@@ -1,0 +1,336 @@
+/* =============================================================================
+   TOKEN ESTIMATOR STYLES
+   Styles for TokenIndicator badge and TokenBreakdownPopover
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   Token Indicator (compact badge)
+   ----------------------------------------------------------------------------- */
+
+.token-indicator-wrapper {
+  position: relative;
+}
+
+.token-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.token-indicator--dark {
+  background: rgba(30, 30, 46, 0.8);
+  border-color: rgba(75, 85, 99, 0.4);
+  color: #9ca3af;
+}
+
+.token-indicator--dark:hover {
+  background: rgba(40, 40, 60, 0.9);
+  border-color: rgba(75, 85, 99, 0.6);
+}
+
+.token-indicator--light {
+  background: rgba(249, 250, 251, 0.9);
+  border-color: rgba(209, 213, 219, 0.6);
+  color: #6b7280;
+}
+
+.token-indicator--light:hover {
+  background: rgba(243, 244, 246, 1);
+  border-color: rgba(209, 213, 219, 0.9);
+}
+
+.token-indicator__icon {
+  flex-shrink: 0;
+}
+
+.token-indicator__tokens {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.token-indicator__separator {
+  opacity: 0.4;
+}
+
+.token-indicator__cost {
+  opacity: 0.8;
+  font-variant-numeric: tabular-nums;
+}
+
+.token-indicator__chevron {
+  opacity: 0.5;
+  margin-left: 2px;
+}
+
+/* -----------------------------------------------------------------------------
+   Token Breakdown Popover
+   ----------------------------------------------------------------------------- */
+
+.token-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  min-width: 260px;
+  max-width: 320px;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  animation: token-popover-in 0.15s ease-out;
+}
+
+@keyframes token-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.token-popover--dark {
+  background: #1f2937;
+  border: 1px solid rgba(75, 85, 99, 0.5);
+  color: #e5e7eb;
+}
+
+.token-popover--light {
+  background: #ffffff;
+  border: 1px solid rgba(209, 213, 219, 0.8);
+  color: #374151;
+}
+
+/* Header */
+.token-popover__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.token-popover__title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.token-popover__level {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.token-popover__level--low {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.token-popover__level--medium {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.token-popover__level--high {
+  background: rgba(249, 115, 22, 0.15);
+  color: #fb923c;
+}
+
+.token-popover__level--critical {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.token-popover--light .token-popover__level--low {
+  color: #059669;
+}
+
+.token-popover--light .token-popover__level--medium {
+  color: #d97706;
+}
+
+.token-popover--light .token-popover__level--high {
+  color: #ea580c;
+}
+
+.token-popover--light .token-popover__level--critical {
+  color: #dc2626;
+}
+
+/* Model info */
+.token-popover__model {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-bottom: 8px;
+}
+
+.token-popover__model strong {
+  font-weight: 600;
+  opacity: 1;
+}
+
+.token-popover__model-limit {
+  margin-left: 4px;
+  opacity: 0.6;
+}
+
+/* Usage bar */
+.token-popover__bar-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.token-popover__bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.token-popover--dark .token-popover__bar {
+  background: rgba(55, 65, 81, 0.6);
+}
+
+.token-popover--light .token-popover__bar {
+  background: rgba(229, 231, 235, 0.8);
+}
+
+.token-popover__bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.token-popover__bar-fill--low {
+  background: #10b981;
+}
+
+.token-popover__bar-fill--medium {
+  background: #f59e0b;
+}
+
+.token-popover__bar-fill--high {
+  background: #f97316;
+}
+
+.token-popover__bar-fill--critical {
+  background: #ef4444;
+}
+
+.token-popover__bar-label {
+  font-size: 11px;
+  font-weight: 500;
+  min-width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Breakdown items */
+.token-popover__breakdown {
+  border-top: 1px solid;
+  padding-top: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.token-popover--dark .token-popover__breakdown {
+  border-color: rgba(75, 85, 99, 0.4);
+}
+
+.token-popover--light .token-popover__breakdown {
+  border-color: rgba(229, 231, 235, 0.8);
+}
+
+.token-popover__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-radius: 4px;
+}
+
+.token-popover--dark .token-popover__item:hover {
+  background: rgba(55, 65, 81, 0.4);
+}
+
+.token-popover--light .token-popover__item:hover {
+  background: rgba(243, 244, 246, 0.8);
+}
+
+.token-popover__item-icon {
+  flex-shrink: 0;
+  opacity: 0.6;
+  display: flex;
+  align-items: center;
+}
+
+.token-popover__item-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.token-popover__item-tokens {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+/* Totals */
+.token-popover__totals {
+  border-top: 1px solid;
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.token-popover--dark .token-popover__totals {
+  border-color: rgba(75, 85, 99, 0.4);
+}
+
+.token-popover--light .token-popover__totals {
+  border-color: rgba(229, 231, 235, 0.8);
+}
+
+.token-popover__total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.token-popover__total-row--highlight {
+  opacity: 1;
+  font-weight: 600;
+  font-size: 12px;
+  margin-top: 2px;
+  padding-top: 4px;
+}
+
+/* Cost detail */
+.token-popover__cost-detail {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  opacity: 0.5;
+  margin-top: 4px;
+  padding-top: 4px;
+}

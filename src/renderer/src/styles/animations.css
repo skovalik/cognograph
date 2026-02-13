@@ -1,0 +1,1190 @@
+/* =============================================================================
+   VISUAL FEEDBACK & JUICINESS - ANIMATIONS
+   =============================================================================
+
+   This file contains all animations for the Cognograph visual feedback system.
+   Import this in index.css after Tailwind directives.
+
+   Sections:
+   1. Streaming & Activity Animations
+   2. Context Flow Animations (Edges)
+   3. Extraction Animations
+   4. Extraction Particle Effects
+   5. Node Lifecycle Animations
+   6. Node Warmth Indicator
+   7. Edge Lifecycle Animations
+   8. Context Injection Feedback
+   9. Chat Panel Typing Indicator
+   10. Project Node Drop Feedback
+   11. Handle Interaction Feedback
+   12. Token Usage Meter
+   13. Canvas Zoom Level Feedback
+   14. Minimap Activity Indicator
+   15. Workspace Node Animations
+   16. Reduced Motion Support
+   ============================================================================= */
+
+/* =============================================================================
+   1. STREAMING & ACTIVITY ANIMATIONS
+   ============================================================================= */
+
+/* Conversation node streaming state */
+.cognograph-node--conversation.streaming {
+  animation: stream-glow 2s ease-in-out infinite;
+  overflow: hidden; /* Prevent animation from going out of bounds */
+  position: relative; /* Ensure pseudo-element is contained */
+}
+
+.cognograph-node--conversation.streaming::before {
+  content: '';
+  position: absolute;
+  inset: 0; /* Changed from -2px to 0 to stay within bounds */
+  border-radius: inherit;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(59, 130, 246, 0.15) 50%,
+    transparent 70%
+  );
+  animation: shimmer-sweep 2s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1; /* Above background but below text */
+}
+
+@keyframes stream-glow {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15),
+                0 0 0 1px var(--ring-color, rgba(59, 130, 246, 0.3));
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.25),
+                0 0 0 2px var(--ring-color, rgba(59, 130, 246, 0.4));
+  }
+}
+
+@keyframes shimmer-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Streaming indicator dots */
+.streaming-dots {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.streaming-dots span {
+  width: 4px;
+  height: 4px;
+  background: currentColor;
+  border-radius: 50%;
+  animation: dot-bounce 1.4s ease-in-out infinite;
+}
+
+.streaming-dots span:nth-child(2) { animation-delay: 0.2s; }
+.streaming-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dot-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+/* =============================================================================
+   2. CONTEXT FLOW ANIMATIONS (EDGES)
+   ============================================================================= */
+
+/* Edge animation when target node is streaming */
+.react-flow__edge-path.context-flowing {
+  stroke-dasharray: 8 4;
+  animation: context-flow 0.8s linear infinite;
+}
+
+@keyframes context-flow {
+  to { stroke-dashoffset: -12; }
+}
+
+/* Bidirectional flow - alternate direction */
+.react-flow__edge-path.context-flowing.bidirectional {
+  animation: context-flow-bi 1.6s linear infinite;
+}
+
+@keyframes context-flow-bi {
+  0%, 100% { stroke-dashoffset: 0; }
+  50% { stroke-dashoffset: -12; }
+}
+
+/* Idle context edge - subtle flowing dash to show context direction (always visible) */
+.react-flow__edge-path.context-idle {
+  stroke-dasharray: 12 8;
+  animation: context-idle-flow 3s linear infinite;
+}
+
+@keyframes context-idle-flow {
+  to { stroke-dashoffset: -20; }
+}
+
+/* Context provider glow - applied to edges feeding a selected conversation */
+.react-flow__edge-path.context-provider-glow {
+  filter: drop-shadow(0 0 4px var(--context-glow-color, rgba(139, 92, 246, 0.5)));
+}
+
+/* Context provider node glow - highlight nodes feeding context into selected conversation */
+.react-flow__node.context-provider-node {
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.4),
+              0 0 12px rgba(139, 92, 246, 0.25);
+  transition: box-shadow 0.3s ease;
+}
+
+/* Workspace link flow (distinct from regular context flow) */
+.react-flow__edge-path.workspace-link-flowing {
+  stroke-dasharray: 5 5;
+  animation: workspace-flow 1.2s linear infinite;
+}
+
+@keyframes workspace-flow {
+  to { stroke-dashoffset: -10; }
+}
+
+/* Animated line style - user-defined animated edge */
+.react-flow__edge-path.edge-animated-flow {
+  stroke-dasharray: 8 4;
+  animation: edge-animated-flow 1s linear infinite;
+}
+
+@keyframes edge-animated-flow {
+  to { stroke-dashoffset: -12; }
+}
+
+/* Edge path while waypoint is being dragged */
+.react-flow__edge-path.edge-dragging {
+  stroke-opacity: 0.7;
+  filter: drop-shadow(0 0 3px currentColor);
+}
+
+/* Waypoint handle animations */
+@keyframes waypoint-pop-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes waypoint-pop-out {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+/* Edge new waypoint animation class */
+.edge-waypoint-new {
+  animation: waypoint-pop-in 0.2s ease-out forwards;
+}
+
+/* Ghost point pulse animation (P0-1) */
+@keyframes edge-ghost-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+.edge-ghost-point {
+  animation: edge-ghost-pulse 1.5s ease-in-out infinite;
+}
+
+/* =============================================================================
+   3. EXTRACTION ANIMATIONS
+   ============================================================================= */
+
+/* Extraction in progress shimmer */
+.cognograph-node--conversation.extracting {
+  position: relative;
+  overflow: hidden;
+}
+
+.cognograph-node--conversation.extracting::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(168, 85, 247, 0.08) 50%,
+    transparent 100%
+  );
+  animation: extract-shimmer 1.5s ease-in-out infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+@keyframes extract-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Wand icon animation when extracting */
+.extract-button.extracting svg {
+  animation: wand-pulse 1s ease-in-out infinite;
+}
+
+@keyframes wand-pulse {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1) rotate(15deg);
+    opacity: 0.8;
+  }
+}
+
+/* =============================================================================
+   4. EXTRACTION PARTICLE EFFECTS
+   ============================================================================= */
+
+/* Particle container - positioned absolutely on the node */
+.extraction-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 100;
+}
+
+/* Individual particle */
+.extraction-particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #a855f7, #6366f1);
+  box-shadow: 0 0 6px rgba(168, 85, 247, 0.6);
+  animation: particle-float 1.5s ease-out forwards;
+}
+
+/* Randomize particle positions using nth-child */
+.extraction-particle:nth-child(1) { left: 20%; animation-delay: 0ms; }
+.extraction-particle:nth-child(2) { left: 40%; animation-delay: 100ms; }
+.extraction-particle:nth-child(3) { left: 60%; animation-delay: 200ms; }
+.extraction-particle:nth-child(4) { left: 80%; animation-delay: 150ms; }
+.extraction-particle:nth-child(5) { left: 30%; animation-delay: 250ms; }
+.extraction-particle:nth-child(6) { left: 70%; animation-delay: 50ms; }
+.extraction-particle:nth-child(7) { left: 50%; animation-delay: 300ms; }
+.extraction-particle:nth-child(8) { left: 10%; animation-delay: 180ms; }
+
+@keyframes particle-float {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-30px) scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-60px) translateX(var(--particle-drift, 0px)) scale(0.5);
+    opacity: 0;
+  }
+}
+
+/* Particle drift variations */
+.extraction-particle:nth-child(odd) { --particle-drift: 15px; }
+.extraction-particle:nth-child(even) { --particle-drift: -15px; }
+.extraction-particle:nth-child(3n) { --particle-drift: 25px; }
+.extraction-particle:nth-child(4n) { --particle-drift: -20px; }
+
+/* =============================================================================
+   4.5 SPATIAL EXTRACTION SYSTEM
+   ============================================================================= */
+
+/* Extraction Badge - appears on node edge, outside top-right corner */
+.extraction-badge {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
+  background: var(--badge-color, var(--gui-accent-primary));
+  color: white;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 20;
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.extraction-badge:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.extraction-badge--active {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3), 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.extraction-badge__count {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Badge pulse animation for new extractions */
+.extraction-badge--pulsing {
+  animation: extraction-badge-pulse 0.6s ease-out;
+}
+
+@keyframes extraction-badge-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    transform: scale(1.3);
+    box-shadow: 0 0 12px var(--badge-color, var(--gui-accent-primary)), 0 2px 10px rgba(0, 0, 0, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Extraction Panel - floating panel */
+.extraction-panel {
+  position: fixed;
+  width: 260px;
+  max-height: 320px;
+  background: var(--gui-panel-bg, rgba(17, 24, 39, 0.95));
+  border: 1px solid var(--gui-border, rgba(255, 255, 255, 0.1));
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(12px);
+  animation: extraction-panel-appear 0.2s ease-out;
+}
+
+@keyframes extraction-panel-appear {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.extraction-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--gui-border, rgba(255, 255, 255, 0.1));
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gui-text-primary, #f3f4f6);
+}
+
+.extraction-panel__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.extraction-panel__footer {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--gui-border, rgba(255, 255, 255, 0.1));
+}
+
+.extraction-panel__btn {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease-out;
+  border: none;
+}
+
+.extraction-panel__btn--accept {
+  background: var(--gui-accent-primary, #8b5cf6);
+  color: white;
+}
+
+.extraction-panel__btn--accept:hover {
+  background: color-mix(in srgb, var(--gui-accent-primary, #8b5cf6) 85%, white);
+}
+
+.extraction-panel__btn--clear {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--gui-text-secondary, #9ca3af);
+}
+
+.extraction-panel__btn--clear:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Extraction Ghost Card - draggable card in panel */
+.extraction-ghost-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  cursor: grab;
+  transition: all 0.15s ease-out;
+}
+
+.extraction-ghost-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateX(2px);
+}
+
+.extraction-ghost-card:active {
+  cursor: grabbing;
+}
+
+.extraction-ghost-card--dragging {
+  opacity: 0.5;
+}
+
+.extraction-ghost-card__icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.extraction-ghost-card__icon--note {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.extraction-ghost-card__icon--task {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.extraction-ghost-card__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.extraction-ghost-card__title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gui-text-primary, #f3f4f6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.extraction-ghost-card__confidence {
+  font-size: 10px;
+  color: var(--gui-text-muted, #6b7280);
+}
+
+.extraction-ghost-card__dismiss {
+  padding: 4px;
+  background: transparent;
+  border: none;
+  color: var(--gui-text-muted, #6b7280);
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0;
+  transition: all 0.15s ease-out;
+}
+
+.extraction-ghost-card:hover .extraction-ghost-card__dismiss {
+  opacity: 1;
+}
+
+.extraction-ghost-card__dismiss:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--gui-text-secondary, #9ca3af);
+}
+
+/* Show more button */
+.extraction-panel__more {
+  padding: 6px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--gui-text-secondary, #9ca3af);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s ease-out;
+}
+
+.extraction-panel__more:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--gui-text-primary, #f3f4f6);
+}
+
+/* Tether Line - connects panel to source node */
+.extraction-tether {
+  position: fixed;
+  pointer-events: none;
+  z-index: 999;
+}
+
+.extraction-tether line {
+  stroke: var(--gui-accent-primary, #8b5cf6);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  opacity: 0.5;
+}
+
+/* Drag Preview - follows cursor */
+.extraction-drag-preview {
+  position: fixed;
+  pointer-events: none;
+  z-index: 10000;
+  padding: 10px 14px;
+  background: var(--gui-panel-bg, rgba(17, 24, 39, 0.95));
+  border: 2px solid var(--gui-accent-primary, #8b5cf6);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: translate(-50%, -50%);
+  animation: drag-preview-appear 0.15s ease-out;
+}
+
+@keyframes drag-preview-appear {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.extraction-drag-preview__icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.extraction-drag-preview__icon--note {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.extraction-drag-preview__icon--task {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.extraction-drag-preview__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gui-text-primary, #f3f4f6);
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Light mode support */
+[data-theme="light"] .extraction-panel {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .extraction-panel__header {
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #1f2937;
+}
+
+[data-theme="light"] .extraction-ghost-card {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .extraction-ghost-card:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .extraction-ghost-card__title {
+  color: #1f2937;
+}
+
+[data-theme="light"] .extraction-drag-preview {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+[data-theme="light"] .extraction-drag-preview__title {
+  color: #1f2937;
+}
+
+/* =============================================================================
+   5. NODE LIFECYCLE ANIMATIONS
+   ============================================================================= */
+
+/* Node spawn animation */
+.cognograph-node.spawning {
+  animation: node-spawn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes node-spawn {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Node delete animation (optional, for smooth removal) */
+.cognograph-node.deleting {
+  animation: node-delete 0.2s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes node-delete {
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+/* =============================================================================
+   6. NODE WARMTH INDICATOR (RECENT ACTIVITY)
+   ============================================================================= */
+
+/* Warmth levels based on recency of activity */
+/* Level 1: Active within last 30 seconds - strong glow */
+.cognograph-node.warmth-hot {
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(251, 146, 60, 0.3),
+    inset 0 0 0 1px rgba(251, 146, 60, 0.2);
+}
+
+/* Level 2: Active within last 2 minutes - medium glow */
+.cognograph-node.warmth-warm {
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    0 0 12px rgba(251, 146, 60, 0.2),
+    inset 0 0 0 1px rgba(251, 146, 60, 0.1);
+}
+
+/* Level 3: Active within last 5 minutes - subtle glow */
+.cognograph-node.warmth-cool {
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    0 0 6px rgba(251, 146, 60, 0.1);
+}
+
+/* Warmth indicator dot in header */
+.warmth-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.warmth-indicator.hot {
+  background: #fb923c;
+  box-shadow: 0 0 8px rgba(251, 146, 60, 0.6);
+  animation: warmth-pulse 2s ease-in-out infinite;
+}
+
+.warmth-indicator.warm {
+  background: #fdba74;
+  box-shadow: 0 0 4px rgba(251, 146, 60, 0.4);
+}
+
+.warmth-indicator.cool {
+  background: #fed7aa;
+  opacity: 0.6;
+}
+
+@keyframes warmth-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.1); }
+}
+
+/* =============================================================================
+   7. EDGE LIFECYCLE ANIMATIONS
+   ============================================================================= */
+
+/* Edge creation draw animation */
+.react-flow__edge.edge-new .react-flow__edge-path {
+  stroke-dasharray: 500;
+  stroke-dashoffset: 500;
+  animation: edge-draw 0.4s ease-out forwards;
+}
+
+@keyframes edge-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* =============================================================================
+   8. CONTEXT INJECTION FEEDBACK
+   ============================================================================= */
+
+/* Context indicator flash on message send */
+.context-indicator.injecting {
+  animation: context-flash 0.6s ease-out;
+}
+
+@keyframes context-flash {
+  0% { background: rgba(59, 130, 246, 0.2); }
+  100% { background: transparent; }
+}
+
+/* Source node highlight when being used as context */
+.cognograph-node.context-source {
+  animation: source-highlight 0.5s ease-out;
+}
+
+@keyframes source-highlight {
+  0% {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
+/* =============================================================================
+   9. CHAT PANEL TYPING INDICATOR
+   ============================================================================= */
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 8px 0;
+  align-items: center;
+}
+
+.typing-indicator span {
+  width: 6px;
+  height: 6px;
+  background: #64748b;
+  border-radius: 50%;
+  animation: typing-bounce 1.4s ease-in-out infinite;
+}
+
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+/* =============================================================================
+   10. PROJECT NODE DROP FEEDBACK
+   ============================================================================= */
+
+/* Enhanced drop zone feedback (extends existing .drag-over) */
+.cognograph-node--project.drag-over {
+  animation: drop-ready 0.8s ease-in-out infinite;
+}
+
+.cognograph-node--project.drag-over::before {
+  content: 'Drop to add';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
+  font-weight: 500;
+  color: #a855f7;
+  opacity: 0.9;
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+@keyframes drop-ready {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.3),
+                inset 0 0 20px rgba(168, 85, 247, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.5),
+                inset 0 0 30px rgba(168, 85, 247, 0.1);
+  }
+}
+
+/* =============================================================================
+   11. HANDLE INTERACTION FEEDBACK (ENHANCED)
+   ============================================================================= */
+
+/* Enhanced handle hover state - extends existing styles in nodes.css */
+.cognograph-node:hover .react-flow__handle:hover {
+  transform: var(--handle-translate) scale(1.3);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
+  transition: all 0.15s ease-out;
+}
+
+/* Handle connecting state */
+.react-flow__handle.connecting {
+  animation: handle-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes handle-pulse {
+  0%, 100% {
+    transform: var(--handle-translate) scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    transform: var(--handle-translate) scale(1.15);
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+  }
+}
+
+/* =============================================================================
+   12. TOKEN USAGE METER
+   ============================================================================= */
+
+/* Token meter container - placed in ChatPanel or ContextIndicator */
+.token-meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--node-text-secondary);
+}
+
+.token-meter__bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  min-width: 60px;
+}
+
+.token-meter__fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease-out, background-color 0.3s ease-out;
+}
+
+/* Fill colors based on usage percentage */
+.token-meter__fill.usage-low {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.token-meter__fill.usage-medium {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.token-meter__fill.usage-high {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+  animation: meter-pulse 1.5s ease-in-out infinite;
+}
+
+.token-meter__fill.usage-critical {
+  background: linear-gradient(90deg, #dc2626, #ef4444);
+  animation: meter-critical 0.8s ease-in-out infinite;
+}
+
+@keyframes meter-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes meter-critical {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(239, 68, 68, 0.5); }
+  50% { opacity: 0.8; box-shadow: 0 0 8px rgba(239, 68, 68, 0.8); }
+}
+
+.token-meter__label {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Light mode support for token meter */
+[data-theme="light"] .token-meter {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .token-meter__bar {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* =============================================================================
+   13. CANVAS ZOOM LEVEL FEEDBACK
+   ============================================================================= */
+
+/* Zoom indicator that appears briefly when zooming */
+.zoom-indicator {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #f3f4f6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.zoom-indicator.visible {
+  opacity: 1;
+}
+
+.zoom-indicator.fading {
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
+}
+
+.zoom-indicator__icon {
+  width: 16px;
+  height: 16px;
+  color: #9ca3af;
+}
+
+.zoom-indicator__value {
+  font-variant-numeric: tabular-nums;
+  min-width: 48px;
+  text-align: center;
+}
+
+/* Zoom level visual representation */
+.zoom-indicator__bar {
+  width: 80px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.zoom-indicator__marker {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #3b82f6;
+  border-radius: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  transition: left 0.15s ease-out;
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.5);
+}
+
+/* 100% zoom marker line */
+.zoom-indicator__bar::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Light mode support */
+[data-theme="light"] .zoom-indicator {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #1f2937;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .zoom-indicator__bar {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .zoom-indicator__bar::after {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* =============================================================================
+   14. MINIMAP ACTIVITY INDICATOR
+   ============================================================================= */
+
+/* Pulse on minimap node when streaming */
+.react-flow__minimap-node.streaming {
+  animation: minimap-pulse 2s ease-in-out infinite;
+}
+
+@keyframes minimap-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* =============================================================================
+   15. WORKSPACE NODE ANIMATIONS
+   ============================================================================= */
+
+/* Workspace node member highlight when showing links */
+.cognograph-node--workspace.showing-links {
+  animation: workspace-active 3s ease-in-out infinite;
+}
+
+@keyframes workspace-active {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.35);
+  }
+}
+
+/* =============================================================================
+   17. TOAST GLOW ANIMATION
+   ============================================================================= */
+
+@keyframes scifi-toast-glow {
+  0%, 100% { box-shadow: 0 0 8px color-mix(in srgb, var(--gui-accent-primary, #8b5cf6) 19%, transparent), 0 4px 16px rgba(0,0,0,0.4); }
+  50% { box-shadow: 0 0 16px color-mix(in srgb, var(--gui-accent-primary, #8b5cf6) 38%, transparent), 0 4px 20px rgba(0,0,0,0.5); }
+}
+
+/* =============================================================================
+   18. LAYOUT TRANSITION ANIMATIONS
+   Smooth transitions when auto-layout or manual positioning changes
+   ============================================================================= */
+
+/* Enable smooth transform transitions for layout changes */
+.react-flow__node {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Disable transition during drag to avoid lag */
+.react-flow__node.dragging {
+  transition: none !important;
+}
+
+/* Spring physics animation class for drag end */
+.node-drag-end {
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+/* Layout animation with stagger support */
+.layout-animating {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Animation timing tokens for consistent feel */
+:root {
+  --transition-instant: 0.1s;
+  --transition-fast: 0.15s;
+  --transition-normal: 0.25s;
+  --transition-slow: 0.4s;
+  --ease-standard: ease-out;
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* =============================================================================
+   16. REDUCED MOTION SUPPORT
+   ============================================================================= */
+
+/* Disable animations (for reduced motion preference) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* Keep essential state indicators visible but static */
+  .streaming-dots span,
+  .typing-indicator span {
+    opacity: 0.6 !important;
+    animation: none !important;
+  }
+
+  .warmth-indicator.hot {
+    animation: none !important;
+  }
+
+  /* Ensure streaming node still has visual indicator */
+  .cognograph-node--conversation.streaming {
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.25),
+                0 0 0 2px var(--ring-color, rgba(59, 130, 246, 0.4));
+  }
+
+  /* Ensure extraction has visual indicator */
+  .cognograph-node--conversation.extracting {
+    box-shadow: 0 4px 20px rgba(168, 85, 247, 0.25),
+                0 0 0 2px rgba(168, 85, 247, 0.4);
+  }
+}
+
+/* =============================================================================
+   14. Ambient Effect Transitions
+   ============================================================================= */
+
+@keyframes ambientFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
