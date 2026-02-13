@@ -2426,9 +2426,6 @@ function Canvas(): JSX.Element {
         {/* Pinned Windows (nodes popped out as floating windows) */}
         <PinnedWindowsContainer />
 
-        {/* AI Editor Modal and Preview */}
-        <AIEditorModal />
-        {isAIEditorOpen && <AIEditorPreview />}
         <WorkflowProgress />
 
         {/* AI Editor InlinePrompt (/ key) */}
@@ -2485,6 +2482,10 @@ function Canvas(): JSX.Element {
           {!isReady && <SplashScreen />}
         </AnimatePresence>
       </div>
+
+      {/* AI Editor Modal and Preview - Outside flex container for guaranteed fixed positioning */}
+      <AIEditorModal />
+      {isAIEditorOpen && <AIEditorPreview />}
     </div>
   )
 }
