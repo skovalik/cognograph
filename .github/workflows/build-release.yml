@@ -1,0 +1,100 @@
+name: Build & Release (Unsigned)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on version tags like v0.1.0
+  workflow_dispatch:  # Allow manual trigger from GitHub Actions tab
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Type check
+        run: npm run typecheck
+
+      # ============ Build (Unsigned) ============
+      - name: Build (macOS - unsigned)
+        if: matrix.os == 'macos-latest'
+        run: npm run build:mac
+
+      - name: Build (Windows - unsigned)
+        if: matrix.os == 'windows-latest'
+        run: npm run build:win
+
+      - name: Build (Linux - no signing required)
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run build:linux
+
+      # ============ Upload Artifacts ============
+      - name: Upload macOS artifacts
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-builds
+          path: |
+            release/*/Cognograph-*.dmg
+            release/*/Cognograph-*.dmg.blockmap
+
+      - name: Upload Windows artifacts
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-builds
+          path: |
+            release/*/Cognograph-*-Setup.exe
+            release/*/Cognograph-*-Setup.exe.blockmap
+
+      - name: Upload Linux artifacts
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-builds
+          path: |
+            release/*/Cognograph-*.AppImage
+            release/*/Cognograph-*.deb
+
+  # ============ Create GitHub Release ============
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/**/*.dmg
+            artifacts/**/*.exe
+            artifacts/**/*.AppImage
+            artifacts/**/*.deb
+          draft: true  # Create as draft for manual review
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
