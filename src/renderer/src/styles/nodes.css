@@ -1,0 +1,1534 @@
+/* =============================================================================
+   THEME CSS VARIABLES
+   ============================================================================= */
+
+:root {
+  /* === ALIASES: Node variables now reference tokens === */
+  --node-bg: var(--surface-node);
+  --node-bg-secondary: var(--surface-node-secondary);
+  --node-border-secondary: var(--border-node);
+  --node-text-primary: var(--text-primary);
+  --node-text-secondary: var(--text-secondary);
+  --node-text-muted: var(--text-muted);
+  --node-header-bg: var(--surface-node-header);
+
+  /* === RGB-only variables for glass system (no alpha channel) === */
+  /* Used in color-mix() to prevent alpha compounding */
+  --node-bg-rgb: 13 13 20; /* Default dark mode RGB */
+
+  /* === Edge Waypoint Handle Colors === */
+  --edge-waypoint-color: var(--gui-accent-primary, rgb(59, 130, 246));
+  --edge-waypoint-hover: var(--gui-accent-primary-hover, rgb(96, 165, 250));
+  --edge-waypoint-active: var(--gui-accent-primary, rgb(59, 130, 246));
+  --edge-waypoint-border: white;
+  --edge-waypoint-glow: color-mix(in srgb, var(--gui-accent-primary, rgb(59, 130, 246)) 40%, transparent);
+  --edge-waypoint-glow-active: color-mix(in srgb, var(--gui-accent-primary, rgb(59, 130, 246)) 60%, transparent);
+  --edge-waypoint-add-bg: color-mix(in srgb, var(--gui-accent-primary, rgb(59, 130, 246)) 90%, transparent);
+}
+
+/* Light mode: explicit overrides to ensure node variables resolve correctly */
+[data-theme="light"] {
+  --node-bg: rgba(255, 255, 255, 0.95);
+  --node-bg-secondary: rgba(243, 244, 246, 0.8);
+  --node-header-bg: rgba(249, 250, 251, 0.5);
+  --node-border-secondary: rgb(209, 213, 219);
+  --node-text-primary: #111827;      /* gray-900 - very dark for light backgrounds */
+  --node-text-secondary: #374151;    /* gray-700 - darker than before (was gray-600) */
+  --node-text-muted: #4b5563;        /* gray-600 - darker than before (was gray-500) */
+
+  /* RGB-only variable for glass system - light mode uses white base */
+  --node-bg-rgb: 255 255 255;
+
+  /* Light mode waypoint handles - darker border for contrast */
+  --edge-waypoint-border: rgba(0, 0, 0, 0.8);
+}
+
+/* Dark mode: explicit overrides for light text on dark backgrounds */
+[data-theme="dark"] {
+  --node-bg: rgba(13, 13, 20, 0.95);
+  --node-bg-secondary: rgba(30, 30, 40, 0.8);
+  --node-header-bg: rgba(20, 20, 30, 0.5);
+  --node-border-secondary: rgb(55, 65, 81);
+  --node-text-primary: #ffffff;      /* pure white for maximum contrast */
+  --node-text-secondary: #e5e7eb;    /* gray-200 - lighter than before (was gray-300) */
+  --node-text-muted: #d1d5db;        /* gray-300 - lighter than before (was gray-400) */
+
+  /* RGB-only variable for glass system - dark mode uses dark base */
+  --node-bg-rgb: 13 13 20;
+
+  /* Dark mode waypoint handles - lighter border for contrast */
+  --edge-waypoint-border: rgba(255, 255, 255, 0.8);
+}
+
+/* =============================================================================
+   NODE BASE STYLES
+   ============================================================================= */
+
+.cognograph-node {
+  @apply rounded-lg border-2;
+  background-color: var(--node-bg);
+  min-width: 150px;
+  min-height: 80px;
+  /* Enable flex layout for responsive resizing */
+  display: flex;
+  flex-direction: column;
+  /* Allow handles to overflow outside node bounds */
+  overflow: visible;
+  /* Use design token shadows */
+  box-shadow: var(--shadow-node);
+  /* CSS state machine transitions */
+  transition:
+    box-shadow var(--duration-normal, 150ms) var(--ease-out, ease-out),
+    border-color var(--duration-normal, 150ms) var(--ease-out, ease-out),
+    transform var(--duration-normal, 150ms) var(--ease-out, ease-out),
+    filter var(--duration-normal, 150ms) var(--ease-out, ease-out);
+}
+
+/* Glass system integration - apply glass effects when enabled globally */
+/* Neutral glass - no color tint, pure transparency */
+html[data-glass-nodes="true"][data-glass-style="soft-blur"] .cognograph-node {
+  backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2) !important;
+  /* Use --glass-opacity variable with node accent color tint from --node-accent custom property */
+  /* Tint percentage scales with opacity: 0% opacity → 0% tint, 85% opacity → 8%/12% tint */
+  /* Strip alpha from --node-bg by using rgb() to get pure transparency */
+  /* IMPORTANT: Must override base .cognograph-node background-color */
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--node-accent, var(--node-conversation, rgb(59 130 246))) calc(var(--glass-opacity, 85) * 0.094%), color-mix(in srgb, rgb(var(--node-bg-rgb)) calc(var(--glass-opacity, 85) * 1%), transparent)) 0%,
+    color-mix(in srgb, var(--node-accent, var(--node-conversation, rgb(59 130 246))) calc(var(--glass-opacity, 85) * 0.141%), color-mix(in srgb, rgb(var(--node-bg-rgb)) calc((var(--glass-opacity, 85) - 6) * 1%), transparent)) 100%
+  ) !important;
+  /* --node-accent is set per-node to border-color (theme token) → blue/purple/amber tint */
+  /* Fallback chain: --node-accent → --node-conversation → blue rgb(59 130 246) */
+  /* Tint coefficients: 0.094 = 8/85, 0.141 = 12/85 */
+  contain: layout; /* Performance: isolate layout, preserve z-index */
+  -webkit-transform: translateZ(0); /* Safari: force GPU layer */
+  transform: translateZ(0);
+}
+
+html[data-glass-nodes="true"][data-glass-style="fluid-glass"] .cognograph-node {
+  backdrop-filter: blur(calc(var(--glass-blur, 12px) * 2)) saturate(1.5) brightness(1.05) !important;
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur, 12px) * 2)) saturate(1.5) brightness(1.05) !important;
+  /* Use --glass-opacity variable with node accent color tint for premium look */
+  /* Tint percentage scales with opacity: 0% opacity → 0% tint, 85% opacity → 15%/20% tint */
+  /* Strip alpha from --node-bg, add more color tint for fluid-glass */
+  /* IMPORTANT: Must override base .cognograph-node background-color */
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--node-accent, var(--node-conversation, rgb(59 130 246))) calc(var(--glass-opacity, 85) * 0.176%), color-mix(in srgb, rgb(var(--node-bg-rgb)) calc((var(--glass-opacity, 85) - 12) * 1%), transparent)) 0%,
+    color-mix(in srgb, var(--node-accent, var(--node-conversation, rgb(59 130 246))) calc(var(--glass-opacity, 85) * 0.235%), color-mix(in srgb, rgb(var(--node-bg-rgb)) calc((var(--glass-opacity, 85) - 18) * 1%), transparent)) 100%
+  ) !important;
+  /* --node-accent is set per-node to border-color (theme token) → blue/purple/amber tint */
+  /* Fallback chain: --node-accent → --node-conversation → blue rgb(59 130 246) */
+  /* Tint coefficients: 0.176 = 15/85, 0.235 = 20/85 */
+  box-shadow:
+    var(--shadow-node),
+    inset 0 1px 1px color-mix(in srgb, var(--gui-text-primary) 10%, transparent);
+  contain: layout;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* Per-node override: force glass (even if global disabled) */
+html[data-glass-style="soft-blur"] .cognograph-node[data-transparent="true"] {
+  backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2) !important;
+  /* Use --glass-opacity variable with node accent color tint */
+  /* Tint percentage scales with opacity: 0% opacity → 0% tint, 85% opacity → 8%/12% tint */
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--node-accent, var(--node-conversation, rgb(59 130 246))) calc(var(--glass-opacity, 85) * 0.094%), color-mix(in srgb, rgb(var(--node-bg-rgb)) calc(var(--glass-opacity, 85) * 1%), transparent)) 0%,
+    color-mix(in srgb, var(--node-accent, var(--node-conversation, rgb(59 130 246))) calc(var(--glass-opacity, 85) * 0.141%), color-mix(in srgb, rgb(var(--node-bg-rgb)) calc((var(--glass-opacity, 85) - 6) * 1%), transparent)) 100%
+  ) !important;
+  contain: layout;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
+  backdrop-filter: blur(calc(var(--glass-blur, 12px) * 2)) saturate(1.5) brightness(1.05) !important;
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur, 12px) * 2)) saturate(1.5) brightness(1.05) !important;
+  /* Use --glass-opacity variable with more color tint */
+  /* Tint percentage scales with opacity: 0% opacity → 0% tint, 85% opacity → 15%/20% tint */
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--node-accent, var(--node-conversation, rgb(59 130 246))) calc(var(--glass-opacity, 85) * 0.176%), color-mix(in srgb, rgb(var(--node-bg-rgb)) calc((var(--glass-opacity, 85) - 12) * 1%), transparent)) 0%,
+    color-mix(in srgb, var(--node-accent, var(--node-conversation, rgb(59 130 246))) calc(var(--glass-opacity, 85) * 0.235%), color-mix(in srgb, rgb(var(--node-bg-rgb)) calc((var(--glass-opacity, 85) - 18) * 1%), transparent)) 100%
+  ) !important;
+  box-shadow:
+    var(--shadow-node),
+    inset 0 1px 1px color-mix(in srgb, var(--gui-text-primary) 10%, transparent);
+  contain: layout;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* Fallback for browsers without color-mix() support (IE11, old Android) */
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .cognograph-node[data-transparent="true"],
+  html[data-glass-nodes="true"] .cognograph-node {
+    background: var(--node-bg) !important; /* Solid fallback */
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* Per-node override: force solid (even if global enabled) */
+.cognograph-node[data-transparent="false"] {
+  /* Don't override background - let inline styles handle node colors */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Hover state: lift and enhanced shadow (only when not dragging or selected) */
+.react-flow__node:not(.dragging) .cognograph-node:hover:not(.selected) {
+  box-shadow: var(--shadow-node-hover);
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+/* Selected state: visible outline with enhanced shadow */
+.cognograph-node.selected {
+  @apply ring-2 ring-offset-2 ring-offset-gray-900;
+  /* Ring color uses the --ring-color CSS variable set by each node's inline styles */
+  --tw-ring-color: var(--ring-color, #6366f1);
+  box-shadow: var(--shadow-node-selected);
+  filter: brightness(1.08);
+}
+
+[data-theme="light"] .cognograph-node.selected {
+  @apply ring-offset-white;
+}
+
+/* Dragging state: scale up with drop shadow */
+/* Note: React Flow applies .dragging to .react-flow__node wrapper */
+.react-flow__node.dragging .cognograph-node {
+  transform: scale(1.02);
+  box-shadow: var(--shadow-node-drag);
+  filter: brightness(1.1);
+}
+
+/* Node type colors - using CSS variables from tokens */
+.cognograph-node--conversation {
+  border-color: var(--node-conversation);
+}
+/* z-index managed per-node via zIndex property for proper layering */
+/* Ring color now uses --ring-color CSS variable from base .cognograph-node.selected */
+
+/* Agent mode differentiation - glass effects only (border/bg set via inline styles) */
+.conversation-node--agent {
+  /* Glass effects: backdrop-filter for depth */
+  backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2);
+
+  /* Subtle white inset highlight - reduced for agent mode (8% light, 5% dark) */
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 color-mix(in srgb, white 8%, transparent);
+}
+
+/* Dark mode: even more subtle white inset (5%) */
+[data-theme="dark"] .conversation-node--agent {
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 color-mix(in srgb, white 5%, transparent);
+}
+
+.cognograph-node--project {
+  /* Base styles - border-color set dynamically via inline styles */
+  @apply flex flex-col;
+  min-width: 250px;
+  min-height: 200px;
+  transition: box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+/* Disable hover effect for project nodes - prevents strobing when mousing over child nodes */
+.cognograph-node--project:hover {
+  filter: none;
+  box-shadow: inherit;
+}
+
+/* React Flow node wrapper for project nodes - ensure they stay behind ALL edges */
+.react-flow__node-project {
+  z-index: -1 !important;
+}
+
+/* Visual feedback when project can receive drop */
+.cognograph-node--project.drag-over {
+  border-width: 4px;
+  transform: scale(1.02);
+  /* Use node's ring-color variable for consistent theming */
+  box-shadow: 0 0 20px color-mix(in srgb, var(--ring-color) 40%, transparent);
+}
+/* Ring color now uses --ring-color CSS variable from base .cognograph-node.selected */
+
+.cognograph-node--note {
+  @apply border-amber-500;
+}
+/* z-index managed per-node via zIndex property */
+/* Ring color now uses --ring-color CSS variable from base .cognograph-node.selected */
+
+.cognograph-node--task {
+  @apply border-emerald-500;
+}
+/* z-index managed per-node via zIndex property */
+/* Ring color now uses --ring-color CSS variable from base .cognograph-node.selected */
+
+.cognograph-node--artifact {
+  @apply border-cyan-500;
+}
+/* z-index managed per-node via zIndex property */
+/* Ring color now uses --ring-color CSS variable from base .cognograph-node.selected */
+
+.cognograph-node--workspace {
+  @apply border-red-500;
+  min-width: 280px;
+}
+.react-flow__node-workspace {
+  z-index: 5 !important;
+}
+/* Ring color now uses --ring-color CSS variable from base .cognograph-node.selected */
+
+.cognograph-node--action {
+  min-width: 220px;
+}
+
+.cognograph-node--action.action-node--inactive {
+  opacity: 0.6;
+  filter: grayscale(0.3);
+}
+
+/* Node header */
+.cognograph-node__header {
+  @apply flex items-center gap-2.5 px-3 py-2.5 border-b;
+  background-color: var(--node-header-bg);
+  /* Match parent's inner corner radius (rounded-lg 8px minus border-2 2px) */
+  border-top-left-radius: calc(var(--radius-lg, 8px) - 2px);
+  border-top-right-radius: calc(var(--radius-lg, 8px) - 2px);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* Dark mode: darker border (mix node bg with black) */
+[data-theme="dark"] .cognograph-node__header {
+  border-color: color-mix(in srgb, var(--node-bg) 60%, black);
+}
+
+/* Light mode: lighter border (mix node bg with gray) */
+[data-theme="light"] .cognograph-node__header {
+  border-color: color-mix(in srgb, var(--node-bg) 70%, rgb(209, 213, 219));
+}
+
+.cognograph-node__icon {
+  @apply w-5 h-5 flex-shrink-0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cognograph-node__title {
+  @apply text-sm font-semibold truncate flex-1;
+  color: var(--node-text-primary);
+  line-height: 1.3;
+}
+
+/* Node title with node color - uses ring-color set by node type */
+.cognograph-node__title--colored {
+  color: var(--ring-color, var(--node-text-primary));
+}
+
+/* Node icon without background - uses ring-color for the icon color */
+.cognograph-node__icon--colored {
+  color: var(--ring-color);
+  background: none !important;
+}
+
+/* Node body */
+.cognograph-node__body {
+  @apply px-3 py-2 text-sm;
+  color: var(--node-text-secondary);
+  /* Expand to fill available space and allow scrolling */
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Allow clicks to pass through to children */
+  cursor: default;
+}
+
+/* Node body content - description text */
+.cognograph-node__body > p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Node body content - allow expansion to fill container */
+.cognograph-node__body > pre,
+.cognograph-node__body > div:first-child:not(.property-badges) {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Property badges container */
+.cognograph-node__body .property-badges {
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+/* Node footer */
+.cognograph-node__footer {
+  @apply flex items-center justify-between px-3 py-2 border-t text-xs;
+  color: var(--node-text-muted);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+/* Dark mode: darker border (mix node bg with black) */
+[data-theme="dark"] .cognograph-node__footer {
+  border-color: color-mix(in srgb, var(--node-bg) 60%, black);
+}
+
+/* Light mode: lighter border (mix node bg with gray) */
+[data-theme="light"] .cognograph-node__footer {
+  border-color: color-mix(in srgb, var(--node-bg) 70%, rgb(209, 213, 219));
+}
+
+/* Resize handle */
+.cognograph-node__resize {
+  @apply absolute bottom-0 right-0 w-4 h-4 cursor-se-resize;
+  @apply opacity-0 transition-opacity;
+}
+
+.cognograph-node:hover .cognograph-node__resize {
+  @apply opacity-50;
+}
+
+.cognograph-node__resize:hover {
+  @apply opacity-100;
+}
+
+/* =============================================================================
+   HANDLE STYLES
+   ============================================================================= */
+
+.react-flow__handle {
+  @apply border-2;
+  background-color: var(--ring-color, #64748b);
+  border-color: color-mix(in srgb, var(--ring-color, #64748b) 70%, white);
+  @apply transition-[opacity,transform] duration-200 ease-out;
+  /* Fixed sizing — avoids per-frame recalc during zoom */
+  --handle-size: 16px;
+  --handle-offset: -8px;
+  width: var(--handle-size) !important;
+  height: var(--handle-size) !important;
+  /* Centering transform per-position (set by position rules below) */
+  --handle-translate: translate(0, 0);
+  /* Hidden by default, show on hover */
+  opacity: 0;
+  pointer-events: none;
+  transform: var(--handle-translate) scale(0.8);
+}
+
+/* Fixed hit area for easier connections */
+.react-flow__handle::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  pointer-events: auto;
+}
+
+/* Per-position centering and offset */
+.react-flow__handle-top {
+  --handle-translate: translateX(-50%);
+  top: var(--handle-offset);
+}
+
+.react-flow__handle-bottom {
+  --handle-translate: translateX(-50%);
+  bottom: var(--handle-offset);
+}
+
+.react-flow__handle-left {
+  --handle-translate: translateY(-50%);
+  left: var(--handle-offset);
+}
+
+.react-flow__handle-right {
+  --handle-translate: translateY(-50%);
+  right: var(--handle-offset);
+}
+
+/* Show handles when node is hovered */
+.cognograph-node:hover .react-flow__handle {
+  background-color: var(--ring-color, #3b82f6);
+  border-color: color-mix(in srgb, var(--ring-color, #3b82f6) 60%, white);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--ring-color, #3b82f6) 50%, transparent);
+  opacity: 1;
+  pointer-events: auto;
+  transform: var(--handle-translate) scale(1);
+}
+
+/* Show handles when connecting (dragging from another handle) */
+.react-flow__handle.connectingfrom,
+.react-flow__handle.connectingto,
+.react-flow.connecting .react-flow__handle {
+  opacity: 1;
+  pointer-events: auto;
+  transform: var(--handle-translate) scale(1);
+}
+
+.react-flow__handle:hover {
+  background-color: color-mix(in srgb, var(--ring-color, #3b82f6) 90%, white);
+  border-color: white;
+  transform: var(--handle-translate) scale(1.2);
+  box-shadow: 0 0 6px var(--ring-color, #3b82f6);
+}
+
+/* Pulsing animation when connecting */
+.react-flow__handle.connecting {
+  animation: pulse-handle 1s ease-in-out infinite;
+  opacity: 1;
+}
+
+@keyframes pulse-handle {
+  0%, 100% { transform: var(--handle-translate) scale(1); opacity: 1; }
+  50% { transform: var(--handle-translate) scale(1.2); opacity: 0.8; }
+}
+
+/* Connection target highlight - shows which handle will receive the connection */
+.react-flow__handle.connection-target-highlight {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: var(--handle-translate) scale(1.6) !important;
+  background-color: var(--target-highlight-color, #22c55e) !important;
+  border-color: white !important;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--target-highlight-color, #22c55e) 30%, transparent),
+    0 0 20px var(--target-highlight-color, #22c55e),
+    0 0 40px color-mix(in srgb, var(--target-highlight-color, #22c55e) 50%, transparent) !important;
+  animation: connection-target-pulse 0.6s ease-in-out infinite !important;
+  z-index: 1000 !important;
+}
+
+@keyframes connection-target-pulse {
+  0%, 100% {
+    transform: var(--handle-translate) scale(1.6);
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--target-highlight-color, #22c55e) 30%, transparent),
+      0 0 20px var(--target-highlight-color, #22c55e),
+      0 0 40px color-mix(in srgb, var(--target-highlight-color, #22c55e) 50%, transparent);
+  }
+  50% {
+    transform: var(--handle-translate) scale(1.8);
+    box-shadow:
+      0 0 0 5px color-mix(in srgb, var(--target-highlight-color, #22c55e) 40%, transparent),
+      0 0 30px var(--target-highlight-color, #22c55e),
+      0 0 60px color-mix(in srgb, var(--target-highlight-color, #22c55e) 60%, transparent);
+  }
+}
+
+/* Node glow when it's the connection target */
+.react-flow__node:has(.connection-target-highlight) {
+  box-shadow: 0 0 25px color-mix(in srgb, var(--target-highlight-color, #22c55e) 40%, transparent) !important;
+}
+
+/* =============================================================================
+   EDGE STYLES
+   ============================================================================= */
+
+/* Ensure edge layer is interactive and above nodes when hovered/selected */
+.react-flow__edges {
+  pointer-events: none;
+}
+
+.react-flow__edge {
+  pointer-events: visibleStroke;
+}
+
+/* When an edge is hovered or selected, bring it above other elements */
+.react-flow__edge:hover,
+.react-flow__edge.selected {
+  z-index: 1000 !important;
+}
+
+.react-flow__edge-path {
+  /* stroke colors handled by inline styles in CustomEdge.tsx */
+  cursor: pointer;
+  transition: stroke 0.15s ease, stroke-width 0.15s ease, filter 0.15s ease;
+}
+
+/* Sleeker edge styling */
+.react-flow__edge-path {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Edge interaction path - invisible wider path for easier clicking */
+.react-flow__edge-interaction {
+  stroke-width: 20;
+  stroke: transparent;
+  fill: none;
+  pointer-events: stroke;
+}
+
+/* Reconnection handle styles - the circles at edge endpoints */
+.react-flow__edgeupdater {
+  cursor: grab;
+  pointer-events: all;
+}
+
+.react-flow__edgeupdater circle {
+  fill: #3b82f6;
+  stroke: #1e40af;
+  stroke-width: 1.5;
+  r: 6;
+  opacity: 0;
+  transition: opacity 0.15s ease, r 0.15s ease, fill 0.15s ease;
+}
+
+/* Show handles on edge hover */
+.react-flow__edge:hover .react-flow__edgeupdater circle {
+  opacity: 1;
+}
+
+/* Enlarge and highlight handles on direct hover */
+.react-flow__edgeupdater:hover circle {
+  opacity: 1;
+  r: 10;
+  fill: #60a5fa;
+  stroke: #3b82f6;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.7));
+}
+
+/* Pulsing animation when hovering reconnect handle */
+.react-flow__edgeupdater:hover circle {
+  animation: reconnect-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes reconnect-pulse {
+  0%, 100% {
+    r: 10;
+    filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.7));
+  }
+  50% {
+    r: 12;
+    filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.9));
+  }
+}
+
+/* When actively dragging the handle */
+.react-flow__edgeupdater:active circle,
+.react-flow__edgeupdater.active circle {
+  fill: #22c55e;
+  stroke: #16a34a;
+  r: 12;
+  animation: none;
+  filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.8));
+}
+
+/* Show handles on selected edges always */
+.react-flow__edge.selected .react-flow__edgeupdater circle {
+  opacity: 1;
+  r: 8;
+}
+
+/* All edges render above project nodes since projects have z-index: -1 */
+.react-flow__edge g[data-intra-project="true"] {
+  /* intraProject flag is kept for potential future styling but z-index is no longer needed */
+}
+
+/* =============================================================================
+   FOCUS MODE EDGE STYLES
+   When focus mode is active, all edges are dimmed except those connected
+   to the focused node. Uses .focus-mode-active class on ReactFlow container.
+   ============================================================================= */
+
+/* Global edge dimming when focus mode is active */
+.focus-mode-active .react-flow__edge .react-flow__edge-path {
+  opacity: 0.1;
+  filter: grayscale(100%);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+/* Edges connected to focused node retain some visibility via hover restore */
+.focus-mode-active .react-flow__edge:hover .react-flow__edge-path {
+  opacity: 0.6;
+  filter: grayscale(50%);
+}
+
+/* =============================================================================
+   STATUS BADGES
+   ============================================================================= */
+
+.status-badge {
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+}
+
+/* =============================================================================
+   NODE RESIZER STYLES
+   ============================================================================= */
+
+/* Make sure resize handles are visible */
+.react-flow__resize-control {
+  position: absolute !important;
+  /* Hidden by default, shown on hover or selected */
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+}
+
+/* Show resize controls on node hover or when selected */
+.react-flow__node:hover .react-flow__resize-control,
+.react-flow__node.selected .react-flow__resize-control {
+  opacity: 1;
+}
+
+.react-flow__resize-control.handle {
+  width: 10px !important;
+  height: 10px !important;
+  /* Colors set via handleStyle prop on NodeResizer to match node color */
+  border-radius: 2px !important;
+  z-index: 100 !important;
+}
+
+.react-flow__resize-control.line {
+  /* Colors set via lineStyle prop on NodeResizer to match node color */
+  /* Visual border is thin but hit area is wider via the element itself */
+  border-width: 2px !important;
+}
+
+/* Line handles - keep default positioning, just ensure they're visible */
+.react-flow__resize-control.line.top {
+  top: 0 !important;
+}
+.react-flow__resize-control.line.bottom {
+  bottom: 0 !important;
+}
+.react-flow__resize-control.line.left {
+  left: 0 !important;
+}
+.react-flow__resize-control.line.right {
+  right: 0 !important;
+}
+
+/* Corner handles - centered on node corners */
+.react-flow__resize-control.handle.top.left {
+  top: -5px !important;
+  left: -5px !important;
+  cursor: nwse-resize !important;
+}
+
+.react-flow__resize-control.handle.top.right {
+  /* Hidden to avoid overlap with AutoFitButton */
+  display: none !important;
+}
+
+.react-flow__resize-control.handle.bottom.left {
+  bottom: -5px !important;
+  left: -5px !important;
+  cursor: nesw-resize !important;
+}
+
+.react-flow__resize-control.handle.bottom.right {
+  bottom: -5px !important;
+  right: -5px !important;
+  cursor: nwse-resize !important;
+}
+
+/* Edge handles (midpoint handles) - centered on edges */
+.react-flow__resize-control.handle.top:not(.left):not(.right) {
+  top: -5px !important;
+  cursor: ns-resize !important;
+}
+
+.react-flow__resize-control.handle.bottom:not(.left):not(.right) {
+  bottom: -5px !important;
+  cursor: ns-resize !important;
+}
+
+.react-flow__resize-control.handle.left:not(.top):not(.bottom) {
+  left: -5px !important;
+  cursor: ew-resize !important;
+}
+
+.react-flow__resize-control.handle.right:not(.top):not(.bottom) {
+  right: -5px !important;
+  cursor: ew-resize !important;
+}
+
+/* Hide resize handles by default, show on hover or selection */
+.react-flow__resize-control {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.react-flow__node:hover .react-flow__resize-control {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.react-flow__node.selected .react-flow__resize-control {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.priority-badge {
+  @apply inline-flex items-center gap-1 text-xs;
+}
+
+/* =============================================================================
+   DISABLED NODE STYLES
+   ============================================================================= */
+
+.cognograph-node--disabled {
+  @apply opacity-50;
+  filter: grayscale(60%) blur(0.5px);
+  pointer-events: auto; /* Keep interactive for selection */
+}
+
+.cognograph-node--disabled .cognograph-node__title {
+  @apply text-gray-500;
+}
+
+.cognograph-node--disabled .cognograph-node__body {
+  @apply text-gray-600;
+}
+
+.cognograph-node--disabled .cognograph-node__footer {
+  @apply text-gray-600;
+}
+
+.cognograph-node--disabled .react-flow__handle {
+  @apply opacity-30;
+}
+
+/* Light mode disabled styles */
+[data-theme="light"] .cognograph-node--disabled {
+  @apply opacity-60;
+}
+
+[data-theme="light"] .cognograph-node--disabled .cognograph-node__title {
+  @apply text-gray-400;
+}
+
+[data-theme="light"] .cognograph-node--disabled .cognograph-node__body {
+  @apply text-gray-400;
+}
+
+[data-theme="light"] .cognograph-node--disabled .cognograph-node__footer {
+  @apply text-gray-400;
+}
+
+/* =============================================================================
+   PINNED NODE INDICATOR
+   Shows a subtle visual indicator when a node is pinned to a floating window
+   ============================================================================= */
+
+/* =============================================================================
+   NODE SHAPE VARIANTS
+   Shape classes that override border-radius for different visual styles
+   ============================================================================= */
+
+/* Rectangle - Default shape with minimal rounding (already applied via .cognograph-node) */
+.node-shape-rectangle {
+  border-radius: 4px !important;
+}
+
+/* Rounded - Softer, more friendly appearance */
+.node-shape-rounded {
+  border-radius: 12px !important;
+}
+
+/* Pill - Fully rounded ends (for tags, quick items) */
+.node-shape-pill {
+  border-radius: 9999px !important;
+}
+
+/* Hexagon - Special/milestone nodes */
+.node-shape-hexagon {
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  border-radius: 0 !important;
+  /* Adjust padding to account for clipped corners */
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* Hexagon needs a visible border simulation since clip-path cuts the border */
+.node-shape-hexagon::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  background: var(--tw-border-opacity, 1) var(--node-border-color, currentColor);
+  z-index: -1;
+}
+
+/* =============================================================================
+   SHIFT+DRAG EDGE CREATION CURSOR FEEDBACK
+   When Shift is held, nodes show crosshair cursor to indicate edge creation mode
+   ============================================================================= */
+
+/* Show crosshair cursor on nodes when Shift is held (ready to drag) */
+.shift-drag-ready .react-flow__node {
+  cursor: crosshair !important;
+}
+
+/* Tooltip-like visual hint when hovering nodes with Shift held */
+.shift-drag-ready .react-flow__node::after {
+  content: 'Drag to connect';
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: var(--surface-overlay, rgba(0, 0, 0, 0.85));
+  color: var(--text-primary, white);
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 1000;
+}
+
+.shift-drag-ready .react-flow__node:hover::after {
+  opacity: 1;
+}
+
+/* During active drag, show grabbing cursor */
+.shift-drag-active {
+  cursor: grabbing !important;
+}
+
+.shift-drag-active * {
+  cursor: inherit !important;
+}
+
+/* =============================================================================
+   AUTO-FIT BUTTON
+   Button that appears on selected nodes to fit dimensions to content
+   ============================================================================= */
+
+.auto-fit-button {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background-color: var(--button-color, var(--gui-accent-primary));
+  border: 2px solid white;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.9;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    box-shadow 0.15s ease;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.auto-fit-button:hover {
+  opacity: 1;
+  transform: scale(1.15);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.auto-fit-button:active {
+  transform: scale(0.95);
+}
+
+/* Light mode adjustments */
+[data-theme="light"] .auto-fit-button {
+  border-color: rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .auto-fit-button:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* =============================================================================
+   FOLD BADGE
+   Badge that appears on nodes with children, allowing collapse/expand
+   ============================================================================= */
+
+.fold-badge {
+  position: absolute;
+  bottom: -8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background-color: var(--badge-color, var(--gui-accent-primary));
+  border: 2px solid white;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.9;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    box-shadow 0.15s ease;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.fold-badge:hover {
+  opacity: 1;
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.fold-badge:active {
+  transform: scale(0.95);
+}
+
+.fold-badge__count {
+  font-size: 9px;
+  font-weight: 700;
+}
+
+/* Light mode adjustments */
+[data-theme="light"] .fold-badge {
+  border-color: rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* =============================================================================
+   NODE FOLDING ANIMATIONS
+   Smooth transitions for nodes being collapsed/expanded
+   ============================================================================= */
+
+/* Nodes that are being hidden due to parent collapse */
+.cognograph-node.node-collapsing {
+  animation: node-collapse 0.2s ease-out forwards;
+}
+
+@keyframes node-collapse {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+/* Nodes that are being shown due to parent expand */
+.cognograph-node.node-expanding {
+  animation: node-expand 0.3s ease-out forwards;
+}
+
+@keyframes node-expand {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* =============================================================================
+   TEXT NODE STYLES
+   ============================================================================= */
+
+.text-node {
+  @apply rounded-md transition-[box-shadow,border-color] duration-150;
+  min-width: 100px;
+  min-height: 30px;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  background: transparent;
+}
+
+.text-node.selected {
+  /* Selection glow uses --ring-color set by inline styles */
+}
+
+.text-node-body {
+  flex: 1;
+  min-height: 20px;
+  padding: 4px 6px;
+  color: var(--node-text-primary);
+  cursor: default;
+  position: relative; /* Required for ::before placeholder pseudo-element */
+}
+
+/* Text node content heading styles */
+.text-node-body h1 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin: 0 0 0.3em;
+  line-height: 1.2;
+}
+
+.text-node-body h2 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 0 0 0.25em;
+  line-height: 1.3;
+}
+
+.text-node-body h3 {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 0 0 0.2em;
+  line-height: 1.3;
+}
+
+/* Text node list styles */
+.text-node-body ul,
+.text-node-body ol {
+  margin: 0.2em 0;
+  padding-left: 1.2em;
+}
+
+.text-node-body li {
+  margin: 0.1em 0;
+}
+
+/* Handles: smaller, more subtle on text nodes */
+.text-node .react-flow__handle {
+  --handle-size: 10px;
+  --handle-offset: -5px;
+}
+
+/* Placeholder text for empty text nodes */
+.text-node-body .tiptap p.is-editor-empty:first-child::before {
+  color: var(--node-text-muted);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  font-style: italic;
+  opacity: 0.6;
+}
+
+/* =============================================================================
+   PINNED NODE INDICATOR (Flexible Positioning) — DISABLED
+   Currently every dragged node is auto-pinned (App.tsx onNodeDragStop) with no
+   way to unpin, so the indicator shows on nearly every node = visual noise.
+   TODO: Revisit when auto-layout features land — add toggle UI, show indicator
+   only when layout engine is active, and let users unpin nodes.
+   See: layout-pinned system (layoutMode: 'pinned' on node data)
+   ============================================================================= */
+
+/* Old pinned style for backward compatibility (different from layout-pinned) */
+.cognograph-node.node--pinned {
+  /* Reserved for future use - currently no special styling */
+}
+
+/* =============================================================================
+   CUT NODE INDICATOR
+   Shows dimmed/dashed visual when nodes are cut (pending paste)
+   ============================================================================= */
+
+.cognograph-node.cognograph-node--cut {
+  opacity: 0.5;
+  outline: 2px dashed rgba(234, 179, 8, 0.7);
+  outline-offset: 4px;
+  transition: opacity 0.2s, outline 0.2s;
+}
+
+.cognograph-node.cognograph-node--cut .react-flow__handle {
+  opacity: 0.3 !important;
+}
+
+/* TextNode cut style */
+.text-node.text-node--cut {
+  opacity: 0.5;
+  outline: 2px dashed rgba(234, 179, 8, 0.7);
+  outline-offset: 4px;
+  transition: opacity 0.2s, outline 0.2s;
+}
+
+/* =============================================================================
+   SHOW MEMBERS MODE - DIM NON-MEMBERS
+   When viewing project membership, non-member nodes are dimmed
+   ============================================================================= */
+
+.cognograph-node.cognograph-node--non-member {
+  opacity: 0.35;
+  filter: grayscale(40%) blur(0.3px);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.cognograph-node.cognograph-node--non-member:hover {
+  opacity: 0.6;
+  filter: grayscale(20%);
+}
+
+/* =============================================================================
+   ENHANCED FOCUS MODE - More aggressive dimming for unconnected nodes
+   Based on MindNode's calm design: unfocused elements should virtually disappear
+   ============================================================================= */
+
+/* Focus mode: Unfocused nodes get very aggressive dimming */
+.cognograph-node.cognograph-node--focus-unfocused {
+  opacity: 0.15;
+  filter: grayscale(50%) blur(0.5px);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+  pointer-events: none; /* Disable interaction with unfocused nodes */
+}
+
+.cognograph-node.cognograph-node--focus-unfocused:hover {
+  opacity: 0.25;
+  filter: grayscale(40%);
+  pointer-events: auto;
+}
+
+/* Text nodes in focus mode */
+.text-node.text-node--focus-unfocused {
+  opacity: 0.15;
+  filter: grayscale(50%) blur(0.5px);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+  pointer-events: none;
+}
+
+.text-node.text-node--focus-unfocused:hover {
+  opacity: 0.25;
+  filter: grayscale(40%);
+  pointer-events: auto;
+}
+
+.cognograph-node.cognograph-node--member-highlight {
+  box-shadow: 0 0 0 3px var(--ring-color, #6366f1), 0 0 20px color-mix(in srgb, var(--ring-color, #6366f1) 40%, transparent);
+}
+
+/* =============================================================================
+   FOCUS MODE NEIGHBORHOOD - Lighter dimming for connected nodes
+   Keeps spatial context visible while highlighting focused area
+   ============================================================================= */
+
+.cognograph-node.cognograph-node--focus-neighbor {
+  opacity: 0.65;
+  filter: grayscale(15%);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.cognograph-node.cognograph-node--focus-neighbor:hover {
+  opacity: 0.85;
+  filter: grayscale(5%);
+}
+
+.text-node.text-node--focus-neighbor {
+  opacity: 0.65;
+  filter: grayscale(15%);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.text-node.text-node--focus-neighbor:hover {
+  opacity: 0.85;
+  filter: grayscale(5%);
+}
+
+/* Non-member text nodes */
+.text-node.text-node--non-member {
+  opacity: 0.35;
+  filter: grayscale(40%) blur(0.3px);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.text-node.text-node--non-member:hover {
+  opacity: 0.6;
+  filter: grayscale(20%);
+}
+
+/* =============================================================================
+   FADE-IN ANIMATION - For suggested actions and other UI elements
+   ============================================================================= */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+/* =============================================================================
+   TASK COMPLETION CELEBRATION - ND dopamine hit
+   ============================================================================= */
+
+@keyframes celebrate-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 15px rgba(34, 197, 94, 0);
+    transform: scale(1.02);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    transform: scale(1);
+  }
+}
+
+.cognograph-node.cognograph-node--celebrating {
+  animation: celebrate-pulse 0.6s ease-out;
+  border-color: rgb(34, 197, 94) !important;
+}
+
+/* =============================================================================
+   VISUAL BOOKMARK - Flag node as current focus (ND feature)
+   ============================================================================= */
+
+.cognograph-node.cognograph-node--bookmarked {
+  box-shadow:
+    0 0 0 2px rgba(251, 191, 36, 0.5),
+    0 0 20px rgba(251, 191, 36, 0.3),
+    var(--tw-shadow, 0 0 #0000);
+}
+
+.cognograph-node.cognograph-node--bookmarked::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 16px;
+  height: 16px;
+  background: rgb(251, 191, 36);
+  border-radius: 50%;
+  z-index: 10;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
+}
+
+/* Star icon inside the bookmark indicator */
+.cognograph-node.cognograph-node--bookmarked::after {
+  content: '★';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  color: rgb(55, 48, 23);
+  z-index: 11;
+}
+
+/* =============================================================================
+   NUMBERED BOOKMARK BADGES (1-9 keys) - Instant spatial anchors
+   Each number has a distinct color for quick visual identification
+   ============================================================================= */
+
+.numbered-bookmark-badge {
+  position: absolute;
+  top: -7px;
+  left: -7px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  color: white;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1.5px solid var(--bm-color, #64748b);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s ease, background 0.1s ease;
+  cursor: pointer;
+}
+
+.numbered-bookmark-badge:hover {
+  transform: scale(1.15);
+  background: rgba(0, 0, 0, 0.8);
+}
+
+[data-theme="light"] .numbered-bookmark-badge {
+  background: rgba(255, 255, 255, 0.85);
+  color: #1e293b;
+}
+
+[data-theme="light"] .numbered-bookmark-badge:hover {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+/* 9 distinct accent colors — border only, no gradients */
+.numbered-bookmark-badge--1 { --bm-color: #ef4444; }
+.numbered-bookmark-badge--2 { --bm-color: #f97316; }
+.numbered-bookmark-badge--3 { --bm-color: #eab308; }
+.numbered-bookmark-badge--4 { --bm-color: #22c55e; }
+.numbered-bookmark-badge--5 { --bm-color: #14b8a6; }
+.numbered-bookmark-badge--6 { --bm-color: #3b82f6; }
+.numbered-bookmark-badge--7 { --bm-color: #8b5cf6; }
+.numbered-bookmark-badge--8 { --bm-color: #ec4899; }
+.numbered-bookmark-badge--9 { --bm-color: #6366f1; }
+
+/* =============================================================================
+   SEMANTIC ZOOM - Content scales with zoom, never hidden
+   Philosophy: Fade don't hide. Preserve visual context at all zoom levels.
+   ============================================================================= */
+
+/* Far zoom (<25%): Reduce opacity, disable interaction, but keep everything visible */
+.semantic-zoom-far .cognograph-node {
+  position: relative;
+}
+
+.semantic-zoom-far .cognograph-node__body {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.semantic-zoom-far .cognograph-node__title {
+  opacity: 0.6;
+}
+
+.semantic-zoom-far .cognograph-node__footer {
+  opacity: 0.4;
+}
+
+.semantic-zoom-far .property-badges {
+  opacity: 0.5;
+}
+
+/* Far zoom: Make numbered bookmarks more prominent (they're navigation aids) */
+.semantic-zoom-far .numbered-bookmark-badge {
+  transform: scale(1.5);
+  opacity: 1;
+}
+
+.semantic-zoom-far .numbered-bookmark-badge:hover {
+  transform: scale(1.7);
+}
+
+/* Mid zoom (25-50%): Slightly reduced opacity, full content visible */
+.semantic-zoom-mid .cognograph-node__body {
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+}
+
+.semantic-zoom-mid .cognograph-node__title {
+  opacity: 0.9;
+}
+
+.semantic-zoom-mid .cognograph-node__footer {
+  opacity: 0.7;
+}
+
+.semantic-zoom-mid .property-badges {
+  opacity: 0.8;
+}
+
+/* Close zoom (>50%): Full visibility (default) */
+.semantic-zoom-close .cognograph-node__body {
+  opacity: 1;
+  max-height: none;
+}
+
+.semantic-zoom-close .cognograph-node__title {
+  opacity: 1;
+}
+
+.semantic-zoom-close .cognograph-node__footer {
+  opacity: 1;
+}
+
+.semantic-zoom-close .property-badges {
+  opacity: 1;
+}
+
+/* Text nodes in semantic zoom - same philosophy: fade, don't hide */
+.semantic-zoom-far .text-node-body {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.semantic-zoom-mid .text-node-body {
+  opacity: 0.85;
+}
+
+/* Make first line slightly more prominent at mid-zoom for scanability */
+.semantic-zoom-mid .text-node-body .tiptap > p:first-child,
+.semantic-zoom-mid .text-node-body .tiptap > h1:first-child,
+.semantic-zoom-mid .text-node-body .tiptap > h2:first-child,
+.semantic-zoom-mid .text-node-body .tiptap > h3:first-child {
+  font-weight: 500;
+}
+
+/* =============================================================================
+   REDUCED MOTION SUPPORT
+   Disable animations and transforms for users who prefer reduced motion
+   ============================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .cognograph-node {
+    transition: none;
+  }
+
+  .react-flow__node:not(.dragging) .cognograph-node:hover:not(.selected) {
+    transform: none;
+  }
+
+  .react-flow__node.dragging .cognograph-node {
+    transform: none;
+  }
+
+  .cognograph-node.node-collapsing,
+  .cognograph-node.node-expanding {
+    animation: none;
+  }
+
+  .react-flow__handle {
+    transition: none;
+  }
+
+  .react-flow__handle.connecting {
+    animation: none;
+  }
+
+  .react-flow__handle.connection-target-highlight {
+    animation: none !important;
+  }
+
+  .react-flow__edgeupdater:hover circle {
+    animation: none;
+  }
+
+  .cognograph-node.cognograph-node--celebrating {
+    animation: none;
+  }
+
+  .numbered-bookmark-badge {
+    transition: none;
+  }
+
+  .auto-fit-button,
+  .fold-badge {
+    transition: none;
+  }
+}
