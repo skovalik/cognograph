@@ -4,6 +4,27 @@
 
 A spatial canvas where AI conversations, notes, tasks, and projects live as connected nodes. Draw a connection between two nodes and the AI reads both. Your layout is your prompt engineering.
 
+## Screenshots
+
+<div align="center">
+
+![Cognograph Interface](.github/images/cognograph_screenshot_01.jpg)
+
+*Spatial canvas with multiple node types and theme customization*
+
+</div>
+
+<details>
+<summary><b>More screenshots</b> (click to expand)</summary>
+
+![Theme Example 1](.github/images/cognograph_screenshot_02.jpg)
+![Theme Example 2](.github/images/cognograph_screenshot_03.jpg)
+![Theme Example 3](.github/images/cognograph_screenshot_04.jpg)
+![Theme Example 4](.github/images/cognograph_screenshot_05.jpg)
+![Theme Example 5](.github/images/cognograph_screenshot_06.jpg)
+
+</details>
+
 <!-- TODO: Add demo GIF showing: create note → create conversation → connect them → AI responds with note context -->
 
 ---
