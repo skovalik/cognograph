@@ -14,7 +14,7 @@ Thank you for your interest in contributing to Cognograph! This guide will help 
 ### Setup
 
 ```bash
-git clone https://github.com/AurochsDigital/cognograph.git
+git clone https://github.com/skovalik/cognograph.git
 cd cognograph
 npm install
 npm run dev
