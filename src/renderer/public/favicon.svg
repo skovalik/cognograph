@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Simplified C-shaped chain for favicon with rainbow colors + gray -->
+
+  <!-- Background -->
+  <rect width="32" height="32" rx="6" fill="#0d0d14"/>
+
+  <!-- Edges connecting nodes in C chain (rainbow order) -->
+  <g stroke-width="1.2" stroke-linecap="round" opacity="0.5">
+    <line x1="25" y1="6" x2="17" y2="5" stroke="#f97316"/>
+    <line x1="12" y1="6" x2="7" y2="10" stroke="#f59e0b"/>
+    <line x1="5" y1="13" x2="5" y2="18" stroke="#10b981"/>
+    <line x1="6" y1="22" x2="9" y2="25" stroke="#06b6d4"/>
+    <line x1="12" y1="27" x2="17" y2="28" stroke="#3b82f6"/>
+    <line x1="21" y1="27" x2="25" y2="25" stroke="#a855f7"/>
+  </g>
+
+  <!-- Node cards forming C (rainbow: Orange→Amber→Green→Cyan→Blue→Purple→Gray) -->
+  <rect x="23" y="3" width="6" height="5" rx="1" fill="#0d0d14" stroke="#f97316" stroke-width="1.5"/>
+  <rect x="10" y="3" width="6" height="5" rx="1" fill="#0d0d14" stroke="#f59e0b" stroke-width="1.5"/>
+  <rect x="3" y="9" width="6" height="5" rx="1" fill="#0d0d14" stroke="#10b981" stroke-width="1.5"/>
+  <rect x="3" y="17" width="5" height="6" rx="1" fill="#0d0d14" stroke="#06b6d4" stroke-width="1.5"/>
+  <rect x="5" y="24" width="6" height="5" rx="1" fill="#0d0d14" stroke="#3b82f6" stroke-width="1.5"/>
+  <rect x="14" y="25" width="6" height="5" rx="1" fill="#0d0d14" stroke="#a855f7" stroke-width="1.5"/>
+  <rect x="23" y="23" width="5" height="4" rx="1" fill="#0d0d14" stroke="#64748b" stroke-width="1.2"/>
+</svg>
