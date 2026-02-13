@@ -1,0 +1,316 @@
+/**
+ * Three-Tier Glassmorphism System
+ *
+ * Provides GPU-accelerated glassmorphism UI with automatic fallbacks:
+ * - .glass-solid: No blur, opaque backgrounds (low GPU / reduced motion)
+ * - .glass-soft: CSS backdrop-filter only (medium GPU)
+ * - .glass-fluid: Full GPU glass with shimmer (high GPU)
+ */
+
+/* =============================================================================
+   Tier 1: Solid (No Glass) - Low GPU / Reduced Motion
+   ============================================================================= */
+
+.glass-solid {
+  background: var(--surface-panel);
+  border: 1px solid var(--gui-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* =============================================================================
+   Tier 2: Soft Blur (CSS-Only Glass) - Medium GPU
+   ============================================================================= */
+
+.glass-soft {
+  /* NEUTRAL glass - no accent tinting */
+  /* Use --glass-opacity variable (from panelOpacity slider) */
+  background: color-mix(
+    in srgb,
+    var(--surface-panel) calc(max(30, var(--glass-opacity, 85)) * 1%),
+    transparent
+  );
+
+  /* CSS-only blur effect - use user's blur radius */
+  backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2);
+
+  /* Semi-transparent border */
+  border: 1px solid color-mix(in srgb, var(--gui-border) 70%, transparent);
+
+  /* Layered shadows for depth */
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 color-mix(in srgb, white 15%, transparent);
+}
+
+/* =============================================================================
+   Tier 3: FluidGlass (Full GPU Glass) - High GPU
+   ============================================================================= */
+
+.glass-fluid {
+  /* NEUTRAL premium glass - no accent tinting */
+  /* Use --glass-opacity variable with 12% more transparency for premium look */
+  background: color-mix(
+    in srgb,
+    var(--surface-panel) calc((max(30, var(--glass-opacity, 85)) - 12) * 1%),
+    transparent
+  );
+
+  /* Premium blur effect - use 2x user's blur radius for stronger effect */
+  backdrop-filter: blur(calc(var(--glass-blur, 12px) * 2)) saturate(1.5) brightness(1.1);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur, 12px) * 2)) saturate(1.5) brightness(1.1);
+
+  /* Neutral border */
+  border: 1px solid color-mix(in srgb, var(--gui-border) 50%, transparent);
+
+  /* Premium layered shadows */
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.24),
+    inset 0 1px 2px color-mix(in srgb, white 20%, transparent),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.1);
+
+  /* Enable stacking context for pseudo-elements */
+  position: relative;
+
+  /* CRITICAL: Contain shimmer within bounds */
+  overflow: hidden;
+}
+
+/* Noise texture overlay (SVG filter) */
+.glass-fluid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+
+  /* Noise texture only (no accent highlight) */
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><filter id="n"><feTurbulence baseFrequency="0.9" numOctaves="3"/></filter><rect width="100%" height="100%" filter="url(%23n)" opacity="0.03"/></svg>');
+
+  opacity: var(--glass-noise-opacity, 0.05);
+  pointer-events: none;
+}
+
+/* Shimmer sweep animation - ONLY on hover or .is-active state */
+@keyframes glass-shimmer {
+  0% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translateX(100%);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(150%);
+  }
+}
+
+.glass-fluid::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+
+  /* Neutral shimmer gradient (white highlight) */
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    transparent 100%
+  );
+
+  /* NO animation by default - only on hover/active */
+  opacity: 0;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Shimmer animation triggers - ONLY on direct hover or active state */
+/* REMOVED: .cognograph-node selectors - they caused fullscreen modals to shimmer */
+.glass-fluid:hover::after,
+.glass-fluid.is-active::after {
+  animation: glass-shimmer 3s cubic-bezier(0.4, 0, 0.2, 1) 1;
+}
+
+/* =============================================================================
+   Reduced Motion Override
+   ============================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-fluid::after {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+}
+
+/* =============================================================================
+   Print Media Override
+   ============================================================================= */
+
+@media print {
+  .glass-solid,
+  .glass-soft,
+  .glass-fluid {
+    /* Remove glass effects for print */
+    background: white !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  .glass-fluid::before,
+  .glass-fluid::after {
+    display: none !important;
+  }
+}
+
+/* =============================================================================
+   Data Attribute Selector (for App.tsx root element)
+   ============================================================================= */
+
+/* Allow overriding at root level via data-glass-style attribute */
+/* NOTE: .glass-auto class is not used anywhere - these selectors removed */
+/* Glass effects are applied via data attributes directly to .cognograph-node elements */
+
+/* =============================================================================
+   Surface-Specific Data Attribute Rules
+   Apply glass effects to toolbars, panels, and modals based on data attributes
+   ============================================================================= */
+
+/* Toolbars - Soft Blur (NEUTRAL - no accent tinting) */
+html[data-glass-toolbar="true"][data-glass-style="soft-blur"] .gui-toolbar {
+  background: color-mix(
+    in srgb,
+    var(--surface-panel) calc(max(30, var(--glass-opacity, 85)) * 1%),
+    transparent
+  );
+  backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2);
+  border: 1px solid color-mix(in srgb, var(--gui-border) 70%, transparent);
+}
+
+/* Toolbars - Fluid Glass (NEUTRAL - no accent tinting) */
+html[data-glass-toolbar="true"][data-glass-style="fluid-glass"] .gui-toolbar {
+  background: color-mix(
+    in srgb,
+    var(--surface-panel) calc((var(--glass-opacity, 85) - 12) * 1%),
+    transparent
+  );
+  backdrop-filter: blur(calc(var(--glass-blur, 12px) * 2)) saturate(1.5) brightness(1.1);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur, 12px) * 2)) saturate(1.5) brightness(1.1);
+  border: 1px solid color-mix(in srgb, var(--gui-border) 50%, transparent);
+  position: relative;
+}
+
+/* Panels - Soft Blur (NEUTRAL - no accent tinting) */
+html[data-glass-panels="true"][data-glass-style="soft-blur"] .gui-panel {
+  background: color-mix(
+    in srgb,
+    var(--surface-panel) calc(max(30, var(--glass-opacity, 85)) * 1%),
+    transparent
+  );
+  backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2);
+  border: 1px solid color-mix(in srgb, var(--gui-border) 70%, transparent);
+}
+
+/* Panels - Fluid Glass (NEUTRAL - no accent tinting) */
+html[data-glass-panels="true"][data-glass-style="fluid-glass"] .gui-panel {
+  background: color-mix(
+    in srgb,
+    var(--surface-panel) calc((max(30, var(--glass-opacity, 85)) - 12) * 1%),
+    transparent
+  );
+  backdrop-filter: blur(calc(var(--glass-blur, 12px) * 2)) saturate(1.5) brightness(1.1);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur, 12px) * 2)) saturate(1.5) brightness(1.1);
+  border: 1px solid color-mix(in srgb, var(--gui-border) 50%, transparent);
+  position: relative;
+}
+
+/* =============================================================================
+   Opaque Content Mode
+   Text stays at full opacity while backgrounds use --glass-opacity
+   NOTE: This is handled via the background color-mix() above, not via CSS rules
+   The --glass-opacity variable controls background transparency only
+   ============================================================================= */
+
+/* REMOVED: Forcing opacity: 1 on children breaks everything
+   Instead, backgrounds use --glass-opacity in color-mix()
+   Text colors use full --gui-text-primary without alpha channel */
+
+/* =============================================================================
+   EXPLICIT CLASS OVERRIDES
+   Force hardcoded glass-X classes to respect user settings via data attributes
+
+   ROOT CAUSE: 30+ components use hardcoded glass-fluid/glass-soft that ignore
+   user settings. These rules OVERRIDE explicit classes based on data attributes.
+   ============================================================================= */
+
+/* When user wants SOLID → override ALL glass classes to solid */
+html[data-glass-style="solid"] .glass-fluid,
+html[data-glass-style="solid"] .glass-soft {
+  background: var(--surface-panel) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid var(--gui-border) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+  overflow: visible !important; /* Remove overflow:hidden from fluid */
+}
+
+/* When user wants SOFT-BLUR → force ALL glass classes to use soft-blur */
+html[data-glass-style="soft-blur"] .glass-fluid,
+html[data-glass-style="soft-blur"] .glass-solid {
+  background: color-mix(
+    in srgb,
+    var(--surface-panel) calc(max(30, var(--glass-opacity, 85)) * 1%),
+    transparent
+  ) !important;
+  backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2) !important;
+  border: 1px solid color-mix(in srgb, var(--gui-border) 70%, transparent) !important;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 color-mix(in srgb, white 15%, transparent) !important;
+  overflow: visible !important;
+}
+
+/* When user wants FLUID-GLASS → force .glass-fluid/.glass-soft to use fluid-glass */
+html[data-glass-style="fluid-glass"] .glass-fluid,
+html[data-glass-style="fluid-glass"] .glass-soft {
+  background: color-mix(
+    in srgb,
+    var(--surface-panel) calc((var(--glass-opacity, 85) - 12) * 1%),
+    transparent
+  ) !important;
+  backdrop-filter: blur(calc(var(--glass-blur, 12px) * 2)) saturate(1.5) brightness(1.1) !important;
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur, 12px) * 2)) saturate(1.5) brightness(1.1) !important;
+  border: 1px solid color-mix(in srgb, var(--gui-border) 50%, transparent) !important;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.24),
+    inset 0 1px 2px color-mix(in srgb, white 20%, transparent),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.1) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* When surface is DISABLED → force solid for that surface type */
+html[data-glass-modals="false"] .glass-fluid,
+html[data-glass-modals="false"] .glass-soft {
+  background: var(--surface-panel) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html[data-glass-panels="false"] .gui-panel.glass-fluid,
+html[data-glass-panels="false"] .gui-panel.glass-soft {
+  background: var(--surface-panel) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* REMOVED: This selector was too broad - it matched ALL glass elements (toolbars, panels, etc)
+   not just actual overlay elements. Overlays are already controlled by nodes/modals/panels settings.
+   If we need overlay-specific control in the future, use a more specific class like .gui-overlay */

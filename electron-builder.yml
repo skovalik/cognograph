@@ -1,0 +1,113 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json
+
+appId: com.cognograph.app
+productName: Cognograph
+copyright: Copyright (c) 2026 Stefan Kovalik
+
+# electron-vite outputs to out/ (main, preload, renderer)
+directories:
+  buildResources: build
+  output: release/${version}
+
+# Files to include in the ASAR archive
+# electron-vite bundles everything into out/, so we include that
+# plus node_modules for externalized main-process dependencies
+files:
+  - out/**/*
+  - "!**/*.map"
+  - "!**/node_modules/.cache"
+  # Exclude source files, configs, and dev artifacts from the package
+  - "!src/**/*"
+  - "!docs/**/*"
+  - "!coverage/**/*"
+  - "!e2e/**/*"
+  - "!server/**/*"
+  - "!scripts/**/*"
+  - "!resources/logo-conepts/**/*"
+  - "!**/.vscode/*"
+  - "!electron.vite.config.{js,ts,mjs,cjs}"
+  - "!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml}"
+  - "!{.env,.env.*,.npmrc,pnpm-lock.yaml}"
+  - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
+  - "!{CLAUDE.md,ARCHITECTURE.md,DECISIONS.md,TODO.md,CHANGELOG.md}"
+  - "!{vitest.config.ts,playwright.config.ts,.dependency-cruiser.cjs}"
+  - "!{shader*.png,patent-*.png,p1-fig*.png}"
+
+# Pack into ASAR archive for faster loading and path length mitigation on Windows
+asar: true
+
+# Don't rebuild native modules (we don't have any currently)
+npmRebuild: false
+
+# --- Windows ----------------------------------------------------------------
+win:
+  executableName: Cognograph
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  artifactName: Cognograph-${version}-Setup.${ext}
+  shortcutName: Cognograph
+  uninstallDisplayName: Cognograph ${version}
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+
+# --- macOS -------------------------------------------------------------------
+mac:
+  icon: build/icon.icns
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  # Skip signing and notarization for v0.1 (unsigned)
+  identity: null
+  gatekeeperAssess: false
+  hardenedRuntime: false
+  entitlementsInherit: build/entitlements.mac.plist
+
+dmg:
+  artifactName: Cognograph-${version}.${ext}
+  sign: false
+
+# --- Linux -------------------------------------------------------------------
+linux:
+  icon: build/icon.png
+  category: Utility
+  target:
+    - AppImage
+    - deb
+  maintainer: Stefan Kovalik
+  synopsis: Spatial canvas for AI workflow orchestration
+  description: >
+    Cognograph is a spatial canvas where users arrange AI conversations,
+    notes, tasks, and projects as nodes on an infinite canvas.
+    Connected nodes automatically inject context into AI prompts.
+
+appImage:
+  artifactName: Cognograph-${version}.${ext}
+
+deb:
+  artifactName: Cognograph-${version}.${ext}
+
+# --- File Associations -------------------------------------------------------
+fileAssociations:
+  - ext: cognograph
+    name: Cognograph Workspace
+    description: Cognograph Workspace File
+    mimeType: application/x-cognograph
+    role: Editor
+
+# --- Auto-Updater (deferred -- placeholder) ----------------------------------
+# publish:
+#   provider: github
+#   owner: <github-org>
+#   repo: cognograph

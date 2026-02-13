@@ -1,0 +1,321 @@
+/* =============================================================================
+ * bridgeAnimations.css — Spatial Command Bridge CSS animations
+ *
+ * All Bridge-related animations in one file:
+ * - Edge flow animation (Phase 1)
+ * - Agent badge states (Phase 1)
+ * - Orchestrator badge glow (Phase 1)
+ * - Ghost node/edge (Phase 3)
+ * - Status bar transitions (Phase 1)
+ * ============================================================================= */
+
+/* --- Edge Flow Animation --------------------------------------------------- */
+
+.edge-flow-animated {
+  stroke-dasharray: 6 10;
+  animation: edgeFlowMove 1.5s linear infinite;
+}
+
+.edge-flow-animated--slow {
+  animation-duration: 2.5s;
+}
+
+.edge-flow-animated--fast {
+  animation-duration: 0.8s;
+}
+
+@keyframes edgeFlowMove {
+  to { stroke-dashoffset: -16; }
+}
+
+/* Glow effect on animated edges */
+.edge-flow-animated-glow {
+  filter: drop-shadow(0 0 2px var(--color-info, #3b82f6));
+  opacity: 0.85;
+}
+
+/* --- Agent Activity Badge -------------------------------------------------- */
+
+.agent-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 2;
+  border: 2px solid var(--surface-node, #1e293b);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 200ms ease, opacity 200ms ease;
+}
+
+.agent-badge--running {
+  background-color: var(--color-info-bg, rgba(59, 130, 246, 0.15));
+  color: var(--color-info, #3b82f6);
+}
+
+.agent-badge--waiting {
+  background-color: var(--color-warning-bg, rgba(245, 158, 11, 0.15));
+  color: var(--color-warning, #f59e0b);
+}
+
+.agent-badge--completed {
+  background-color: var(--color-success-bg, rgba(34, 197, 94, 0.15));
+  color: var(--color-success, #22c55e);
+  animation: badgeCompletePulse 1s ease-out;
+}
+
+.agent-badge--error {
+  background-color: var(--color-error-bg, rgba(220, 38, 38, 0.15));
+  color: var(--color-error, #dc2626);
+}
+
+.agent-badge--paused {
+  background-color: rgba(156, 163, 175, 0.15);
+  color: var(--text-muted, #9ca3af);
+}
+
+.agent-badge--queued {
+  background-color: rgba(107, 114, 128, 0.15);
+  color: var(--text-secondary, #6b7280);
+  animation: badgeQueuePulse 3s ease-in-out infinite;
+}
+
+/* Spinner for running state */
+.agent-badge-spinner {
+  animation: badgeSpin 1s linear infinite;
+}
+
+@keyframes badgeSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Completion pulse */
+@keyframes badgeCompletePulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* Queue pulse (subtle opacity) */
+@keyframes badgeQueuePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Waiting approval pulse */
+.agent-badge--waiting .agent-badge-icon {
+  animation: badgeWaitPulse 2s ease-in-out infinite;
+}
+
+@keyframes badgeWaitPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Fade-out animation for completed badges */
+.agent-badge--fade-out {
+  animation: badgeFadeOut 500ms ease-out forwards;
+}
+
+@keyframes badgeFadeOut {
+  to { opacity: 0; transform: scale(0.8); }
+}
+
+/* --- Orchestrator Badge Glow ----------------------------------------------- */
+
+.orchestrator-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 2;
+  border: 2px solid var(--surface-node, #1e293b);
+}
+
+.orchestrator-badge--orchestrating {
+  background-color: rgba(168, 85, 247, 0.2);
+  color: var(--node-orchestrator, #a855f7);
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.4),
+              0 0 16px rgba(168, 85, 247, 0.2);
+  animation: orchestratorGlow 2s ease-in-out infinite;
+}
+
+.orchestrator-badge--paused {
+  background-color: rgba(156, 163, 175, 0.15);
+  color: var(--text-muted, #9ca3af);
+}
+
+.orchestrator-badge--completed {
+  background-color: var(--color-success-bg, rgba(34, 197, 94, 0.15));
+  color: var(--color-success, #22c55e);
+  animation: badgeCompletePulse 1s ease-out;
+}
+
+.orchestrator-badge--error {
+  background-color: var(--color-error-bg, rgba(220, 38, 38, 0.15));
+  color: var(--color-error, #dc2626);
+}
+
+@keyframes orchestratorGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(168, 85, 247, 0.4); }
+  50% { box-shadow: 0 0 12px rgba(168, 85, 247, 0.6), 0 0 24px rgba(168, 85, 247, 0.3); }
+}
+
+/* --- Bridge Status Bar ----------------------------------------------------- */
+
+.bridge-status-bar {
+  animation: bridgeSlideDown 200ms ease-out;
+}
+
+.bridge-status-bar--hidden {
+  animation: bridgeSlideUp 150ms ease-in forwards;
+}
+
+@keyframes bridgeSlideDown {
+  from { transform: translateY(-36px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes bridgeSlideUp {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-36px); opacity: 0; }
+}
+
+/* Bridge badge pulse (for active agent count) */
+.bridge-badge-pulse {
+  animation: bridgeBadgePulse 2s ease-in-out infinite;
+}
+
+@keyframes bridgeBadgePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* --- Ghost Node (Phase 3) -------------------------------------------------- */
+
+.ghost-node {
+  background: var(--surface-node, #1e293b);
+  border: 2px dashed var(--ghost-color, #94a3b8);
+  border-radius: var(--radius-lg, 12px);
+  padding: 12px;
+  min-width: 180px;
+  max-width: 280px;
+  opacity: var(--ghost-opacity, 0.4);
+  transition: opacity 200ms ease, border-color 200ms ease;
+  position: relative;
+  cursor: grab;
+  animation: ghostPulse 2s ease-in-out infinite;
+}
+
+.ghost-node:hover {
+  opacity: 0.85;
+  border-style: solid;
+}
+
+.ghost-node:active {
+  cursor: grabbing;
+}
+
+.ghost-node-drag-handle {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+  transition: opacity 150ms;
+}
+
+.ghost-node:hover .ghost-node-drag-handle {
+  opacity: 0.6;
+}
+
+@keyframes ghostPulse {
+  0%, 100% { border-color: var(--ghost-color); }
+  50% { border-color: color-mix(in srgb, var(--ghost-color) 50%, transparent); }
+}
+
+/* --- Ghost Edge (Phase 3) -------------------------------------------------- */
+
+.ghost-edge {
+  stroke-dasharray: 5 5;
+  stroke-width: 1.5;
+  opacity: 0.4;
+  animation: ghostEdgeDash 1s linear infinite;
+}
+
+.ghost-edge:hover {
+  opacity: 0.8;
+  stroke-width: 2;
+}
+
+@keyframes ghostEdgeDash {
+  to { stroke-dashoffset: -10; }
+}
+
+/* --- Screen Reader Only ---------------------------------------------------- */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* --- Reduced Motion -------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .bridge-status-bar {
+    animation: none !important;
+    transition: opacity 0.01ms !important;
+  }
+
+  .bridge-badge-pulse {
+    animation: none !important;
+  }
+
+  .edge-flow-animated {
+    animation: none !important;
+    stroke-dasharray: 4 8;
+  }
+
+  .agent-badge-spinner {
+    animation: none !important;
+  }
+
+  .agent-badge--completed {
+    animation: none !important;
+  }
+
+  .agent-badge--queued {
+    animation: none !important;
+  }
+
+  .agent-badge--waiting .agent-badge-icon {
+    animation: none !important;
+  }
+
+  .orchestrator-badge--orchestrating {
+    animation: none !important;
+  }
+
+  .ghost-node {
+    animation: none !important;
+  }
+
+  .ghost-edge {
+    animation: none !important;
+  }
+}

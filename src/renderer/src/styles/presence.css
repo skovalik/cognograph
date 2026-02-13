@@ -1,0 +1,31 @@
+/* Presence & Multiplayer Styles */
+
+/* Remote cursor animation */
+.remote-cursor {
+  transition: transform 75ms linear;
+}
+
+/* Selection indicator pulse */
+@keyframes selection-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.remote-selection-ring {
+  animation: selection-pulse 2s ease-in-out infinite;
+}
+
+/* User avatar stack */
+.user-avatar-stack > *:not(:first-child) {
+  margin-left: -6px;
+}
+
+/* Connection status dot pulse */
+@keyframes status-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+}
+
+.status-dot-pulse {
+  animation: status-pulse 1.5s ease-in-out infinite;
+}
