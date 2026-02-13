@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+
+# Local shortcuts and personal files
+*.bat
+*.lnk
+workplace saves/
+shader*.png
+patent-*.png
+p1-fig*.png
+
+# Build output
+dist/
+dist-electron/
+out/
+release/
+
+# Electron
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage/
+
+# Misc
+*.bak
+*.tmp
+
+# Windows artifacts
+nul
+
+# Claude temporary files
+tmpclaude-*
+.claude/
+
+# Temporary utility scripts
+test.txt
+update-workspace.js
+e2e/test-results/
+
+# Claude Code activity bridge (ephemeral session data)
+# The JSONL events file is runtime data that must not be committed.
+# The hook script (.cognograph-activity/hook.mjs) IS tracked in git.
+.cognograph-activity/events.jsonl
