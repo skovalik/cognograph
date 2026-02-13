@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <!-- Glow filters for each node color - rainbow order -->
+    <filter id="glowOrange" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feFlood flood-color="#f97316" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowAmber" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feFlood flood-color="#f59e0b" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowGreen" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feFlood flood-color="#10b981" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowCyan" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feFlood flood-color="#06b6d4" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowBlue" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feFlood flood-color="#3b82f6" flood-opacity="0.6"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowPurple" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feFlood flood-color="#a855f7" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowGray" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#64748b" flood-opacity="0.4"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" fill="#0d0d14"/>
+
+  <!-- Edges connecting nodes in C-shape chain (rainbow order) -->
+  <g stroke-width="4" stroke-linecap="round" opacity="0.6">
+    <!-- Orange to Amber -->
+    <line x1="395" y1="95" x2="280" y2="82" stroke="#f97316"/>
+    <!-- Amber to Green -->
+    <line x1="200" y1="95" x2="130" y2="155" stroke="#f59e0b"/>
+    <!-- Green to Cyan -->
+    <line x1="100" y1="210" x2="90" y2="280" stroke="#10b981"/>
+    <!-- Cyan to Blue -->
+    <line x1="100" y1="345" x2="135" y2="400" stroke="#06b6d4"/>
+    <!-- Blue to Purple -->
+    <line x1="185" y1="430" x2="265" y2="445" stroke="#3b82f6"/>
+    <!-- Purple to Gray -->
+    <line x1="320" y1="445" x2="385" y2="420" stroke="#a855f7"/>
+  </g>
+
+  <!-- Node cards forming C shape (rainbow: Orange→Amber→Green→Cyan→Blue→Purple→Gray) -->
+
+  <!-- Node 1: Top right - Orange (Action) -->
+  <rect x="360" y="65" width="85" height="50" rx="6" fill="#0d0d14" stroke="#f97316" stroke-width="4" filter="url(#glowOrange)"/>
+
+  <!-- Node 2: Top center - Amber (Note) -->
+  <rect x="200" y="60" width="80" height="55" rx="6" fill="#0d0d14" stroke="#f59e0b" stroke-width="4" filter="url(#glowAmber)"/>
+
+  <!-- Node 3: Upper left - Green (Task) -->
+  <rect x="70" y="150" width="85" height="55" rx="6" fill="#0d0d14" stroke="#10b981" stroke-width="4" filter="url(#glowGreen)"/>
+
+  <!-- Node 4: Middle left - Cyan (Artifact) -->
+  <rect x="55" y="275" width="80" height="65" rx="6" fill="#0d0d14" stroke="#06b6d4" stroke-width="4" filter="url(#glowCyan)"/>
+
+  <!-- Node 5: Lower left - Blue (Conversation) -->
+  <rect x="90" y="395" width="90" height="50" rx="6" fill="#0d0d14" stroke="#3b82f6" stroke-width="4" filter="url(#glowBlue)"/>
+
+  <!-- Node 6: Bottom center - Purple (Project) -->
+  <rect x="225" y="420" width="90" height="50" rx="6" fill="#0d0d14" stroke="#a855f7" stroke-width="4" filter="url(#glowPurple)"/>
+
+  <!-- Node 7: Bottom right - Gray (Text/neutral) -->
+  <rect x="365" y="395" width="75" height="48" rx="6" fill="#0d0d14" stroke="#64748b" stroke-width="4" filter="url(#glowGray)"/>
+</svg>

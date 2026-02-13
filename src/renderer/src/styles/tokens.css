@@ -1,0 +1,415 @@
+/* =============================================================================
+   DESIGN TOKENS
+   Single source of truth for all visual properties.
+   Consumed by index.css (GUI) and nodes.css (nodes) via aliases.
+
+   SYNCED WITH: styleguide-master_02.html (2026-02-01)
+   ============================================================================= */
+
+:root {
+  /* =========================================================================
+     SURFACE COLORS
+     Background colors for canvas, panels, nodes, and inputs
+     ========================================================================= */
+  --surface-canvas: #0d0d14;
+  --surface-grid: #1a1a24;
+  --surface-panel: #0d0d14;
+  --surface-panel-secondary: #14161e;
+  --surface-node: rgba(13, 13, 20, 0.95);
+  --surface-node-secondary: rgba(20, 22, 30, 0.5);
+  --surface-node-header: transparent;
+  --surface-input: #14161e;
+
+  /* =========================================================================
+     TEXT COLORS
+     Primary, secondary, and muted text
+     ========================================================================= */
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --text-muted: #9ca3af;
+
+  /* =========================================================================
+     ACCENT COLORS
+     Interactive elements, buttons, focus rings
+     ========================================================================= */
+  --accent-primary: #9333ea;
+  --accent-secondary: #2563eb;
+  --accent-primary-hover: color-mix(in srgb, var(--accent-primary) 85%, white);
+  --accent-secondary-hover: color-mix(in srgb, var(--accent-secondary) 85%, white);
+
+  /* =========================================================================
+     NODE TYPE COLORS
+     Each node type has a distinct brand color
+     ========================================================================= */
+  --node-conversation: #3b82f6;
+  --node-project: #8b5cf6;
+  --node-note: #f59e0b;
+  --node-task: #10b981;
+  --node-artifact: #06b6d4;
+  --node-workspace: #ef4444;
+  --node-text: #94a3b8;
+  --node-action: #f97316;
+  --node-orchestrator: #a855f7;  /* purple-500 - agent mode differentiation */
+
+  /* =========================================================================
+     NODE MODE TINTS
+     Visual differentiation for node modes via background opacity
+     Based on Phase 0 user study: 76% accuracy, 80% preference
+     ========================================================================= */
+  --node-mode-tint-light: 15%;      /* Light modes: General, Background */
+  --node-mode-tint-medium: 25%;     /* Medium modes: Reference, Example, Page, etc. */
+  --node-mode-tint-heavy: 40%;      /* Heavy modes: Persona, Instruction, Design Tokens */
+  --node-mode-transition-duration: 200ms; /* Smooth tint changes */
+
+  /* =========================================================================
+     STATUS COLORS
+     Semantic colors for success, warning, error, info states
+     ========================================================================= */
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-error: #dc2626;
+  --color-info: #3b82f6;
+  --color-success-bg: rgba(34, 197, 94, 0.15);
+  --color-warning-bg: rgba(245, 158, 11, 0.15);
+  --color-error-bg: rgba(220, 38, 38, 0.15);
+  --color-info-bg: rgba(59, 130, 246, 0.15);
+
+  /* =========================================================================
+     DISABLED STATES
+     Colors for disabled/inactive elements
+     ========================================================================= */
+  --color-disabled-bg: rgba(255, 255, 255, 0.05);
+  --color-disabled-text: rgba(255, 255, 255, 0.35);
+  --color-disabled-border: rgba(255, 255, 255, 0.1);
+
+  /* =========================================================================
+     OVERLAY COLORS
+     Backdrop and overlay colors
+     ========================================================================= */
+  --overlay-light: rgba(255, 255, 255, 0.8);
+  --overlay-dark: rgba(0, 0, 0, 0.5);
+  --overlay-backdrop: rgba(0, 0, 0, 0.6);
+
+  /* =========================================================================
+     BORDER COLORS
+     Subtle and default borders for containers and dividers
+     ========================================================================= */
+  --border-subtle: color-mix(in srgb, var(--text-secondary) 30%, transparent);
+  --border-default: color-mix(in srgb, var(--text-secondary) 6%, transparent);
+  --border-node: rgb(55, 65, 81);
+
+  /* =========================================================================
+     SPACING SCALE
+     4px base unit. Use multiples: 1=4px, 2=8px, 3=12px, etc.
+     ========================================================================= */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* =========================================================================
+     BORDER RADIUS
+     sm for badges/tags, md for inputs, lg for cards, xl for panels
+     ========================================================================= */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* =========================================================================
+     SHADOWS
+     Elevation levels: node < panel < modal
+     Material Design 3 inspired layered shadows (ambient + key light)
+     ========================================================================= */
+  /* Node shadows - layered for tactile feel */
+  --shadow-node: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --shadow-node-hover: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
+  --shadow-node-selected: 0px 1px 3px 0px rgba(0, 0, 0, 0.3), 0px 4px 8px 3px rgba(0, 0, 0, 0.15);
+  --shadow-node-drag: 0px 8px 24px rgba(0, 0, 0, 0.25);
+
+  /* Panel and modal shadows */
+  --shadow-panel: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-toast: 0 4px 20px rgba(0, 0, 0, 0.4);
+
+  /* Edge shadows */
+  --shadow-edge-hover: drop-shadow(0 0 2px rgba(0, 0, 0, 0.15));
+  --shadow-edge-selected: drop-shadow(0 0 4px rgba(59, 130, 246, 0.4));
+
+  /* Selection ring (for focus and selection states) */
+  --selection-color: var(--accent-secondary);
+  --selection-ring: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  --focus-ring: 0 0 0 2px var(--selection-color);
+  --focus-ring-offset: 2px;
+
+  /* =========================================================================
+     TYPOGRAPHY
+     Font families and size scale
+     ========================================================================= */
+  --font-sans: 'Inter', 'Roboto', 'Open Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Source Code Pro', monospace;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+
+  /* =========================================================================
+     MOTION
+     Duration and easing tokens. Respect prefers-reduced-motion.
+     ========================================================================= */
+  --duration-instant: 50ms;
+  --duration-fast: 100ms;
+  --duration-normal: 150ms;
+  --duration-slow: 200ms;
+  --duration-emphasis: 300ms;
+  --duration-enter: 250ms;
+  --duration-exit: 200ms;
+  --ease-default: ease-out;
+  --ease-out: cubic-bezier(0, 0, 0.58, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: ease-in-out;
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* =========================================================================
+     COMPONENT SIZING
+     Handles, scrollbars, panel widths
+     ========================================================================= */
+  --handle-size: 16px;
+  --handle-hit-area: 40px;
+  --handle-offset: -8px;
+  --scrollbar-width: 8px;
+  --node-min-width: 150px;
+  --node-min-height: 80px;
+  --panel-width-properties: 360px;
+  --panel-width-sidebar: 280px;
+  --panel-width-chat: 400px;
+
+  /* =========================================================================
+     TOOLBAR ICON COLORS
+     Default + 4 accent slots for toolbar buttons
+     ========================================================================= */
+  --toolbar-icon-default: #9ca3af;
+  --toolbar-icon-1: #a855f7;
+  --toolbar-icon-2: #22d3ee;
+  --toolbar-icon-3: #34d399;
+  --toolbar-icon-4: #a855f7;
+
+  /* =========================================================================
+     Z-INDEX SCALE
+     Layering for canvas elements, panels, modals, toasts
+     ========================================================================= */
+  --z-canvas-nodes: 0;
+  --z-canvas-edges: 5;
+  --z-panels: 50;
+  --z-dropdowns: 60;
+  --z-modals: 100;
+  --z-toasts: 9999;
+}
+
+/* =============================================================================
+   LIGHT MODE OVERRIDES
+   Applied when data-theme="light" on body or ancestor
+   ============================================================================= */
+[data-theme="light"] {
+  --surface-canvas: #ffffff;
+  --surface-grid: #e5e7eb;
+  --surface-panel: #ffffff;
+  --surface-panel-secondary: #f9fafb;
+  --surface-node: rgba(255, 255, 255, 0.95);
+  --surface-node-secondary: rgba(243, 244, 246, 0.8);
+  --surface-node-header: rgba(249, 250, 251, 0.5);
+  --surface-input: #ffffff;
+
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+
+  --accent-primary: #7c3aed;
+  --accent-secondary: #2563eb;
+
+  --border-node: rgb(209, 213, 219);
+
+  /* Layered shadows for light mode */
+  --shadow-node: 0px 1px 2px 0px rgba(0, 0, 0, 0.1), 0px 1px 3px 1px rgba(0, 0, 0, 0.06);
+  --shadow-node-hover: 0px 1px 2px 0px rgba(0, 0, 0, 0.1), 0px 2px 6px 2px rgba(0, 0, 0, 0.08);
+  --shadow-node-selected: 0px 1px 3px 0px rgba(0, 0, 0, 0.1), 0px 4px 8px 3px rgba(0, 0, 0, 0.08);
+  --shadow-node-drag: 0px 8px 24px rgba(0, 0, 0, 0.15);
+  --shadow-panel: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-modal: 0 4px 16px rgba(0, 0, 0, 0.15);
+
+  /* Disabled states for light mode */
+  --color-disabled-bg: rgba(0, 0, 0, 0.05);
+  --color-disabled-text: rgba(0, 0, 0, 0.35);
+  --color-disabled-border: rgba(0, 0, 0, 0.1);
+
+  --toolbar-icon-default: #6b7280;
+  --toolbar-icon-1: #7c3aed;
+  --toolbar-icon-2: #0891b2;
+  --toolbar-icon-3: #059669;
+  --toolbar-icon-4: #7c3aed;
+}
+
+/* =============================================================================
+   REDUCED MOTION
+   Disable animations when user prefers reduced motion
+   ============================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 0ms;
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+    --duration-slow: 0ms;
+    --duration-emphasis: 0ms;
+    --duration-enter: 0ms;
+    --duration-exit: 0ms;
+  }
+}
+
+/* App-level reduced motion override - user explicitly wants reduced motion */
+[data-reduce-motion="reduce"] {
+  --duration-instant: 0ms;
+  --duration-fast: 0ms;
+  --duration-normal: 0ms;
+  --duration-slow: 0ms;
+  --duration-emphasis: 0ms;
+  --duration-enter: 0ms;
+  --duration-exit: 0ms;
+}
+
+/* Legacy support for old attribute value */
+[data-reduce-motion="true"] {
+  --duration-instant: 0ms;
+  --duration-fast: 0ms;
+  --duration-normal: 0ms;
+  --duration-slow: 0ms;
+  --duration-emphasis: 0ms;
+  --duration-enter: 0ms;
+  --duration-exit: 0ms;
+}
+
+/* User explicitly wants animations even if OS prefers reduced */
+[data-reduce-motion="no-preference"] {
+  --duration-instant: 50ms;
+  --duration-fast: 100ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --duration-emphasis: 400ms;
+  --duration-enter: 250ms;
+  --duration-exit: 200ms;
+}
+
+/* Override OS media query when user explicitly sets preference */
+@media (prefers-reduced-motion: reduce) {
+  [data-reduce-motion="no-preference"] {
+    --duration-instant: 50ms;
+    --duration-fast: 100ms;
+    --duration-normal: 200ms;
+    --duration-slow: 300ms;
+    --duration-emphasis: 400ms;
+    --duration-enter: 250ms;
+    --duration-exit: 200ms;
+  }
+}
+
+/* =============================================================================
+   SHADCN/UI VARIABLE MAPPING
+   Maps Cognograph design tokens to shadcn's expected variable names.
+   shadcn uses HSL values without the hsl() wrapper, but since we use
+   hex/rgba tokens, we map directly and override in tailwind.config.js.
+   ============================================================================= */
+:root {
+  --background: var(--surface-canvas);
+  --foreground: var(--text-primary);
+  --card: var(--surface-node);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-panel);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-panel-secondary);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--surface-panel-secondary);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--surface-panel-secondary);
+  --accent-foreground: var(--text-primary);
+  --destructive: var(--color-error);
+  --destructive-foreground: #ffffff;
+  --border: var(--border-default);
+  --input: var(--border-default);
+  --ring: var(--accent-primary);
+  --radius: var(--radius-lg);
+}
+
+[data-theme="light"] {
+  --primary-foreground: #ffffff;
+  --secondary-foreground: var(--text-primary);
+  --accent-foreground: var(--text-primary);
+  --destructive-foreground: #ffffff;
+}
+
+/* =============================================================================
+   FOCUS VISIBLE STYLES
+   Consistent focus ring for all interactive elements
+   ============================================================================= */
+:focus-visible {
+  outline: 2px solid var(--selection-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* High contrast focus mode */
+[data-high-contrast-focus="true"] :focus-visible {
+  outline-width: 3px;
+  outline-offset: 3px;
+}
+
+/* =============================================================================
+   VIEW TRANSITION — Theme circular reveal
+   ============================================================================= */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  mix-blend-mode: normal;
+}
+
+/* Suppress default crossfade when JS drives the clip-path animation */
+.theme-transition-circular::view-transition-old(root),
+.theme-transition-circular::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* Suppress default crossfade when JS drives the dither mask animation */
+.theme-transition-dither::view-transition-old(root),
+.theme-transition-dither::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* Respect OS reduce-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+}
+
+/* Respect app-level reduce-motion preference */
+[data-reduce-motion="reduce"] ::view-transition-group(*),
+[data-reduce-motion="reduce"] ::view-transition-old(*),
+[data-reduce-motion="reduce"] ::view-transition-new(*) { animation: none !important; }
