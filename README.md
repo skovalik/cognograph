@@ -124,7 +124,7 @@ Each conversation node can use a different provider. Set per-node or use workspa
 | LLM SDKs | Anthropic, OpenAI, Google Generative AI |
 | 3D/Effects | Three.js, R3F, OGL |
 | Build | electron-vite, Vite |
-| Testing | Vitest (314 tests), Playwright |
+| Testing | Vitest (788 tests), Playwright |
 
 ---
 
@@ -136,7 +136,7 @@ src/
 ├── preload/        # IPC bridge (type-safe API surface)
 ├── renderer/       # React app
 │   ├── components/ # UI components + 8 node types
-│   ├── stores/     # Zustand stores (16 stores)
+│   ├── stores/     # Zustand stores (34 stores)
 │   ├── services/   # Agent tools, action executor, extraction
 │   └── utils/      # Mutation executor, helpers
 └── shared/         # Types shared across all processes
@@ -158,9 +158,9 @@ Cognograph started as a tool for my own brain. Turns out a lot of brains need it
 
 Contributions are welcome. The codebase is TypeScript throughout with strict types, Zustand for state, and React Flow for the canvas layer.
 
-Start with `CLAUDE.md` at the project root — it routes you to architecture docs, specs, and the decision log. `ARCHITECTURE.md` explains how data flows. `docs/guides/PITFALLS.md` covers the gotchas that'll save you time.
+Start with `ARCHITECTURE.md` at the project root — it explains how data flows through the system. `docs/guides/PITFALLS.md` covers common gotchas that'll save you time.
 
-If you're not sure where to start, open an issue or check `TODO.md`.
+If you're not sure where to start, open an issue or check the [Issues](https://github.com/skovalik/cognograph/issues) page.
 
 ---
 
