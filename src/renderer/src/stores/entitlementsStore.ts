@@ -7,6 +7,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { logger } from '../utils/logger'
 
 export type Plan = 'free' | 'pro' | 'power' | 'team'
 
@@ -71,14 +72,14 @@ export const useEntitlementsStore = create<EntitlementsState>()(
           // Get current workspace ID for auth
           const workspaceId = localStorage.getItem('lastWorkspaceId')
           if (!workspaceId) {
-            console.log('[Entitlements] No workspace ID, using defaults')
+            logger.log('[Entitlements] No workspace ID, using defaults')
             return
           }
 
           // Get token
           const tokenResult = await window.api.multiplayer.getToken(workspaceId)
           if (!tokenResult.success || !tokenResult.token) {
-            console.log('[Entitlements] No token, using defaults')
+            logger.log('[Entitlements] No token, using defaults')
             return
           }
 
@@ -107,7 +108,7 @@ export const useEntitlementsStore = create<EntitlementsState>()(
             lastFetched: Date.now()
           })
 
-          console.log('[Entitlements] Updated:', data.plan)
+          logger.log('[Entitlements] Updated:', data.plan)
 
         } catch (err) {
           console.error('[Entitlements] Fetch error:', err)

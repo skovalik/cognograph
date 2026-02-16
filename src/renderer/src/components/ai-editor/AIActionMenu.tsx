@@ -25,6 +25,7 @@ interface AIActionMenuProps {
   isOpen: boolean
   onClose: () => void
   anchorRect: DOMRect | null
+  onToggleAISidebar?: () => void
 }
 
 interface MenuItem {
@@ -37,11 +38,10 @@ interface MenuItem {
   separator?: boolean
 }
 
-function AIActionMenuComponent({ isOpen, onClose, anchorRect }: AIActionMenuProps): JSX.Element | null {
+function AIActionMenuComponent({ isOpen, onClose, anchorRect, onToggleAISidebar }: AIActionMenuProps): JSX.Element | null {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const menuRef = useRef<HTMLDivElement>(null)
   const openModal = useAIEditorStore((state) => state.openModal)
-  const openSidebar = useAIEditorStore((state) => state.openSidebar)
 
   const menuItems: MenuItem[] = [
     {
@@ -93,8 +93,11 @@ function AIActionMenuComponent({ isOpen, onClose, anchorRect }: AIActionMenuProp
       label: 'AI Sidebar',
       description: 'Open persistent AI chat',
       icon: MessageSquare,
-      shortcut: 'Ctrl+Shift+A',
-      action: () => openSidebar?.()
+      shortcut: 'Ctrl+Shift+I',
+      action: () => {
+        onToggleAISidebar?.()
+        onClose()
+      }
     },
     {
       id: 'quick-prompt',

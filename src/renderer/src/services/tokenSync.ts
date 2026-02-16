@@ -7,6 +7,8 @@
  * - Propagate token updates to all tabs
  */
 
+import { logger } from '../utils/logger'
+
 type TokenMessage =
   | { type: 'TOKEN_REFRESHING'; workspaceId: string; tabId: string }
   | { type: 'TOKEN_REFRESHED'; workspaceId: string; token: string; expiresAt: string; tabId: string }
@@ -44,7 +46,7 @@ class TokenSyncService {
         this.handleMessage(event.data)
       }
       this.isInitialized = true
-      console.log('[TokenSync] Initialized for tab:', this.tabId)
+      logger.log('[TokenSync] Initialized for tab:', this.tabId)
     } catch (err) {
       console.error('[TokenSync] Failed to initialize:', err)
     }
@@ -158,13 +160,13 @@ class TokenSyncService {
       case 'TOKEN_REFRESHING':
         // Another tab is refreshing - don't start our own refresh
         this.refreshingWorkspaces.add(message.workspaceId)
-        console.log(`[TokenSync] Tab ${message.tabId} is refreshing token for ${message.workspaceId}`)
+        logger.log(`[TokenSync] Tab ${message.tabId} is refreshing token for ${message.workspaceId}`)
         break
 
       case 'TOKEN_REFRESHED':
         // Another tab refreshed - update our token
         this.refreshingWorkspaces.delete(message.workspaceId)
-        console.log(`[TokenSync] Received refreshed token from tab ${message.tabId}`)
+        logger.log(`[TokenSync] Received refreshed token from tab ${message.tabId}`)
 
         // Store the new token locally
         window.api.multiplayer.storeToken(message.workspaceId, message.token)
@@ -206,7 +208,7 @@ class TokenSyncService {
           expiresAt: validation.expiresAt,
           tabId: this.tabId
         })
-        console.log(`[TokenSync] Shared token with tab ${requestingTabId}`)
+        logger.log(`[TokenSync] Shared token with tab ${requestingTabId}`)
       }
     }
   }

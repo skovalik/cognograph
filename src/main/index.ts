@@ -34,6 +34,7 @@ import {
   deleteCredential,
   listCredentials,
 } from './services/credentialStore'
+import { logger } from './utils/logger'
 
 // Catch unhandled promise rejections to prevent silent crashes
 process.on('unhandledRejection', (reason) => {
@@ -63,6 +64,36 @@ function createWindow(): void {
       webSecurity: true,
       allowRunningInsecureContent: false
     }
+  })
+
+  // Content Security Policy (relaxed for development, strict in production)
+  // Development needs 'unsafe-inline' and 'unsafe-eval' for Vite HMR
+  const isDev = !app.isPackaged
+  const cspPolicy = isDev
+    ? "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+      "img-src 'self' data: https: blob:; " +
+      "font-src 'self' data: https://fonts.gstatic.com; " +
+      "connect-src 'self' http://localhost:* ws://localhost:* https:; " +
+      "frame-src 'self' http://localhost:*; " +
+      "media-src 'self' blob:"
+    : "default-src 'self'; " +
+      "script-src 'self'; " +
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+      "img-src 'self' data: https:; " +
+      "font-src 'self' data: https://fonts.gstatic.com; " +
+      "connect-src 'self' https:; " +
+      "frame-src 'self'; " +
+      "media-src 'self' blob:"
+
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [cspPolicy]
+      }
+    })
   })
 
   mainWindow.on('ready-to-show', () => {
@@ -165,7 +196,7 @@ registerDeepLinkProtocol()
 
 // Ensure single instance for deep link handling on Windows/Linux
 if (!app.requestSingleInstanceLock()) {
-  console.log('[Main] Another instance is running. Quitting.')
+  logger.log('[Main] Another instance is running. Quitting.')
   app.quit()
 }
 

@@ -58,7 +58,7 @@ export const OfflineIndicator = memo(function OfflineIndicator({
   return (
     <div
       className={`
-        fixed z-50 px-4 py-2 flex items-center gap-3
+        fixed gui-z-toasts px-4 py-2 flex items-center gap-3
         bg-[var(--bg-secondary)] border border-[var(--border-default)]
         shadow-lg transition-all duration-300
         ${positionClasses}
