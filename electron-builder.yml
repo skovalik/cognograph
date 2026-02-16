@@ -64,7 +64,7 @@ mac:
   icon: build/icon.icns
   category: public.app-category.productivity
   target:
-    - target: dmg
+    - target: zip
       arch:
         - x64
         - arm64
@@ -72,11 +72,6 @@ mac:
   identity: null
   gatekeeperAssess: false
   hardenedRuntime: false
-
-dmg:
-  artifactName: Cognograph-${version}.${ext}
-  sign: false
-  writeUpdateInfo: false
 
 # --- Linux -------------------------------------------------------------------
 linux:
