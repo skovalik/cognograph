@@ -9,7 +9,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useWorkspaceStore } from '@/stores'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
 
 interface ContextSource {
