@@ -1796,4 +1796,4 @@ START:
 
 ---
 
-*For questions or feedback on multi-agent coordination, see [GitHub Issues](https://github.com/cognograph/cognograph/issues) or [Community Discord](https://discord.gg/cognograph).*
+*For questions or feedback on multi-agent coordination, see [GitHub Issues](https://github.com/skovalik/cognograph/issues).*
