@@ -222,6 +222,71 @@ export function createProjectNode(
   })
 }
 
+/**
+ * Create a workspace node.
+ */
+export function createWorkspaceNode(
+  includedNodeIds: string[] = [],
+  overrides: Partial<Node<NodeData>> = {}
+): Node<NodeData> {
+  const data = {
+    type: 'workspace' as const,
+    title: 'Test Workspace',
+    description: 'Test workspace description',
+    includedNodeIds,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    ...overrides.data
+  }
+  return createTestNode('workspace', {
+    ...overrides,
+    data
+  })
+}
+
+/**
+ * Create an artifact node.
+ */
+export function createArtifactNode(
+  content: string = 'Test artifact content',
+  overrides: Partial<Node<NodeData>> = {}
+): Node<NodeData> {
+  const data = {
+    type: 'artifact' as const,
+    title: 'Test Artifact',
+    content,
+    contentType: 'text/plain',
+    language: 'plaintext',
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    ...overrides.data
+  }
+  return createTestNode('artifact', {
+    ...overrides,
+    data
+  })
+}
+
+/**
+ * Create a text node.
+ */
+export function createTextNode(
+  content: string = 'Test text content',
+  overrides: Partial<Node<NodeData>> = {}
+): Node<NodeData> {
+  const data = {
+    type: 'text' as const,
+    content,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    ...overrides.data
+  }
+  return createTestNode('text', {
+    ...overrides,
+    data
+  })
+}
+
 // -----------------------------------------------------------------------------
 // Edge Factories
 // -----------------------------------------------------------------------------

@@ -25,9 +25,23 @@ import {
   Type,
   Zap,
   Share2,
-  Workflow
+  Workflow,
+  Plus,
+  ChevronDown
 } from 'lucide-react'
-import { Separator, Tooltip, TooltipTrigger, TooltipContent } from './ui'
+import {
+  Separator,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuLabel
+} from './ui'
 import { useReactFlow } from '@xyflow/react'
 import { toast } from 'react-hot-toast'
 import { useWorkspaceStore, getHistoryActionLabel } from '../stores/workspaceStore'
@@ -50,9 +64,10 @@ interface ToolbarProps {
   onOpenSettings: () => void
   showThemeMenu?: boolean
   onShowThemeMenuChange?: (show: boolean) => void
+  onToggleAISidebar?: () => void
 }
 
-function ToolbarComponent({ onSave, onSaveAs, onNew, onOpen, onOpenThemeSettings, onOpenSettings, showThemeMenu, onShowThemeMenuChange }: ToolbarProps): JSX.Element {
+function ToolbarComponent({ onSave, onSaveAs, onNew, onOpen, onOpenThemeSettings, onOpenSettings, showThemeMenu, onShowThemeMenuChange, onToggleAISidebar }: ToolbarProps): JSX.Element {
   const addNode = useWorkspaceStore((state) => state.addNode)
   const addAgentNode = useWorkspaceStore((state) => state.addAgentNode)
   const undo = useWorkspaceStore((state) => state.undo)
@@ -307,141 +322,153 @@ function ToolbarComponent({ onSave, onSaveAs, onNew, onOpen, onOpenThemeSettings
 
       <Divider />
 
-      {/* Node creation - using theme colors with labels */}
-      <button
-        onClick={() => handleAddNode('conversation')}
-        className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
-        title="Add Conversation (Shift+C)"
-        aria-label="Add Conversation"
-      >
-        <MessageSquare
-          className="w-5 h-5 transition-colors"
-          style={{ color: nodeColors.conversation }}
-        />
-        <span className="toolbar-btn-label" style={{ color: nodeColors.conversation }}>Chat</span>
-      </button>
-      <button
-        onClick={() => {
-          let position: { x: number; y: number }
-          if (lastCanvasClick && Date.now() - lastCanvasClick.time < 2000) {
-            position = { x: lastCanvasClick.x, y: lastCanvasClick.y }
-          } else {
-            const currentViewport = getViewport()
-            const centerX = (-currentViewport.x + window.innerWidth / 2) / currentViewport.zoom
-            const centerY = (-currentViewport.y + window.innerHeight / 2) / currentViewport.zoom
-            position = {
-              x: centerX + (Math.random() - 0.5) * 50,
-              y: centerY + (Math.random() - 0.5) * 50
-            }
-          }
-          addAgentNode(position)
-        }}
-        className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
-        title="New Agent (Ctrl+Shift+A)"
-        aria-label="New Agent"
-      >
-        <Bot
-          className="w-5 h-5 transition-colors"
-          style={{ color: nodeColors.conversation }}
-        />
-        <span className="toolbar-btn-label" style={{ color: nodeColors.conversation }}>Agent</span>
-      </button>
-      <button
-        onClick={() => handleAddNode('project')}
-        className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
-        title="Add Project (Shift+P)"
-        aria-label="Add Project"
-      >
-        <Folder
-          className="w-5 h-5 transition-colors"
-          style={{ color: nodeColors.project }}
-        />
-        <span className="toolbar-btn-label" style={{ color: nodeColors.project }}>Project</span>
-      </button>
-      <button
-        onClick={() => handleAddNode('note')}
-        className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
-        title="Add Note (Shift+N)"
-        aria-label="Add Note"
-      >
-        <FileText
-          className="w-5 h-5 transition-colors"
-          style={{ color: nodeColors.note }}
-        />
-        <span className="toolbar-btn-label" style={{ color: nodeColors.note }}>Note</span>
-      </button>
-      <button
-        onClick={() => handleAddNode('task')}
-        className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
-        title="Add Task (Shift+T)"
-        aria-label="Add Task"
-      >
-        <CheckSquare
-          className="w-5 h-5 transition-colors"
-          style={{ color: nodeColors.task }}
-        />
-        <span className="toolbar-btn-label" style={{ color: nodeColors.task }}>Task</span>
-      </button>
-      <button
-        onClick={() => handleAddNode('artifact')}
-        className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
-        title="Add Artifact (Shift+A)"
-        aria-label="Add Artifact"
-      >
-        <Code
-          className="w-5 h-5 transition-colors"
-          style={{ color: nodeColors.artifact }}
-        />
-        <span className="toolbar-btn-label" style={{ color: nodeColors.artifact }}>Code</span>
-      </button>
-      <button
-        onClick={() => handleAddNode('workspace')}
-        className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
-        title="Add Workspace (Shift+W)"
-        aria-label="Add Workspace"
-      >
-        <Boxes
-          className="w-5 h-5 transition-colors"
-          style={{ color: nodeColors.workspace }}
-        />
-        <span className="toolbar-btn-label" style={{ color: nodeColors.workspace }}>Space</span>
-      </button>
-      <button
-        onClick={() => handleAddNode('action')}
-        className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
-        title="Add Action (Shift+Z)"
-        aria-label="Add Action"
-      >
-        <Zap
-          className="w-5 h-5 transition-colors"
-          style={{ color: nodeColors.action }}
-        />
-        <span className="toolbar-btn-label" style={{ color: nodeColors.action }}>Action</span>
-      </button>
-      <button
-        onClick={() => handleAddNode('text')}
-        className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
-        title="Add Text (Shift+X)"
-        aria-label="Add Text"
-      >
-        <Type
-          className="w-5 h-5 transition-colors"
-          style={{ color: nodeColors.text }}
-        />
-        <span className="toolbar-btn-label" style={{ color: nodeColors.text }}>Text</span>
-      </button>
-      <button
-        onClick={() => handleAddNode('orchestrator')}
-        className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
-        title="Add Orchestrator (Shift+O)"
-        aria-label="Add Orchestrator"
-      >
-        <Workflow
-          className="w-5 h-5 transition-colors"
-          style={{ color: nodeColors.orchestrator }}
-        />
-        <span className="toolbar-btn-label" style={{ color: nodeColors.orchestrator }}>Orchestrator</span>
-      </button>
+      {/* Quick-add buttons for most common node types */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => handleAddNode('conversation')}
+            className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
+            aria-label="Add Conversation (Shift+C)"
+          >
+            <MessageSquare className="w-5 h-5 transition-colors" style={{ color: nodeColors.conversation }} />
+            <span className="toolbar-btn-label" style={{ color: nodeColors.conversation }}>Chat</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>Conversation (Shift+C)</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => handleAddNode('note')}
+            className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
+            aria-label="Add Note (Shift+N)"
+          >
+            <FileText className="w-5 h-5 transition-colors" style={{ color: nodeColors.note }} />
+            <span className="toolbar-btn-label" style={{ color: nodeColors.note }}>Note</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>Note (Shift+N)</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => handleAddNode('task')}
+            className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
+            aria-label="Add Task (Shift+T)"
+          >
+            <CheckSquare className="w-5 h-5 transition-colors" style={{ color: nodeColors.task }} />
+            <span className="toolbar-btn-label" style={{ color: nodeColors.task }}>Task</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>Task (Shift+T)</TooltipContent>
+      </Tooltip>
+
+      {/* Additional node types - individual buttons with responsive labels */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => handleAddNode('project')}
+            className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
+            aria-label="Add Project (Shift+P)"
+          >
+            <Folder className="w-5 h-5 transition-colors" style={{ color: nodeColors.project }} />
+            <span className="toolbar-btn-label" style={{ color: nodeColors.project }}>Project</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>Project (Shift+P)</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => handleAddNode('artifact')}
+            className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
+            aria-label="Add Artifact (Shift+A)"
+          >
+            <Code className="w-5 h-5 transition-colors" style={{ color: nodeColors.artifact }} />
+            <span className="toolbar-btn-label" style={{ color: nodeColors.artifact }}>Artifact</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>Artifact / Code (Shift+A)</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => handleAddNode('text')}
+            className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
+            aria-label="Add Text (Shift+X)"
+          >
+            <Type className="w-5 h-5 transition-colors" style={{ color: nodeColors.text }} />
+            <span className="toolbar-btn-label" style={{ color: nodeColors.text }}>Text</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>Text (Shift+X)</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => handleAddNode('workspace')}
+            className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
+            aria-label="Add Workspace (Shift+W)"
+          >
+            <Boxes className="w-5 h-5 transition-colors" style={{ color: nodeColors.workspace }} />
+            <span className="toolbar-btn-label" style={{ color: nodeColors.workspace }}>Workspace</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>Workspace (Shift+W)</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => handleAddNode('action')}
+            className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
+            aria-label="Add Action (Shift+Z)"
+          >
+            <Zap className="w-5 h-5 transition-colors" style={{ color: nodeColors.action }} />
+            <span className="toolbar-btn-label" style={{ color: nodeColors.action }}>Action</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>Action (Shift+Z)</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => handleAddNode('orchestrator')}
+            className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
+            aria-label="Add Orchestrator (Shift+O)"
+          >
+            <Workflow className="w-5 h-5 transition-colors" style={{ color: nodeColors.orchestrator }} />
+            <span className="toolbar-btn-label" style={{ color: nodeColors.orchestrator }}>Orchestrator</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>Orchestrator (Shift+O)</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => {
+              let position: { x: number; y: number }
+              if (lastCanvasClick && Date.now() - lastCanvasClick.time < 2000) {
+                position = { x: lastCanvasClick.x, y: lastCanvasClick.y }
+              } else {
+                const currentViewport = getViewport()
+                const centerX = (-currentViewport.x + window.innerWidth / 2) / currentViewport.zoom
+                const centerY = (-currentViewport.y + window.innerHeight / 2) / currentViewport.zoom
+                position = {
+                  x: centerX + (Math.random() - 0.5) * 50,
+                  y: centerY + (Math.random() - 0.5) * 50
+                }
+              }
+              addAgentNode(position)
+            }}
+            className={`p-2 ${buttonHoverClasses} rounded transition-colors group flex items-center gap-1`}
+            aria-label="Add Agent (Ctrl+Shift+A)"
+          >
+            <Bot className="w-5 h-5 transition-colors" style={{ color: nodeColors.conversation }} />
+            <span className="toolbar-btn-label" style={{ color: nodeColors.conversation }}>Agent</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>Agent (Ctrl+Shift+A)</TooltipContent>
+      </Tooltip>
     </>
   )
 
@@ -547,6 +574,7 @@ function ToolbarComponent({ onSave, onSaveAs, onNew, onOpen, onOpenThemeSettings
           isOpen={aiMenuOpen}
           onClose={handleAIMenuClose}
           anchorRect={aiMenuAnchor}
+          onToggleAISidebar={onToggleAISidebar}
         />
       </>
     )
@@ -574,6 +602,7 @@ function ToolbarComponent({ onSave, onSaveAs, onNew, onOpen, onOpenThemeSettings
           isOpen={aiMenuOpen}
           onClose={handleAIMenuClose}
           anchorRect={aiMenuAnchor}
+          onToggleAISidebar={onToggleAISidebar}
         />
       </>
     )

@@ -6,6 +6,7 @@
 
 import { useWorkspaceStore } from '../renderer/src/stores/workspaceStore'
 import { useAIEditorStore } from '../renderer/src/stores/aiEditorStore'
+import { invalidateContextCache } from '../renderer/src/utils/contextCache'
 import type { Node, Edge } from '@xyflow/react'
 import type { NodeData, EdgeData } from '../shared/types'
 
@@ -21,6 +22,9 @@ import type { NodeData, EdgeData } from '../shared/types'
  * Uses partial setState to preserve store functions and default values.
  */
 export function resetWorkspaceStore(): void {
+  // Clear the context cache to avoid stale results across tests
+  invalidateContextCache()
+  
   // Don't use replace (second arg = true) as it removes functions
   useWorkspaceStore.setState({
     // Core data

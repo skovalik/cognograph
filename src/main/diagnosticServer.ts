@@ -96,14 +96,15 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
   app.use(express.json({ limit: '1mb' }))
 
   // SECURITY: Token authentication (required on every request)
-  app.use((req: Request, res: Response, next: NextFunction) => {
+  app.use((req: Request, res: Response, next: NextFunction): void => {
     const token = req.headers['x-diagnostic-token']
     if (token !== DIAGNOSTIC_TOKEN) {
-      return res.status(401).json({
+      res.status(401).json({
         error: 'Unauthorized',
         code: 'AUTH_REQUIRED',
         suggestion: 'Include x-diagnostic-token header with valid token from Cognograph console'
       })
+      return
     }
     next()
   })

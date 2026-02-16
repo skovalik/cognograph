@@ -58,6 +58,7 @@ import { useTemplateStore } from '../stores/templateStore'
 import { useAIEditorStore } from '../stores/aiEditorStore'
 import { suggestTemplateName } from '../utils/templateUtils'
 import type { Node as FlowNode } from '@xyflow/react'
+import { logger } from '../utils/logger'
 import type { NodeData } from '@shared/types'
 import { getConversionTargets } from '../utils/nodeConversion'
 import { useCCBridgeStore } from '../stores/ccBridgeStore'
@@ -332,7 +333,7 @@ function ContextMenuComponent(): JSX.Element | null {
   // Handle duplicate nodes
   const handleDuplicate = useCallback(() => {
     // For now, just log - full duplicate implementation would need more work
-    console.log('[ContextMenu] Duplicate not yet implemented')
+    logger.log('[ContextMenu] Duplicate not yet implemented')
     close()
   }, [close])
 
