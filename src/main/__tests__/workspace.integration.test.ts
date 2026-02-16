@@ -579,9 +579,12 @@ describe('Workspace Persistence Integration', () => {
     })
 
     it('should preserve backup on failure', async () => {
-      vi.mocked(fs.writeFile).mockRejectedValue(new Error('Write failed'))
       vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(mockWorkspaceData))
       vi.mocked(fs.unlink).mockResolvedValue(undefined)
+      // First call (backup write) succeeds, second call (main write) fails
+      vi.mocked(fs.writeFile)
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('Write failed'))
 
       await fs.writeFile('/test/workspace.json.backup', JSON.stringify(mockWorkspaceData))
 

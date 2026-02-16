@@ -715,13 +715,15 @@ describe('Context Injection - BFS Traversal', () => {
       const note3 = createNoteNode('Node C', { id: 'note-3' })
       const note4 = createNoteNode('Node D', { id: 'note-4' })
       seedNodes([note1, note2, note3, note4])
-      // Create two cycles: A→B→A and C→D→C
-      seedEdge(createTestEdge('note-1', 'note-2'))
+      // Create two cycles with correct edge directions for context injection
+      // Context flows: B → A (A receives from B), A → B (circular)
       seedEdge(createTestEdge('note-2', 'note-1'))
-      seedEdge(createTestEdge('note-3', 'note-4'))
+      seedEdge(createTestEdge('note-1', 'note-2'))
+      // Context flows: D → C, C → D (circular)
       seedEdge(createTestEdge('note-4', 'note-3'))
-      // Connect the cycles
-      seedEdge(createTestEdge('note-2', 'note-3'))
+      seedEdge(createTestEdge('note-3', 'note-4'))
+      // Connect the cycles: C → B (B receives from C)
+      seedEdge(createTestEdge('note-3', 'note-2'))
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
@@ -776,9 +778,10 @@ describe('Context Injection - BFS Traversal', () => {
       const note2 = createNoteNode('Node B', { id: 'note-2' })
       const note3 = createNoteNode('Node C', { id: 'note-3' })
       seedNodes([note1, note2, note3])
-      seedEdge(createTestEdge('note-1', 'note-2'))
-      seedEdge(createTestEdge('note-2', 'note-3'))
-      seedEdge(createTestEdge('note-3', 'note-1'))
+      // Correct edge directions for context injection: B → A → C → B (circular)
+      seedEdge(createTestEdge('note-2', 'note-1')) // B → A (A receives from B)
+      seedEdge(createTestEdge('note-1', 'note-3')) // A → C
+      seedEdge(createTestEdge('note-3', 'note-2')) // C → B (closes circle)
 
       const { getContextForNode, updateContextSettings } = useWorkspaceStore.getState()
 
