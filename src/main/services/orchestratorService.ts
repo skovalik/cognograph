@@ -482,13 +482,14 @@ async function executeParallel(state: ActiveRunState): Promise<void> {
 
     // Process results and apply failure policies
     for (let j = 0; j < results.length; j++) {
-      const settledResult = results[j]
+      const settledResult = results[j]!
+      const agent = batch[j]!
+
       if (settledResult.status === 'rejected') {
-        const agent = batch[j]
         agent.status = 'failed'
         agent.lastError = (settledResult.reason as Error).message
       } else if (settledResult.value.status === 'failed') {
-        const shouldAbort = await applyFailurePolicy(state, batch[j], settledResult.value)
+        const shouldAbort = await applyFailurePolicy(state, agent, settledResult.value)
         if (shouldAbort) {
           state.aborted = true
           break

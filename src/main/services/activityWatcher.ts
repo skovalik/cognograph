@@ -31,7 +31,6 @@ let watcher: FSWatcher | null = null
 let lastSize = 0
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 let currentConfig: CCBridgeConfig = { ...DEFAULT_CC_BRIDGE_CONFIG }
-let currentEventsPath: string | null = null
 
 // In-memory ring buffer for getHistory (main-process side)
 const eventHistory: CCActivityEvent[] = []
@@ -56,7 +55,6 @@ export function startActivityWatcher(
 
   const activityDir = path.join(projectDir, currentConfig.activityDir)
   const eventsFile = path.join(activityDir, 'events.jsonl')
-  currentEventsPath = eventsFile
 
   // Auto-create the activity directory if it does not exist
   mkdirSync(activityDir, { recursive: true })
@@ -126,7 +124,6 @@ export function stopActivityWatcher(): void {
     watcher = null
   }
   lastSize = 0
-  currentEventsPath = null
   console.log('[ActivityWatcher] Stopped')
 }
 
