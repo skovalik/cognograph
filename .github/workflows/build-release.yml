@@ -59,8 +59,8 @@ jobs:
         with:
           name: macos-builds
           path: |
-            release/*/Cognograph-*.dmg
-            release/*/Cognograph-*.dmg.blockmap
+            release/*/Cognograph-*.zip
+            release/*/Cognograph-*-mac.zip
 
       - name: Upload Windows artifacts
         if: matrix.os == 'windows-latest'
@@ -96,7 +96,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            artifacts/**/*.dmg
+            artifacts/**/*.zip
             artifacts/**/*.exe
             artifacts/**/*.AppImage
             artifacts/**/*.deb
