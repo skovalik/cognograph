@@ -1727,7 +1727,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           state.selectedNodeIds = state.selectedNodeIds.filter((id) => !nodeIds.includes(id))
           state.isDirty = true
 
-          // Push batch history action
+          // Push batch history action (only if nodes/edges were actually deleted)
           const actions: HistoryAction[] = [
             ...deletedNodes.map((node) => ({
               type: 'DELETE_NODE' as const,
@@ -1738,12 +1738,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               edge: JSON.parse(JSON.stringify(edge))
             }))
           ]
-          state.history = state.history.slice(0, state.historyIndex + 1)
-          state.history.push({ type: 'BATCH', actions })
-          state.historyIndex++
-          if (state.history.length > 100) {
-            state.history = state.history.slice(-100)
-            state.historyIndex = state.history.length - 1
+          if (actions.length > 0) {
+            state.history = state.history.slice(0, state.historyIndex + 1)
+            state.history.push({ type: 'BATCH', actions })
+            state.historyIndex++
+            if (state.history.length > 100) {
+              state.history = state.history.slice(-100)
+              state.historyIndex = state.history.length - 1
+            }
           }
 
           // Close panels if the active node is deleted
