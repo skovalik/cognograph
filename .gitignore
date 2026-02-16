@@ -59,3 +59,4 @@ e2e/test-results/
 # The JSONL events file is runtime data that must not be committed.
 # The hook script (.cognograph-activity/hook.mjs) IS tracked in git.
 .cognograph-activity/events.jsonl
+.env.test

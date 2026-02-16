@@ -181,7 +181,9 @@ export function useShiftDragEdgeCreation({
 
   // Global event listeners
   useEffect(() => {
-    const handleMouseDown = (e: MouseEvent) => {
+    // CRITICAL: Use pointerdown instead of mousedown to fire BEFORE React Flow's handler
+    // React Flow's Pane calls preventDefault() on pointerdown which suppresses mousedown
+    const handlePointerDown = (e: PointerEvent) => {
       // Only trigger on Shift+left click
       if (!e.shiftKey || e.button !== 0) return
 
@@ -204,13 +206,13 @@ export function useShiftDragEdgeCreation({
       startDrag(nodeId, e.clientX, e.clientY)
     }
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
       if (stateRef.current.isActive) {
         updateDrag(e.clientX, e.clientY)
       }
     }
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
       if (stateRef.current.isActive) {
         endDrag()
       }
@@ -238,17 +240,18 @@ export function useShiftDragEdgeCreation({
       }
     }
 
-    // Use capture phase to intercept before React Flow
-    window.addEventListener('mousedown', handleMouseDown, true)
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('mouseup', handleMouseUp)
+    // Use capture phase to intercept BEFORE React Flow's Pane handler
+    // CRITICAL: Must use pointerdown, not mousedown (RF suppresses mousedown via preventDefault)
+    window.addEventListener('pointerdown', handlePointerDown, true)
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerUp)
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
 
     return () => {
-      window.removeEventListener('mousedown', handleMouseDown, true)
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
+      window.removeEventListener('pointerdown', handlePointerDown, true)
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
     }

@@ -11,6 +11,7 @@ import type { GlassSettings, GlassStyle } from '@shared/types'
 import { getGPUTier } from '@/utils/gpuDetection'
 import { resolveGlassStyle } from '@/utils/glassUtils'
 import { Slider } from '../ui/slider'
+import { logger } from '@/utils/logger'
 
 interface GlassSettingsSectionProps {
   glassSettings: GlassSettings
@@ -39,7 +40,7 @@ function GlassSettingsSectionInner({
   }, [onGlassSettingsChange])
 
   const handlePanelOpacityChange = useCallback((value: number[]) => {
-    console.log('[SLIDER] Panel opacity changed to:', value[0])
+    logger.log('[SLIDER] Panel opacity changed to:', value[0])
     onGlassSettingsChange({ panelOpacity: value[0] })
   }, [onGlassSettingsChange])
 

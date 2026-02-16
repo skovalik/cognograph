@@ -95,6 +95,24 @@ async function ensureWorkspacesDir(): Promise<void> {
 }
 
 export function registerWorkspaceHandlers(): void {
+  // TEST ONLY: Force new empty workspace (clears autosaved state)
+  ipcMain.handle('workspace:reset-for-test', async (_event) => {
+    try {
+      // Clear the autosaved workspace file
+      const defaultWorkspace = join(WORKSPACES_DIR, 'autosave.cg')
+      try {
+        await fs.unlink(defaultWorkspace)
+      } catch {
+        // File doesn't exist, that's fine
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('[Workspace] Failed to reset for test:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
   ipcMain.handle('workspace:save', async (_event, data: WorkspaceData) => {
     try {
       await ensureWorkspacesDir()

@@ -1188,3 +1188,91 @@
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+/* =============================================================================
+   15. NODE CREATION FEEDBACK
+   Pulse + scale-in animation when a node is just created
+   ============================================================================= */
+
+@keyframes node-creation-pop {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.3;
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6);
+  }
+  40% {
+    transform: scale(1.03);
+    opacity: 1;
+    box-shadow: 0 0 0 12px rgba(59, 130, 246, 0);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: none;
+  }
+}
+
+.react-flow__node.node-just-created {
+  animation: node-creation-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* =============================================================================
+   16. CONNECTION SUCCESS FEEDBACK
+   Brief glow on edges when they are first connected
+   ============================================================================= */
+
+@keyframes edge-connection-flash {
+  0% {
+    stroke-width: 4;
+    filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.8));
+  }
+  100% {
+    stroke-width: 2;
+    filter: none;
+  }
+}
+
+.react-flow__edge-path.edge-just-connected {
+  animation: edge-connection-flash 0.6s ease-out forwards;
+}
+
+/* =============================================================================
+   17. SAVE INDICATOR PULSE
+   Brief pulse on the save indicator when workspace auto-saves
+   ============================================================================= */
+
+@keyframes save-pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.save-indicator-pulse {
+  animation: save-pulse 0.4s ease-out;
+}
+
+/* =============================================================================
+   18. LOADING SKELETON SHIMMER
+   Used for loading states in ContextIndicator, BridgeStatusBar, etc.
+   ============================================================================= */
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-loading {
+  background: linear-gradient(
+    90deg,
+    var(--surface-panel, rgba(255,255,255,0.05)) 25%,
+    var(--surface-elevated, rgba(255,255,255,0.1)) 50%,
+    var(--surface-panel, rgba(255,255,255,0.05)) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}

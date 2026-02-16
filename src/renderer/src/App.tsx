@@ -31,7 +31,7 @@ import { ConnectionPropertiesPanel } from './components/ConnectionPropertiesPane
 import { ChatPanel } from './components/ChatPanel'
 import { LeftSidebar } from './components/LeftSidebar'
 import { ExtractionPanel, ExtractionDragPreview } from './components/extractions'
-import { ErrorBoundary } from './components/ErrorBoundary'
+import { ErrorBoundary, InlineErrorBoundary } from './components/ErrorBoundary'
 import { SaveTemplateModal, PasteTemplateModal, TemplateBrowser } from './components/templates'
 import { ContextMenu } from './components/ContextMenu'
 import { ThemeSettingsModal } from './components/ThemeSettingsModal'
@@ -67,9 +67,12 @@ import { initCCBridgeListener } from './stores/ccBridgeStore'
 import { initOrchestratorIPC } from './stores/orchestratorStore'
 import { initBridgeIPC, useBridgeStore } from './stores/bridgeStore'
 import { useProposalStore } from './stores/proposalStore'
-import { ProposalCard } from './components/bridge/ProposalCard'
-import { CommandBar } from './components/bridge/CommandBar'
-import { BridgeStatusBar } from './components/bridge/BridgeStatusBar'
+// NOTE: ProposalCard, CommandBar, and bridge/BridgeStatusBar are deferred to v0.3.0.
+// See docs/TODO-BRIDGE.md. Uncomment these imports when re-enabling.
+// import { ProposalCard } from './components/bridge/ProposalCard'
+// import { CommandBar } from './components/bridge/CommandBar'
+// import { BridgeStatusBar as BridgeStatusBarOld } from './components/bridge/BridgeStatusBar'
+import { BridgeStatusBar } from './components/BridgeStatusBar'
 import { useUIStore } from './stores/uiStore'
 import { SyncProviderWrapper, useSyncProvider } from './sync'
 import { useTemplateStore } from './stores/templateStore'
@@ -545,6 +548,29 @@ function Canvas(): JSX.Element {
     handlePhysicsPositionChange,
     isDraggingNode
   )
+
+  // Utility: apply creation pop animation to a newly created node
+  const animateNodeCreation = useCallback((nodeId: string) => {
+    // Wait for React Flow to render the DOM node, then apply animation
+    requestAnimationFrame(() => {
+      const nodeEl = document.querySelector(`[data-id="${nodeId}"]`)
+      if (nodeEl) {
+        nodeEl.classList.add('node-just-created')
+        setTimeout(() => nodeEl.classList.remove('node-just-created'), 800)
+      }
+    })
+  }, [])
+
+  // Utility: apply flash animation to a newly created edge
+  const animateEdgeCreation = useCallback((edgeId: string) => {
+    requestAnimationFrame(() => {
+      const edgePath = document.querySelector(`[data-testid="rf__edge-${edgeId}"] .react-flow__edge-path`)
+      if (edgePath) {
+        edgePath.classList.add('edge-just-connected')
+        setTimeout(() => edgePath.classList.remove('edge-just-connected'), 800)
+      }
+    })
+  }, [])
 
   // Compute combined edges including workspace member links
   const combinedEdges = useMemo(() => {
@@ -1033,8 +1059,15 @@ function Canvas(): JSX.Element {
       } else {
         onConnect(connection)
       }
+
+      // Visual + audio feedback for successful connection
+      playSound('connect')
+      if (connection.source && connection.target) {
+        const edgeId = `${connection.source}-${connection.target}`
+        animateEdgeCreation(edgeId)
+      }
     },
-    [onConnect, connectionTarget]
+    [onConnect, connectionTarget, animateEdgeCreation]
   )
 
   // Node drag start handler - capture initial positions for undo/redo
@@ -1196,6 +1229,11 @@ function Canvas(): JSX.Element {
   )
 
   // File drop handler - creates artifact nodes from dropped files
+  // Max file size: 5MB for text, 10MB for images
+  const MAX_TEXT_FILE_SIZE = 5 * 1024 * 1024
+  const MAX_IMAGE_FILE_SIZE = 10 * 1024 * 1024
+  const MAX_FILES_PER_DROP = 20
+
   const handleFileDrop = useCallback(
     async (event: React.DragEvent<HTMLDivElement>): Promise<void> => {
       event.preventDefault()
@@ -1205,10 +1243,18 @@ function Canvas(): JSX.Element {
       const files = event.dataTransfer?.files
       if (!files || files.length === 0) return
 
+      if (files.length > MAX_FILES_PER_DROP) {
+        toast.error(`Too many files (${files.length}). Maximum ${MAX_FILES_PER_DROP} files per drop.`)
+        return
+      }
+
       const position = screenToFlowPosition({
         x: event.clientX,
         y: event.clientY
       })
+
+      let successCount = 0
+      let errorCount = 0
 
       // Process each dropped file
       for (let i = 0; i < files.length; i++) {
@@ -1220,6 +1266,15 @@ function Canvas(): JSX.Element {
         try {
           // Check if it's an image file
           const isImage = file.type.startsWith('image/')
+
+          // File size check
+          const maxSize = isImage ? MAX_IMAGE_FILE_SIZE : MAX_TEXT_FILE_SIZE
+          if (file.size > maxSize) {
+            const maxMB = Math.round(maxSize / (1024 * 1024))
+            toast.error(`${file.name} too large (${(file.size / (1024 * 1024)).toFixed(1)}MB, max ${maxMB}MB)`)
+            errorCount++
+            continue
+          }
 
           let content: string
           if (isImage) {
@@ -1235,16 +1290,38 @@ function Canvas(): JSX.Element {
             content = await file.text()
           }
 
-          createArtifactFromFile(
+          const nodeId = createArtifactFromFile(
             { name: file.name, content, isBase64: isImage },
             { x: position.x + offset.x, y: position.y + offset.y }
           )
+          successCount++
 
-          sciFiToast(`Created artifact: ${file.name}`, 'success')
+          // Apply creation highlight animation
+          requestAnimationFrame(() => {
+            const nodeEl = document.querySelector(`[data-id="${nodeId}"]`)
+            if (nodeEl) {
+              nodeEl.classList.add('node-just-created')
+              setTimeout(() => nodeEl.classList.remove('node-just-created'), 800)
+            }
+          })
         } catch (error) {
           console.error('Error reading file:', error)
-          toast.error(`Failed to read: ${file.name}`)
+          errorCount++
         }
+      }
+
+      // Summary toast
+      if (successCount > 0 && errorCount === 0) {
+        sciFiToast(
+          successCount === 1
+            ? `Created artifact: ${files[0]?.name ?? 'file'}`
+            : `Created ${successCount} artifacts`,
+          'success'
+        )
+      } else if (successCount > 0 && errorCount > 0) {
+        sciFiToast(`Created ${successCount} artifact${successCount !== 1 ? 's' : ''}, ${errorCount} failed`, 'warning')
+      } else if (errorCount > 0) {
+        toast.error(`Failed to read ${errorCount} file${errorCount !== 1 ? 's' : ''}`)
       }
     },
     [screenToFlowPosition, createArtifactFromFile]
@@ -1354,10 +1431,11 @@ function Canvas(): JSX.Element {
         // Create conversation at click position
         const newId = addNode('conversation', flowPosition)
         setSelectedNodes([newId])
+        animateNodeCreation(newId)
         sciFiToast('New conversation created', 'success', 1500)
       }
     },
-    [screenToFlowPosition, recordCanvasClick, closeContextMenu, showThemeModal, showSettingsModal, addNode, setSelectedNodes]
+    [screenToFlowPosition, recordCanvasClick, closeContextMenu, showThemeModal, showSettingsModal, addNode, setSelectedNodes, animateNodeCreation]
   )
 
   // Context menu handler
@@ -1429,9 +1507,10 @@ function Canvas(): JSX.Element {
         targetHandle
       })
 
+      animateNodeCreation(newNodeId)
       setQuickConnectPopup(null)
     },
-    [quickConnectPopup, addNode, addEdge]
+    [quickConnectPopup, addNode, addEdge, animateNodeCreation]
   )
 
   // Close quick-connect popup on Escape or outside click
@@ -1675,6 +1754,7 @@ function Canvas(): JSX.Element {
             const pos = getSpawnPosition()
             const newId = addNode(ns.type, pos)
             setSelectedNodes([newId])
+            animateNodeCreation(newId)
             sciFiToast(ns.label, 'success', 1500)
             break
           }
@@ -1686,6 +1766,7 @@ function Canvas(): JSX.Element {
           const pos = getSpawnPosition()
           const newId = addAgentNode(pos)
           setSelectedNodes([newId])
+          animateNodeCreation(newId)
           sciFiToast('New agent created', 'success', 1500)
         }
       }
@@ -2103,7 +2184,10 @@ function Canvas(): JSX.Element {
           onSelectionChange={handleSelectionChange}
           onNodeClick={handleNodeClick}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={{
+            padding: 0.2,
+            maxZoom: 1.0  // Prevent over-zooming in tests (single nodes would zoom to 400%+)
+          }}
           defaultEdgeOptions={{
             type: 'custom',
             animated: false
@@ -2124,7 +2208,7 @@ function Canvas(): JSX.Element {
           }}
           selectNodesOnDrag={false}
           multiSelectionKeyCode="Shift"
-          selectionKeyCode="Shift"
+          selectionKeyCode={null}
           minZoom={0.1}
           maxZoom={4}
           proOptions={{ hideAttribution: true }}
@@ -2290,6 +2374,7 @@ function Canvas(): JSX.Element {
           onOpen={handleOpen}
           onOpenThemeSettings={() => setShowThemeModal(prev => !prev)}
           onOpenSettings={() => setShowSettingsModal(true)}
+          onToggleAISidebar={() => setAiSidebarOpen(prev => !prev)}
           showThemeMenu={showThemeMenu}
           onShowThemeMenuChange={setShowThemeMenu}
         />
@@ -2497,6 +2582,10 @@ function App(): JSX.Element {
         <ReactFlowProvider>
           <Canvas />
         </ReactFlowProvider>
+        {/* Global orchestrator status indicator */}
+        <InlineErrorBoundary name="BridgeStatusBar">
+          <BridgeStatusBar />
+        </InlineErrorBoundary>
       </SyncProviderWrapper>
     </TooltipProvider>
   )

@@ -11,6 +11,7 @@
 
 import { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { Palette, Wand2, Copy, Check, Plus, Minus, Save, Pipette, X } from 'lucide-react'
+import { logger } from '../utils/logger'
 
 interface ColorPickerProps {
   color: string // Current color in hex format
@@ -165,7 +166,7 @@ function ColorPickerComponent({
       onChange(pickedColor)
     } catch (err) {
       // User cancelled or error occurred
-      console.log('Eyedropper cancelled or error:', err)
+      logger.log('Eyedropper cancelled or error:', err)
     } finally {
       setIsEyedropperActive(false)
     }

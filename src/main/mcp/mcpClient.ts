@@ -99,7 +99,7 @@ export async function connectMCPServer(config: MCPServerConfig): Promise<{
     const env = {
       ...process.env,
       ...(config.env || {})
-    }
+    } as Record<string, string>
 
     transport = new StdioClientTransport({
       command: config.command,

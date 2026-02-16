@@ -123,7 +123,7 @@ async function testMCPServer(request: MCPTestRequest): Promise<MCPTestResponse> 
     const env = {
       ...process.env,
       ...(request.env || {})
-    }
+    } as Record<string, string>
 
     transport = new StdioClientTransport({
       command: request.command,

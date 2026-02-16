@@ -6,6 +6,7 @@ import type { CollaborativeSyncProvider } from './CollaborativeSyncProvider'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import type { WorkspaceData } from '@shared/types'
 import type { ConnectionStatus } from '@shared/multiplayerTypes'
+import { logger } from '../utils/logger'
 
 interface SyncContextValue {
   provider: SyncProvider
@@ -141,7 +142,7 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
       const unsubExternalChange = localProvider.onExternalChange((data: WorkspaceData) => {
         const currentId = useWorkspaceStore.getState().workspaceId
         if (data.id === currentId) {
-          console.log('[SyncProvider] External change detected, reloading workspace')
+          logger.log('[SyncProvider] External change detected, reloading workspace')
           useWorkspaceStore.getState().loadWorkspace(data)
         }
       })

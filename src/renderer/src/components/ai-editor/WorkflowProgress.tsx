@@ -340,7 +340,7 @@ function WorkflowProgressComponent(): JSX.Element | null {
 
   return (
     <div
-      className={`fixed bottom-4 right-4 z-50 w-80 ${bgClass} border ${borderClass} rounded-lg shadow-xl overflow-hidden`}
+      className={`fixed bottom-4 right-4 gui-z-panels w-80 ${bgClass} border ${borderClass} rounded-lg shadow-xl overflow-hidden`}
       style={{
         transition: 'all 0.2s ease-out'
       }}

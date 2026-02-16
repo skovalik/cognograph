@@ -1,172 +1,193 @@
-import { useState } from 'react'
-import { Network, ChevronDown, ChevronUp, Settings } from 'lucide-react'
-import { useNodesStore, useEdgesStore, useWorkspaceStore } from '../stores'
-import type { NodeData } from '@shared/types'
+/**
+ * Context Indicator Component
+ *
+ * Shows which nodes are contributing context to the current conversation/agent.
+ * Compact badge by default, expands to show full list on click.
+ *
+ * Implements VISION.md promise: "Automatic with visibility"
+ */
+
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { useWorkspaceStore } from '@/stores'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+
+interface ContextSource {
+  nodeId: string
+  title: string
+  type: string
+  tokens: number
+}
 
 interface ContextIndicatorProps {
   nodeId: string
-  onSettingsClick?: () => void
-  /** Whether context is currently being injected (triggers flash animation) */
-  isInjecting?: boolean
+  compact?: boolean
+  className?: string
 }
 
-export function ContextIndicator({ nodeId, onSettingsClick, isInjecting = false }: ContextIndicatorProps): JSX.Element | null {
-  const [isExpanded, setIsExpanded] = useState(false)
-  const nodes = useNodesStore((s) => s.nodes)
-  const edges = useEdgesStore((s) => s.edges)
-  const contextSettings = useWorkspaceStore((s) => s.contextSettings) // Complex context injection - stays in workspaceStore
+/**
+ * Parse getContextForNode() output to extract individual sources.
+ * Avoids duplicate BFS traversal - reuses existing context string.
+ */
+function parseContextSources(contextText: string, nodeId: string, allNodes: Array<{ id: string; data: { type: string; title?: string; [key: string]: unknown } }>): ContextSource[] {
+  if (!contextText || contextText.trim() === '') {
+    return []
+  }
 
-  // Calculate context sources using similar logic to getContextForNode
-  // but just getting the list of nodes that would be included
-  const getContextSources = () => {
-    const maxDepth = contextSettings.globalDepth
-    const visited = new Set<string>()
-    const result: Array<{ id: string; title: string; type: NodeData['type']; depth: number }> = []
-    const queue: Array<{ id: string; depth: number }> = []
+  const sources: ContextSource[] = []
 
-    // Get inbound edges
-    const getInboundEdges = (targetId: string) =>
-      edges.filter((e) => {
-        if (e.target !== targetId) return false
-        if (e.data?.active === false) return false
-        return true
-      })
+  // Context format: "[Role: Title]...content...\n\n---\n\n[Next Role: Title]..."
+  // Split by section separator
+  const sections = contextText.split('\n\n---\n\n')
 
-    // Get bidirectional outbound edges
-    const getBidirectionalEdges = (sourceId: string) =>
-      edges.filter((e) => {
-        if (e.source !== sourceId) return false
-        if (e.data?.active === false) return false
-        if (e.data?.direction !== 'bidirectional') return false
-        return true
-      })
+  sections.forEach((section) => {
+    // Extract title from "[Role: Title]" header
+    const headerMatch = section.match(/^\[([^\]]+): ([^\]]+)\]/)
+    if (!headerMatch) return
 
-    // Seed queue
-    const initialInbound = getInboundEdges(nodeId)
-    const initialBidirectional = getBidirectionalEdges(nodeId)
+    const role = headerMatch[1]  // e.g., "Reference", "Project Scope"
+    const title = headerMatch[2]  // e.g., "Requirements"
 
-    initialInbound.forEach((edge) => {
-      queue.push({ id: edge.source, depth: 1 })
-    })
-    initialBidirectional.forEach((edge) => {
-      if (!visited.has(edge.target)) {
-        queue.push({ id: edge.target, depth: 1 })
-      }
+    // Find matching node by title
+    const node = allNodes.find(n => {
+      if (n.id === nodeId) return false  // Exclude self
+      return n.data.title === title
     })
 
-    // BFS
-    while (queue.length > 0) {
-      const current = queue.shift()!
-      if (visited.has(current.id)) continue
-      if (current.depth > maxDepth) continue
+    if (node) {
+      // Estimate tokens (rough: 4 chars per token)
+      const tokens = Math.ceil(section.length / 4)
 
-      const node = nodes.find((n) => n.id === current.id)
-      if (!node || node.data.includeInContext === false) continue
-
-      visited.add(current.id)
-      result.push({
-        id: current.id,
-        title: node.data.title as string,
+      sources.push({
+        nodeId: node.id,
+        title,
         type: node.data.type,
-        depth: current.depth
+        tokens
       })
-
-      if (current.depth < maxDepth) {
-        const nextInbound = getInboundEdges(current.id)
-        const nextBidirectional = getBidirectionalEdges(current.id)
-
-        nextInbound.forEach((edge) => {
-          if (!visited.has(edge.source)) {
-            queue.push({ id: edge.source, depth: current.depth + 1 })
-          }
-        })
-        nextBidirectional.forEach((edge) => {
-          if (!visited.has(edge.target)) {
-            queue.push({ id: edge.target, depth: current.depth + 1 })
-          }
-        })
-      }
     }
+  })
 
-    return result
-  }
+  return sources
+}
 
-  const contextSources = getContextSources()
-
-  if (contextSources.length === 0) {
-    return null
-  }
-
-  const typeColors: Record<NodeData['type'], string> = {
-    project: 'bg-violet-500/20 text-violet-400',
-    note: 'bg-amber-500/20 text-amber-400',
-    task: 'bg-emerald-500/20 text-emerald-400',
-    conversation: 'bg-blue-500/20 text-blue-400',
-    artifact: 'bg-cyan-500/20 text-cyan-400',
-    workspace: 'bg-red-500/20 text-red-400',
-    action: 'bg-orange-500/20 text-orange-400',
-    text: 'bg-[var(--text-muted)]/20 text-[var(--text-secondary)]',
-    orchestrator: 'bg-violet-500/20 text-violet-400'
-  }
-
-  // Build className with injection flash state
-  const containerClassName = [
-    'border-t border-[var(--border-subtle)] bg-[var(--surface-panel)]/50',
-    isInjecting && 'context-indicator injecting'
-  ].filter(Boolean).join(' ')
-
+/** Skeleton loader for context indicator */
+function ContextSkeleton({ className }: { className?: string }) {
   return (
-    <div className={containerClassName}>
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-4 py-2 text-xs hover:bg-[var(--surface-panel-secondary)]/50 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <Network className="w-3.5 h-3.5 text-blue-400" />
-          <span className="text-[var(--text-secondary)]">
-            Using context from <span className="text-white font-medium">{contextSources.length}</span> {contextSources.length === 1 ? 'node' : 'nodes'}
-          </span>
-          <span className="text-[var(--text-muted)]">(depth: {contextSettings.globalDepth})</span>
-        </div>
-        <div className="flex items-center gap-1">
-          {onSettingsClick && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onSettingsClick()
-              }}
-              className="p-1 hover:bg-[var(--surface-panel-secondary)] rounded transition-colors"
-              title="Context Settings"
-            >
-              <Settings className="w-3 h-3 text-[var(--text-muted)] hover:text-[var(--text-secondary)]" />
-            </button>
-          )}
-          {isExpanded ? (
-            <ChevronUp className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-          ) : (
-            <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-          )}
-        </div>
-      </button>
-
-      {isExpanded && (
-        <div className="px-4 pb-3 space-y-1.5 max-h-[150px] overflow-y-auto">
-          {contextSources.map((source) => (
-            <div
-              key={source.id}
-              className="flex items-center gap-2 text-xs"
-            >
-              <span className={`px-1.5 py-0.5 rounded ${typeColors[source.type]}`}>
-                {source.type}
-              </span>
-              <span className="text-[var(--text-secondary)] truncate flex-1" title={source.title}>
-                {source.title}
-              </span>
-              <span className="text-[var(--text-muted)]">d{source.depth}</span>
-            </div>
-          ))}
-        </div>
+    <div
+      className={cn(
+        "inline-flex items-center gap-1 px-2 py-1 rounded-md",
+        "text-xs font-medium text-muted-foreground",
+        "border border-border/50",
+        className
       )}
+      aria-label="Calculating context..."
+      role="status"
+    >
+      <span className="text-[10px]">📎</span>
+      <span className="skeleton-loading inline-block w-20 h-3" />
+    </div>
+  )
+}
+
+export function ContextIndicator({ nodeId, compact = true, className }: ContextIndicatorProps) {
+  const [expanded, setExpanded] = useState(false)
+  const [isCalculating, setIsCalculating] = useState(true)
+  const getContextForNode = useWorkspaceStore(state => state.getContextForNode)
+  const allNodes = useWorkspaceStore(state => state.nodes)
+  const computedRef = useRef(false)
+
+  const { sources, totalTokens } = useMemo(() => {
+    const contextText = getContextForNode(nodeId)
+    const sources = parseContextSources(contextText, nodeId, allNodes)
+    const totalTokens = sources.reduce((sum, s) => sum + s.tokens, 0)
+    return { sources, totalTokens }
+  }, [nodeId, getContextForNode, allNodes])
+
+  // Show loading skeleton briefly on first render, then reveal computed result
+  useEffect(() => {
+    if (!computedRef.current) {
+      computedRef.current = true
+      // Use rAF to defer calculation display so the skeleton is painted first
+      requestAnimationFrame(() => {
+        setIsCalculating(false)
+      })
+    }
+  }, [])
+
+  // Show skeleton while calculating
+  if (isCalculating) {
+    return <ContextSkeleton className={className} />
+  }
+
+  // No context - show muted message
+  if (sources.length === 0) {
+    return (
+      <div className={cn("text-xs text-muted-foreground", className)}>
+        No context nodes connected
+      </div>
+    )
+  }
+
+  // Compact mode - clickable badge
+  if (compact && !expanded) {
+    return (
+      <button
+        onClick={() => setExpanded(true)}
+        className={cn(
+          "inline-flex items-center gap-1 px-2 py-1 rounded-md",
+          "text-xs font-medium",
+          "bg-primary/10 hover:bg-primary/20",
+          "text-primary",
+          "transition-colors",
+          "border border-primary/20",
+          className
+        )}
+        aria-label={`${sources.length} context source${sources.length !== 1 ? 's' : ''}, ${totalTokens} tokens. Click to expand`}
+      >
+        <span className="text-[10px]">📎</span>
+        <span>{sources.length} context{sources.length !== 1 ? 's' : ''}</span>
+        <span className="text-muted-foreground">•</span>
+        <span>{totalTokens}t</span>
+      </button>
+    )
+  }
+
+  // Expanded mode - full list
+  return (
+    <div className={cn("context-indicator-expanded rounded-md border border-border bg-card p-3 space-y-2", className)}>
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-medium flex items-center gap-1.5">
+          <span className="text-base">📎</span>
+          <span>Using context from:</span>
+        </div>
+        <button
+          onClick={() => setExpanded(false)}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Collapse context indicator"
+        >
+          Collapse ▲
+        </button>
+      </div>
+
+      <ul className="space-y-1.5">
+        {sources.map((source, i) => (
+          <li key={`${source.nodeId}-${i}`} className="flex items-center gap-2 text-xs">
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              {source.type}
+            </Badge>
+            <span className="flex-1 truncate" title={source.title}>
+              {source.title}
+            </span>
+            <span className="text-muted-foreground text-[10px]">
+              ({source.tokens}t)
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="text-xs text-muted-foreground pt-2 border-t border-border">
+        Total: {sources.length} source{sources.length !== 1 ? 's' : ''} • ~{totalTokens} tokens
+      </div>
     </div>
   )
 }

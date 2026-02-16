@@ -26,6 +26,19 @@ let cachedTier: GPUTier | null = null
 export function getGPUTier(): GPUTier {
   if (cachedTier !== null) return cachedTier
 
+  // CRITICAL: Disable GPU in test/CI environments to prevent VRAM leaks and driver crashes
+  // Tests run 10+ Electron instances rapidly - GPU contexts don't clean up fast enough
+  if (import.meta.env.MODE === 'test' || typeof window !== 'undefined' && (window as any).__TEST_MODE__) {
+    cachedTier = {
+      webglAvailable: false,
+      webgl2Available: false,
+      maxTextureSize: 0,
+      tier: 'low',
+    }
+    console.log('[GPU Detection] Test mode detected - GPU disabled')
+    return cachedTier
+  }
+
   try {
     const canvas = document.createElement('canvas')
 

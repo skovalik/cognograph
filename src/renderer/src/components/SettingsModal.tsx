@@ -14,6 +14,7 @@ import { createFocusTrap } from '../utils/accessibility'
 import { performThemeTransition } from '../utils/themeTransition'
 import type { PropertiesDisplayMode, ChatDisplayMode, ExtractionSettings, GlassSettings } from '@shared/types'
 import { DEFAULT_EXTRACTION_SETTINGS, DEFAULT_GLASS_SETTINGS, CONNECTOR_PROVIDER_INFO, type ConnectorProvider } from '@shared/types'
+import { logger } from '../utils/logger'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -72,9 +73,9 @@ function SettingsModalComponent({ isOpen, onClose }: SettingsModalProps): JSX.El
   }, [setAIPaletteEnabled, themeSettings.aiPaletteEnabled])
 
   const handleGlassSettingsChange = useCallback((updates: Partial<GlassSettings>) => {
-    console.log('[SETTINGS] handleGlassSettingsChange called with:', updates)
+    logger.log('[SETTINGS] handleGlassSettingsChange called with:', updates)
     const currentGlass = themeSettings.glassSettings ?? DEFAULT_GLASS_SETTINGS
-    console.log('[SETTINGS] Current glass settings:', currentGlass)
+    logger.log('[SETTINGS] Current glass settings:', currentGlass)
     // Ensure applyTo has defaults BEFORE merging
     const currentApplyTo = currentGlass.applyTo ?? DEFAULT_GLASS_SETTINGS.applyTo
     // Deep merge applyTo object to preserve unchecked checkboxes
@@ -85,7 +86,7 @@ function SettingsModalComponent({ isOpen, onClose }: SettingsModalProps): JSX.El
         ? { ...currentApplyTo, ...updates.applyTo }
         : currentApplyTo
     }
-    console.log('[SETTINGS] New glass settings:', newGlassSettings)
+    logger.log('[SETTINGS] New glass settings:', newGlassSettings)
     useWorkspaceStore.setState((state) => ({
       themeSettings: {
         ...state.themeSettings,
@@ -93,7 +94,7 @@ function SettingsModalComponent({ isOpen, onClose }: SettingsModalProps): JSX.El
       },
       isDirty: true
     }))
-    console.log('[SETTINGS] State updated, isDirty set to true')
+    logger.log('[SETTINGS] State updated, isDirty set to true')
   }, [themeSettings.glassSettings])
 
   const handlePropertiesDisplayModeChange = useCallback((mode: PropertiesDisplayMode) => {

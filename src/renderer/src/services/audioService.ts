@@ -21,6 +21,7 @@ export type SoundType =
   | 'redo' // Redo action
   | 'delete' // Item deleted
   | 'create' // Item created
+  | 'connect' // Edge/connection created
   | 'navigate' // Navigation event
 
 // Audio settings store
@@ -72,6 +73,7 @@ const SOUND_CONFIGS: Record<SoundType, { frequency: number; duration: number; ty
   redo: { frequency: 550, duration: 0.1, type: 'triangle' },
   delete: { frequency: 330, duration: 0.12, type: 'sine', decay: 0.08 },
   create: { frequency: 660, duration: 0.08, type: 'sine' },
+  connect: { frequency: 740, duration: 0.1, type: 'sine', decay: 0.06 },
   navigate: { frequency: 500, duration: 0.06, type: 'sine' }
 }
 
