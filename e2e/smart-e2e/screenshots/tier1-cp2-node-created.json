@@ -1,0 +1,10 @@
+{
+  "scenario": "critical-path-2",
+  "state": "conversation-node-created",
+  "timestamp": "2026-02-15T10:02:49.335Z",
+  "viewport": {
+    "width": 0,
+    "height": 0
+  },
+  "nodeCount": 5
+}

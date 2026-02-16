@@ -1,0 +1,10 @@
+{
+  "scenario": "critical-path-3",
+  "state": "message-typed",
+  "timestamp": "2026-02-15T10:02:55.115Z",
+  "viewport": {
+    "width": 0,
+    "height": 0
+  },
+  "nodeCount": 5
+}

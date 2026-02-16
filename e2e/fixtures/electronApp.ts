@@ -18,9 +18,12 @@ export const test = base.extend<{
   window: Page
 }>({
   // eslint-disable-next-line no-empty-pattern
-  electronApp: async ({}, use) => {
+  electronApp: async ({}, use, testInfo) => {
     // Path to the built Electron app main entry
     const mainPath = path.join(__dirname, '../../out/main/index.js')
+
+    // Create unique workspace for this test to prevent autosave pollution
+    const testWorkspacePath = path.join(__dirname, `../../e2e/test-workspaces/test-${Date.now()}.cg`)
 
     // Launch Electron app
     const app = await electron.launch({
@@ -29,7 +32,9 @@ export const test = base.extend<{
         ...process.env,
         NODE_ENV: 'test',
         // Disable GPU acceleration for CI stability
-        ELECTRON_DISABLE_GPU: '1'
+        ELECTRON_DISABLE_GPU: '1',
+        // Force app to use test-specific workspace (prevents autosave pollution)
+        COGNOGRAPH_TEST_WORKSPACE: testWorkspacePath
       }
     })
 

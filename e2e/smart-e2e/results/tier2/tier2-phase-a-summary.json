@@ -1,0 +1,715 @@
+{
+  "timestamp": "2026-02-15T22:05:37.783Z",
+  "tier": 2,
+  "phase": "A",
+  "states_evaluated": 10,
+  "metrics": {
+    "avg_clarity_score": 3,
+    "completion_rate": 0.5,
+    "states_with_dealbreakers": 10,
+    "avg_confusing_elements": 6.1
+  },
+  "cost": {
+    "total_usd": 0.207945,
+    "per_state_usd": 0.0207945
+  },
+  "results": [
+    {
+      "state": "empty-canvas",
+      "task": "Create your first note",
+      "passA": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "You are a UX auditor hired to FIND PROBLEMS. Your performance is measured by how many real issues you find. You do NOT get rewarded for saying \"this looks good.\"\n\nIf you cannot find at least 3 issues, you are not looking hard enough.\n\nA friend sent you this screenshot of an app with no context. You have 5 seconds.\n\nAnswer in JSON format:\n{\n  \"first_impression\": \"one sentence gut reaction\",\n  \"what_it_does\": \"your best guess in <10 words\",\n  \"attention_first_3_seconds\": [\"elements your eyes went to, in order\"],\n  \"confusing_elements\": [\"specific things that made no sense\"],\n  \"clarity_score\": 0-10,\n  \"seconds_before_switching_tabs\": \"5/15/30/60/never\",\n  \"dealbreaker\": \"what would make you close this immediately or null\"\n}",
+        "response": {
+          "first_impression": "Dark themed note-taking or canvas app with an overwhelming tutorial overlay blocking the empty workspace.",
+          "what_it_does": "AI chat canvas with notes and task management",
+          "attention_first_3_seconds": [
+            "The centered modal dialog with sparkle icon",
+            "The text 'Your canvas is ready' as the headline",
+            "The highlighted 'New Note' option with orange border"
+          ],
+          "confusing_elements": [
+            "Why is 'New Note' highlighted but the text says to chat with Claude first?",
+            "The 'General' label and '0 words' counter appear on what looks like an incomplete tooltip",
+            "Mixed messaging: 'Start by creating a conversation' vs 'add notes' - which should I do first?",
+            "The keyboard shortcuts use inconsistent formatting (Ctrl+K vs Shift+M with different separators)",
+            "What is the difference between a 'conversation', 'note', and 'task'?",
+            "'Click anywhere to dismiss' but there's a highlighted item suggesting I should click it instead"
+          ],
+          "clarity_score": 3,
+          "seconds_before_switching_tabs": "15",
+          "dealbreaker": "The tutorial doesn't clearly explain what this app actually does or why I'd use it over existing tools - just lists features without context"
+        },
+        "raw_response": "```json\n{\n  \"first_impression\": \"Dark themed note-taking or canvas app with an overwhelming tutorial overlay blocking the empty workspace.\",\n  \"what_it_does\": \"AI chat canvas with notes and task management\",\n  \"attention_first_3_seconds\": [\n    \"The centered modal dialog with sparkle icon\",\n    \"The text 'Your canvas is ready' as the headline\",\n    \"The highlighted 'New Note' option with orange border\"\n  ],\n  \"confusing_elements\": [\n    \"Why is 'New Note' highlighted but the text says to chat with Claude first?\",\n    \"The 'General' label and '0 words' counter appear on what looks like an incomplete tooltip\",\n    \"Mixed messaging: 'Start by creating a conversation' vs 'add notes' - which should I do first?\",\n    \"The keyboard shortcuts use inconsistent formatting (Ctrl+K vs Shift+M with different separators)\",\n    \"What is the difference between a 'conversation', 'note', and 'task'?\",\n    \"'Click anywhere to dismiss' but there's a highlighted item suggesting I should click it instead\"\n  ],\n  \"clarity_score\": 3,\n  \"seconds_before_switching_tabs\": \"15\",\n  \"dealbreaker\": \"The tutorial doesn't clearly explain what this app actually does or why I'd use it over existing tools - just lists features without context\"\n}\n```",
+        "metadata": {
+          "timestamp": "2026-02-15T22:01:36.966Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-empty-canvas.png",
+          "input_tokens": 1770,
+          "output_tokens": 330,
+          "cost_usd": 0.01026
+        }
+      },
+      "passB": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "Complete this task using ONLY what you see. If you get stuck, say exactly where and why. Do NOT guess or make up UI elements that aren't visible.\n\nYour job is to identify WHERE users get stuck, not to be clever.\n\nTask: \"Create your first note\"\n\nAnswer in JSON format:\n{\n  \"can_complete\": true or false,\n  \"steps\": [\n    {\"target\": \"precise element description with location\", \"confidence\": \"certain/likely/guessing\", \"why\": \"reasoning\"}\n  ],\n  \"stuck_at_step\": null or step number,\n  \"why_stuck\": \"what information is missing\",\n  \"wrong_turns\": [\"things you almost clicked by mistake\"],\n  \"recovery_possible\": \"if you click wrong thing, can you undo?\"\n}",
+        "response": {
+          "can_complete": true,
+          "steps": [
+            {
+              "target": "The 'New Note' button with a document icon, located in the center dialog box under 'Your canvas is ready'",
+              "confidence": "certain",
+              "why": "This is clearly labeled as 'New Note' and is the first option in the dialog, designed to create a note"
+            }
+          ],
+          "stuck_at_step": null,
+          "why_stuck": null,
+          "wrong_turns": [
+            "The 'Double-click to create a conversation' option below the New Note button - this creates a conversation, not a note",
+            "The command palette option (Ctrl+K) - this opens a command palette but is not the direct way to create a note",
+            "The document icon in the top toolbar - might be confused with creating a new note but it's in the main toolbar"
+          ],
+          "recovery_possible": "Yes, if I clicked the wrong option, I could dismiss the dialog by clicking anywhere outside it (as indicated by 'Click anywhere to dismiss' text) or use Escape key, and try again"
+        },
+        "raw_response": "{\n  \"can_complete\": true,\n  \"steps\": [\n    {\n      \"target\": \"The 'New Note' button with a document icon, located in the center dialog box under 'Your canvas is ready'\",\n      \"confidence\": \"certain\",\n      \"why\": \"This is clearly labeled as 'New Note' and is the first option in the dialog, designed to create a note\"\n    }\n  ],\n  \"stuck_at_step\": null,\n  \"why_stuck\": null,\n  \"wrong_turns\": [\n    \"The 'Double-click to create a conversation' option below the New Note button - this creates a conversation, not a note\",\n    \"The command palette option (Ctrl+K) - this opens a command palette but is not the direct way to create a note\",\n    \"The document icon in the top toolbar - might be confused with creating a new note but it's in the main toolbar\"\n  ],\n  \"recovery_possible\": \"Yes, if I clicked the wrong option, I could dismiss the dialog by clicking anywhere outside it (as indicated by 'Click anywhere to dismiss' text) or use Escape key, and try again\"\n}",
+        "metadata": {
+          "timestamp": "2026-02-15T22:01:45.054Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-empty-canvas.png",
+          "input_tokens": 1739,
+          "output_tokens": 270,
+          "cost_usd": 0.009267000000000001
+        }
+      }
+    },
+    {
+      "state": "single-node",
+      "task": "Open this node and change its title",
+      "passA": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "You are a UX auditor hired to FIND PROBLEMS. Your performance is measured by how many real issues you find. You do NOT get rewarded for saying \"this looks good.\"\n\nIf you cannot find at least 3 issues, you are not looking hard enough.\n\nA friend sent you this screenshot of an app with no context. You have 5 seconds.\n\nAnswer in JSON format:\n{\n  \"first_impression\": \"one sentence gut reaction\",\n  \"what_it_does\": \"your best guess in <10 words\",\n  \"attention_first_3_seconds\": [\"elements your eyes went to, in order\"],\n  \"confusing_elements\": [\"specific things that made no sense\"],\n  \"clarity_score\": 0-10,\n  \"seconds_before_switching_tabs\": \"5/15/30/60/never\",\n  \"dealbreaker\": \"what would make you close this immediately or null\"\n}",
+        "response": {
+          "first_impression": "Dark themed note-taking or AI chat app with an overwhelming onboarding tooltip situation.",
+          "what_it_does": "Create notes or chat with Claude AI assistant",
+          "attention_first_3_seconds": [
+            "The overlapping 'New Nota' dialog with orange border",
+            "The centered 'Your canvas is ready' message with sparkle icon",
+            "The toolbar icons at the top of the screen"
+          ],
+          "confusing_elements": [
+            "Two competing UI elements overlapping - the onboarding modal and a 'New Nota' creation dialog blocking each other",
+            "'Nota' spelling - is this a typo or intentional branding?",
+            "The '0 words' counter at bottom seems disconnected from empty state",
+            "Keyboard shortcuts use inconsistent formatting (Ctrl+K vs Shift+M notation)",
+            "Can't tell if this is primarily a chat app or note-taking app from the mixed messaging",
+            "The 'General' dropdown button's purpose is unclear in this context",
+            "Bottom right has 'Map' dropdown and orange button with no labels"
+          ],
+          "clarity_score": 3,
+          "seconds_before_switching_tabs": "15",
+          "dealbreaker": "The overlapping modals creating a confusing first-use experience - I literally cannot tell what I'm supposed to interact with first"
+        },
+        "raw_response": "```json\n{\n  \"first_impression\": \"Dark themed note-taking or AI chat app with an overwhelming onboarding tooltip situation.\",\n  \"what_it_does\": \"Create notes or chat with Claude AI assistant\",\n  \"attention_first_3_seconds\": [\n    \"The overlapping 'New Nota' dialog with orange border\",\n    \"The centered 'Your canvas is ready' message with sparkle icon\",\n    \"The toolbar icons at the top of the screen\"\n  ],\n  \"confusing_elements\": [\n    \"Two competing UI elements overlapping - the onboarding modal and a 'New Nota' creation dialog blocking each other\",\n    \"'Nota' spelling - is this a typo or intentional branding?\",\n    \"The '0 words' counter at bottom seems disconnected from empty state\",\n    \"Keyboard shortcuts use inconsistent formatting (Ctrl+K vs Shift+M notation)\",\n    \"Can't tell if this is primarily a chat app or note-taking app from the mixed messaging\",\n    \"The 'General' dropdown button's purpose is unclear in this context\",\n    \"Bottom right has 'Map' dropdown and orange button with no labels\"\n  ],\n  \"clarity_score\": 3,\n  \"seconds_before_switching_tabs\": \"15\",\n  \"dealbreaker\": \"The overlapping modals creating a confusing first-use experience - I literally cannot tell what I'm supposed to interact with first\"\n}\n```",
+        "metadata": {
+          "timestamp": "2026-02-15T22:01:59.342Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-single-node.png",
+          "input_tokens": 1770,
+          "output_tokens": 339,
+          "cost_usd": 0.010395000000000001
+        }
+      },
+      "passB": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "Complete this task using ONLY what you see. If you get stuck, say exactly where and why. Do NOT guess or make up UI elements that aren't visible.\n\nYour job is to identify WHERE users get stuck, not to be clever.\n\nTask: \"Open this node and change its title\"\n\nAnswer in JSON format:\n{\n  \"can_complete\": true or false,\n  \"steps\": [\n    {\"target\": \"precise element description with location\", \"confidence\": \"certain/likely/guessing\", \"why\": \"reasoning\"}\n  ],\n  \"stuck_at_step\": null or step number,\n  \"why_stuck\": \"what information is missing\",\n  \"wrong_turns\": [\"things you almost clicked by mistake\"],\n  \"recovery_possible\": \"if you click wrong thing, can you undo?\"\n}",
+        "response": {
+          "can_complete": true,
+          "steps": [
+            {
+              "target": "The 'New Nota' node/card in the center-right of the screen with an orange/golden border",
+              "confidence": "certain",
+              "why": "This is the node that needs to be opened. It's clearly visible with the title 'New Nota' and has a distinctive orange border. There's also a sparkle icon and a pin icon on it, along with a 'General' dropdown."
+            },
+            {
+              "target": "Double-click on the 'New Nota' title text or anywhere on the node card",
+              "confidence": "certain",
+              "why": "The welcome dialog in the background states 'Double-click to create a conversation' which suggests double-clicking is the primary interaction method for opening nodes. Double-clicking on the node should open it for editing."
+            },
+            {
+              "target": "Once opened, the title 'New Nota' should become editable, allowing me to change it",
+              "confidence": "likely",
+              "why": "Standard behavior for note-taking applications is that opening a node allows you to edit its title. The title should either be automatically selected or clickable to edit."
+            }
+          ],
+          "stuck_at_step": null,
+          "why_stuck": null,
+          "wrong_turns": [
+            "Might accidentally click the 'General' dropdown button thinking it would open the node",
+            "Might click the sparkle icon or pin icon thinking those would open the node",
+            "Could accidentally click on the Map dropdown in the bottom right corner"
+          ],
+          "recovery_possible": "Yes, clicking elsewhere or pressing Escape would likely close any accidentally opened menus or dialogs, allowing me to try again"
+        },
+        "raw_response": "{\n  \"can_complete\": true,\n  \"steps\": [\n    {\n      \"target\": \"The 'New Nota' node/card in the center-right of the screen with an orange/golden border\",\n      \"confidence\": \"certain\",\n      \"why\": \"This is the node that needs to be opened. It's clearly visible with the title 'New Nota' and has a distinctive orange border. There's also a sparkle icon and a pin icon on it, along with a 'General' dropdown.\"\n    },\n    {\n      \"target\": \"Double-click on the 'New Nota' title text or anywhere on the node card\",\n      \"confidence\": \"certain\",\n      \"why\": \"The welcome dialog in the background states 'Double-click to create a conversation' which suggests double-clicking is the primary interaction method for opening nodes. Double-clicking on the node should open it for editing.\"\n    },\n    {\n      \"target\": \"Once opened, the title 'New Nota' should become editable, allowing me to change it\",\n      \"confidence\": \"likely\",\n      \"why\": \"Standard behavior for note-taking applications is that opening a node allows you to edit its title. The title should either be automatically selected or clickable to edit.\"\n    }\n  ],\n  \"stuck_at_step\": null,\n  \"why_stuck\": null,\n  \"wrong_turns\": [\n    \"Might accidentally click the 'General' dropdown button thinking it would open the node\",\n    \"Might click the sparkle icon or pin icon thinking those would open the node\",\n    \"Could accidentally click on the Map dropdown in the bottom right corner\"\n  ],\n  \"recovery_possible\": \"Yes, clicking elsewhere or pressing Escape would likely close any accidentally opened menus or dialogs, allowing me to try again\"\n}",
+        "metadata": {
+          "timestamp": "2026-02-15T22:02:10.818Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-single-node.png",
+          "input_tokens": 1742,
+          "output_tokens": 419,
+          "cost_usd": 0.011511
+        }
+      }
+    },
+    {
+      "state": "two-connected",
+      "task": "Make the AI use the first note as context when answering in the conversation",
+      "passA": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "You are a UX auditor hired to FIND PROBLEMS. Your performance is measured by how many real issues you find. You do NOT get rewarded for saying \"this looks good.\"\n\nIf you cannot find at least 3 issues, you are not looking hard enough.\n\nA friend sent you this screenshot of an app with no context. You have 5 seconds.\n\nAnswer in JSON format:\n{\n  \"first_impression\": \"one sentence gut reaction\",\n  \"what_it_does\": \"your best guess in <10 words\",\n  \"attention_first_3_seconds\": [\"elements your eyes went to, in order\"],\n  \"confusing_elements\": [\"specific things that made no sense\"],\n  \"clarity_score\": 0-10,\n  \"seconds_before_switching_tabs\": \"5/15/30/60/never\",\n  \"dealbreaker\": \"what would make you close this immediately or null\"\n}",
+        "response": {
+          "first_impression": "A dark-themed productivity app with chat and note-taking features that feels visually cluttered and confusing.",
+          "what_it_does": "Chat app with note-taking and visual mapping features",
+          "attention_first_3_seconds": [
+            "The blue card labeled 'New Conversation' with prominent border",
+            "The orange/yellow 'New Note' card on the right",
+            "The toolbar at the top with many icons"
+          ],
+          "confusing_elements": [
+            "Blue circular handles/dots on the conversation card look like resize handles but unclear what they do",
+            "The text 'Double-click to start chatting' is confusing - why double-click instead of single click?",
+            "What does 'Anthropic' mean in the bottom right of the conversation card?",
+            "The relationship between the conversation card and note card is unclear - are they linked?",
+            "Too many unlabeled icons in the top toolbar with no tooltips visible",
+            "The 'Chat' dropdown button in the conversation card seems redundant when the card is already labeled 'New Conversation'",
+            "A small map preview in bottom right corner appears disconnected from everything else"
+          ],
+          "clarity_score": 3,
+          "seconds_before_switching_tabs": "30",
+          "dealbreaker": "The double-click requirement to start chatting - unnecessary friction that breaks standard interaction patterns"
+        },
+        "raw_response": "```json\n{\n  \"first_impression\": \"A dark-themed productivity app with chat and note-taking features that feels visually cluttered and confusing.\",\n  \"what_it_does\": \"Chat app with note-taking and visual mapping features\",\n  \"attention_first_3_seconds\": [\n    \"The blue card labeled 'New Conversation' with prominent border\",\n    \"The orange/yellow 'New Note' card on the right\",\n    \"The toolbar at the top with many icons\"\n  ],\n  \"confusing_elements\": [\n    \"Blue circular handles/dots on the conversation card look like resize handles but unclear what they do\",\n    \"The text 'Double-click to start chatting' is confusing - why double-click instead of single click?\",\n    \"What does 'Anthropic' mean in the bottom right of the conversation card?\",\n    \"The relationship between the conversation card and note card is unclear - are they linked?\",\n    \"Too many unlabeled icons in the top toolbar with no tooltips visible\",\n    \"The 'Chat' dropdown button in the conversation card seems redundant when the card is already labeled 'New Conversation'\",\n    \"A small map preview in bottom right corner appears disconnected from everything else\"\n  ],\n  \"clarity_score\": 3,\n  \"seconds_before_switching_tabs\": \"30\",\n  \"dealbreaker\": \"The double-click requirement to start chatting - unnecessary friction that breaks standard interaction patterns\"\n}\n```",
+        "metadata": {
+          "timestamp": "2026-02-15T22:02:26.914Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-two-connected.png",
+          "input_tokens": 1770,
+          "output_tokens": 346,
+          "cost_usd": 0.0105
+        }
+      },
+      "passB": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "Complete this task using ONLY what you see. If you get stuck, say exactly where and why. Do NOT guess or make up UI elements that aren't visible.\n\nYour job is to identify WHERE users get stuck, not to be clever.\n\nTask: \"Make the AI use the first note as context when answering in the conversation\"\n\nAnswer in JSON format:\n{\n  \"can_complete\": true or false,\n  \"steps\": [\n    {\"target\": \"precise element description with location\", \"confidence\": \"certain/likely/guessing\", \"why\": \"reasoning\"}\n  ],\n  \"stuck_at_step\": null or step number,\n  \"why_stuck\": \"what information is missing\",\n  \"wrong_turns\": [\"things you almost clicked by mistake\"],\n  \"recovery_possible\": \"if you click wrong thing, can you undo?\"\n}",
+        "response": {
+          "can_complete": false,
+          "steps": [
+            {
+              "target": "The 'New Note' panel on the right side of the screen with an orange/yellow border",
+              "confidence": "certain",
+              "why": "This is the note that needs to be used as context for the conversation on the left"
+            },
+            {
+              "target": "Looking for a way to link or attach the note to the conversation",
+              "confidence": "likely",
+              "why": "I need to find a mechanism to make the AI use this note as context, possibly through a button, menu, or drag-and-drop action"
+            }
+          ],
+          "stuck_at_step": 2,
+          "why_stuck": "I can see both the 'New Conversation' panel (left, blue border) and the 'New Note' panel (right, orange border), but there's no visible UI element or button that would allow me to attach or link the note to the conversation as context. I don't see any 'Add Context', 'Attach Note', or similar button in either panel. The conversation shows '0 messages' and 'Anthropic' at the bottom, and the note shows '0 words', but there's no visible mechanism to connect them. I would need to see a button, menu option, or some other UI element that explicitly allows adding the note as context to the conversation.",
+          "wrong_turns": [
+            "The 'Chat' dropdown button in the conversation panel - this might change chat settings but doesn't obviously relate to adding context",
+            "The pin icon or pencil icon in the New Note header - these likely relate to note management, not linking to conversations",
+            "The 'General' dropdown in the note panel - this appears to be for categorization, not for linking to conversations"
+          ],
+          "recovery_possible": "Yes, clicking dropdown menus or buttons would likely be reversible by clicking elsewhere or pressing escape"
+        },
+        "raw_response": "{\n  \"can_complete\": false,\n  \"steps\": [\n    {\n      \"target\": \"The 'New Note' panel on the right side of the screen with an orange/yellow border\",\n      \"confidence\": \"certain\",\n      \"why\": \"This is the note that needs to be used as context for the conversation on the left\"\n    },\n    {\n      \"target\": \"Looking for a way to link or attach the note to the conversation\",\n      \"confidence\": \"likely\",\n      \"why\": \"I need to find a mechanism to make the AI use this note as context, possibly through a button, menu, or drag-and-drop action\"\n    }\n  ],\n  \"stuck_at_step\": 2,\n  \"why_stuck\": \"I can see both the 'New Conversation' panel (left, blue border) and the 'New Note' panel (right, orange border), but there's no visible UI element or button that would allow me to attach or link the note to the conversation as context. I don't see any 'Add Context', 'Attach Note', or similar button in either panel. The conversation shows '0 messages' and 'Anthropic' at the bottom, and the note shows '0 words', but there's no visible mechanism to connect them. I would need to see a button, menu option, or some other UI element that explicitly allows adding the note as context to the conversation.\",\n  \"wrong_turns\": [\n    \"The 'Chat' dropdown button in the conversation panel - this might change chat settings but doesn't obviously relate to adding context\",\n    \"The pin icon or pencil icon in the New Note header - these likely relate to note management, not linking to conversations\",\n    \"The 'General' dropdown in the note panel - this appears to be for categorization, not for linking to conversations\"\n  ],\n  \"recovery_possible\": \"Yes, clicking dropdown menus or buttons would likely be reversible by clicking elsewhere or pressing escape\"\n}",
+        "metadata": {
+          "timestamp": "2026-02-15T22:02:38.319Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-two-connected.png",
+          "input_tokens": 1750,
+          "output_tokens": 450,
+          "cost_usd": 0.012
+        }
+      }
+    },
+    {
+      "state": "chat-open",
+      "task": "Send a message to the AI",
+      "passA": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "You are a UX auditor hired to FIND PROBLEMS. Your performance is measured by how many real issues you find. You do NOT get rewarded for saying \"this looks good.\"\n\nIf you cannot find at least 3 issues, you are not looking hard enough.\n\nA friend sent you this screenshot of an app with no context. You have 5 seconds.\n\nAnswer in JSON format:\n{\n  \"first_impression\": \"one sentence gut reaction\",\n  \"what_it_does\": \"your best guess in <10 words\",\n  \"attention_first_3_seconds\": [\"elements your eyes went to, in order\"],\n  \"confusing_elements\": [\"specific things that made no sense\"],\n  \"clarity_score\": 0-10,\n  \"seconds_before_switching_tabs\": \"5/15/30/60/never\",\n  \"dealbreaker\": \"what would make you close this immediately or null\"\n}",
+        "response": {
+          "first_impression": "A note-taking app with some kind of visual node/connection system that feels overly complex for what should be simple.",
+          "what_it_does": "Create notes with metadata in a visual workspace",
+          "attention_first_3_seconds": [
+            "Glowing orange circles and connecting lines (most visually dominant)",
+            "\"New Note\" large text in center",
+            "Right sidebar with form fields"
+          ],
+          "confusing_elements": [
+            "Why are there giant glowing orbs connected by lines for a simple note?",
+            "The word 'Gene' appears cut off next to editing icons - is this a label, button, or truncated text?",
+            "Two separate '0 words' counters (one in canvas, one in sidebar) showing identical info",
+            "Icon row at top has 20+ buttons with no labels - impossible to know what most do",
+            "What is 'Context Injection' and why does it have a help icon?",
+            "Why does 'Role' default to 'Reference' for a blank note?",
+            "'Conditional Activation' is collapsed - what does this do?"
+          ],
+          "clarity_score": 3,
+          "seconds_before_switching_tabs": "15",
+          "dealbreaker": "The visual complexity (glowing nodes, lines) adds zero value to writing a note and makes it feel like I need a tutorial just to type text"
+        },
+        "raw_response": "```json\n{\n  \"first_impression\": \"A note-taking app with some kind of visual node/connection system that feels overly complex for what should be simple.\",\n  \"what_it_does\": \"Create notes with metadata in a visual workspace\",\n  \"attention_first_3_seconds\": [\n    \"Glowing orange circles and connecting lines (most visually dominant)\",\n    \"\\\"New Note\\\" large text in center\",\n    \"Right sidebar with form fields\"\n  ],\n  \"confusing_elements\": [\n    \"Why are there giant glowing orbs connected by lines for a simple note?\",\n    \"The word 'Gene' appears cut off next to editing icons - is this a label, button, or truncated text?\",\n    \"Two separate '0 words' counters (one in canvas, one in sidebar) showing identical info\",\n    \"Icon row at top has 20+ buttons with no labels - impossible to know what most do\",\n    \"What is 'Context Injection' and why does it have a help icon?\",\n    \"Why does 'Role' default to 'Reference' for a blank note?\",\n    \"'Conditional Activation' is collapsed - what does this do?\"\n  ],\n  \"clarity_score\": 3,\n  \"seconds_before_switching_tabs\": \"15\",\n  \"dealbreaker\": \"The visual complexity (glowing nodes, lines) adds zero value to writing a note and makes it feel like I need a tutorial just to type text\"\n}\n```",
+        "metadata": {
+          "timestamp": "2026-02-15T21:41:35.037Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-chat-open.png",
+          "input_tokens": 1770,
+          "output_tokens": 347,
+          "cost_usd": 0.010515
+        }
+      },
+      "passB": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "Complete this task using ONLY what you see. If you get stuck, say exactly where and why. Do NOT guess or make up UI elements that aren't visible.\n\nYour job is to identify WHERE users get stuck, not to be clever.\n\nTask: \"Send a message to the AI\"\n\nAnswer in JSON format:\n{\n  \"can_complete\": true or false,\n  \"steps\": [\n    {\"target\": \"precise element description with location\", \"confidence\": \"certain/likely/guessing\", \"why\": \"reasoning\"}\n  ],\n  \"stuck_at_step\": null or step number,\n  \"why_stuck\": \"what information is missing\",\n  \"wrong_turns\": [\"things you almost clicked by mistake\"],\n  \"recovery_possible\": \"if you click wrong thing, can you undo?\"\n}",
+        "response": {
+          "can_complete": false,
+          "steps": [
+            {
+              "target": "Look for a chat interface or message input field to send a message to AI",
+              "confidence": "certain",
+              "why": "I need to find where to type and send a message to the AI"
+            },
+            {
+              "target": "The 'Content' text area on the right panel that says 'Write your note here...'",
+              "confidence": "guessing",
+              "why": "This appears to be a note-taking interface, not a chat interface. There's a content field but no clear way to send it as a message to AI"
+            }
+          ],
+          "stuck_at_step": 1,
+          "why_stuck": "I cannot find any visible UI element that allows sending a message to an AI. The interface shows a note-taking application with a 'New Note' title, content area, and various formatting options, but there is no chat interface, send button, or AI interaction element visible. The content field appears to be for writing notes, not for chatting with AI.",
+          "wrong_turns": [
+            "The 'Content' text area might seem like a place to type a message, but there's no send button or indication this communicates with AI",
+            "The star icon near the top might be mistaken for an AI feature, but it appears to be a decoration or status indicator",
+            "The 'Node Enabled' toggle might seem AI-related but appears to be a node activation setting"
+          ],
+          "recovery_possible": "N/A - cannot attempt the task as no AI messaging interface is visible"
+        },
+        "raw_response": "{\n  \"can_complete\": false,\n  \"steps\": [\n    {\n      \"target\": \"Look for a chat interface or message input field to send a message to AI\",\n      \"confidence\": \"certain\",\n      \"why\": \"I need to find where to type and send a message to the AI\"\n    },\n    {\n      \"target\": \"The 'Content' text area on the right panel that says 'Write your note here...'\",\n      \"confidence\": \"guessing\",\n      \"why\": \"This appears to be a note-taking interface, not a chat interface. There's a content field but no clear way to send it as a message to AI\"\n    }\n  ],\n  \"stuck_at_step\": 1,\n  \"why_stuck\": \"I cannot find any visible UI element that allows sending a message to an AI. The interface shows a note-taking application with a 'New Note' title, content area, and various formatting options, but there is no chat interface, send button, or AI interaction element visible. The content field appears to be for writing notes, not for chatting with AI.\",\n  \"wrong_turns\": [\n    \"The 'Content' text area might seem like a place to type a message, but there's no send button or indication this communicates with AI\",\n    \"The star icon near the top might be mistaken for an AI feature, but it appears to be a decoration or status indicator\",\n    \"The 'Node Enabled' toggle might seem AI-related but appears to be a node activation setting\"\n  ],\n  \"recovery_possible\": \"N/A - cannot attempt the task as no AI messaging interface is visible\"\n}",
+        "metadata": {
+          "timestamp": "2026-02-15T21:41:44.928Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-chat-open.png",
+          "input_tokens": 1741,
+          "output_tokens": 380,
+          "cost_usd": 0.010923
+        }
+      }
+    },
+    {
+      "state": "toolbar-visible",
+      "task": "Create a new conversation node",
+      "passA": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "You are a UX auditor hired to FIND PROBLEMS. Your performance is measured by how many real issues you find. You do NOT get rewarded for saying \"this looks good.\"\n\nIf you cannot find at least 3 issues, you are not looking hard enough.\n\nA friend sent you this screenshot of an app with no context. You have 5 seconds.\n\nAnswer in JSON format:\n{\n  \"first_impression\": \"one sentence gut reaction\",\n  \"what_it_does\": \"your best guess in <10 words\",\n  \"attention_first_3_seconds\": [\"elements your eyes went to, in order\"],\n  \"confusing_elements\": [\"specific things that made no sense\"],\n  \"clarity_score\": 0-10,\n  \"seconds_before_switching_tabs\": \"5/15/30/60/never\",\n  \"dealbreaker\": \"what would make you close this immediately or null\"\n}",
+        "response": {
+          "first_impression": "Dark themed note-taking or AI chat app with an overwhelming tutorial overlay blocking an empty canvas.",
+          "what_it_does": "AI chat/conversation app with notes and tasks",
+          "attention_first_3_seconds": [
+            "The centered sparkle icon and 'Your canvas is ready' heading",
+            "The bright orange/yellow 'New Note' button with hover state",
+            "The list of keyboard shortcuts below"
+          ],
+          "confusing_elements": [
+            "Why is 'New Note' highlighted when the main text says to 'create a conversation to chat with Claude'?",
+            "What is the difference between a 'conversation', 'note', and 'task'?",
+            "The '0 words' counter appears on the command palette instruction which makes no sense",
+            "Why does it say 'Double-click to create a conversation' when there's also a New Note button?",
+            "The mini-map in bottom right shows a yellow rectangle but canvas is empty - what am I looking at?"
+          ],
+          "clarity_score": 3,
+          "seconds_before_switching_tabs": "15",
+          "dealbreaker": "The modal forces me to learn 5 different interaction methods before I can do anything - I just want to start, not memorize shortcuts"
+        },
+        "raw_response": "```json\n{\n  \"first_impression\": \"Dark themed note-taking or AI chat app with an overwhelming tutorial overlay blocking an empty canvas.\",\n  \"what_it_does\": \"AI chat/conversation app with notes and tasks\",\n  \"attention_first_3_seconds\": [\n    \"The centered sparkle icon and 'Your canvas is ready' heading\",\n    \"The bright orange/yellow 'New Note' button with hover state\",\n    \"The list of keyboard shortcuts below\"\n  ],\n  \"confusing_elements\": [\n    \"Why is 'New Note' highlighted when the main text says to 'create a conversation to chat with Claude'?\",\n    \"What is the difference between a 'conversation', 'note', and 'task'?\",\n    \"The '0 words' counter appears on the command palette instruction which makes no sense\",\n    \"Why does it say 'Double-click to create a conversation' when there's also a New Note button?\",\n    \"The mini-map in bottom right shows a yellow rectangle but canvas is empty - what am I looking at?\"\n  ],\n  \"clarity_score\": 3,\n  \"seconds_before_switching_tabs\": \"15\",\n  \"dealbreaker\": \"The modal forces me to learn 5 different interaction methods before I can do anything - I just want to start, not memorize shortcuts\"\n}\n```",
+        "metadata": {
+          "timestamp": "2026-02-15T22:03:27.021Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-toolbar-visible.png",
+          "input_tokens": 1770,
+          "output_tokens": 318,
+          "cost_usd": 0.01008
+        }
+      },
+      "passB": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "Complete this task using ONLY what you see. If you get stuck, say exactly where and why. Do NOT guess or make up UI elements that aren't visible.\n\nYour job is to identify WHERE users get stuck, not to be clever.\n\nTask: \"Create a new conversation node\"\n\nAnswer in JSON format:\n{\n  \"can_complete\": true or false,\n  \"steps\": [\n    {\"target\": \"precise element description with location\", \"confidence\": \"certain/likely/guessing\", \"why\": \"reasoning\"}\n  ],\n  \"stuck_at_step\": null or step number,\n  \"why_stuck\": \"what information is missing\",\n  \"wrong_turns\": [\"things you almost clicked by mistake\"],\n  \"recovery_possible\": \"if you click wrong thing, can you undo?\"\n}",
+        "response": {
+          "can_complete": true,
+          "steps": [
+            {
+              "target": "The 'Double-click to create a conversation' option in the center dialog box, which shows a chat bubble icon and is the second item in the list",
+              "confidence": "certain",
+              "why": "The dialog clearly shows 'Double-click to create a conversation' as an option with a chat bubble icon, which directly matches the task requirement"
+            }
+          ],
+          "stuck_at_step": null,
+          "why_stuck": null,
+          "wrong_turns": [
+            "The 'New Note' button at the top of the list might be tempting, but it creates a note, not a conversation",
+            "The command palette option (Press Ctrl+K) could be confused as a way to create conversations, but it's for opening the command palette",
+            "The 'creating a conversation to chat with Claude' link in the description text might look clickable but it's part of the instructional text"
+          ],
+          "recovery_possible": "Yes, if I clicked the wrong option like 'New Note', I could simply close or dismiss the created note and try again. The dialog also says 'Click anywhere to dismiss' at the bottom, so I can dismiss it and restart if needed."
+        },
+        "raw_response": "{\n  \"can_complete\": true,\n  \"steps\": [\n    {\n      \"target\": \"The 'Double-click to create a conversation' option in the center dialog box, which shows a chat bubble icon and is the second item in the list\",\n      \"confidence\": \"certain\",\n      \"why\": \"The dialog clearly shows 'Double-click to create a conversation' as an option with a chat bubble icon, which directly matches the task requirement\"\n    }\n  ],\n  \"stuck_at_step\": null,\n  \"why_stuck\": null,\n  \"wrong_turns\": [\n    \"The 'New Note' button at the top of the list might be tempting, but it creates a note, not a conversation\",\n    \"The command palette option (Press Ctrl+K) could be confused as a way to create conversations, but it's for opening the command palette\",\n    \"The 'creating a conversation to chat with Claude' link in the description text might look clickable but it's part of the instructional text\"\n  ],\n  \"recovery_possible\": \"Yes, if I clicked the wrong option like 'New Note', I could simply close or dismiss the created note and try again. The dialog also says 'Click anywhere to dismiss' at the bottom, so I can dismiss it and restart if needed.\"\n}",
+        "metadata": {
+          "timestamp": "2026-02-15T22:03:36.271Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-toolbar-visible.png",
+          "input_tokens": 1740,
+          "output_tokens": 301,
+          "cost_usd": 0.009735
+        }
+      }
+    },
+    {
+      "state": "settings-open",
+      "task": "Configure your API key so AI features work",
+      "passA": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "You are a UX auditor hired to FIND PROBLEMS. Your performance is measured by how many real issues you find. You do NOT get rewarded for saying \"this looks good.\"\n\nIf you cannot find at least 3 issues, you are not looking hard enough.\n\nA friend sent you this screenshot of an app with no context. You have 5 seconds.\n\nAnswer in JSON format:\n{\n  \"first_impression\": \"one sentence gut reaction\",\n  \"what_it_does\": \"your best guess in <10 words\",\n  \"attention_first_3_seconds\": [\"elements your eyes went to, in order\"],\n  \"confusing_elements\": [\"specific things that made no sense\"],\n  \"clarity_score\": 0-10,\n  \"seconds_before_switching_tabs\": \"5/15/30/60/never\",\n  \"dealbreaker\": \"what would make you close this immediately or null\"\n}",
+        "response": {
+          "first_impression": "A dark-themed settings panel for some kind of workspace or diagram tool with sliders and technical options.",
+          "what_it_does": "Configure workspace layout and visualization settings",
+          "attention_first_3_seconds": [
+            "The bright cyan 'Done' button in bottom right",
+            "The 'Settings' header with gear icon at top",
+            "The blue sliders in the middle section"
+          ],
+          "confusing_elements": [
+            "What 'Context Depth' means - the explanation about 'hops' and 'conversation node context' is vague",
+            "Why there are two different sidebar width settings (Properties vs Left) - unclear what each controls",
+            "What 'Live Physics' actually does - 'springs pulling nodes toward ideal distances' is abstract",
+            "'Untitled Workspace' suggests I should name it but there's no obvious edit affordance",
+            "The toolbar icons at the top are tiny and mostly indecipherable without labels"
+          ],
+          "clarity_score": 4,
+          "seconds_before_switching_tabs": "30",
+          "dealbreaker": "If I had to configure 'Context Depth' before using the app and had no idea what it meant"
+        },
+        "raw_response": "```json\n{\n  \"first_impression\": \"A dark-themed settings panel for some kind of workspace or diagram tool with sliders and technical options.\",\n  \"what_it_does\": \"Configure workspace layout and visualization settings\",\n  \"attention_first_3_seconds\": [\n    \"The bright cyan 'Done' button in bottom right\",\n    \"The 'Settings' header with gear icon at top\",\n    \"The blue sliders in the middle section\"\n  ],\n  \"confusing_elements\": [\n    \"What 'Context Depth' means - the explanation about 'hops' and 'conversation node context' is vague\",\n    \"Why there are two different sidebar width settings (Properties vs Left) - unclear what each controls\",\n    \"What 'Live Physics' actually does - 'springs pulling nodes toward ideal distances' is abstract\",\n    \"'Untitled Workspace' suggests I should name it but there's no obvious edit affordance\",\n    \"The toolbar icons at the top are tiny and mostly indecipherable without labels\"\n  ],\n  \"clarity_score\": 4,\n  \"seconds_before_switching_tabs\": \"30\",\n  \"dealbreaker\": \"If I had to configure 'Context Depth' before using the app and had no idea what it meant\"\n}\n```",
+        "metadata": {
+          "timestamp": "2026-02-15T22:03:50.162Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-settings-open.png",
+          "input_tokens": 1770,
+          "output_tokens": 301,
+          "cost_usd": 0.009825
+        }
+      },
+      "passB": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "Complete this task using ONLY what you see. If you get stuck, say exactly where and why. Do NOT guess or make up UI elements that aren't visible.\n\nYour job is to identify WHERE users get stuck, not to be clever.\n\nTask: \"Configure your API key so AI features work\"\n\nAnswer in JSON format:\n{\n  \"can_complete\": true or false,\n  \"steps\": [\n    {\"target\": \"precise element description with location\", \"confidence\": \"certain/likely/guessing\", \"why\": \"reasoning\"}\n  ],\n  \"stuck_at_step\": null or step number,\n  \"why_stuck\": \"what information is missing\",\n  \"wrong_turns\": [\"things you almost clicked by mistake\"],\n  \"recovery_possible\": \"if you click wrong thing, can you undo?\"\n}",
+        "response": {
+          "can_complete": true,
+          "steps": [
+            {
+              "target": "The 'AI & Connectors' menu item in the left sidebar of the Settings dialog",
+              "confidence": "certain",
+              "why": "This is clearly labeled and is the logical place to configure API keys for AI features"
+            },
+            {
+              "target": "Click on the 'AI & Connectors' option to access API key configuration",
+              "confidence": "certain",
+              "why": "The menu item is visible and clickable in the left sidebar, second item from the top"
+            }
+          ],
+          "stuck_at_step": null,
+          "why_stuck": null,
+          "wrong_turns": [
+            "Might mistakenly click 'Preferences' thinking API keys would be there",
+            "Could potentially look in 'Defaults' section thinking it's a default setting"
+          ],
+          "recovery_possible": "Yes, can easily navigate back by clicking on different menu items in the left sidebar"
+        },
+        "raw_response": "{\n  \"can_complete\": true,\n  \"steps\": [\n    {\n      \"target\": \"The 'AI & Connectors' menu item in the left sidebar of the Settings dialog\",\n      \"confidence\": \"certain\",\n      \"why\": \"This is clearly labeled and is the logical place to configure API keys for AI features\"\n    },\n    {\n      \"target\": \"Click on the 'AI & Connectors' option to access API key configuration\",\n      \"confidence\": \"certain\",\n      \"why\": \"The menu item is visible and clickable in the left sidebar, second item from the top\"\n    }\n  ],\n  \"stuck_at_step\": null,\n  \"why_stuck\": null,\n  \"wrong_turns\": [\n    \"Might mistakenly click 'Preferences' thinking API keys would be there\",\n    \"Could potentially look in 'Defaults' section thinking it's a default setting\"\n  ],\n  \"recovery_possible\": \"Yes, can easily navigate back by clicking on different menu items in the left sidebar\"\n}",
+        "metadata": {
+          "timestamp": "2026-02-15T22:03:56.430Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-settings-open.png",
+          "input_tokens": 1743,
+          "output_tokens": 247,
+          "cost_usd": 0.008934000000000001
+        }
+      }
+    },
+    {
+      "state": "sidebar-open",
+      "task": "View your recent conversations",
+      "passA": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "You are a UX auditor hired to FIND PROBLEMS. Your performance is measured by how many real issues you find. You do NOT get rewarded for saying \"this looks good.\"\n\nIf you cannot find at least 3 issues, you are not looking hard enough.\n\nA friend sent you this screenshot of an app with no context. You have 5 seconds.\n\nAnswer in JSON format:\n{\n  \"first_impression\": \"one sentence gut reaction\",\n  \"what_it_does\": \"your best guess in <10 words\",\n  \"attention_first_3_seconds\": [\"elements your eyes went to, in order\"],\n  \"confusing_elements\": [\"specific things that made no sense\"],\n  \"clarity_score\": 0-10,\n  \"seconds_before_switching_tabs\": \"5/15/30/60/never\",\n  \"dealbreaker\": \"what would make you close this immediately or null\"\n}",
+        "response": {
+          "first_impression": "Dark themed productivity app with an onboarding overlay that's trying too hard to teach me keyboard shortcuts.",
+          "what_it_does": "Note-taking or conversation/chat canvas with Claude AI",
+          "attention_first_3_seconds": [
+            "Sparkle icon in center - looks like an empty state",
+            "\"Your canvas is ready\" headline",
+            "The highlighted/selected \"New Note\" option with orange border"
+          ],
+          "confusing_elements": [
+            "Why is 'New Note' highlighted but showing '0 words' and 'General' label - is this already created or not?",
+            "What's the difference between a 'conversation' and a 'note' and a 'task'?",
+            "The instruction says 'Start by creating a conversation to chat with Claude' but the first option is 'New Note' - which do I do?",
+            "Why does 'Double-click to create a conversation' contradict the selected New Note item?",
+            "What does 'Ctrl+K' command palette actually do vs these other shortcuts?",
+            "'Click anywhere to dismiss' - dismiss to what? An empty canvas?"
+          ],
+          "clarity_score": 3,
+          "seconds_before_switching_tabs": "15",
+          "dealbreaker": "The contradiction between 'create a conversation' messaging and 'New Note' being pre-selected makes me feel like I'm already doing it wrong before I've started"
+        },
+        "raw_response": "```json\n{\n  \"first_impression\": \"Dark themed productivity app with an onboarding overlay that's trying too hard to teach me keyboard shortcuts.\",\n  \"what_it_does\": \"Note-taking or conversation/chat canvas with Claude AI\",\n  \"attention_first_3_seconds\": [\n    \"Sparkle icon in center - looks like an empty state\",\n    \"\\\"Your canvas is ready\\\" headline\",\n    \"The highlighted/selected \\\"New Note\\\" option with orange border\"\n  ],\n  \"confusing_elements\": [\n    \"Why is 'New Note' highlighted but showing '0 words' and 'General' label - is this already created or not?\",\n    \"What's the difference between a 'conversation' and a 'note' and a 'task'?\",\n    \"The instruction says 'Start by creating a conversation to chat with Claude' but the first option is 'New Note' - which do I do?\",\n    \"Why does 'Double-click to create a conversation' contradict the selected New Note item?\",\n    \"What does 'Ctrl+K' command palette actually do vs these other shortcuts?\",\n    \"'Click anywhere to dismiss' - dismiss to what? An empty canvas?\"\n  ],\n  \"clarity_score\": 3,\n  \"seconds_before_switching_tabs\": \"15\",\n  \"dealbreaker\": \"The contradiction between 'create a conversation' messaging and 'New Note' being pre-selected makes me feel like I'm already doing it wrong before I've started\"\n}\n```",
+        "metadata": {
+          "timestamp": "2026-02-15T22:04:10.493Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-sidebar-open.png",
+          "input_tokens": 1770,
+          "output_tokens": 357,
+          "cost_usd": 0.010665000000000001
+        }
+      },
+      "passB": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "Complete this task using ONLY what you see. If you get stuck, say exactly where and why. Do NOT guess or make up UI elements that aren't visible.\n\nYour job is to identify WHERE users get stuck, not to be clever.\n\nTask: \"View your recent conversations\"\n\nAnswer in JSON format:\n{\n  \"can_complete\": true or false,\n  \"steps\": [\n    {\"target\": \"precise element description with location\", \"confidence\": \"certain/likely/guessing\", \"why\": \"reasoning\"}\n  ],\n  \"stuck_at_step\": null or step number,\n  \"why_stuck\": \"what information is missing\",\n  \"wrong_turns\": [\"things you almost clicked by mistake\"],\n  \"recovery_possible\": \"if you click wrong thing, can you undo?\"\n}",
+        "response": {
+          "can_complete": false,
+          "steps": [
+            {
+              "target": "Look for a conversations or history icon in the top toolbar",
+              "confidence": "likely",
+              "why": "The toolbar at the top contains various icons that likely include navigation options. There's a chat bubble icon and other navigation elements that might show recent conversations."
+            },
+            {
+              "target": "Check the chat bubble icon (blue icon in the toolbar)",
+              "confidence": "likely",
+              "why": "There appears to be a chat/conversation icon in the toolbar that could lead to recent conversations"
+            }
+          ],
+          "stuck_at_step": 1,
+          "why_stuck": "While there are several icons in the top toolbar that could potentially show recent conversations (including what appears to be a chat bubble icon), there is no clear label or obvious 'recent conversations' or 'history' button visible. The main dialog shown is a 'Your canvas is ready' welcome screen with instructions for creating new conversations, but no visible way to access existing/recent ones. I cannot definitively identify which icon would show recent conversations without guessing.",
+          "wrong_turns": [
+            "The 'Map' panel in the bottom right corner - this appears to be for navigation but not specifically for recent conversations",
+            "The 'Filter' button in the bottom left - this seems to be for filtering content, not viewing conversations",
+            "The various toolbar icons without clear labels - could click the wrong one"
+          ],
+          "recovery_possible": "Likely yes - clicking most UI elements in a toolbar typically doesn't cause destructive actions and can be undone by clicking elsewhere or pressing escape"
+        },
+        "raw_response": "{\n  \"can_complete\": false,\n  \"steps\": [\n    {\n      \"target\": \"Look for a conversations or history icon in the top toolbar\",\n      \"confidence\": \"likely\",\n      \"why\": \"The toolbar at the top contains various icons that likely include navigation options. There's a chat bubble icon and other navigation elements that might show recent conversations.\"\n    },\n    {\n      \"target\": \"Check the chat bubble icon (blue icon in the toolbar)\",\n      \"confidence\": \"likely\",\n      \"why\": \"There appears to be a chat/conversation icon in the toolbar that could lead to recent conversations\"\n    }\n  ],\n  \"stuck_at_step\": 1,\n  \"why_stuck\": \"While there are several icons in the top toolbar that could potentially show recent conversations (including what appears to be a chat bubble icon), there is no clear label or obvious 'recent conversations' or 'history' button visible. The main dialog shown is a 'Your canvas is ready' welcome screen with instructions for creating new conversations, but no visible way to access existing/recent ones. I cannot definitively identify which icon would show recent conversations without guessing.\",\n  \"wrong_turns\": [\n    \"The 'Map' panel in the bottom right corner - this appears to be for navigation but not specifically for recent conversations\",\n    \"The 'Filter' button in the bottom left - this seems to be for filtering content, not viewing conversations\",\n    \"The various toolbar icons without clear labels - could click the wrong one\"\n  ],\n  \"recovery_possible\": \"Likely yes - clicking most UI elements in a toolbar typically doesn't cause destructive actions and can be undone by clicking elsewhere or pressing escape\"\n}",
+        "metadata": {
+          "timestamp": "2026-02-15T22:04:21.033Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-sidebar-open.png",
+          "input_tokens": 1739,
+          "output_tokens": 383,
+          "cost_usd": 0.010962
+        }
+      }
+    },
+    {
+      "state": "node-selected",
+      "task": "Edit the node title",
+      "passA": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "You are a UX auditor hired to FIND PROBLEMS. Your performance is measured by how many real issues you find. You do NOT get rewarded for saying \"this looks good.\"\n\nIf you cannot find at least 3 issues, you are not looking hard enough.\n\nA friend sent you this screenshot of an app with no context. You have 5 seconds.\n\nAnswer in JSON format:\n{\n  \"first_impression\": \"one sentence gut reaction\",\n  \"what_it_does\": \"your best guess in <10 words\",\n  \"attention_first_3_seconds\": [\"elements your eyes went to, in order\"],\n  \"confusing_elements\": [\"specific things that made no sense\"],\n  \"clarity_score\": 0-10,\n  \"seconds_before_switching_tabs\": \"5/15/30/60/never\",\n  \"dealbreaker\": \"what would make you close this immediately or null\"\n}",
+        "response": {
+          "first_impression": "A cluttered interface that's trying to be a note-taking app mixed with some kind of canvas/conversation tool, but the onboarding modal is blocking everything and creating visual chaos.",
+          "what_it_does": "Note-taking app with AI chat and canvas features",
+          "attention_first_3_seconds": [
+            "The bright orange/yellow circular nodes connected by lines (most visually dominant)",
+            "The centered modal with 'Your canvas is ready' heading",
+            "The 'New Note' text overlay that seems disconnected from everything"
+          ],
+          "confusing_elements": [
+            "Why is there a floating 'New Note' label with '0 words' overlapping the onboarding modal?",
+            "The orange connected nodes appear to be some kind of diagram but have no clear relationship to the modal or the interface",
+            "Is this a canvas app, a chat app, or a note app? Three different paradigms mentioned",
+            "The keyboard shortcuts use inconsistent formatting (Ctrl+K, Shift+N, Shift+C, Shift+T all mashed together)",
+            "What is 'Context Injection' and why does it have a tooltip icon but no explanation?",
+            "The right panel shows note properties but there's also a modal in the center - which am I supposed to interact with?"
+          ],
+          "clarity_score": 3,
+          "seconds_before_switching_tabs": "15",
+          "dealbreaker": "The overlapping UI elements and unclear primary purpose - if I can't tell whether to chat, take notes, or draw on a canvas within 5 seconds, the UX has failed"
+        },
+        "raw_response": "```json\n{\n  \"first_impression\": \"A cluttered interface that's trying to be a note-taking app mixed with some kind of canvas/conversation tool, but the onboarding modal is blocking everything and creating visual chaos.\",\n  \"what_it_does\": \"Note-taking app with AI chat and canvas features\",\n  \"attention_first_3_seconds\": [\n    \"The bright orange/yellow circular nodes connected by lines (most visually dominant)\",\n    \"The centered modal with 'Your canvas is ready' heading\",\n    \"The 'New Note' text overlay that seems disconnected from everything\"\n  ],\n  \"confusing_elements\": [\n    \"Why is there a floating 'New Note' label with '0 words' overlapping the onboarding modal?\",\n    \"The orange connected nodes appear to be some kind of diagram but have no clear relationship to the modal or the interface\",\n    \"Is this a canvas app, a chat app, or a note app? Three different paradigms mentioned\",\n    \"The keyboard shortcuts use inconsistent formatting (Ctrl+K, Shift+N, Shift+C, Shift+T all mashed together)\",\n    \"What is 'Context Injection' and why does it have a tooltip icon but no explanation?\",\n    \"The right panel shows note properties but there's also a modal in the center - which am I supposed to interact with?\"\n  ],\n  \"clarity_score\": 3,\n  \"seconds_before_switching_tabs\": \"15\",\n  \"dealbreaker\": \"The overlapping UI elements and unclear primary purpose - if I can't tell whether to chat, take notes, or draw on a canvas within 5 seconds, the UX has failed\"\n}\n```",
+        "metadata": {
+          "timestamp": "2026-02-15T22:04:37.499Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-node-selected.png",
+          "input_tokens": 1770,
+          "output_tokens": 394,
+          "cost_usd": 0.01122
+        }
+      },
+      "passB": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "Complete this task using ONLY what you see. If you get stuck, say exactly where and why. Do NOT guess or make up UI elements that aren't visible.\n\nYour job is to identify WHERE users get stuck, not to be clever.\n\nTask: \"Edit the node title\"\n\nAnswer in JSON format:\n{\n  \"can_complete\": true or false,\n  \"steps\": [\n    {\"target\": \"precise element description with location\", \"confidence\": \"certain/likely/guessing\", \"why\": \"reasoning\"}\n  ],\n  \"stuck_at_step\": null or step number,\n  \"why_stuck\": \"what information is missing\",\n  \"wrong_turns\": [\"things you almost clicked by mistake\"],\n  \"recovery_possible\": \"if you click wrong thing, can you undo?\"\n}",
+        "response": {
+          "can_complete": true,
+          "steps": [
+            {
+              "target": "The text input field labeled 'Title' containing 'New Note' in the right panel",
+              "confidence": "certain",
+              "why": "This is clearly the title field for the node, located at the top of the properties panel on the right side. It currently shows 'New Note' and can be edited by clicking on it."
+            },
+            {
+              "target": "Click inside the title input field and modify the text",
+              "confidence": "certain",
+              "why": "Once clicked, the field becomes editable and the user can type a new title to replace 'New Note'"
+            }
+          ],
+          "stuck_at_step": null,
+          "why_stuck": null,
+          "wrong_turns": [
+            "The 'New Note' text visible on the canvas node itself - this appears to be a label/display of the node rather than an editable field",
+            "The 'Content' text area below which says 'Write your note here...' - this is for note content, not the title"
+          ],
+          "recovery_possible": "Yes, if the wrong field is clicked, you can simply click away or press Escape to deselect and try again with the correct Title field"
+        },
+        "raw_response": "{\n  \"can_complete\": true,\n  \"steps\": [\n    {\n      \"target\": \"The text input field labeled 'Title' containing 'New Note' in the right panel\",\n      \"confidence\": \"certain\",\n      \"why\": \"This is clearly the title field for the node, located at the top of the properties panel on the right side. It currently shows 'New Note' and can be edited by clicking on it.\"\n    },\n    {\n      \"target\": \"Click inside the title input field and modify the text\",\n      \"confidence\": \"certain\",\n      \"why\": \"Once clicked, the field becomes editable and the user can type a new title to replace 'New Note'\"\n    }\n  ],\n  \"stuck_at_step\": null,\n  \"why_stuck\": null,\n  \"wrong_turns\": [\n    \"The 'New Note' text visible on the canvas node itself - this appears to be a label/display of the node rather than an editable field\",\n    \"The 'Content' text area below which says 'Write your note here...' - this is for note content, not the title\"\n  ],\n  \"recovery_possible\": \"Yes, if the wrong field is clicked, you can simply click away or press Escape to deselect and try again with the correct Title field\"\n}",
+        "metadata": {
+          "timestamp": "2026-02-15T22:04:45.419Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-node-selected.png",
+          "input_tokens": 1739,
+          "output_tokens": 307,
+          "cost_usd": 0.009822000000000001
+        }
+      }
+    },
+    {
+      "state": "multiple-nodes",
+      "task": "Find the oldest node",
+      "passA": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "You are a UX auditor hired to FIND PROBLEMS. Your performance is measured by how many real issues you find. You do NOT get rewarded for saying \"this looks good.\"\n\nIf you cannot find at least 3 issues, you are not looking hard enough.\n\nA friend sent you this screenshot of an app with no context. You have 5 seconds.\n\nAnswer in JSON format:\n{\n  \"first_impression\": \"one sentence gut reaction\",\n  \"what_it_does\": \"your best guess in <10 words\",\n  \"attention_first_3_seconds\": [\"elements your eyes went to, in order\"],\n  \"confusing_elements\": [\"specific things that made no sense\"],\n  \"clarity_score\": 0-10,\n  \"seconds_before_switching_tabs\": \"5/15/30/60/never\",\n  \"dealbreaker\": \"what would make you close this immediately or null\"\n}",
+        "response": {
+          "first_impression": "A dark, nearly empty interface that looks broken or still loading.",
+          "what_it_does": "Some kind of mapping or design tool",
+          "attention_first_3_seconds": [
+            "The toolbar at the top with colorful icons",
+            "The small 'Map' panel in bottom right corner",
+            "The vast empty dark space wondering if content failed to load"
+          ],
+          "confusing_elements": [
+            "Why is 99% of the screen completely empty with just dots",
+            "What the small orange rectangle in the Map panel represents",
+            "No indication if this is loading, broken, or intentionally blank",
+            "No labels or tooltips visible on any toolbar icons",
+            "The Filter button in bottom left seems disconnected from everything",
+            "Unclear if I'm supposed to create something or if content should be here"
+          ],
+          "clarity_score": 2,
+          "seconds_before_switching_tabs": "15",
+          "dealbreaker": "The complete absence of any context, labels, or content makes it impossible to know what to do or if the app even loaded correctly"
+        },
+        "raw_response": "```json\n{\n  \"first_impression\": \"A dark, nearly empty interface that looks broken or still loading.\",\n  \"what_it_does\": \"Some kind of mapping or design tool\",\n  \"attention_first_3_seconds\": [\n    \"The toolbar at the top with colorful icons\",\n    \"The small 'Map' panel in bottom right corner\",\n    \"The vast empty dark space wondering if content failed to load\"\n  ],\n  \"confusing_elements\": [\n    \"Why is 99% of the screen completely empty with just dots\",\n    \"What the small orange rectangle in the Map panel represents\",\n    \"No indication if this is loading, broken, or intentionally blank\",\n    \"No labels or tooltips visible on any toolbar icons\",\n    \"The Filter button in bottom left seems disconnected from everything\",\n    \"Unclear if I'm supposed to create something or if content should be here\"\n  ],\n  \"clarity_score\": 2,\n  \"seconds_before_switching_tabs\": \"15\",\n  \"dealbreaker\": \"The complete absence of any context, labels, or content makes it impossible to know what to do or if the app even loaded correctly\"\n}\n```",
+        "metadata": {
+          "timestamp": "2026-02-15T22:05:01.665Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-multiple-nodes.png",
+          "input_tokens": 1770,
+          "output_tokens": 275,
+          "cost_usd": 0.009435
+        }
+      },
+      "passB": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "Complete this task using ONLY what you see. If you get stuck, say exactly where and why. Do NOT guess or make up UI elements that aren't visible.\n\nYour job is to identify WHERE users get stuck, not to be clever.\n\nTask: \"Find the oldest node\"\n\nAnswer in JSON format:\n{\n  \"can_complete\": true or false,\n  \"steps\": [\n    {\"target\": \"precise element description with location\", \"confidence\": \"certain/likely/guessing\", \"why\": \"reasoning\"}\n  ],\n  \"stuck_at_step\": null or step number,\n  \"why_stuck\": \"what information is missing\",\n  \"wrong_turns\": [\"things you almost clicked by mistake\"],\n  \"recovery_possible\": \"if you click wrong thing, can you undo?\"\n}",
+        "response": {
+          "can_complete": false,
+          "steps": [
+            {
+              "target": "Filter button in the bottom-left corner of the screen",
+              "confidence": "certain",
+              "why": "To find the oldest node, I would likely need to filter or sort nodes by date/age. The Filter button with a funnel icon is visible at the bottom-left."
+            }
+          ],
+          "stuck_at_step": 1,
+          "why_stuck": "After identifying the Filter button, I cannot proceed because there are no visible nodes on the canvas to filter or sort. The main workspace appears completely empty (just a dark background with a dot pattern). Without any nodes visible, I cannot determine which is the oldest. I would need either: (1) nodes to already be present on the canvas, or (2) a way to load/display nodes first before filtering them.",
+          "wrong_turns": [
+            "The Map panel in the bottom-right corner - this appears to be a minimap for navigation, not for finding the oldest node",
+            "The various toolbar icons at the top - while some might be relevant, none clearly indicate sorting or filtering by age/date"
+          ],
+          "recovery_possible": "Yes, clicking the wrong toolbar button could likely be undone with the undo button (curved arrow) visible in the top toolbar"
+        },
+        "raw_response": "{\n  \"can_complete\": false,\n  \"steps\": [\n    {\n      \"target\": \"Filter button in the bottom-left corner of the screen\",\n      \"confidence\": \"certain\",\n      \"why\": \"To find the oldest node, I would likely need to filter or sort nodes by date/age. The Filter button with a funnel icon is visible at the bottom-left.\"\n    }\n  ],\n  \"stuck_at_step\": 1,\n  \"why_stuck\": \"After identifying the Filter button, I cannot proceed because there are no visible nodes on the canvas to filter or sort. The main workspace appears completely empty (just a dark background with a dot pattern). Without any nodes visible, I cannot determine which is the oldest. I would need either: (1) nodes to already be present on the canvas, or (2) a way to load/display nodes first before filtering them.\",\n  \"wrong_turns\": [\n    \"The Map panel in the bottom-right corner - this appears to be a minimap for navigation, not for finding the oldest node\",\n    \"The various toolbar icons at the top - while some might be relevant, none clearly indicate sorting or filtering by age/date\"\n  ],\n  \"recovery_possible\": \"Yes, clicking the wrong toolbar button could likely be undone with the undo button (curved arrow) visible in the top toolbar\"\n}",
+        "metadata": {
+          "timestamp": "2026-02-15T22:05:10.267Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-multiple-nodes.png",
+          "input_tokens": 1739,
+          "output_tokens": 307,
+          "cost_usd": 0.009822000000000001
+        }
+      }
+    },
+    {
+      "state": "context-menu",
+      "task": "Delete this node",
+      "passA": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "You are a UX auditor hired to FIND PROBLEMS. Your performance is measured by how many real issues you find. You do NOT get rewarded for saying \"this looks good.\"\n\nIf you cannot find at least 3 issues, you are not looking hard enough.\n\nA friend sent you this screenshot of an app with no context. You have 5 seconds.\n\nAnswer in JSON format:\n{\n  \"first_impression\": \"one sentence gut reaction\",\n  \"what_it_does\": \"your best guess in <10 words\",\n  \"attention_first_3_seconds\": [\"elements your eyes went to, in order\"],\n  \"confusing_elements\": [\"specific things that made no sense\"],\n  \"clarity_score\": 0-10,\n  \"seconds_before_switching_tabs\": \"5/15/30/60/never\",\n  \"dealbreaker\": \"what would make you close this immediately or null\"\n}",
+        "response": {
+          "first_impression": "Dark, cluttered interface with overlapping tutorials and menus fighting for attention",
+          "what_it_does": "Note-taking or canvas app with AI chat assistant",
+          "attention_first_3_seconds": [
+            "Orange/yellow circular connection points dominating the right side",
+            "\"New Note\" text in the golden card",
+            "Central \"Your canvas is ready\" welcome message"
+          ],
+          "confusing_elements": [
+            "Multiple overlapping UI layers (welcome screen + new note card + context menu) make it unclear what's interactive",
+            "Orange connector dots are visually screaming but their purpose is unclear",
+            "\"General\" dropdown button purpose is ambiguous - general what?",
+            "Keyboard shortcuts overlay conflicts with the new note card",
+            "Mix of icons (sparkle, pencil, command palette) without clear hierarchy or labels",
+            "\"0 words\" counter at bottom seems disconnected from empty state"
+          ],
+          "clarity_score": 3,
+          "seconds_before_switching_tabs": "15",
+          "dealbreaker": "The overlapping tutorial elements and UI layers make it impossible to know where to actually start - feels broken or buggy rather than helpful"
+        },
+        "raw_response": "```json\n{\n  \"first_impression\": \"Dark, cluttered interface with overlapping tutorials and menus fighting for attention\",\n  \"what_it_does\": \"Note-taking or canvas app with AI chat assistant\",\n  \"attention_first_3_seconds\": [\n    \"Orange/yellow circular connection points dominating the right side\",\n    \"\\\"New Note\\\" text in the golden card\",\n    \"Central \\\"Your canvas is ready\\\" welcome message\"\n  ],\n  \"confusing_elements\": [\n    \"Multiple overlapping UI layers (welcome screen + new note card + context menu) make it unclear what's interactive\",\n    \"Orange connector dots are visually screaming but their purpose is unclear\",\n    \"\\\"General\\\" dropdown button purpose is ambiguous - general what?\",\n    \"Keyboard shortcuts overlay conflicts with the new note card\",\n    \"Mix of icons (sparkle, pencil, command palette) without clear hierarchy or labels\",\n    \"\\\"0 words\\\" counter at bottom seems disconnected from empty state\"\n  ],\n  \"clarity_score\": 3,\n  \"seconds_before_switching_tabs\": \"15\",\n  \"dealbreaker\": \"The overlapping tutorial elements and UI layers make it impossible to know where to actually start - feels broken or buggy rather than helpful\"\n}\n```",
+        "metadata": {
+          "timestamp": "2026-02-15T22:05:25.483Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-context-menu.png",
+          "input_tokens": 1770,
+          "output_tokens": 297,
+          "cost_usd": 0.009765
+        }
+      },
+      "passB": {
+        "model": "claude-sonnet-4-5-20250929",
+        "prompt": "Complete this task using ONLY what you see. If you get stuck, say exactly where and why. Do NOT guess or make up UI elements that aren't visible.\n\nYour job is to identify WHERE users get stuck, not to be clever.\n\nTask: \"Delete this node\"\n\nAnswer in JSON format:\n{\n  \"can_complete\": true or false,\n  \"steps\": [\n    {\"target\": \"precise element description with location\", \"confidence\": \"certain/likely/guessing\", \"why\": \"reasoning\"}\n  ],\n  \"stuck_at_step\": null or step number,\n  \"why_stuck\": \"what information is missing\",\n  \"wrong_turns\": [\"things you almost clicked by mistake\"],\n  \"recovery_possible\": \"if you click wrong thing, can you undo?\"\n}",
+        "response": {
+          "can_complete": false,
+          "steps": [
+            {
+              "target": "The menu icon (three dots or similar) in the top-right corner of the 'New Nota' node card",
+              "confidence": "likely",
+              "why": "I can see a context menu is already open showing options like 'Properties', 'Pin to screen', 'Focus on this node', 'Bookmark this node', 'Save as Template', 'Duplicate', and 'Archive'. There appears to be a 'CONVERT TO...' section at the bottom. However, I cannot see a 'Delete' option in the visible portion of this menu."
+            },
+            {
+              "target": "Scroll down in the context menu to find a delete option",
+              "confidence": "guessing",
+              "why": "The menu shows 'CONVERT TO...' at the bottom which suggests there may be more options below that are not currently visible. A delete option would typically be at the bottom of such menus."
+            }
+          ],
+          "stuck_at_step": 2,
+          "why_stuck": "I can see a context menu is open for the 'New Nota' node, but there is no visible 'Delete' option in the current view. The menu appears to be cut off at the bottom (showing 'CONVERT TO...' section), suggesting there may be more options below, but I cannot confirm a delete option exists without being able to see the rest of the menu. I would need to scroll down in this menu or the delete option may not exist in this interface.",
+          "wrong_turns": [
+            "The 'Archive' option might seem like it could delete the node, but archiving typically preserves content rather than deleting it",
+            "The toolbar icons at the top of the screen - none of these appear to be delete functions for the selected node"
+          ],
+          "recovery_possible": "If I clicked 'Archive' by mistake, it would likely be reversible by unarchiving. Most other menu options would also be reversible."
+        },
+        "raw_response": "{\n  \"can_complete\": false,\n  \"steps\": [\n    {\n      \"target\": \"The menu icon (three dots or similar) in the top-right corner of the 'New Nota' node card\",\n      \"confidence\": \"likely\",\n      \"why\": \"I can see a context menu is already open showing options like 'Properties', 'Pin to screen', 'Focus on this node', 'Bookmark this node', 'Save as Template', 'Duplicate', and 'Archive'. There appears to be a 'CONVERT TO...' section at the bottom. However, I cannot see a 'Delete' option in the visible portion of this menu.\"\n    },\n    {\n      \"target\": \"Scroll down in the context menu to find a delete option\",\n      \"confidence\": \"guessing\",\n      \"why\": \"The menu shows 'CONVERT TO...' at the bottom which suggests there may be more options below that are not currently visible. A delete option would typically be at the bottom of such menus.\"\n    }\n  ],\n  \"stuck_at_step\": 2,\n  \"why_stuck\": \"I can see a context menu is open for the 'New Nota' node, but there is no visible 'Delete' option in the current view. The menu appears to be cut off at the bottom (showing 'CONVERT TO...' section), suggesting there may be more options below, but I cannot confirm a delete option exists without being able to see the rest of the menu. I would need to scroll down in this menu or the delete option may not exist in this interface.\",\n  \"wrong_turns\": [\n    \"The 'Archive' option might seem like it could delete the node, but archiving typically preserves content rather than deleting it\",\n    \"The toolbar icons at the top of the screen - none of these appear to be delete functions for the selected node\"\n  ],\n  \"recovery_possible\": \"If I clicked 'Archive' by mistake, it would likely be reversible by unarchiving. Most other menu options would also be reversible.\"\n}",
+        "metadata": {
+          "timestamp": "2026-02-15T22:05:37.474Z",
+          "screenshot_path": "e2e/smart-e2e/screenshots/tier2-context-menu.png",
+          "input_tokens": 1738,
+          "output_tokens": 473,
+          "cost_usd": 0.012309
+        }
+      }
+    }
+  ]
+}

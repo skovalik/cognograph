@@ -24,7 +24,7 @@ export const TokenIndicator = memo(function TokenIndicator() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 20 }}
           transition={{ duration: 0.2 }}
-          className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 rounded-lg"
+          className="fixed bottom-12 right-4 gui-z-panels flex items-center gap-2 px-3 py-1.5 rounded-lg"
           style={{
             background: 'rgba(0, 0, 0, 0.75)',
             backdropFilter: 'blur(4px)',

@@ -273,4 +273,54 @@ export function withErrorBoundary<P extends object>(
   return WithErrorBoundary
 }
 
+// -----------------------------------------------------------------------------
+// Inline Error Boundary — for small UI components (badges, indicators, status bars)
+// Shows a tiny muted fallback instead of a full error page.
+// Prevents one component crash from taking down the whole app.
+// -----------------------------------------------------------------------------
+
+interface InlineErrorBoundaryProps {
+  children: ReactNode
+  /** What to show when the component crashes. Defaults to null (hidden). */
+  fallback?: ReactNode
+  /** Component name for logging */
+  name?: string
+}
+
+interface InlineErrorBoundaryState {
+  hasError: boolean
+}
+
+export class InlineErrorBoundary extends Component<InlineErrorBoundaryProps, InlineErrorBoundaryState> {
+  constructor(props: InlineErrorBoundaryProps) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError(): InlineErrorBoundaryState {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    // Log but don't show full error UI — this is for non-critical components
+    const name = this.props.name || 'InlineComponent'
+    addBreadcrumb('error', `InlineErrorBoundary caught error in ${name}`, 'error', {
+      componentStack: errorInfo.componentStack
+    })
+    captureException(error, {
+      componentName: name,
+      componentStack: errorInfo.componentStack
+    })
+    // eslint-disable-next-line no-console
+    console.warn(`[InlineErrorBoundary] ${name} crashed:`, error.message)
+  }
+
+  render(): ReactNode {
+    if (this.state.hasError) {
+      return this.props.fallback ?? null
+    }
+    return this.props.children
+  }
+}
+
 export default ErrorBoundary

@@ -1,0 +1,513 @@
+{
+  "timestamp": "2026-02-15T22:03:17.904Z",
+  "clickables": [
+    {
+      "type": "div",
+      "text": "New NoteGeneral0 wordsYour canvas is readyStart by creating a conversation to chat with Claude, or a",
+      "label": null,
+      "selector": "div.react-flow.semantic-zoom-close",
+      "boundingBox": {
+        "x": 0,
+        "y": 0,
+        "width": 1384,
+        "height": 861
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-testid": "rf__wrapper"
+      }
+    },
+    {
+      "type": "div",
+      "text": "New NoteGeneral0 words",
+      "label": null,
+      "selector": "div.react-flow__node.react-flow__node-note",
+      "boundingBox": {
+        "x": 552,
+        "y": 360.5,
+        "width": 280,
+        "height": 140
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-id": "7221f7df-794d-4b82-9b86-fdc1e92da18b",
+        "data-testid": "rf__node-7221f7df-794d-4b82-9b86-fdc1e92da18b"
+      }
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Click to change icon",
+      "selector": "button.cognograph-node__icon.flex-shrink-0",
+      "boundingBox": {
+        "x": 565,
+        "y": 373.5,
+        "width": 20,
+        "height": 20
+      },
+      "visible": true,
+      "dataAttrs": {}
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "AI Property Suggestions",
+      "selector": "button.\n.p-1",
+      "boundingBox": {
+        "x": 690.03125,
+        "y": 371.5,
+        "width": 22,
+        "height": 22
+      },
+      "visible": true,
+      "dataAttrs": {}
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Extract notes & tasks",
+      "selector": "button.p-1.rounded",
+      "boundingBox": {
+        "x": 722.03125,
+        "y": 373.5,
+        "width": 20,
+        "height": 20
+      },
+      "visible": true,
+      "dataAttrs": {}
+    },
+    {
+      "type": "button",
+      "text": "General",
+      "label": "Note mode",
+      "selector": "#radix-:r29:",
+      "boundingBox": {
+        "x": 752.03125,
+        "y": 373,
+        "width": 66.96875,
+        "height": 21
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-state": "closed"
+      }
+    },
+    {
+      "type": "svg",
+      "text": "",
+      "label": null,
+      "selector": "svg",
+      "boundingBox": {
+        "x": 0,
+        "y": 0,
+        "width": 1384,
+        "height": 861
+      },
+      "visible": true,
+      "dataAttrs": {}
+    },
+    {
+      "type": "div",
+      "text": "",
+      "label": "Control Panel",
+      "selector": "div.react-flow__panel.react-flow__controls",
+      "boundingBox": {
+        "x": 15,
+        "y": 740,
+        "width": 28,
+        "height": 106
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-testid": "rf__controls"
+      }
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Zoom In",
+      "selector": "button.react-flow__controls-button.react-flow__controls-zoomin",
+      "boundingBox": {
+        "x": 16,
+        "y": 741,
+        "width": 26,
+        "height": 26
+      },
+      "visible": true,
+      "dataAttrs": {}
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Zoom Out",
+      "selector": "button.react-flow__controls-button.react-flow__controls-zoomout",
+      "boundingBox": {
+        "x": 16,
+        "y": 767,
+        "width": 26,
+        "height": 26
+      },
+      "visible": true,
+      "dataAttrs": {}
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Fit View",
+      "selector": "button.react-flow__controls-button.react-flow__controls-fitview",
+      "boundingBox": {
+        "x": 16,
+        "y": 793,
+        "width": 26,
+        "height": 26
+      },
+      "visible": true,
+      "dataAttrs": {}
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Toggle Interactivity",
+      "selector": "button.react-flow__controls-button.react-flow__controls-interactive",
+      "boundingBox": {
+        "x": 16,
+        "y": 819,
+        "width": 26,
+        "height": 26
+      },
+      "visible": true,
+      "dataAttrs": {}
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Collapse minimap",
+      "selector": "button.p-0.5.gui-button",
+      "boundingBox": {
+        "x": 1341,
+        "y": 669,
+        "width": 18,
+        "height": 18
+      },
+      "visible": true,
+      "dataAttrs": {}
+    },
+    {
+      "type": "div",
+      "text": "Mini Map",
+      "label": null,
+      "selector": "div.react-flow__panel.react-flow__minimap",
+      "boundingBox": {
+        "x": 1172,
+        "y": 709,
+        "width": 180,
+        "height": 120
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-testid": "rf__minimap"
+      }
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Open sidebar",
+      "selector": "button.p-2.gui-button",
+      "boundingBox": {
+        "x": 29,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-state": "closed"
+      }
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Switch to vertical toolbar",
+      "selector": "button.p-2.gui-button",
+      "boundingBox": {
+        "x": 69,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {}
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "New Workspace",
+      "selector": "button.p-2.gui-button",
+      "boundingBox": {
+        "x": 114,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-state": "closed"
+      }
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Open Workspace",
+      "selector": "button.p-2.gui-button",
+      "boundingBox": {
+        "x": 154,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-state": "closed"
+      }
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Save Workspace",
+      "selector": "button.p-2.gui-button",
+      "boundingBox": {
+        "x": 194,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-state": "closed"
+      }
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Save As",
+      "selector": "button.p-2.gui-button",
+      "boundingBox": {
+        "x": 234,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-state": "closed"
+      }
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Undo",
+      "selector": "button.p-2.gui-button",
+      "boundingBox": {
+        "x": 279,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-state": "closed"
+      }
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Redo",
+      "selector": "button.p-2.gui-button",
+      "boundingBox": {
+        "x": 319,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-state": "closed"
+      }
+    },
+    {
+      "type": "button",
+      "text": "Chat",
+      "label": "Add Conversation (Shift+C)",
+      "selector": "button.p-2.gui-button",
+      "boundingBox": {
+        "x": 364,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-state": "closed"
+      }
+    },
+    {
+      "type": "button",
+      "text": "Note",
+      "label": "Add Note (Shift+N)",
+      "selector": "button.p-2.gui-button",
+      "boundingBox": {
+        "x": 404,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-state": "closed"
+      }
+    },
+    {
+      "type": "button",
+      "text": "Task",
+      "label": "Add Task (Shift+T)",
+      "selector": "button.p-2.gui-button",
+      "boundingBox": {
+        "x": 444,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-state": "closed"
+      }
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Add Node menu - all node types",
+      "selector": "#radix-:r3l:",
+      "boundingBox": {
+        "x": 484,
+        "y": 25,
+        "width": 50,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-state": "closed"
+      }
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Open AI Actions menu",
+      "selector": "button.p-2.gui-button",
+      "boundingBox": {
+        "x": 543,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {}
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Share workspace",
+      "selector": "button.p-2.gui-button",
+      "boundingBox": {
+        "x": 583,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {}
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Toggle properties display mode",
+      "selector": "button.p-2.gui-button",
+      "boundingBox": {
+        "x": 628,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {}
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Toggle chat display mode",
+      "selector": "button.p-2.gui-button",
+      "boundingBox": {
+        "x": 668,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {}
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Theme & Appearance (Cmd+T)",
+      "selector": "#radix-:r3o:",
+      "boundingBox": {
+        "x": 713,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {
+        "data-state": "closed"
+      }
+    },
+    {
+      "type": "button",
+      "text": "",
+      "label": "Open settings",
+      "selector": "button.p-2.gui-button",
+      "boundingBox": {
+        "x": 753,
+        "y": 25,
+        "width": 36,
+        "height": 36
+      },
+      "visible": true,
+      "dataAttrs": {}
+    },
+    {
+      "type": "button",
+      "text": "Filter",
+      "label": "Filter node types",
+      "selector": "button.flex.items-center",
+      "boundingBox": {
+        "x": 24,
+        "y": 815,
+        "width": 86.1875,
+        "height": 30
+      },
+      "visible": true,
+      "dataAttrs": {}
+    }
+  ],
+  "nodes": [
+    {
+      "id": "7221f7df-794d-4b82-9b86-fdc1e92da18b",
+      "type": "note",
+      "position": {
+        "x": 528,
+        "y": 340.5
+      }
+    }
+  ],
+  "edges": []
+}

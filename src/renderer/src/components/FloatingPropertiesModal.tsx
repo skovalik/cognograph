@@ -147,8 +147,10 @@ function FloatingPropertiesModalComponent({ nodeId, index }: FloatingPropertiesM
   return (
     <div
       ref={modalRef}
-      className="fixed z-[100] bg-[var(--surface-panel)] glass-fluid border border-[var(--border-subtle)] rounded-lg shadow-2xl overflow-hidden"
+      className="fixed z-[100] bg-[var(--surface-panel)] glass-fluid border border-[var(--border-subtle)] rounded-lg shadow-2xl"
       style={{
+        position: 'fixed', // Override glass-fluid's position: relative
+        overflow: 'visible', // Prevent glass-fluid from clipping dropdowns
         left: position.x,
         top: position.y,
         width: size.width,

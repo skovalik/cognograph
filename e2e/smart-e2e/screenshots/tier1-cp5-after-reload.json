@@ -1,0 +1,10 @@
+{
+  "scenario": "critical-path-5",
+  "state": "after-reload",
+  "timestamp": "2026-02-15T10:03:09.734Z",
+  "viewport": {
+    "width": 0,
+    "height": 0
+  },
+  "nodeCount": 5
+}

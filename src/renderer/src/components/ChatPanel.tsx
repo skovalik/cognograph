@@ -1,5 +1,5 @@
 import { memo, useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { X, Send, Square, Link, Key, Package, ChevronDown, ChevronUp, Boxes, GripHorizontal, Bot, MessageSquare } from 'lucide-react'
+import { X, Send, Square, Link, Key, Package, ChevronDown, ChevronUp, Boxes, GripHorizontal, Bot, MessageSquare, Settings2 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -18,6 +18,8 @@ import { estimateCost } from '../utils/tokenEstimator'
 import { useSessionStatsStore } from '../stores/sessionStatsStore'
 import type { ConversationNodeData, Message, ConnectorProvider } from '@shared/types'
 import { DEFAULT_EXTRACTION_SETTINGS, DEFAULT_AGENT_SETTINGS, CONNECTOR_PROVIDER_INFO } from '@shared/types'
+import { logger } from '../utils/logger'
+import { InlineErrorBoundary } from './ErrorBoundary'
 
 interface ChatPanelProps {
   nodeId: string
@@ -75,6 +77,14 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatP
   const currentResponseRef = useRef<string>('')
   const userScrolledUpRef = useRef(false)
   const rafRef = useRef<number | null>(null)
+
+  // Refs for on-close extraction (avoids stale closure in cleanup effect)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const onCloseExtractRef = useRef<{ nodeData: any; extractionSettings: any; nodeId: string }>({
+    nodeData: null,
+    extractionSettings: null,
+    nodeId
+  })
 
   // Find the node - use useMemo to avoid recalculating
   const node = useMemo(() => {
@@ -151,6 +161,9 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatP
 
   // Get extraction settings from node data
   const extractionSettings = nodeData?.extractionSettings || DEFAULT_EXTRACTION_SETTINGS
+
+  // Keep refs in sync for on-close extraction cleanup (avoids stale closure)
+  onCloseExtractRef.current = { nodeData, extractionSettings, nodeId }
 
   // Per-message extraction handler (debounced)
   const triggerPerMessageExtraction = useCallback(async () => {
@@ -339,25 +352,27 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatP
   }, [nodeId, updateLastMessage, extractionSettings, triggerPerMessageExtraction, setStreaming])
 
   // On-close extraction trigger - runs when chat panel unmounts
+  // Uses ref to read latest values at unmount time (avoids stale closure)
   useEffect(() => {
     return () => {
+      const { nodeData: latestNodeData, extractionSettings: latestSettings, nodeId: latestNodeId } = onCloseExtractRef.current
       // Only trigger if auto-extract is enabled and trigger mode is 'on-close'
       if (
-        nodeData &&
-        extractionSettings.autoExtractEnabled &&
-        extractionSettings.extractionTrigger === 'on-close' &&
-        nodeData.messages.length > 0
+        latestNodeData &&
+        latestSettings.autoExtractEnabled &&
+        latestSettings.extractionTrigger === 'on-close' &&
+        latestNodeData.messages.length > 0
       ) {
         // Run extraction asynchronously (fire and forget since component is unmounting)
         runExtraction(
-          nodeId,
-          nodeData.messages,
-          extractionSettings,
-          nodeData.extractedTitles || []
+          latestNodeId,
+          latestNodeData.messages,
+          latestSettings,
+          latestNodeData.extractedTitles || []
         ).then((results) => {
           results.forEach((result) => {
             addPendingExtraction({
-              sourceNodeId: nodeId,
+              sourceNodeId: latestNodeId,
               type: result.type,
               suggestedData: {
                 title: result.title,
@@ -376,7 +391,7 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatP
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Empty deps - we capture latest values via closure on unmount
+  }, []) // Empty deps - latest values read from onCloseExtractRef at unmount time
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isStreaming || !nodeData) return
@@ -506,7 +521,7 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatP
 
   // Early return AFTER all hooks have been called
   if (!isValidConversation || !nodeData) {
-    console.log('ChatPanel: Invalid state', { nodeId, isValidConversation, hasNodeData: !!nodeData })
+    logger.log('ChatPanel: Invalid state', { nodeId, isValidConversation, hasNodeData: !!nodeData })
     return null
   }
 
@@ -760,12 +775,26 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatP
         </div>
       </div>
 
-      {/* Context indicator */}
-      <ContextIndicator
-        nodeId={nodeId}
-        onSettingsClick={() => setShowContextSettings(true)}
-        isInjecting={isInjecting}
-      />
+      {/* Context indicator - compact badge with settings access */}
+      <div className={`px-4 py-2 border-t border-[var(--border-subtle)] flex items-center gap-2 ${isInjecting ? 'animate-pulse bg-blue-500/10' : ''}`}>
+        <InlineErrorBoundary name="ContextIndicator" fallback={
+          <span className={`text-xs ${textMutedClasses}`}>Context unavailable</span>
+        }>
+          <ContextIndicator
+            nodeId={nodeId}
+            compact={true}
+            className="flex-1"
+          />
+        </InlineErrorBoundary>
+        <button
+          onClick={() => setShowContextSettings(true)}
+          className={`p-1 ${hoverBgClasses} rounded transition-colors`}
+          title="Context Settings"
+          aria-label="Open context settings"
+        >
+          <Settings2 className={`w-3.5 h-3.5 ${textMutedClasses}`} />
+        </button>
+      </div>
 
       {/* Token usage meter */}
       <div className={`px-4 py-2 border-t border-[var(--border-subtle)]`}>
@@ -1289,9 +1318,9 @@ function ApiKeyModal({
         throw new Error('API not available. Please restart the app.')
       }
 
-      console.log('ApiKeyModal: Calling setApiKey for', provider)
+      logger.log('ApiKeyModal: Calling setApiKey for', provider)
       const result = await window.api.settings.setApiKey(provider, key.trim())
-      console.log('ApiKeyModal: Result:', result)
+      logger.log('ApiKeyModal: Result:', result)
 
       if (result && !result.success) {
         setError(result.error || 'Unknown error')
@@ -1315,7 +1344,7 @@ function ApiKeyModal({
   const cancelTextClasses = 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
 
   return (
-    <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-60">
+    <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-[60]">
       <div className={`${modalBgClasses} rounded-lg p-6 w-96 shadow-xl`}>
         <h3 className={`text-lg font-medium ${textClasses} mb-4`}>
           Enter {providerNames[provider] || provider} API Key

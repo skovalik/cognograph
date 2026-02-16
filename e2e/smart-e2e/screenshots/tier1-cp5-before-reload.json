@@ -1,0 +1,10 @@
+{
+  "scenario": "critical-path-5",
+  "state": "node-created-before-reload",
+  "timestamp": "2026-02-15T10:03:08.758Z",
+  "viewport": {
+    "width": 0,
+    "height": 0
+  },
+  "nodeCount": 5
+}

@@ -1,0 +1,10 @@
+{
+  "scenario": "critical-path-4",
+  "state": "nodes-connected",
+  "timestamp": "2026-02-15T10:03:04.479Z",
+  "viewport": {
+    "width": 0,
+    "height": 0
+  },
+  "nodeCount": 5
+}
