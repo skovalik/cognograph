@@ -272,7 +272,6 @@ export function executeCommand(
       cwd: workingDir,
       timeout: timeoutMs,
       maxBuffer: 100 * 1024, // 100KB
-      shell: true,
     }, (error, stdout, stderr) => {
       if (error) {
         resolve({
