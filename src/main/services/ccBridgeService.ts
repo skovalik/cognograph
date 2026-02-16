@@ -165,7 +165,7 @@ export function cancelDispatch(dispatchId: string): boolean {
   const idx = dispatchQueue.findIndex((d) => d.id === dispatchId)
   if (idx === -1) return false
 
-  const dispatch = dispatchQueue[idx]
+  const dispatch = dispatchQueue[idx]!
   if (dispatch.status !== 'pending') return false
 
   dispatchQueue.splice(idx, 1)
@@ -312,10 +312,10 @@ function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): voi
     if (pathname === '/dispatch/pending' && method === 'GET') {
       handleGetPending(res)
     } else if (pathname.match(/^\/dispatch\/[^/]+\/ack$/) && method === 'POST') {
-      const dispatchId = pathname.split('/')[2]
+      const dispatchId = pathname.split('/')[2]!
       handleAcknowledge(dispatchId, req, res)
     } else if (pathname.match(/^\/dispatch\/[^/]+\/complete$/) && method === 'POST') {
-      const dispatchId = pathname.split('/')[2]
+      const dispatchId = pathname.split('/')[2]!
       handleComplete(dispatchId, req, res)
     } else {
       res.writeHead(404, { 'Content-Type': 'application/json' })

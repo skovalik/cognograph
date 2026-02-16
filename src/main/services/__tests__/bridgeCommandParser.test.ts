@@ -86,17 +86,17 @@ describe('bridgeCommandParser', () => {
       expect(result.parsed!.confidence).toBeGreaterThanOrEqual(0.9)
       expect(result.proposalId).toBeDefined()
       expect(result.changes).toHaveLength(1)
-      expect(result.changes[0].type).toBe('create-node')
-      expect(result.changes[0].nodeType).toBe('note')
-      expect(result.changes[0].nodeData?.title).toBe('testing')
-      expect(result.changes[0].position).toBeDefined()
+      expect(result.changes[0]!.type).toBe('create-node')
+      expect(result.changes[0]!.nodeType).toBe('note')
+      expect(result.changes[0]!.nodeData?.title).toBe('testing')
+      expect(result.changes[0]!.position).toBeDefined()
     })
 
     it('generates proposal for create task command', async () => {
       const result = await parseCommand('Create a task called Review PR', DEFAULT_CONTEXT)
 
-      expect(result.changes[0].nodeType).toBe('task')
-      expect(result.changes[0].nodeData?.title).toBe('Review PR')
+      expect(result.changes[0]!.nodeType).toBe('task')
+      expect(result.changes[0]!.nodeData?.title).toBe('Review PR')
     })
 
     it('creates a Proposal object when changes exist', async () => {
@@ -133,7 +133,7 @@ describe('bridgeCommandParser', () => {
 
       const result = await parseCommand('Create a note about test', context)
 
-      const pos = result.changes[0].position!
+      const pos = result.changes[0]!.position!
       // Should be within 50px of viewport center (random offset)
       expect(pos.x).toBeGreaterThanOrEqual(450)
       expect(pos.x).toBeLessThanOrEqual(550)

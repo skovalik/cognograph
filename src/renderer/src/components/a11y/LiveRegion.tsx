@@ -49,6 +49,7 @@ function LiveRegionComponent({
 
       return () => clearTimeout(announceId)
     }
+    return undefined
   }, [message])
 
   useEffect(() => {
@@ -62,6 +63,7 @@ function LiveRegionComponent({
 
       return () => clearTimeout(clearId)
     }
+    return undefined
   }, [message, clearAfter])
 
   return (

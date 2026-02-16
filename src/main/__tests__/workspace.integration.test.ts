@@ -11,7 +11,6 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { promises as fs } from 'fs'
-import { join } from 'path'
 import type { WorkspaceData } from '@shared/types'
 
 // Mock electron
@@ -67,7 +66,9 @@ vi.mock('../workspaceValidation', () => ({
 
 describe('Workspace Persistence Integration', () => {
   const mockWorkspaceData: WorkspaceData = {
-    version: '1.0',
+    id: 'workspace-1',
+    name: 'Test Workspace',
+    version: 1,
     nodes: [
       {
         id: 'node-1',
@@ -83,11 +84,9 @@ describe('Workspace Persistence Integration', () => {
       }
     ],
     edges: [],
-    settings: {
-      theme: 'dark',
-      autoSaveEnabled: true,
-      contextDepth: 2
-    }
+    viewport: { x: 0, y: 0, zoom: 1 },
+    createdAt: Date.now(),
+    updatedAt: Date.now()
   }
 
   beforeEach(() => {
@@ -145,9 +144,9 @@ describe('Workspace Persistence Integration', () => {
     })
 
     it('should preserve workspace version', async () => {
-      vi.mocked(fs.writeFile).mockImplementation((path, data) => {
+      vi.mocked(fs.writeFile).mockImplementation((_path, data) => {
         const parsed = JSON.parse(data as string)
-        expect(parsed.version).toBe('1.0')
+        expect(parsed.version).toBe(1)
         return Promise.resolve()
       })
 
@@ -155,7 +154,7 @@ describe('Workspace Persistence Integration', () => {
     })
 
     it('should preserve all nodes', async () => {
-      vi.mocked(fs.writeFile).mockImplementation((path, data) => {
+      vi.mocked(fs.writeFile).mockImplementation((_path, data) => {
         const parsed = JSON.parse(data as string)
         expect(parsed.nodes).toHaveLength(1)
         expect(parsed.nodes[0].id).toBe('node-1')
@@ -173,12 +172,15 @@ describe('Workspace Persistence Integration', () => {
             id: 'edge-1',
             source: 'node-1',
             target: 'node-2',
-            data: { label: 'test' }
+            data: {
+              direction: 'unidirectional' as const,
+              active: true
+            }
           }
         ]
       }
 
-      vi.mocked(fs.writeFile).mockImplementation((path, data) => {
+      vi.mocked(fs.writeFile).mockImplementation((_path, data) => {
         const parsed = JSON.parse(data as string)
         expect(parsed.edges).toHaveLength(1)
         return Promise.resolve()
@@ -187,11 +189,11 @@ describe('Workspace Persistence Integration', () => {
       await fs.writeFile('/test/workspace.json', JSON.stringify(dataWithEdges))
     })
 
-    it('should preserve settings', async () => {
-      vi.mocked(fs.writeFile).mockImplementation((path, data) => {
+    it('should preserve workspace metadata', async () => {
+      vi.mocked(fs.writeFile).mockImplementation((_path, data) => {
         const parsed = JSON.parse(data as string)
-        expect(parsed.settings).toBeDefined()
-        expect(parsed.settings.theme).toBe('dark')
+        expect(parsed.id).toBeDefined()
+        expect(parsed.name).toBe('Test Workspace')
         return Promise.resolve()
       })
 
@@ -222,7 +224,7 @@ describe('Workspace Persistence Integration', () => {
     })
 
     it('should format JSON with proper indentation', async () => {
-      vi.mocked(fs.writeFile).mockImplementation((path, data) => {
+      vi.mocked(fs.writeFile).mockImplementation((_path, data) => {
         expect(data).toContain('\n')
         expect(data).toContain('  ')
         return Promise.resolve()
@@ -276,18 +278,15 @@ describe('Workspace Persistence Integration', () => {
     })
 
     it('should update timestamp on save', async () => {
-      vi.mocked(fs.writeFile).mockImplementation((path, data) => {
+      vi.mocked(fs.writeFile).mockImplementation((_path, data) => {
         const parsed = JSON.parse(data as string)
-        expect(parsed.settings.lastSaved).toBeDefined()
+        expect(parsed.updatedAt).toBeDefined()
         return Promise.resolve()
       })
 
-      const dataWithTimestamp = {
+      const dataWithTimestamp: WorkspaceData = {
         ...mockWorkspaceData,
-        settings: {
-          ...mockWorkspaceData.settings,
-          lastSaved: Date.now()
-        }
+        updatedAt: Date.now()
       }
 
       await fs.writeFile('/test/workspace.json', JSON.stringify(dataWithTimestamp))
@@ -295,10 +294,14 @@ describe('Workspace Persistence Integration', () => {
 
     it('should handle empty workspace', async () => {
       const emptyData: WorkspaceData = {
-        version: '1.0',
+        id: 'workspace-empty',
+        name: 'Empty Workspace',
+        version: 1,
         nodes: [],
         edges: [],
-        settings: {}
+        viewport: { x: 0, y: 0, zoom: 1 },
+        createdAt: Date.now(),
+        updatedAt: Date.now()
       }
 
       vi.mocked(fs.writeFile).mockResolvedValue(undefined)
@@ -319,7 +322,7 @@ describe('Workspace Persistence Integration', () => {
       const data = await fs.readFile('/test/workspace.json', 'utf8')
       const parsed = JSON.parse(data as string)
 
-      expect(parsed.version).toBe('1.0')
+      expect(parsed.version).toBe(1)
       expect(parsed.nodes).toHaveLength(1)
     })
 
@@ -489,7 +492,7 @@ describe('Workspace Persistence Integration', () => {
       const cleaned = (data as string).replace(/^\uFEFF/, '')
       const parsed = JSON.parse(cleaned)
 
-      expect(parsed.version).toBe('1.0')
+      expect(parsed.version).toBe(1)
     })
 
     it('should handle trailing whitespace', async () => {
@@ -500,7 +503,7 @@ describe('Workspace Persistence Integration', () => {
       const data = await fs.readFile('/test/workspace.json', 'utf8')
       const parsed = JSON.parse((data as string).trim())
 
-      expect(parsed.version).toBe('1.0')
+      expect(parsed.version).toBe(1)
     })
 
     it('should validate workspace after load', async () => {
