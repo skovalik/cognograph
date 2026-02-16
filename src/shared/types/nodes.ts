@@ -5,7 +5,7 @@
 // Agent types, workspace node defaults, type guard functions
 // =============================================================================
 
-import type { ContextMetadata, Attachment, NodeShape } from './common'
+import type { ContextMetadata } from './common'
 import type { ExtractionSettings } from './extraction'
 import type { ActionNodeData } from '../actionTypes'
 

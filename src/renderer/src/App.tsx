@@ -36,7 +36,6 @@ import { SaveTemplateModal, PasteTemplateModal, TemplateBrowser } from './compon
 import { ContextMenu } from './components/ContextMenu'
 import { ThemeSettingsModal } from './components/ThemeSettingsModal'
 import { SettingsModal } from './components/SettingsModal'
-import { WorkspaceInfo } from './components/WorkspaceInfo'
 import { FloatingPropertiesModal } from './components/FloatingPropertiesModal'
 import { PinnedWindowsContainer } from './components/PinnedWindow'
 import { CollapsibleMinimap } from './components/CollapsibleMinimap'
@@ -229,7 +228,7 @@ function Canvas(): JSX.Element {
   const ghostNodes = useProposalStore(s => s.ghostNodes)
   const ghostEdges = useProposalStore(s => s.ghostEdges)
   const activeProposalId = useProposalStore(s => s.activeProposalId)
-  const activeProposal = useProposalStore(s => activeProposalId ? s.proposals[activeProposalId] : null)
+  const _activeProposal = useProposalStore(s => activeProposalId ? s.proposals[activeProposalId] : null)
 
   // Refs for nodes/edges to avoid recreating callbacks on every position change
   const nodesRef = useRef(nodes)
@@ -371,7 +370,7 @@ function Canvas(): JSX.Element {
 
       // Set CSS variables
       root.style.setProperty('--glass-blur', `${glassSettings.blurRadius}px`)
-      root.style.setProperty('--glass-opacity', glassSettings.panelOpacity) // Unitless number for calc()
+      root.style.setProperty('--glass-opacity', `${glassSettings.panelOpacity}`) // Unitless number for calc()
       root.style.setProperty('--glass-noise-opacity', `${glassSettings.noiseOpacity / 100}`)
       root.style.setProperty('--glass-shimmer-speed', `${glassSettings.shimmerSpeed}`)
 
@@ -510,7 +509,7 @@ function Canvas(): JSX.Element {
   // Shift+drag edge creation - allows creating edges by Shift+dragging from node to node
   const handleShiftDragEdgeCreate = useCallback(
     (sourceId: string, targetId: string) => {
-      addEdge({ source: sourceId, target: targetId })
+      addEdge({ source: sourceId, target: targetId, sourceHandle: null, targetHandle: null })
       toast('Connection created', { duration: 1500, icon: <Link2 size={16} className="text-blue-400" /> })
     },
     [addEdge]
@@ -2375,6 +2374,13 @@ function Canvas(): JSX.Element {
           onOpenThemeSettings={() => setShowThemeModal(prev => !prev)}
           onOpenSettings={() => setShowSettingsModal(true)}
           onToggleAISidebar={() => setAiSidebarOpen(prev => !prev)}
+          onOpenInlinePrompt={() => {
+            setInlinePromptPosition({
+              x: Math.round(window.innerWidth / 2 - 200),
+              y: Math.round(window.innerHeight / 3)
+            })
+            setInlinePromptOpen(true)
+          }}
           showThemeMenu={showThemeMenu}
           onShowThemeMenuChange={setShowThemeMenu}
         />
