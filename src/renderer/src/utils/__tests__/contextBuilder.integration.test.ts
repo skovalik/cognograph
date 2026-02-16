@@ -38,7 +38,7 @@ describe('Context Injection - BFS Traversal', () => {
     resetTestCounters()
     // Ensure contextSettings are reset to defaults
     useWorkspaceStore.setState({
-      contextSettings: { globalDepth: 2, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+      contextSettings: { globalDepth: 2, traversalMode: 'all' }
     })
   })
 
@@ -69,7 +69,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 2, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 2, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -89,7 +89,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 3, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 3, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -139,7 +139,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 2, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 2, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -160,7 +160,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 2, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 2, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -177,7 +177,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 0, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 0, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -194,7 +194,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 1, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 1, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -218,7 +218,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 5, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 5, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -242,7 +242,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 10, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 10, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -265,7 +265,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 2, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 2, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -310,7 +310,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 3, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 3, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -336,7 +336,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 2, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 2, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -363,7 +363,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 3, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 3, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -392,7 +392,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 3, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 3, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -617,7 +617,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 2, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 2, traversalMode: 'all' }
       })
 
       const context3 = getContextForNode('note-3')
@@ -635,7 +635,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 2, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 2, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -688,7 +688,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 3, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 3, traversalMode: 'all' }
       })
       const context = getContextForNode('note-1')
 
@@ -727,7 +727,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 3, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 3, traversalMode: 'all' }
       })
       const context = getContextForNode('note-1')
 
@@ -764,7 +764,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 5, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 5, traversalMode: 'all' }
       })
       const context = getContextForNode('note-1')
 
@@ -816,7 +816,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 3, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 3, traversalMode: 'all' }
       })
       const context = getContextForNode('center')
 
@@ -845,7 +845,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 5, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 5, traversalMode: 'all' }
       })
       const context = getContextForNode('n1')
 
@@ -863,7 +863,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 5, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 5, traversalMode: 'all' }
       })
       const context = getContextForNode('note-1')
 
@@ -1059,7 +1059,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 3, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 3, traversalMode: 'all' }
       })
       const context = getContextForNode('target')
 
@@ -1082,7 +1082,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 0, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 0, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -1099,7 +1099,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 1, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 1, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -1120,7 +1120,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 2, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 2, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -1143,7 +1143,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 3, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 3, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -1167,7 +1167,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 5, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 5, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -1191,7 +1191,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 10, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 10, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -1214,13 +1214,13 @@ describe('Context Injection - BFS Traversal', () => {
       const { getContextForNode } = useWorkspaceStore.getState()
 
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 1, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 1, traversalMode: 'all' }
       })
       let context = getContextForNode('conv-1')
       expect(context).not.toContain('Level 1')
 
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 2, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 2, traversalMode: 'all' }
       })
       context = getContextForNode('conv-1')
       expect(context).toContain('Level 1')
@@ -1244,7 +1244,7 @@ describe('Context Injection - BFS Traversal', () => {
       const { getContextForNode } = useWorkspaceStore.getState()
 
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 1, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 1, traversalMode: 'all' }
       })
       let context = getContextForNode('conv-1')
       expect(context).toContain('Leaf1')
@@ -1254,7 +1254,7 @@ describe('Context Injection - BFS Traversal', () => {
       expect(context).not.toContain('Root')
 
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 2, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 2, traversalMode: 'all' }
       })
       context = getContextForNode('conv-1')
       expect(context).toContain('Branch1')
@@ -1262,7 +1262,7 @@ describe('Context Injection - BFS Traversal', () => {
       expect(context).not.toContain('Root')
 
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 3, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 3, traversalMode: 'all' }
       })
       context = getContextForNode('conv-1')
       expect(context).toContain('Root')
@@ -1278,7 +1278,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 0, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 0, traversalMode: 'all' }
       })
       const context = getContextForNode('conv-1')
 
@@ -1295,7 +1295,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 1, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 1, traversalMode: 'all' }
       })
       const context = getContextForNode('note-3')
 
@@ -1346,7 +1346,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 20, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 20, traversalMode: 'all' }
       })
 
       const start = performance.now()
@@ -1376,7 +1376,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 5, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 5, traversalMode: 'all' }
       })
 
       const start = performance.now()
@@ -1598,7 +1598,7 @@ describe('Context Injection - BFS Traversal', () => {
 
       const { getContextForNode } = useWorkspaceStore.getState()
       useWorkspaceStore.setState({
-        contextSettings: { globalDepth: 999999, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false }
+        contextSettings: { globalDepth: 999999, traversalMode: 'all' }
       })
       expect(() => getContextForNode('conv-1')).not.toThrow()
     })

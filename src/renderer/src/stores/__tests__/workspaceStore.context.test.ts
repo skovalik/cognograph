@@ -201,7 +201,7 @@ describe('getContextForNode (BFS context injection)', () => {
 
     it('should respect depth limit', () => {
       // Set depth limit to 1
-      useWorkspaceStore.setState({ contextSettings: { globalDepth: 1, maxTokens: 16000, traversalMode: 'all', includeDisabledNodes: false } })
+      useWorkspaceStore.setState({ contextSettings: { globalDepth: 1, traversalMode: 'all' } })
 
       // Chain: note-1 → proj-1 → conv-1 (note is depth 2, should be excluded)
       const note = createNoteNode('Too deep', {

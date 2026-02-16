@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react'
 import { Search, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import type { AgentMemory, MemoryEntry } from '@shared/types'
-import { Input } from '../ui/input'
-import { Button } from '../ui/button'
+import { Input } from '../ui/Input'
+import { Button } from '../ui/Button'
 
 interface AgentMemoryViewerProps {
   nodeId: string
