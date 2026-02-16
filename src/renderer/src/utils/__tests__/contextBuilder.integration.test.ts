@@ -1195,7 +1195,9 @@ describe('Context Injection - BFS Traversal', () => {
       for (let i = 2; i <= 11; i++) {
         expect(context).toContain(`L${i}`)
       }
-      expect(context).not.toContain('L1')
+      // Check that L1 (from note-1 at depth 11) is NOT included
+      // Use word boundary to avoid matching L10, L11
+      expect(context).not.toMatch(/\bL1\b/)
     })
 
     it('should handle depth changes dynamically', () => {
@@ -1229,12 +1231,12 @@ describe('Context Injection - BFS Traversal', () => {
       const leaf2 = createNoteNode('Leaf2', { id: 'l2' })
       const conv = createConversationNode([], { id: 'conv-1' })
       seedNodes([root, branch1, branch2, leaf1, leaf2, conv])
-      seedEdge(createTestEdge('root', 'branch1'))
-      seedEdge(createTestEdge('root', 'branch2'))
-      seedEdge(createTestEdge('branch1', 'leaf1'))
-      seedEdge(createTestEdge('branch2', 'leaf2'))
-      seedEdge(createTestEdge('leaf1', 'conv-1'))
-      seedEdge(createTestEdge('leaf2', 'conv-1'))
+      seedEdge(createTestEdge('root', 'b1'))
+      seedEdge(createTestEdge('root', 'b2'))
+      seedEdge(createTestEdge('b1', 'l1'))
+      seedEdge(createTestEdge('b2', 'l2'))
+      seedEdge(createTestEdge('l1', 'conv-1'))
+      seedEdge(createTestEdge('l2', 'conv-1'))
 
       const { getContextForNode } = useWorkspaceStore.getState()
 

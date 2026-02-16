@@ -6,6 +6,7 @@ import type { AgentStreamChunk } from '../../../preload/index'
 import { getPresetById } from '../constants/agentPresets'
 import { v4 as uuid } from 'uuid'
 import toast from 'react-hot-toast'
+import { logger } from '../utils/logger'
 
 // -----------------------------------------------------------------------------
 // Agent State (per-agent Map, not singleton)
@@ -216,7 +217,7 @@ function finalizeRunEntry(
 export function initAgentService(): void {
   // Strict single-initialization guard
   if (isServiceInitialized) {
-    console.log('[AgentService] Already initialized, skipping')
+    logger.log('[AgentService] Already initialized, skipping')
     return
   }
 
@@ -230,13 +231,13 @@ export function initAgentService(): void {
 
   // Clean up any existing listener first (defensive)
   if (streamUnsubscribe) {
-    console.log('[AgentService] Cleaning up old listener')
+    logger.log('[AgentService] Cleaning up old listener')
     streamUnsubscribe()
     streamUnsubscribe = null
   }
 
   streamUnsubscribe = window.api.agent.onStreamChunk(handleStreamChunk)
-  console.log('[AgentService] Initialized stream listener (single instance)')
+  logger.log('[AgentService] Initialized stream listener (single instance)')
 
   // Recover any stale agent states from previous session (Fix 3)
   recoverStaleAgentStates()
@@ -277,7 +278,7 @@ export async function sendAgentMessage(
     } else {
       agentState.pendingQueue.push({ conversationId, content, timestamp: Date.now() })
     }
-    console.log(`[AgentService] Queued message for ${conversationId}, queue length: ${agentState.pendingQueue.length}`)
+    logger.log(`[AgentService] Queued message for ${conversationId}, queue length: ${agentState.pendingQueue.length}`)
     return
   }
 
@@ -324,7 +325,7 @@ export function pauseAgent(conversationId: string): void {
     window.api.agent.cancel(agentState.currentRequestId)
   }
 
-  console.log(`[AgentService] Pause requested for ${conversationId}`)
+  logger.log(`[AgentService] Pause requested for ${conversationId}`)
 }
 
 export async function resumeAgent(conversationId: string): Promise<void> {
@@ -496,9 +497,9 @@ async function runAgentLoop(conversationId: string): Promise<void> {
 
       const tools = [...canvasAndFsTools, ...mcpTools]
 
-      console.log(`[AgentService] [${conversationId}] Sending request with ${tools.length} tools, requestId: ${agentState.currentRequestId}`)
-      console.log(`[AgentService] [${conversationId}] Stream listener registered: ${!!streamUnsubscribe}`)
-      console.log(`[AgentService] [${conversationId}] Messages being sent (${messages.length} messages)`)
+      logger.log(`[AgentService] [${conversationId}] Sending request with ${tools.length} tools, requestId: ${agentState.currentRequestId}`)
+      logger.log(`[AgentService] [${conversationId}] Stream listener registered: ${!!streamUnsubscribe}`)
+      logger.log(`[AgentService] [${conversationId}] Messages being sent (${messages.length} messages)`)
 
       // Set up completion promise BEFORE sending request
       // This ensures we don't miss the 'done' event
@@ -525,7 +526,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
         systemPromptPrefix: systemPromptPrefix || undefined
       })
 
-      console.log(`[AgentService] [${conversationId}] Request sent, waiting for completion...`)
+      logger.log(`[AgentService] [${conversationId}] Request sent, waiting for completion...`)
 
       // Wait for this iteration to complete (via stream events)
       const { stopReason } = await completionPromise
@@ -536,7 +537,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
         agentState.iterationTimeout = null
       }
 
-      console.log(`[AgentService] [${conversationId}] Iteration complete, stopReason: ${stopReason}`)
+      logger.log(`[AgentService] [${conversationId}] Iteration complete, stopReason: ${stopReason}`)
 
       // Check if we need to continue (tool was called)
       if (!agentState.isRunning) break
@@ -577,7 +578,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
         store.addToolMessage(conversationId, toolUseMsg)
 
         // Execute tool (async for filesystem IPC tools, sync for canvas tools)
-        console.log(`[AgentService] [${conversationId}] Executing tool: ${toolUse.name}`)
+        logger.log(`[AgentService] [${conversationId}] Executing tool: ${toolUse.name}`)
         const result = await executeTool(
           toolUse.name,
           JSON.parse(toolUse.inputJson || '{}'),
@@ -613,7 +614,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
         agentState.currentToolUse = null
         agentState.accumulatedText = ''
         const newRequestId = uuid()
-        console.log(`[AgentService] [${conversationId}] Tool executed, new requestId for next iteration: ${newRequestId}`)
+        logger.log(`[AgentService] [${conversationId}] Tool executed, new requestId for next iteration: ${newRequestId}`)
         agentState.currentRequestId = newRequestId
 
         // Add empty placeholder for next assistant response
@@ -694,7 +695,7 @@ function waitForIterationComplete(conversationId: string): Promise<{ stopReason:
 }
 
 function handleStreamChunk(chunk: AgentStreamChunk): void {
-  console.log('[AgentService] Received chunk:', chunk.type, 'for request:', chunk.requestId)
+  logger.log('[AgentService] Received chunk:', chunk.type, 'for request:', chunk.requestId)
 
   // Find which agent this chunk belongs to by requestId
   const agentState = findStateByRequestId(chunk.requestId)
@@ -709,7 +710,7 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
   switch (chunk.type) {
     case 'text_delta':
       agentState.accumulatedText += chunk.content || ''
-      console.log(`[AgentService] [${conversationId}] text_delta - accumulated length:`, agentState.accumulatedText.length)
+      logger.log(`[AgentService] [${conversationId}] text_delta - accumulated length:`, agentState.accumulatedText.length)
       store.updateLastMessage(conversationId, agentState.accumulatedText)
       break
 

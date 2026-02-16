@@ -689,6 +689,7 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
 .react-flow__node:hover .react-flow__resize-control,
 .react-flow__node.selected .react-flow__resize-control {
   opacity: 1;
+  /* Don't enable pointer-events here - only on direct hover below */
 }
 
 .react-flow__resize-control.handle {
@@ -764,21 +765,18 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
   cursor: ew-resize !important;
 }
 
-/* Hide resize handles by default, show on hover or selection */
+/* TEMPORARY FIX: Hide resize handles completely to unblock node clicks
+   TODO: Implement proper pointer-events management for resize controls
+
+   Problem: Resize controls with pointer-events: auto block clicks on node content.
+   Resize controls span entire edges (line controls) and corners (handle controls).
+   CSS :hover paradox: can't enable pointer-events on :hover when base has pointer-events: none.
+
+   Proper fix needs: JS-based proximity detection OR invisible interaction layer OR
+   different UX pattern (e.g., resize only from bottom-right corner like Figma).
+*/
 .react-flow__resize-control {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s;
-}
-
-.react-flow__node:hover .react-flow__resize-control {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.react-flow__node.selected .react-flow__resize-control {
-  opacity: 1;
-  pointer-events: auto;
+  display: none !important; /* Completely hide until proper fix implemented */
 }
 
 .priority-badge {

@@ -12,6 +12,7 @@ export interface WorkspaceAPI {
   watch: (id: string) => Promise<{ success: boolean; error?: string }>
   unwatch: (id: string) => Promise<{ success: boolean; error?: string }>
   onExternalChange: (callback: (id: string) => void) => () => void
+  resetForTest: () => Promise<{ success: boolean; error?: string }>
 }
 
 // Dialog API types
@@ -517,7 +518,8 @@ const api: ElectronAPI = {
       const handler = (_event: Electron.IpcRendererEvent, id: string): void => callback(id)
       ipcRenderer.on('workspace:external-change', handler)
       return () => ipcRenderer.removeListener('workspace:external-change', handler)
-    }
+    },
+    resetForTest: () => ipcRenderer.invoke('workspace:reset-for-test')
   },
   dialog: {
     showSaveDialog: (options) => ipcRenderer.invoke('dialog:showSaveDialog', options || {}),
@@ -730,3 +732,6 @@ const api: ElectronAPI = {
 }
 
 contextBridge.exposeInMainWorld('api', api)
+
+// Expose test mode flag for GPU detection safety
+contextBridge.exposeInMainWorld('__TEST_MODE__', process.env.NODE_ENV === 'test')

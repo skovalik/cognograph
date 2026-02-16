@@ -6,6 +6,7 @@
  */
 
 import * as Sentry from '@sentry/electron/renderer'
+import { logger } from '../utils/logger'
 
 // Type declaration for Vite's import.meta.env
 declare global {
@@ -30,7 +31,7 @@ let isInitialized = false
 export function initSentry(): void {
   if (isInitialized) return
   if (!SENTRY_DSN) {
-    console.log('[Sentry] No DSN configured, error tracking disabled')
+    logger.log('[Sentry] No DSN configured, error tracking disabled')
     return
   }
 
@@ -102,7 +103,7 @@ export function initSentry(): void {
     })
 
     isInitialized = true
-    console.log('[Sentry] Initialized for renderer process')
+    logger.log('[Sentry] Initialized for renderer process')
   } catch (err) {
     console.error('[Sentry] Failed to initialize:', err)
   }
@@ -199,7 +200,7 @@ export function captureMessage(
   level: 'debug' | 'info' | 'warning' | 'error' | 'fatal' = 'info'
 ): string {
   if (!isInitialized) {
-    console.log('[Sentry] Not initialized, message not sent:', message)
+    logger.log('[Sentry] Not initialized, message not sent:', message)
     return ''
   }
 

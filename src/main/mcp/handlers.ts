@@ -627,10 +627,10 @@ function handleSiteGetComponents(provider: MCPSyncProvider, args: ToolArgs): unk
       return { error: 'NOT_FOUND', message: `No page found for route ${route}` }
     }
 
-    pageNode = pageNodes[0]
+    pageNode = pageNodes[0] ?? null
 
     // Warn if duplicates
-    if (pageNodes.length > 1) {
+    if (pageNodes.length > 1 && pageNode) {
       const duplicateIds = pageNodes.map((n) => n.id)
       return {
         ...buildPageSpec(provider, pageNode, allNodes),
@@ -854,7 +854,7 @@ function handleWebGetWPConfig(provider: MCPSyncProvider): unknown {
     }
   }
 
-  const node = wpConfigNodes[0]
+  const node = wpConfigNodes[0]!
   const wpc = node.data.wpConfig as Record<string, unknown> | undefined
 
   const result: Record<string, unknown> = {
