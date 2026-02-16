@@ -72,11 +72,11 @@ mac:
   identity: null
   gatekeeperAssess: false
   hardenedRuntime: false
-  entitlementsInherit: build/entitlements.mac.plist
 
 dmg:
   artifactName: Cognograph-${version}.${ext}
   sign: false
+  writeUpdateInfo: false
 
 # --- Linux -------------------------------------------------------------------
 linux:
