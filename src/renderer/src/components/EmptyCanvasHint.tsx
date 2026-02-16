@@ -9,6 +9,7 @@ import { memo, useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MessageSquare, Sparkles, Command, Keyboard, FileText } from 'lucide-react'
 import { useNodesStore } from '../stores'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 interface EmptyCanvasHintProps {
   onDismiss?: () => void
@@ -16,11 +17,13 @@ interface EmptyCanvasHintProps {
 
 function EmptyCanvasHintComponent({ onDismiss }: EmptyCanvasHintProps): JSX.Element | null {
   const nodes = useNodesStore((s) => s.nodes)
+  const lastSaved = useWorkspaceStore((s) => s.lastSaved)
   const [dismissed, setDismissed] = useState(false)
   const [hasInteracted, setHasInteracted] = useState(false)
 
-  // Check if canvas is empty
+  // Check if canvas is empty AND this is a new workspace (never saved)
   const isEmpty = nodes.length === 0
+  const isNewWorkspace = lastSaved === null // Only show on brand new workspaces, not loaded files
 
   // Dismiss after user interaction
   useEffect(() => {
@@ -65,7 +68,7 @@ function EmptyCanvasHintComponent({ onDismiss }: EmptyCanvasHintProps): JSX.Elem
     onDismiss?.()
   }, [onDismiss])
 
-  if (dismissed || !isEmpty) return null
+  if (dismissed || !isEmpty || !isNewWorkspace) return null
 
   return (
     <AnimatePresence>
@@ -78,7 +81,7 @@ function EmptyCanvasHintComponent({ onDismiss }: EmptyCanvasHintProps): JSX.Elem
         style={{ zIndex: 5 }}
       >
         <motion.div
-          className="gui-panel glass-soft border gui-border rounded-2xl p-8 max-w-md text-center pointer-events-auto shadow-xl"
+          className="gui-panel glass-soft border gui-border rounded-2xl p-8 max-w-xl text-center pointer-events-auto shadow-xl"
           initial={{ scale: 0.95 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.1, duration: 0.3 }}

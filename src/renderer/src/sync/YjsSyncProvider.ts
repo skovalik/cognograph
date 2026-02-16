@@ -18,6 +18,7 @@ import { YjsStoreBinding } from './YjsStoreBinding'
 import { populateDocFromWorkspaceData, workspaceDataFromDoc } from './yjs-utils'
 import { Awareness } from 'y-protocols/awareness'
 import { tokenSync } from '../services/tokenSync'
+import { logger } from '../utils/logger'
 
 /**
  * Type-safe interface for y-websocket's WebsocketProvider.
@@ -98,7 +99,7 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
 
     // Use whenSynced promise (safe even if already synced)
     await this.indexeddbProvider.whenSynced
-    console.log('[YjsSyncProvider] IndexedDB synced for workspace:', workspaceId)
+    logger.log('[YjsSyncProvider] IndexedDB synced for workspace:', workspaceId)
 
     // Set up store binding
     this.binding = new YjsStoreBinding(this.doc)
@@ -345,7 +346,7 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
         const isSynced = args[0] as boolean
         if (isSynced) {
           this._connectionStatus = 'connected'
-          console.log('[YjsSyncProvider] WebSocket synced with server')
+          logger.log('[YjsSyncProvider] WebSocket synced with server')
         } else {
           this._connectionStatus = 'syncing'
         }
@@ -450,7 +451,7 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
     // Set up cross-tab token sync listener
     if (!this._tokenSyncUnsubscribe) {
       this._tokenSyncUnsubscribe = tokenSync.onTokenUpdate(this._workspaceId, (newToken, expiresAt) => {
-        console.log('[YjsSyncProvider] Received token update from another tab')
+        logger.log('[YjsSyncProvider] Received token update from another tab')
         // Update our config with the new token
         if (this.config) {
           this.config.token = newToken
@@ -505,7 +506,7 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
 
     // Check if another tab is already refreshing
     if (tokenSync.isRefreshing(this._workspaceId)) {
-      console.log('[YjsSyncProvider] Another tab is refreshing, waiting...')
+      logger.log('[YjsSyncProvider] Another tab is refreshing, waiting...')
       // Schedule check for when refresh completes
       this._tokenRefreshTimer = setTimeout(() => {
         this.startTokenRefresh()
@@ -513,7 +514,7 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
       return
     }
 
-    console.log('[YjsSyncProvider] Refreshing token...')
+    logger.log('[YjsSyncProvider] Refreshing token...')
 
     // Notify other tabs we're refreshing
     tokenSync.notifyRefreshing(this._workspaceId)
@@ -547,7 +548,7 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
         return
       }
 
-      console.log('[YjsSyncProvider] Token refreshed successfully')
+      logger.log('[YjsSyncProvider] Token refreshed successfully')
       this._tokenRefreshRetries = 0 // Reset on success
 
       // Notify other tabs of the new token
@@ -593,7 +594,7 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
   private async reconnectWithNewToken(newToken: string): Promise<void> {
     if (!this.wsProvider) return
 
-    console.log('[YjsSyncProvider] Reconnecting with new token...')
+    logger.log('[YjsSyncProvider] Reconnecting with new token...')
 
     // Store current sync state
     const wasOnline = this._isOnline
@@ -630,7 +631,7 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
       30000
     )
 
-    console.log(`[YjsSyncProvider] Token refresh scheduled in ${Math.round(refreshIn / 1000)}s`)
+    logger.log(`[YjsSyncProvider] Token refresh scheduled in ${Math.round(refreshIn / 1000)}s`)
 
     this._tokenRefreshTimer = setTimeout(() => {
       this.refreshToken()

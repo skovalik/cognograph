@@ -24,6 +24,7 @@ import { getPresetById } from '../../constants/agentPresets'
 import { runAgent, pauseAgent, stopAgent, retryAgent } from '../../services/agentService'
 import { CountUp } from '../ui/react-bits'
 import { AgentActivityBadge } from '../bridge/AgentActivityBadge'
+import { InlineErrorBoundary } from '../ErrorBoundary'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -361,11 +362,12 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
       {/* Extraction badge for spatial extraction system */}
       <ExtractionBadge nodeId={id} nodeColor={nodeColor} />
 
-      {/* Bridge: Agent activity badge (Phase 1) - DISABLED for performance */}
-      {/* Causing drag lag - re-enable after optimizing update frequency */}
-      {/* {nodeData.mode === 'agent' && (
-        <AgentActivityBadge nodeId={id} agentName={nodeData.title || 'Agent'} />
-      )} */}
+      {/* Bridge: Agent activity badge (Phase 1) - wrapped in error boundary */}
+      {nodeData.mode === 'agent' && (
+        <InlineErrorBoundary name="AgentActivityBadge">
+          <AgentActivityBadge nodeId={id} agentName={nodeData.title || 'Agent'} />
+        </InlineErrorBoundary>
+      )}
 
       <div className="cognograph-node__header">
         <InlineIconPicker

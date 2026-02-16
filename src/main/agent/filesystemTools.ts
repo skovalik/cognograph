@@ -75,6 +75,9 @@ export function validateCommand(command: string, allowedCommands: string[]): { v
 
   // Extract the base command (first word)
   const baseCommand = command.trim().split(/\s+/)[0]
+  if (!baseCommand) {
+    return { valid: false, error: 'Empty command' }
+  }
 
   if (!allowedCommands.includes(baseCommand)) {
     return { valid: false, error: `Command "${baseCommand}" not in allowed list: ${allowedCommands.join(', ')}` }
@@ -220,8 +223,9 @@ export function searchFiles(
             const content = fs.readFileSync(fullPath, 'utf-8')
             const lines = content.split('\n')
             for (let i = 0; i < lines.length; i++) {
-              if (regex.test(lines[i])) {
-                results.push({ file: path.relative(validation.resolved, fullPath), line: i + 1, content: lines[i].trim().slice(0, 200) })
+              const line = lines[i]!
+              if (regex.test(line)) {
+                results.push({ file: path.relative(validation.resolved, fullPath), line: i + 1, content: line.trim().slice(0, 200) })
                 regex.lastIndex = 0 // Reset regex state for global flag
                 if (results.length >= maxResults) return
               }

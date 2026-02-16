@@ -274,8 +274,9 @@ function AIEditorModalComponent(): JSX.Element | null {
   return (
     <div
       ref={modalRef}
-      className={`fixed z-[100] ${bgClass} glass-fluid border ${borderClass} rounded-lg shadow-2xl overflow-hidden`}
+      className={`fixed z-[100] ${bgClass} glass-fluid border ${borderClass} rounded-lg shadow-2xl`}
       style={{
+        overflow: 'visible', // Prevent glass-fluid from clipping dropdowns
         left: position.x,
         top: position.y,
         width: size.width,

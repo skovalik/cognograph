@@ -6,6 +6,7 @@
  */
 
 import { addBreadcrumb, captureMessage } from './sentry'
+import { logger } from '../utils/logger'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -71,7 +72,7 @@ class HealthCheckManager {
       this.check()
     }, this.interval)
 
-    console.log('[HealthCheck] Started polling', { url: this.serverUrl, interval: this.interval })
+    logger.log('[HealthCheck] Started polling', { url: this.serverUrl, interval: this.interval })
   }
 
   /**
@@ -177,7 +178,7 @@ class HealthCheckManager {
 
       // Special handling for server becoming available
       if (wasUnreachable) {
-        console.log('[HealthCheck] Server is now available')
+        logger.log('[HealthCheck] Server is now available')
         this.onServerAvailable?.()
       }
     }

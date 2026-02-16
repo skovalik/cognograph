@@ -364,6 +364,7 @@ interface WorkspaceState {
   setLinkColors: (colors: { default: string; active: string; inactive: string; selected: string }) => void
   setLinkGradientEnabled: (enabled: boolean) => void
   updateThemeSettings: (settings: Partial<import('@shared/types').ThemeSettings>) => void
+  updateContextSettings: (updates: Partial<ContextSettings>) => void
 
   // Actions - Workspace Preferences
   setArtifactPropertiesDisplay: (mode: PropertiesDisplayMode) => void
@@ -472,6 +473,15 @@ const getContentTypeFromExtension = (ext: string): ArtifactContentType => {
     scala: 'code',
     vue: 'code',
     svelte: 'code',
+    css: 'code',
+    scss: 'code',
+    less: 'code',
+    sql: 'code',
+    sh: 'code',
+    bash: 'code',
+    zsh: 'code',
+    ps1: 'code',
+    dockerfile: 'code',
     // Markup / Data
     md: 'markdown',
     markdown: 'markdown',
@@ -4000,13 +4010,21 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         while (queue.length > 0) {
           const current = queue.shift()!
 
+          // Debug: Log processing for depth tests (disabled)
+          // console.log(`[BFS] Processing ${current.node.id} at depth ${current.depth}, maxDepth=${maxDepth}`)
+
           if (visited.has(current.node.id)) continue
-          if (current.depth > maxDepth) continue
+          if (current.depth > maxDepth) {
+            // console.log(`[BFS] Skipping ${current.node.id} - depth ${current.depth} > maxDepth ${maxDepth}`)
+            continue
+          }
 
           visited.add(current.node.id)
           result.push(current)
+          // console.log(`[BFS] Added ${current.node.id} to results at depth ${current.depth}`)
 
-          // Continue traversal for next depth (only if within depth limit)
+          // Continue traversal for next depth (only if next depth would be within limit)
+          // Don't queue if we're already at maxDepth (next would exceed limit)
           if (current.depth < maxDepth) {
             const nextInbound = getInboundEdges(current.node.id)
             const nextBidirectional = getBidirectionalEdges(current.node.id)
@@ -4015,9 +4033,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               if (!visited.has(edge.source) && !current.path.includes(edge.source)) {
                 const sourceNode = nodes.find((n) => n.id === edge.source)
                 if (sourceNode && sourceNode.data.includeInContext !== false) {
+                  const nextDepth = current.depth + 1
+                  // console.log(`[BFS] Queueing ${sourceNode.id} at depth ${nextDepth} (from ${current.node.id} at depth ${current.depth})`)
                   queue.push({
                     node: sourceNode,
-                    depth: current.depth + 1,
+                    depth: nextDepth,
                     strengthPriority: getEdgeStrengthPriority(edge),
                     path: [...current.path, sourceNode.id]
                   })
@@ -4131,23 +4151,31 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           switch (node.data.type) {
             case 'note': {
               const noteData = node.data as NoteNodeData
+              const role = getRoleLabel(nodeData.contextRole, 'Reference')
+              const label = customLabel || noteData.title
+              const summary = nodeData.summary ? `\nSummary: ${nodeData.summary}` : ''
+              
               if (noteData.content) {
-                const role = getRoleLabel(nodeData.contextRole, 'Reference')
-                const label = customLabel || noteData.title
-                const summary = nodeData.summary ? `\nSummary: ${nodeData.summary}` : ''
                 contextParts.push(`[${role}: ${label}]${priorityMarker}${metaBlock}${summary}\n${noteData.content}`)
+              } else {
+                // Include metadata even if content is empty
+                contextParts.push(`[${role}: ${label}]${priorityMarker}${metaBlock}${summary}\n(Empty note)`)
               }
               break
             }
             case 'project': {
               const projectData = node.data as ProjectNodeData
+              const role = getRoleLabel(nodeData.contextRole, 'Project Scope')
+              const label = customLabel || projectData.title
+              const summary = nodeData.summary ? `\nSummary: ${nodeData.summary}` : ''
+              const childCount = projectData.childNodeIds.length
+              const childInfo = childCount > 0 ? `\nContains ${childCount} items` : ''
+              
               if (projectData.description) {
-                const role = getRoleLabel(nodeData.contextRole, 'Project Scope')
-                const label = customLabel || projectData.title
-                const summary = nodeData.summary ? `\nSummary: ${nodeData.summary}` : ''
-                const childCount = projectData.childNodeIds.length
-                const childInfo = childCount > 0 ? `\nContains ${childCount} items` : ''
                 contextParts.push(`[${role}: ${label}]${priorityMarker}${metaBlock}${summary}${childInfo}\n${projectData.description}`)
+              } else {
+                // Include metadata even if description is empty
+                contextParts.push(`[${role}: ${label}]${priorityMarker}${metaBlock}${summary}${childInfo}\n(No description)`)
               }
               break
             }
@@ -4162,9 +4190,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             case 'conversation': {
               const convData = node.data as ConversationNodeData
               const recentMessages = convData.messages.slice(-5)
+              
               if (recentMessages.length > 0) {
                 const msgText = recentMessages.map((m) => `${m.role}: ${m.content}`).join('\n')
                 contextParts.push(`[Related Conversation: ${convData.title}]${metaBlock}\nProvider: ${convData.provider}\n${msgText}`)
+              } else {
+                // Include metadata even if no messages yet
+                contextParts.push(`[Related Conversation: ${convData.title}]${metaBlock}\nProvider: ${convData.provider}\n(No messages yet)`)
               }
               break
             }
@@ -4239,11 +4271,15 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             }
             case 'text': {
               const textData = node.data as TextNodeData
+              const role = getRoleLabel(nodeData.contextRole, 'Text')
+              const label = customLabel || 'Text'
+              const summary = nodeData.summary ? `\nSummary: ${nodeData.summary}` : ''
+              
               if (textData.content) {
-                const role = getRoleLabel(nodeData.contextRole, 'Text')
-                const label = customLabel || 'Text'
-                const summary = nodeData.summary ? `\nSummary: ${nodeData.summary}` : ''
                 contextParts.push(`[${role}: ${label}]${priorityMarker}${metaBlock}${summary}\n${textData.content}`)
+              } else {
+                // Include metadata even if content is empty
+                contextParts.push(`[${role}: ${label}]${priorityMarker}${metaBlock}${summary}\n(Empty)`)
               }
               break
             }
@@ -4563,6 +4599,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           state.isDirty = true
         })
       },
+
+    // Update context settings (for testing and dynamic depth changes)
+    updateContextSettings: (updates: Partial<ContextSettings>) => {
+      set((state) => {
+        state.contextSettings = { ...state.contextSettings, ...updates }
+      })
+    },
 
       // ---------------------------------------------------------------------
       // Workspace Preferences Actions
