@@ -125,7 +125,7 @@ Each conversation node can use a different provider. Set per-node or use workspa
 | LLM SDKs | Anthropic, OpenAI, Google Generative AI |
 | 3D/Effects | Three.js, R3F, OGL |
 | Build | electron-vite, Vite |
-| Testing | Vitest (788 tests), Playwright |
+| Testing | Vitest (792 tests), Playwright |
 
 ---
 
