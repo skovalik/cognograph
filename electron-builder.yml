@@ -107,6 +107,9 @@ fileAssociations:
     role: Editor
 
 # --- Auto-Updater (deferred -- placeholder) ----------------------------------
+# Explicitly disable publishing to prevent GH_TOKEN requirement in CI
+publish: null
+# Future publishing config:
 # publish:
 #   provider: github
 #   owner: <github-org>
