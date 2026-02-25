@@ -207,9 +207,11 @@ Patent pending. Four provisional patent applications filed February 2026 coverin
 
 ## License
 
-[AGPL-3.0](./LICENSE) — Open source, copyleft. Patent pending.
+[AGPL-3.0](./LICENSE) with [Defensive Patent Pledge](./PATENTS). Patent pending.
 
-Use it, modify it, self-host it. If you distribute modified versions or run them as a network service, you must release your source code under the same license.
+**Free for personal use.** Commercial use requires a commercial license — [contact us](mailto:stefan@aurochs.agency) for details.
+
+If you distribute modified versions or run them as a network service, AGPL-3.0 requires you to release your source code under the same license.
 
 ---
 

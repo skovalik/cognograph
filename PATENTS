@@ -1,0 +1,47 @@
+Additional Grant of Patent Rights
+
+"Software" means the Cognograph software distributed by Stefan Kovalik.
+
+Stefan Kovalik hereby grants to each recipient of the Software ("you") a
+perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+(except as stated in this section) patent license to make, have made, use,
+offer to sell, sell, import, transfer, and otherwise run, modify, and
+propagate the contents of this implementation of the Software, where such
+license applies only to those patent claims, both currently owned or
+controlled by Stefan Kovalik and acquired in the future, licensable by
+Stefan Kovalik that are necessarily infringed by this implementation of the
+Software. This grant does not include claims that would be infringed only
+as a consequence of further modification of this implementation. If you or
+your agent or exclusive licensee institute or order or agree to the
+institution of patent litigation or any other patent enforcement action
+against any entity (including a cross-claim or counterclaim in a lawsuit)
+alleging that this implementation of the Software or any code incorporated
+within this implementation of the Software constitutes direct or
+contributory patent infringement, or inducement of patent infringement,
+then any patent rights granted to you under this Grant of Patent Rights
+for the Software shall terminate as of the date such litigation is filed.
+
+Patent Applications
+
+The following provisional patent applications have been filed with the
+United States Patent and Trademark Office with a priority date of
+February 10, 2026:
+
+1. Application No. 63/979,198 — "System and Method for Graph-Based
+   Automatic Context Assembly in AI Conversation Interfaces"
+   (Context Injection)
+
+2. Application No. 63/979,201 — "System and Method for Spatial
+   Topology-Based Agent Permission and Orchestration Control"
+   (Spatial Agent Orchestration)
+
+3. Application No. 63/979,203 — "System and Method for Position-Based
+   Trigger Activation in Spatial Computing Interfaces"
+   (Spatial Triggers)
+
+4. Application No. 63/979,205 — "System and Method for Conversational
+   Plan Refinement with Ghost-Node Preview and Atomic Execution"
+   (Plan-Preview-Apply)
+
+These applications cover 78 claims across four patent families.
+Nonprovisional applications must be filed by February 10, 2027.
