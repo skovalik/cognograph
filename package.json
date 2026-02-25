@@ -5,7 +5,7 @@
   "type": "module",
   "main": "./out/main/index.js",
   "author": "Stefan Kovalik",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",
     "url": "https://github.com/skovalik/cognograph.git"
