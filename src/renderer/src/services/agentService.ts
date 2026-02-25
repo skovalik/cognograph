@@ -7,6 +7,7 @@ import { getPresetById } from '../constants/agentPresets'
 import { v4 as uuid } from 'uuid'
 import toast from 'react-hot-toast'
 import { logger } from '../utils/logger'
+import { estimateCost } from '../utils/tokenEstimator'
 
 // -----------------------------------------------------------------------------
 // Agent State (per-agent Map, not singleton)
@@ -29,6 +30,11 @@ interface AgentState {
   iterationTimeout: ReturnType<typeof setTimeout> | null // 5 min timeout per iteration
   toolCallCount: number // Track across the run for run summary
   runStartedAt: number | null // For run summary timing
+  // Token tracking accumulators (accumulate across all iterations in runAgentLoop)
+  totalInputTokens: number
+  totalOutputTokens: number
+  totalCacheCreationTokens: number
+  totalCacheReadTokens: number
 }
 
 interface QueuedMessage {
@@ -64,7 +70,11 @@ function getOrCreateState(conversationId: string): AgentState {
       pauseRequested: false,
       iterationTimeout: null,
       toolCallCount: 0,
-      runStartedAt: null
+      runStartedAt: null,
+      totalInputTokens: 0,
+      totalOutputTokens: 0,
+      totalCacheCreationTokens: 0,
+      totalCacheReadTokens: 0
     })
   }
   return agentStates.get(conversationId)!
@@ -146,6 +156,11 @@ function createRunEntry(conversationId: string): void {
   const state = getOrCreateState(conversationId)
   state.runStartedAt = Date.now()
   state.toolCallCount = 0
+  // Reset token accumulators for new run
+  state.totalInputTokens = 0
+  state.totalOutputTokens = 0
+  state.totalCacheCreationTokens = 0
+  state.totalCacheReadTokens = 0
 
   const store = useWorkspaceStore.getState()
   const node = store.nodes.find((n) => n.id === conversationId)
@@ -164,8 +179,10 @@ function createRunEntry(conversationId: string): void {
     startedAt: new Date().toISOString(),
     status: 'completed', // Will be updated on completion
     toolCallCount: 0,
-    tokensUsed: 0,
-    costUSD: 0
+    tokensUsed: 0,  // Will be calculated in finalizeRunEntry
+    costUSD: 0,     // Will be calculated in finalizeRunEntry
+    inputTokens: 0,
+    outputTokens: 0
   })
 
   store.updateNode(conversationId, {
@@ -190,11 +207,33 @@ function finalizeRunEntry(
   const lastRun = history[history.length - 1]
 
   if (lastRun && !lastRun.completedAt) {
+    // Calculate token cost using accumulated tokens from all iterations
+    const inputTokens = agentState?.totalInputTokens ?? 0
+    const outputTokens = agentState?.totalOutputTokens ?? 0
+    const cacheCreationTokens = agentState?.totalCacheCreationTokens ?? 0
+    const cacheReadTokens = agentState?.totalCacheReadTokens ?? 0
+    const model = convData.workspaceOverrides?.llm?.model || 'claude-sonnet-4-20250514'
+
+    const cost = estimateCost(
+      inputTokens,
+      outputTokens,
+      model,
+      cacheCreationTokens,
+      cacheReadTokens
+    )
+
     history[history.length - 1] = {
       ...lastRun,
       completedAt: new Date().toISOString(),
       status,
       toolCallCount: agentState?.toolCallCount ?? lastRun.toolCallCount,
+      // New token tracking fields
+      inputTokens,
+      outputTokens,
+      cacheCreationTokens: cacheCreationTokens || undefined,
+      cacheReadTokens: cacheReadTokens || undefined,
+      tokensUsed: inputTokens + outputTokens,  // Backwards compat
+      costUSD: cost.totalCost,
       errorMessage
     }
   }
@@ -733,6 +772,13 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
       break
 
     case 'done':
+      // Accumulate token usage across iterations (multi-turn agent runs)
+      if (chunk.usage) {
+        agentState.totalInputTokens += chunk.usage.input_tokens
+        agentState.totalOutputTokens += chunk.usage.output_tokens
+        agentState.totalCacheCreationTokens += chunk.usage.cache_creation_input_tokens || 0
+        agentState.totalCacheReadTokens += chunk.usage.cache_read_input_tokens || 0
+      }
       agentState.iterationResolve?.({ stopReason: chunk.stopReason || 'end_turn' })
       break
 

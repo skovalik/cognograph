@@ -26,7 +26,10 @@ export default defineConfig({
       '@shared': resolve(__dirname, './src/shared'),
       '@renderer': resolve(__dirname, './src/renderer/src'),
       '@/lib/utils': resolve(__dirname, './src/renderer/src/lib/utils'),
-      '@': resolve(__dirname, './src/renderer/src')
+      '@': resolve(__dirname, './src/renderer/src'),
+      // Stub for node-pty (native module not yet installed).
+      // Tests use vi.mock('node-pty') to replace this with a proper mock.
+      'node-pty': resolve(__dirname, './src/main/services/__mocks__/node-pty.ts')
     }
   }
 })

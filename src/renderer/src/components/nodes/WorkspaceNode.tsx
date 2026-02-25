@@ -22,6 +22,7 @@ import { InlineIconPicker } from '../InlineIconPicker'
 import { measureTextWidth } from '../../utils/nodeUtils'
 import { AttachmentBadge } from './AttachmentBadge'
 import { useNodeResize } from '../../hooks/useNodeResize'
+import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
 
 // TypeScript interface for node styles with CSS custom properties
@@ -126,11 +127,16 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
   const memberCount = nodeData.includedNodeIds.length
   const excludedCount = nodeData.excludedNodeIds.length
 
+  // LOD (Level of Detail) rendering based on zoom level
+  const { showContent, showTitle, showBadges, showLede, zoomLevel } = useNodeContentVisibility()
+
   // Check if node is disabled
   const isDisabled = nodeData.enabled === false
 
   // Visual feedback states
   const isSpawning = useIsSpawning(id)
+  const showInteractiveControls = showContent
+  const showFooter = showBadges
 
   // Build className with all animation states
   const nodeClassName = [
@@ -139,7 +145,8 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
     selected && 'selected',
     isDisabled && 'cognograph-node--disabled',
     isSpawning && 'spawning',
-    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`
+    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
+    `workspace-node--lod-${zoomLevel}`
   ].filter(Boolean).join(' ')
 
   // Handle visibility toggle
@@ -180,136 +187,190 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
       ref={nodeRef}
       className={nodeClassName}
       style={nodeStyle}
+      data-lod={zoomLevel}
       data-transparent={transparent}
       onDoubleClick={handleDoubleClick}
+      {...(zoomLevel === 'far' ? { role: 'img', 'aria-label': `Workspace: ${nodeData.title} (${memberCount} members)` } : {})}
     >
-      {/* Handles on all four sides */}
-      <Handle type="target" position={Position.Top} id="top-target" />
-      <Handle type="source" position={Position.Top} id="top-source" />
-      <Handle type="target" position={Position.Bottom} id="bottom-target" />
-      <Handle type="source" position={Position.Bottom} id="bottom-source" />
-      <Handle type="target" position={Position.Left} id="left-target" />
-      <Handle type="source" position={Position.Left} id="left-source" />
-      <Handle type="target" position={Position.Right} id="right-target" />
-      <Handle type="source" position={Position.Right} id="right-source" />
+      {/* Handles - hidden at far zoom */}
+      {zoomLevel !== 'far' && (
+        <>
+          <Handle type="target" position={Position.Top} id="top-target" />
+          <Handle type="source" position={Position.Top} id="top-source" />
+          <Handle type="target" position={Position.Bottom} id="bottom-target" />
+          <Handle type="source" position={Position.Bottom} id="bottom-source" />
+          <Handle type="target" position={Position.Left} id="left-target" />
+          <Handle type="source" position={Position.Left} id="left-source" />
+          <Handle type="target" position={Position.Right} id="right-target" />
+          <Handle type="source" position={Position.Right} id="right-source" />
+        </>
+      )}
 
-      {/* Header */}
-      <div className="cognograph-node__header">
-        <InlineIconPicker
-          nodeData={nodeData}
-          nodeColor={nodeColor}
-          onIconChange={(icon) => updateNode(id, { icon })}
-          onIconColorChange={(iconColor) => updateNode(id, { iconColor })}
-          className="cognograph-node__icon"
-        />
-        <EditableTitle
-          value={nodeData.title}
-          onChange={(newTitle) => updateNode(id, { title: newTitle })}
-          className="cognograph-node__title flex-1 truncate"
-          placeholder="Untitled Workspace"
-        />
+      {/* Member count badge - always visible (key metric) */}
+      <span
+        className="absolute top-1.5 right-1.5 flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded"
+        style={{ background: `${nodeColor}25`, color: nodeColor }}
+        aria-label={`${memberCount} members`}
+      >
+        <Users className="w-3 h-3" />
+        {memberCount}
+      </span>
 
-        {/* AI Property Assist */}
-        <NodeAIErrorBoundary compact>
-          <AIPropertyAssist
-            nodeId={id}
+      {/* L0 far: Colored rectangle with icon + title */}
+      {zoomLevel === 'far' && (
+        <div className="flex items-center justify-center gap-1.5 h-full" aria-hidden={false}>
+          <InlineIconPicker
             nodeData={nodeData}
-            compact={true}
+            nodeColor={nodeColor}
+            onIconChange={(icon) => updateNode(id, { icon })}
+            onIconColorChange={(iconColor) => updateNode(id, { iconColor })}
+            className="cognograph-node__icon"
           />
-        </NodeAIErrorBoundary>
-
-        {/* Toggle buttons */}
-        <button
-          onClick={handleToggleVisibility}
-          className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
-          title={nodeData.showOnCanvas ? 'Hide from canvas' : 'Show on canvas'}
-        >
-          {nodeData.showOnCanvas ? (
-            <Eye className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
-          ) : (
-            <EyeOff className="w-4 h-4" style={{ color: 'var(--node-text-muted)' }} />
-          )}
-        </button>
-        <button
-          onClick={handleToggleLinks}
-          className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
-          title={nodeData.showLinks ? 'Hide member links' : 'Show member links'}
-        >
-          {nodeData.showLinks ? (
-            <Link2 className="w-4 h-4" style={{ color: nodeData.linkColor }} />
-          ) : (
-            <Link2Off className="w-4 h-4" style={{ color: 'var(--node-text-muted)' }} />
-          )}
-        </button>
-        <button
-          onClick={handleSettingsClick}
-          className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
-          title="Open settings"
-        >
-          <Settings2 className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
-        </button>
-      </div>
-
-      {/* Body */}
-      <div className="cognograph-node__body space-y-2">
-        <EditableText
-          value={nodeData.description || ''}
-          onChange={(newDescription) => updateNode(id, { description: newDescription })}
-          placeholder="Add description..."
-          className="text-xs"
-        />
-
-        {/* LLM Settings Summary */}
-        <div className="flex items-center gap-2 text-xs">
-          <Bot className="w-3.5 h-3.5" style={{ color: nodeColor }} />
-          <span style={{ color: 'var(--node-text-secondary)' }}>{llmSummary}</span>
+          <span
+            className="text-[11px] font-medium truncate"
+            style={{ color: 'var(--node-text-primary)', maxWidth: '120px' }}
+          >
+            {nodeData.title}
+          </span>
         </div>
+      )}
 
-        {/* Context Rules Summary */}
-        <div className="flex items-center gap-2 text-xs">
-          <Compass className="w-3.5 h-3.5" style={{ color: nodeColor }} />
-          <span style={{ color: 'var(--node-text-secondary)' }}>{contextSummary}</span>
-        </div>
+      {/* Header - visible at mid + close */}
+      {showTitle && (
+        <div className="cognograph-node__header">
+          <InlineIconPicker
+            nodeData={nodeData}
+            nodeColor={nodeColor}
+            onIconChange={(icon) => updateNode(id, { icon })}
+            onIconColorChange={(iconColor) => updateNode(id, { iconColor })}
+            className="cognograph-node__icon"
+          />
+          <EditableTitle
+            value={nodeData.title}
+            onChange={(newTitle) => updateNode(id, { title: newTitle })}
+            className="cognograph-node__title flex-1 truncate"
+            placeholder="Untitled Workspace"
+          />
 
-        {/* Property Badges */}
-        <PropertyBadges
-          properties={nodeData.properties || {}}
-          definitions={propertyDefinitions}
-          hiddenProperties={nodeData.hiddenProperties}
-          compact
-        />
-      </div>
+          {/* AI Property Assist - only at close */}
+          {showInteractiveControls && (
+            <NodeAIErrorBoundary compact>
+              <AIPropertyAssist
+                nodeId={id}
+                nodeData={nodeData}
+                compact={true}
+              />
+            </NodeAIErrorBoundary>
+          )}
 
-      {/* Footer */}
-      <div className="cognograph-node__footer">
-        <div className="flex items-center gap-2">
-          <Users className="w-3.5 h-3.5" style={{ color: 'var(--node-text-muted)' }} />
-          <span>{memberCount} members</span>
-          {excludedCount > 0 && (
-            <span style={{ color: 'var(--node-text-muted)' }}>({excludedCount} excluded)</span>
+          {/* Toggle buttons - only at close */}
+          {showInteractiveControls && (
+            <>
+              <button
+                onClick={handleToggleVisibility}
+                className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
+                title={nodeData.showOnCanvas ? 'Hide from canvas' : 'Show on canvas'}
+              >
+                {nodeData.showOnCanvas ? (
+                  <Eye className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
+                ) : (
+                  <EyeOff className="w-4 h-4" style={{ color: 'var(--node-text-muted)' }} />
+                )}
+              </button>
+              <button
+                onClick={handleToggleLinks}
+                className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
+                title={nodeData.showLinks ? 'Hide member links' : 'Show member links'}
+              >
+                {nodeData.showLinks ? (
+                  <Link2 className="w-4 h-4" style={{ color: nodeData.linkColor }} />
+                ) : (
+                  <Link2Off className="w-4 h-4" style={{ color: 'var(--node-text-muted)' }} />
+                )}
+              </button>
+              <button
+                onClick={handleSettingsClick}
+                className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
+                title="Open settings"
+              >
+                <Settings2 className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
+              </button>
+            </>
           )}
         </div>
-        <AttachmentBadge count={nodeData.attachments?.length} />
-        <span style={{ color: nodeColor }}>Workspace</span>
-      </div>
+      )}
 
-      {/* Socket bars showing connections */}
-      <NodeSocketBars nodeId={id} nodeColor={nodeColor} enabled={selected} />
+      {/* Body - LOD-aware content */}
+      {(showContent || showLede) && (
+        <div className="cognograph-node__body space-y-2" aria-hidden={!showContent && !showLede}>
+          {/* Description editor - only at close */}
+          {showContent && (
+            <EditableText
+              value={nodeData.description || ''}
+              onChange={(newDescription) => updateNode(id, { description: newDescription })}
+              placeholder="Add description..."
+              className="text-xs"
+            />
+          )}
+
+          {/* LLM Settings Summary - lede at mid, full at close */}
+          <div className="flex items-center gap-2 text-xs">
+            <Bot className="w-3.5 h-3.5" style={{ color: nodeColor }} />
+            <span style={{ color: 'var(--node-text-secondary)' }}>{llmSummary}</span>
+          </div>
+
+          {/* Context Rules Summary - lede at mid, full at close */}
+          <div className="flex items-center gap-2 text-xs">
+            <Compass className="w-3.5 h-3.5" style={{ color: nodeColor }} />
+            <span style={{ color: 'var(--node-text-secondary)' }}>{contextSummary}</span>
+          </div>
+
+          {/* Property Badges - only at close */}
+          {showContent && (
+            <PropertyBadges
+              properties={nodeData.properties || {}}
+              definitions={propertyDefinitions}
+              hiddenProperties={nodeData.hiddenProperties}
+              compact
+            />
+          )}
+        </div>
+      )}
+
+      {/* Footer - visible at mid + close */}
+      {showFooter && (
+        <div className="cognograph-node__footer">
+          <div className="flex items-center gap-2">
+            <Users className="w-3.5 h-3.5" style={{ color: 'var(--node-text-muted)' }} />
+            <span>{memberCount} members</span>
+            {excludedCount > 0 && (
+              <span style={{ color: 'var(--node-text-muted)' }}>({excludedCount} excluded)</span>
+            )}
+          </div>
+          <AttachmentBadge count={nodeData.attachments?.length} />
+          <span style={{ color: nodeColor }}>Workspace</span>
+        </div>
+      )}
+
+      {/* Socket bars showing connections - only at close */}
+      {showContent && <NodeSocketBars nodeId={id} nodeColor={nodeColor} enabled={selected} />}
     </div>
   )
 
   return (
     <>
-      <NodeResizer
-        minWidth={MIN_WIDTH}
-        minHeight={MIN_HEIGHT}
-        isVisible={selected}
-        onResizeStart={handleResizeStart}
-        onResize={handleResize}
-        onResizeEnd={handleResizeEnd}
-        handleStyle={{ borderColor: nodeColor, backgroundColor: nodeColor }}
-        lineStyle={{ borderColor: nodeColor }}
-      />
+      {showInteractiveControls && (
+        <NodeResizer
+          minWidth={MIN_WIDTH}
+          minHeight={MIN_HEIGHT}
+          isVisible={selected}
+          onResizeStart={handleResizeStart}
+          onResize={handleResize}
+          onResizeEnd={handleResizeEnd}
+          handleStyle={{ borderColor: nodeColor, backgroundColor: nodeColor }}
+          lineStyle={{ borderColor: nodeColor }}
+        />
+      )}
       {nodeContent}
     </>
   )

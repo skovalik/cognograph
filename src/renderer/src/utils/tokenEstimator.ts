@@ -105,16 +105,44 @@ export function getModelPricing(model?: string): ModelPricing {
 }
 
 /**
+ * Check if a model is an Anthropic (Claude) model
+ */
+function isAnthropicModel(model?: string): boolean {
+  if (!model) return false
+  return model.toLowerCase().includes('claude')
+}
+
+/**
  * Estimate cost in USD for given token counts.
+ * Supports cache tokens for Anthropic models (different pricing for cache creation/read).
  */
 export function estimateCost(
   inputTokens: number,
   outputTokens: number,
-  model?: string
+  model?: string,
+  cacheCreationTokens?: number,
+  cacheReadTokens?: number
 ): CostEstimate {
   const pricing = getModelPricing(model)
-  const inputCost = (inputTokens / 1_000_000) * pricing.input
+  let inputCost: number
+
+  // Cache pricing is Anthropic-specific
+  if (isAnthropicModel(model) && (cacheCreationTokens || cacheReadTokens)) {
+    // Anthropic cache pricing:
+    // - cache_creation: 1.25x input rate
+    // - cache_read: 0.1x input rate (90% discount)
+    // - regular input tokens: standard input rate
+    const regularInputTokens = inputTokens - (cacheCreationTokens || 0) - (cacheReadTokens || 0)
+    inputCost = (regularInputTokens / 1_000_000) * pricing.input
+    inputCost += ((cacheCreationTokens || 0) / 1_000_000) * pricing.input * 1.25
+    inputCost += ((cacheReadTokens || 0) / 1_000_000) * pricing.input * 0.1
+  } else {
+    // Standard pricing for non-Anthropic or when no cache tokens
+    inputCost = (inputTokens / 1_000_000) * pricing.input
+  }
+
   const outputCost = (outputTokens / 1_000_000) * pricing.output
+
   return {
     inputCost,
     outputCost,
@@ -203,6 +231,7 @@ export function buildTokenEstimate(params: {
  * Shows more decimal places for small values.
  */
 export function formatCost(cost: number): string {
+  if (typeof cost !== 'number' || isNaN(cost)) return '$0.00'
   if (cost === 0) return '$0.00'
   if (cost < 0.001) return '<$0.001'
   if (cost < 0.01) return `$${cost.toFixed(4)}`

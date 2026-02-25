@@ -10,7 +10,9 @@ import { AttachmentBadge } from './AttachmentBadge'
 import { ExtractionBadge, ExtractionControls } from '../extractions'
 import { AutoFitButton } from './AutoFitButton'
 import { useNodeResize } from '../../hooks/useNodeResize'
+import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
+import { StructuredContentPreview } from './StructuredContentPreview'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -97,8 +99,20 @@ function TextNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   const isPinned = useIsNodePinned(id)
   const isCut = useWorkspaceStore(s => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id))
 
+  // LOD (Level of Detail) rendering based on zoom level
+  const { showContent, showLede, zoomLevel } = useNodeContentVisibility()
+
   // Show members mode - dim non-members
   const { nonMemberClass } = useShowMembersClassForTextNode(id, nodeData.parentId)
+  const showInteractiveControls = showContent
+
+  // Extract plain text preview for far zoom (no heavy editor mounted)
+  const plainTextPreview = useMemo(() => {
+    if (!nodeData.content) return ''
+    // Strip HTML tags and collapse whitespace
+    const plain = nodeData.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    return plain
+  }, [nodeData.content])
 
   // Build className
   const nodeClassName = [
@@ -110,63 +124,98 @@ function TextNodeComponent({ id, data, selected, width, height }: NodeProps): JS
     warmthLevel && `warmth-${warmthLevel}`,
     isPinned && 'node--pinned',
     isCut && 'text-node--cut',
-    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`
+    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
+    `text-node--lod-${zoomLevel}`
   ].filter(Boolean).join(' ')
 
   const nodeContent = (
-    <div ref={nodeRef} className={nodeClassName} style={nodeStyle} data-transparent={transparent}>
-      {/* Auto-fit button - appears when selected */}
-      <AutoFitButton
-        nodeId={id}
-        title=""
-        content={nodeData.content}
-        selected={selected}
-        nodeColor={nodeColor}
-        minWidth={MIN_WIDTH}
-        minHeight={MIN_HEIGHT}
-        headerHeight={0}
-        footerHeight={0}
-      />
-      {/* Handles on all four sides */}
-      <Handle type="target" position={Position.Top} id="top-target" className="text-node-handle" />
-      <Handle type="source" position={Position.Top} id="top-source" className="text-node-handle" />
-      <Handle type="target" position={Position.Bottom} id="bottom-target" className="text-node-handle" />
-      <Handle type="source" position={Position.Bottom} id="bottom-source" className="text-node-handle" />
-      <Handle type="target" position={Position.Left} id="left-target" className="text-node-handle" />
-      <Handle type="source" position={Position.Left} id="left-source" className="text-node-handle" />
-      <Handle type="target" position={Position.Right} id="right-target" className="text-node-handle" />
-      <Handle type="source" position={Position.Right} id="right-source" className="text-node-handle" />
+    <div
+      ref={nodeRef}
+      className={nodeClassName}
+      style={nodeStyle}
+      data-lod={zoomLevel}
+      data-transparent={transparent}
+      {...(zoomLevel === 'far' ? { role: 'img', 'aria-label': `Text: ${plainTextPreview.slice(0, 60) || 'Empty'}` } : {})}
+    >
+      {/* Auto-fit button - only at close */}
+      {showInteractiveControls && (
+        <AutoFitButton
+          nodeId={id}
+          title=""
+          content={nodeData.content}
+          selected={selected}
+          nodeColor={nodeColor}
+          minWidth={MIN_WIDTH}
+          minHeight={MIN_HEIGHT}
+          headerHeight={0}
+          footerHeight={0}
+        />
+      )}
+
+      {/* Handles - hidden at far zoom */}
+      {zoomLevel !== 'far' && (
+        <>
+          <Handle type="target" position={Position.Top} id="top-target" className="text-node-handle" />
+          <Handle type="source" position={Position.Top} id="top-source" className="text-node-handle" />
+          <Handle type="target" position={Position.Bottom} id="bottom-target" className="text-node-handle" />
+          <Handle type="source" position={Position.Bottom} id="bottom-source" className="text-node-handle" />
+          <Handle type="target" position={Position.Left} id="left-target" className="text-node-handle" />
+          <Handle type="source" position={Position.Left} id="left-source" className="text-node-handle" />
+          <Handle type="target" position={Position.Right} id="right-target" className="text-node-handle" />
+          <Handle type="source" position={Position.Right} id="right-source" className="text-node-handle" />
+        </>
+      )}
 
       {/* Extraction badge for spatial extraction system */}
       <ExtractionBadge nodeId={id} nodeColor={nodeColor} />
 
-      {/* Extraction controls + AI Property Assist - top right */}
-      <div className="absolute top-1 right-1 z-10 flex items-center gap-1">
-        <NodeAIErrorBoundary compact>
-          <AIPropertyAssist
-            nodeId={id}
-            nodeData={nodeData}
-            compact={true}
-          />
-        </NodeAIErrorBoundary>
-        <ExtractionControls nodeId={id} />
-      </div>
+      {/* Extraction controls + AI Property Assist - only at close */}
+      {showInteractiveControls && (
+        <div className="absolute top-1 right-1 z-10 flex items-center gap-1">
+          <NodeAIErrorBoundary compact>
+            <AIPropertyAssist
+              nodeId={id}
+              nodeData={nodeData}
+              compact={true}
+            />
+          </NodeAIErrorBoundary>
+          <ExtractionControls nodeId={id} />
+        </div>
+      )}
 
-      <div className="text-node-body" data-focusable="true">
-        <RichTextEditor
-          value={nodeData.content || ''}
-          onChange={(html) => updateNode(id, { content: html })}
-          placeholder="Type here..."
-          enableLists={true}
-          enableFormatting={true}
-          enableHeadings={true}
-          enableAlignment={true}
-          floatingToolbar={true}
-          showToolbar="on-focus"
-          minHeight={20}
-          editOnDoubleClick={true}
-        />
-      </div>
+      {/* L0 far: Structured preview — headings legible, body text shows density */}
+      {zoomLevel === 'far' && (
+        <div className="text-node-body" aria-hidden={false}>
+          <StructuredContentPreview content={nodeData.content || ''} zoomLevel="far" />
+        </div>
+      )}
+
+      {/* L2 mid: Structured preview with more visible content */}
+      {showLede && !showContent && (
+        <div className="text-node-body" aria-hidden={false} style={{ opacity: 0.9 }}>
+          <StructuredContentPreview content={nodeData.content || ''} zoomLevel="mid" />
+        </div>
+      )}
+
+      {/* L3 close: Full TipTap editor with toolbar */}
+      {showContent && (
+        <div className="text-node-body" data-focusable="true">
+          <RichTextEditor
+            value={nodeData.content || ''}
+            onChange={(html) => updateNode(id, { content: html })}
+            placeholder="Type here..."
+            enableLists={true}
+            enableFormatting={true}
+            enableHeadings={true}
+            enableAlignment={true}
+            floatingToolbar={true}
+            showToolbar="on-focus"
+            minHeight={20}
+            editOnDoubleClick={true}
+          />
+        </div>
+      )}
+
       {nodeData.attachments && nodeData.attachments.length > 0 && (
         <div className="cognograph-node__footer" style={{ padding: '2px 8px' }}>
           <AttachmentBadge count={nodeData.attachments.length} />
@@ -177,17 +226,19 @@ function TextNodeComponent({ id, data, selected, width, height }: NodeProps): JS
 
   return (
     <>
-      <NodeResizer
-        minWidth={MIN_WIDTH}
-        minHeight={MIN_HEIGHT}
-        isVisible={selected}
-        onResizeStart={handleResizeStart}
-        onResize={handleResize}
-        onResizeEnd={handleResizeEnd}
-        handleClassName="w-2 h-2"
-        handleStyle={{ borderColor: nodeColor, backgroundColor: nodeColor, opacity: 0.7 }}
-        lineStyle={{ borderColor: nodeColor, opacity: 0.4 }}
-      />
+      {showInteractiveControls && (
+        <NodeResizer
+          minWidth={MIN_WIDTH}
+          minHeight={MIN_HEIGHT}
+          isVisible={selected}
+          onResizeStart={handleResizeStart}
+          onResize={handleResize}
+          onResizeEnd={handleResizeEnd}
+          handleClassName="w-2 h-2"
+          handleStyle={{ borderColor: nodeColor, backgroundColor: nodeColor, opacity: 0.7 }}
+          lineStyle={{ borderColor: nodeColor, opacity: 0.4 }}
+        />
+      )}
       {nodeContent}
     </>
   )

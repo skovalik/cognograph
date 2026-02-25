@@ -1,5 +1,5 @@
-import { memo, useState, useCallback } from 'react'
-import { Plus, Plug, Server, Trash2, Edit2, Play, Circle, Loader2, CheckCircle, AlertTriangle, X } from 'lucide-react'
+import { memo, useState, useCallback, useEffect } from 'react'
+import { Plus, Plug, Server, Trash2, Edit2, Play, Circle, Loader2, CheckCircle, AlertTriangle, X, Database, Link } from 'lucide-react'
 import { useConnectorStore } from '../../stores/connectorStore'
 import { LLMConnectorCard } from './LLMConnectorCard'
 import { AddLLMModal } from './AddLLMModal'
@@ -110,6 +110,9 @@ function ConnectorsTabComponent(): JSX.Element {
 
       {/* MCP Servers Section */}
       <MCPServersSection />
+
+      {/* Notion Integration Section */}
+      <NotionSection />
 
       {/* Add/Edit LLM Modal */}
       {addModalOpen && (
@@ -505,6 +508,334 @@ function AddMCPModal({ connector, onClose }: {
             {isEditing ? 'Save' : 'Add Server'}
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// -----------------------------------------------------------------------------
+// Notion Integration Section
+// -----------------------------------------------------------------------------
+
+function NotionSection(): JSX.Element {
+  const [token, setToken] = useState('')
+  const [workflowsDbId, setWorkflowsDbId] = useState('')
+  const [execLogDbId, setExecLogDbId] = useState('')
+  const [testing, setTesting] = useState(false)
+  const [syncEnabled, setSyncEnabled] = useState(true)
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connected' | 'error'>('idle')
+  const [errorMessage, setErrorMessage] = useState<string>('')
+  const [workspaceName, setWorkspaceName] = useState<string>('')
+
+  // Node-level sync settings (Section 11 of Node Sync Spec)
+  const [nodeSyncEnabled, setNodeSyncEnabled] = useState(false)
+  const [tasksDbId, setTasksDbId] = useState('')
+  const [projectsDbId, setProjectsDbId] = useState('')
+  const [hubPageId, setHubPageId] = useState('')
+
+  // Load existing settings on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      const storedToken = await window.api.settings.getApiKey('notion')
+      const workflowsDb = await window.api.settings.get('notionWorkflowsDbId')
+      const execLogDb = await window.api.settings.get('notionExecLogDbId')
+      const enabled = await window.api.settings.get('notionSyncEnabled')
+
+      // Node sync settings
+      const nodeEnabled = await window.api.settings.get('nodeSyncEnabled')
+      const tasks = await window.api.settings.get('tasksDbId')
+      const projects = await window.api.settings.get('projectsDbId')
+      const hub = await window.api.settings.get('hubPageId')
+
+      if (storedToken) {
+        // Show masked token (last 4 chars only)
+        const masked = '•'.repeat(Math.max(0, storedToken.length - 4)) + storedToken.slice(-4)
+        setToken(masked)
+        setConnectionStatus('connected')
+      }
+      if (workflowsDb) setWorkflowsDbId(workflowsDb as string)
+      if (execLogDb) setExecLogDbId(execLogDb as string)
+      if (enabled !== undefined) setSyncEnabled(enabled as boolean)
+      if (nodeEnabled !== undefined) setNodeSyncEnabled(nodeEnabled as boolean)
+      if (tasks) setTasksDbId(tasks as string)
+      if (projects) setProjectsDbId(projects as string)
+      if (hub) setHubPageId(hub as string)
+    }
+    loadSettings()
+  }, [])
+
+  const handleTestConnection = useCallback(async () => {
+    if (!token || token.startsWith('•')) {
+      setErrorMessage('Please enter a valid Notion token')
+      setConnectionStatus('error')
+      return
+    }
+
+    setTesting(true)
+    setErrorMessage('')
+
+    try {
+      // Save the token first
+      await window.api.settings.setApiKey('notion', token)
+
+      // Test connection via Notion API
+      const result = await window.api.notion.testConnection()
+
+      if (result.success) {
+        setConnectionStatus('connected')
+        setWorkspaceName(result.workspaceName || 'Notion Workspace')
+        toast.success(`Connected to ${result.workspaceName}!`)
+      } else {
+        throw new Error(result.error || 'Connection test failed')
+      }
+
+    } catch (err) {
+      setConnectionStatus('error')
+      setErrorMessage(err instanceof Error ? err.message : 'Connection test failed')
+    } finally {
+      setTesting(false)
+    }
+  }, [token])
+
+  const handleSaveSettings = useCallback(async () => {
+    try {
+      if (workflowsDbId) {
+        await window.api.settings.set('notionWorkflowsDbId', workflowsDbId)
+      }
+      if (execLogDbId) {
+        await window.api.settings.set('notionExecLogDbId', execLogDbId)
+      }
+      await window.api.settings.set('notionSyncEnabled', syncEnabled)
+
+      // Node sync settings
+      await window.api.settings.set('nodeSyncEnabled', nodeSyncEnabled)
+      if (tasksDbId) await window.api.settings.set('tasksDbId', tasksDbId)
+      if (projectsDbId) await window.api.settings.set('projectsDbId', projectsDbId)
+      if (hubPageId) await window.api.settings.set('hubPageId', hubPageId)
+    } catch (err) {
+      console.error('[NotionSection] Failed to save settings:', err)
+    }
+  }, [workflowsDbId, execLogDbId, syncEnabled, nodeSyncEnabled, tasksDbId, projectsDbId, hubPageId])
+
+  const handleDisconnect = useCallback(async () => {
+    await window.api.settings.setApiKey('notion', '')
+    setToken('')
+    setConnectionStatus('idle')
+    setWorkspaceName('')
+    setErrorMessage('')
+  }, [])
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3 pb-2 border-b gui-border">
+        <div className="flex items-center gap-2">
+          <Database className="w-4 h-4" style={{ color: 'var(--gui-accent-tertiary)' }} />
+          <span className="text-sm font-medium gui-text">Notion Integration</span>
+        </div>
+        {connectionStatus === 'connected' && (
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-green-500" />
+            <span className="text-xs gui-text-secondary">{workspaceName}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="gui-card rounded-lg p-4 space-y-4">
+        {/* Token Input */}
+        <div>
+          <label className="block text-xs font-medium gui-text mb-1.5">
+            Integration Token
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="ntn_secret_..."
+              className="flex-1 gui-input text-xs font-mono"
+            />
+            <button
+              onClick={handleTestConnection}
+              disabled={testing || !token}
+              className="gui-btn gui-btn-accent gui-btn-sm disabled:opacity-50"
+            >
+              {testing ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Testing
+                </>
+              ) : (
+                <>
+                  <Play className="w-3 h-3" />
+                  Test
+                </>
+              )}
+            </button>
+            {connectionStatus === 'connected' && (
+              <button
+                onClick={handleDisconnect}
+                className="gui-btn gui-btn-ghost gui-btn-sm"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+          <p className="text-xs gui-text-secondary mt-1">
+            <Link className="w-3 h-3 inline mr-1" />
+            <a
+              href="#"
+              className="underline"
+              onClick={(e) => {
+                e.preventDefault()
+                // TODO: Open setup guide
+              }}
+            >
+              How to get your Notion token
+            </a>
+          </p>
+          {errorMessage && (
+            <p className="text-xs text-red-500 mt-1">{errorMessage}</p>
+          )}
+          {connectionStatus === 'connected' && !errorMessage && (
+            <p className="text-xs text-green-500 mt-1">
+              Connected to {workspaceName}
+            </p>
+          )}
+        </div>
+
+        {/* Database IDs */}
+        {connectionStatus === 'connected' && (
+          <>
+            <div>
+              <label className="block text-xs font-medium gui-text mb-1.5">
+                Workflows Database ID
+              </label>
+              <input
+                type="text"
+                value={workflowsDbId}
+                onChange={(e) => setWorkflowsDbId(e.target.value)}
+                onBlur={handleSaveSettings}
+                placeholder="e8baa51a-aa6b-43c4-a687-8b6860408c1d"
+                className="w-full gui-input text-xs font-mono"
+              />
+              <p className="text-xs gui-text-secondary mt-1">
+                Paste the database ID from your Notion Workflows database
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium gui-text mb-1.5">
+                Execution Log Database ID
+              </label>
+              <input
+                type="text"
+                value={execLogDbId}
+                onChange={(e) => setExecLogDbId(e.target.value)}
+                onBlur={handleSaveSettings}
+                placeholder="af568e1c-18dd-4acb-9ee5-0f6875e1de65"
+                className="w-full gui-input text-xs font-mono"
+              />
+              <p className="text-xs gui-text-secondary mt-1">
+                Paste the database ID from your Notion Execution Log database
+              </p>
+            </div>
+
+            {/* Sync Toggle */}
+            <div className="flex items-center justify-between pt-2 border-t gui-border">
+              <div>
+                <div className="text-xs font-medium gui-text">Enable Sync</div>
+                <div className="text-xs gui-text-secondary">
+                  Sync workspace data to Notion databases
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={syncEnabled}
+                  onChange={(e) => {
+                    setSyncEnabled(e.target.checked)
+                    handleSaveSettings()
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            {/* Node-Level Sync Section */}
+            <div className="pt-3 mt-3 border-t gui-border">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <div className="text-xs font-medium gui-text">Node Sync</div>
+                  <div className="text-xs gui-text-secondary">
+                    Push individual nodes (tasks, projects, notes) to Notion
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={nodeSyncEnabled}
+                    onChange={(e) => {
+                      setNodeSyncEnabled(e.target.checked)
+                      handleSaveSettings()
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              {nodeSyncEnabled && (
+                <div className="space-y-3 pl-2 border-l-2 border-blue-600/30">
+                  <div>
+                    <label className="block text-xs font-medium gui-text mb-1.5">
+                      Tasks Database ID
+                    </label>
+                    <input
+                      type="text"
+                      value={tasksDbId}
+                      onChange={(e) => setTasksDbId(e.target.value)}
+                      onBlur={handleSaveSettings}
+                      placeholder="Database ID for task nodes"
+                      className="w-full gui-input text-xs font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium gui-text mb-1.5">
+                      Projects Database ID
+                    </label>
+                    <input
+                      type="text"
+                      value={projectsDbId}
+                      onChange={(e) => setProjectsDbId(e.target.value)}
+                      onBlur={handleSaveSettings}
+                      placeholder="Database ID for project nodes"
+                      className="w-full gui-input text-xs font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium gui-text mb-1.5">
+                      Hub Page ID
+                    </label>
+                    <input
+                      type="text"
+                      value={hubPageId}
+                      onChange={(e) => setHubPageId(e.target.value)}
+                      onBlur={handleSaveSettings}
+                      placeholder="Parent page for notes and artifacts"
+                      className="w-full gui-input text-xs font-mono"
+                    />
+                    <p className="text-xs gui-text-secondary mt-1">
+                      Notes and artifacts sync as child pages under this parent
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

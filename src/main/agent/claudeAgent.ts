@@ -30,17 +30,51 @@ interface AgentRequestPayload {
   systemPromptPrefix?: string
 }
 
-interface AgentStreamChunk {
-  requestId: string
-  conversationId: string
-  type: 'text_delta' | 'tool_use_start' | 'tool_use_delta' | 'tool_use_end' | 'done' | 'error'
-  content?: string
-  toolUseId?: string
-  toolName?: string
-  toolInput?: string
-  stopReason?: string
-  error?: string
-}
+type AgentStreamChunk =
+  | {
+      requestId: string
+      conversationId: string
+      type: 'text_delta'
+      content: string
+    }
+  | {
+      requestId: string
+      conversationId: string
+      type: 'tool_use_start'
+      toolUseId: string
+      toolName: string
+    }
+  | {
+      requestId: string
+      conversationId: string
+      type: 'tool_use_delta'
+      toolUseId: string
+      toolInput: string
+    }
+  | {
+      requestId: string
+      conversationId: string
+      type: 'tool_use_end'
+      toolUseId: string
+    }
+  | {
+      requestId: string
+      conversationId: string
+      type: 'done'
+      stopReason: string
+      usage?: {
+        input_tokens: number
+        output_tokens: number
+        cache_creation_input_tokens?: number
+        cache_read_input_tokens?: number
+      }
+    }
+  | {
+      requestId: string
+      conversationId: string
+      type: 'error'
+      error: string
+    }
 
 interface EncryptedKeys {
   anthropic?: string
@@ -172,7 +206,7 @@ function processStreamEvent(
           requestId,
           conversationId,
           type: 'tool_use_delta',
-          toolUseId: currentToolUseId.value || undefined,
+          toolUseId: currentToolUseId.value || '',
           toolInput: event.delta.partial_json
         }
       }
@@ -262,16 +296,28 @@ export function registerAgentHandlers(): void {
         }
       }
 
-      // Get final message to determine stop reason
+      // Get final message to determine stop reason and extract usage
       const finalMessage = await stream.finalMessage()
 
       console.log(`[Agent] Stream completed with stop_reason: ${finalMessage.stop_reason}`)
+
+      // Extract usage data for token tracking
+      // Note: cache token fields may not be in SDK types yet but exist in API responses
+      const usage = finalMessage.usage
+        ? {
+            input_tokens: finalMessage.usage.input_tokens,
+            output_tokens: finalMessage.usage.output_tokens,
+            cache_creation_input_tokens: (finalMessage.usage as any).cache_creation_input_tokens,
+            cache_read_input_tokens: (finalMessage.usage as any).cache_read_input_tokens
+          }
+        : undefined
 
       sendStreamChunk({
         requestId,
         conversationId,
         type: 'done',
-        stopReason: finalMessage.stop_reason || 'end_turn'
+        stopReason: finalMessage.stop_reason || 'end_turn',
+        usage
       })
     } catch (error) {
       if ((error as Error).name === 'AbortError') {

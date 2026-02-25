@@ -49,14 +49,17 @@ const sheetVariants = cva(
 
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
-    VariantProps<typeof sheetVariants> {}
+    VariantProps<typeof sheetVariants> {
+  /** When true, renders without the darkening backdrop overlay */
+  noOverlay?: boolean
+}
 
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = 'right', className, children, ...props }, ref) => (
+>(({ side = 'right', className, children, noOverlay, ...props }, ref) => (
   <SheetPortal>
-    <SheetOverlay />
+    {!noOverlay && <SheetOverlay />}
     <SheetPrimitive.Content
       ref={ref}
       className={cn(sheetVariants({ side }), className)}

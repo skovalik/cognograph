@@ -4,17 +4,18 @@
 import type { MCPSyncProvider, WorkspaceNode } from './provider'
 import { formatTokens, type TokenFormat } from './formatters/tokenFormatter'
 import type { DesignTokenSet, DesignToken } from '../../shared/types/common'
+import { buildContextForNode } from '../services/contextWriter'
 
 type ToolArgs = Record<string, unknown>
 
 /**
  * Execute a tool call by name, delegating to the appropriate handler.
  */
-export function handleToolCall(
+export async function handleToolCall(
   provider: MCPSyncProvider,
   toolName: string,
   args: ToolArgs
-): unknown {
+): Promise<unknown> {
   switch (toolName) {
     case 'get_todos':
       return handleGetTodos(provider, args)
@@ -46,6 +47,8 @@ export function handleToolCall(
       return handleWebGetContentModels(provider, args)
     case 'cognograph_web_get_wp_config':
       return handleWebGetWPConfig(provider)
+    case 'get_initial_context':
+      return handleGetInitialContext(provider, args)
     default:
       throw new Error(`Unknown tool: ${toolName}`)
   }
@@ -875,6 +878,43 @@ function handleWebGetWPConfig(provider: MCPSyncProvider): unknown {
   }
 
   return result
+}
+
+// --- Context Injection Handler ---
+
+async function handleGetInitialContext(
+  _provider: MCPSyncProvider,
+  args: ToolArgs
+): Promise<unknown> {
+  let nodeId = args.nodeId as string | undefined
+
+  // Fall back to env var if nodeId not provided
+  if (!nodeId) {
+    nodeId = process.env.COGNOGRAPH_NODE_ID
+  }
+
+  if (!nodeId) {
+    return {
+      error: 'NO_NODE_ID',
+      message: 'No nodeId provided and COGNOGRAPH_NODE_ID env var not set.'
+    }
+  }
+
+  try {
+    const context = await buildContextForNode(nodeId)
+    return {
+      nodeId,
+      markdown: context.markdown,
+      totalTokens: context.totalTokens,
+      entryCount: context.entries.length,
+      contextFilePath: context.filePath
+    }
+  } catch (error) {
+    return {
+      error: 'CONTEXT_BUILD_FAILED',
+      message: error instanceof Error ? error.message : String(error)
+    }
+  }
 }
 
 // --- Helpers ---

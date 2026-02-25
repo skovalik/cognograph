@@ -91,22 +91,22 @@ function LeftSidebarComponent(): JSX.Element | null {
       {/* Content area - shows active tab panel */}
       <div className="flex-1 overflow-hidden">
         {(activeTab === 'layers' || activeTab === 'extractions') && (
-          <AnimatedContent distance={20} duration={0.25} direction="vertical">
+          <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
             <LayersPanel sidebarWidth={leftSidebarWidth} />
           </AnimatedContent>
         )}
         {activeTab === 'activity' && (
-          <AnimatedContent distance={20} duration={0.25} direction="vertical">
+          <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
             <ActivityFeedPanel sidebarWidth={leftSidebarWidth} />
           </AnimatedContent>
         )}
         {activeTab === 'dispatch' && (
-          <AnimatedContent distance={20} duration={0.25} direction="vertical">
+          <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
             <DispatchPanel sidebarWidth={leftSidebarWidth} />
           </AnimatedContent>
         )}
         {activeTab === 'bridge-log' && (
-          <AnimatedContent distance={20} duration={0.25} direction="vertical">
+          <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
             <BridgeLogPanel sidebarWidth={leftSidebarWidth} />
           </AnimatedContent>
         )}

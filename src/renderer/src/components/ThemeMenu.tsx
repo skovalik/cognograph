@@ -1,9 +1,10 @@
 import { memo, useState, useCallback, useEffect, useRef } from 'react'
-import { Palette, Sun, Moon, ChevronDown, ChevronRight, Settings } from 'lucide-react'
+import { Palette, Sun, Moon, ChevronDown, ChevronRight, Settings, Sparkles, GitBranch } from 'lucide-react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useProgramStore } from '../stores/programStore'
 import { THEME_PRESETS } from '../constants/themePresets'
 import { performThemeTransition, performPresetTransition } from '../utils/themeTransition'
+import { EFFECTS_BY_CATEGORY } from './ambient/effectRegistry'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +20,7 @@ import {
   DropdownMenuSubContent
 } from './ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
-import type { ThemeMode, GlassStyle } from '@shared/types'
+import { DEFAULT_GLASS_SETTINGS, DEFAULT_AMBIENT_EFFECT, type ThemeMode, type GlassStyle, type EdgeStyle } from '@shared/types'
 
 interface ThemeMenuProps {
   onOpenAdvancedSettings: () => void
@@ -34,6 +35,14 @@ const GLASS_MODE_LABELS: Record<GlassStyle, string> = {
   'soft-blur': 'Subtle',
   'solid': 'Minimal'
 }
+
+// Edge style options (matches ThemeSettingsModal)
+const EDGE_STYLE_OPTIONS: { value: EdgeStyle; label: string }[] = [
+  { value: 'straight', label: 'Straight' },
+  { value: 'smooth', label: 'Smooth' },
+  { value: 'sharp', label: 'Sharp' },
+  { value: 'rounded', label: 'Rounded' }
+]
 
 /**
  * Theme Menu Dropdown
@@ -66,8 +75,12 @@ export const ThemeMenu = memo<ThemeMenuProps>(({ onOpenAdvancedSettings, externa
   const themeMode = useWorkspaceStore((state) => state.themeSettings.mode)
   const currentPresetId = useWorkspaceStore((state) => state.themeSettings.currentPresetId)
   const glassSettings = useWorkspaceStore((state) => state.themeSettings.glassSettings)
+  const ambientEffect = useWorkspaceStore((state) => state.themeSettings.ambientEffect)
+  const edgeStyle = useWorkspaceStore((state) => state.themeSettings.edgeStyle || 'rounded')
   const setThemeMode = useWorkspaceStore((state) => state.setThemeMode)
   const applyThemePreset = useWorkspaceStore((state) => state.applyThemePreset)
+  const updateThemeSettings = useWorkspaceStore((state) => state.updateThemeSettings)
+  const setEdgeStyle = useWorkspaceStore((state) => state.setEdgeStyle)
 
   // Recent presets tracking (stored in programStore for persistence across workspaces)
   const recentPresetIds = useProgramStore((state) => state.recentThemePresets || [])
@@ -110,12 +123,23 @@ export const ThemeMenu = memo<ThemeMenuProps>(({ onOpenAdvancedSettings, externa
       themeSettings: {
         ...state.themeSettings,
         glassSettings: {
-          ...state.themeSettings.glassSettings!,
+          ...DEFAULT_GLASS_SETTINGS,
+          ...state.themeSettings.glassSettings,
           userPreference: style
         }
       }
     }))
   }, [])
+
+  // Select ambient effect
+  const handleEffectSelect = useCallback((effectId: string) => {
+    const current = ambientEffect ?? DEFAULT_AMBIENT_EFFECT
+    if (effectId === 'none') {
+      updateThemeSettings({ ambientEffect: { ...current, effect: 'none', enabled: false } })
+    } else {
+      updateThemeSettings({ ambientEffect: { ...current, effect: effectId as any, enabled: true } })
+    }
+  }, [ambientEffect, updateThemeSettings])
 
   // Mark first-time tooltip as seen on hover
   const handleFirstHover = useCallback(() => {
@@ -258,6 +282,63 @@ export const ThemeMenu = memo<ThemeMenuProps>(({ onOpenAdvancedSettings, externa
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>
+
+        <DropdownMenuSeparator />
+
+        {/* Canvas Effects Submenu */}
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Sparkles className="w-4 h-4 mr-2" />
+            Canvas Effects
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-48 max-h-80 overflow-y-auto">
+            <DropdownMenuItem
+              onClick={() => handleEffectSelect('none')}
+              className={!ambientEffect?.enabled ? 'font-medium' : ''}
+            >
+              None
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {EFFECTS_BY_CATEGORY.map(({ category, effects }) => (
+              <div key={category}>
+                <DropdownMenuLabel className="text-[10px]">{category}</DropdownMenuLabel>
+                {effects.map((entry) => {
+                  const isActive = ambientEffect?.enabled && ambientEffect.effect === entry.id
+                  return (
+                    <DropdownMenuItem
+                      key={entry.id}
+                      onClick={() => handleEffectSelect(entry.id)}
+                      className={isActive ? 'font-medium' : ''}
+                    >
+                      <span className="w-5 text-center text-[10px] mr-1.5 opacity-60">{entry.icon}</span>
+                      {entry.name}
+                    </DropdownMenuItem>
+                  )
+                })}
+              </div>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+
+        {/* Edge Shape Submenu */}
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <GitBranch className="w-4 h-4 mr-2" />
+            Edge Shape
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-40">
+            <DropdownMenuRadioGroup
+              value={edgeStyle}
+              onValueChange={(value) => setEdgeStyle(value as EdgeStyle)}
+            >
+              {EDGE_STYLE_OPTIONS.map(({ value, label }) => (
+                <DropdownMenuRadioItem key={value} value={value}>
+                  {label}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
 
         <DropdownMenuSeparator />
 

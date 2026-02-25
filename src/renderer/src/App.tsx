@@ -86,6 +86,16 @@ import { useScheduleService } from './hooks/useScheduleService'
 import { useOnboardingTooltips } from './hooks/useOnboardingTooltips'
 import { useAnalyticsTracking } from './hooks/useAnalyticsTracking'
 import { SpatialRegionOverlay } from './components/action/SpatialRegionOverlay'
+import { CanvasDistrictOverlay } from './components/canvas/CanvasDistrictOverlay'
+import { ContextScopeBadge } from './components/ContextScopeBadge'
+import { NodeHoverPreview } from './components/NodeHoverPreview'
+import { SessionReEntryPrompt } from './components/SessionReEntryPrompt'
+import { CanvasTableOfContents } from './components/CanvasTableOfContents'
+import { CognitiveLoadMeter } from './components/CognitiveLoadMeter'
+import { EdgeGrammarLegend } from './components/EdgeGrammarLegend'
+import { ExecutionStatusOverlay } from './components/ExecutionStatusOverlay'
+import { useContextVisualizationStore } from './stores/contextVisualizationStore'
+import { useContextVisualization } from './hooks/useContextVisualization'
 import { SuggestedAutomations } from './components/action/SuggestedAutomations'
 import { MessageSquare, FileText, CheckSquare, Folder, Code, Boxes, Link2 } from 'lucide-react'
 import { calculateSnapGuides, type SnapGuide } from './utils/snapGuides'
@@ -98,9 +108,17 @@ import { resolveGlassStyle } from './utils/glassUtils'
 import type { Edge } from '@xyflow/react'
 import { UserCursors } from './components/Presence/UserCursors'
 import { ConnectionStatus, SessionExpiredModal } from './components/Multiplayer'
+import { initRendererPlugins } from '@plugins/renderer-registry'
 import { usePresence } from './hooks/usePresence'
 import { useSemanticZoomClass } from './hooks/useSemanticZoom'
 import { useNavigationHistory } from './hooks/useNavigationHistory'
+import { useSpacebarPan } from './hooks/useSpacebarPan'
+import { ZoomOverlay } from './components/canvas/ZoomOverlay'
+import { KeyboardModeIndicator } from './components/canvas/KeyboardModeIndicator'
+import { useContextSelectionStore } from './stores/contextSelectionStore'
+import { useSpatialRegionStore } from './stores/spatialRegionStore'
+import { tidyUpLayout } from './utils/tidyUpLayout'
+import type { LayoutNode, LayoutEdge } from './utils/tidyUpLayout'
 import { useShiftDragEdgeCreation } from './hooks/useShiftDragEdgeCreation'
 import { usePhysicsSimulation, DEFAULT_PHYSICS_CONFIG, getPhysicsConfigForStrength } from './hooks/usePhysicsSimulation'
 import { playSound } from './services/audioService'
@@ -109,6 +127,23 @@ import './styles/nodes.css'
 import './styles/token-estimator.css'
 import './styles/presence.css'
 import './styles/bridgeAnimations.css'
+
+// Initialize plugin renderer registry
+// Returns Promise<void> — no await needed at module level (fire-and-forget)
+initRendererPlugins()
+
+// PFD Phase 5B: Rect overlap check for auto-grow (used in handleNodeDragStop)
+function rectsOverlap(
+  a: { x: number; y: number; width: number; height: number },
+  b: { x: number; y: number; width: number; height: number }
+): boolean {
+  return (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
+  )
+}
 
 // Resizable wrapper for the properties sidebar
 interface ResizablePropertiesPanelProps {
@@ -153,11 +188,11 @@ function ResizablePropertiesPanel({ width, onWidthChange, compact = false }: Res
       {/* Left edge resize handle - wider hit area for easier grabbing */}
       {onWidthChange && (
         <div
-          className="absolute left-0 top-0 w-2 h-full cursor-ew-resize z-20 group"
+          className="absolute left-0 top-0 w-3 h-full cursor-ew-resize z-[51] group"
           onMouseDown={handleResizeStart}
         >
           {/* Visual indicator line */}
-          <div className="absolute left-0 top-0 w-0.5 h-full bg-transparent group-hover:bg-blue-500/50 transition-colors" />
+          <div className="absolute left-0 top-0 w-0.5 h-full bg-[var(--border-subtle)] opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
       )}
       <PropertiesPanel compact={compact} />
@@ -181,11 +216,23 @@ function Canvas(): JSX.Element {
   const { getViewport, screenToFlowPosition, getInternalNode, setCenter } = useReactFlow()
   const semanticZoomClass = useSemanticZoomClass()
   const { goBack, goForward, canGoBack, canGoForward } = useNavigationHistory()
+
+  // PFD Phase 5B: Spacebar + Arrow key panning
+  useSpacebarPan()
+
+  // PFD Phase 5B: Context selection store (transient Ctrl+Click context)
+  const toggleContextSelection = useContextSelectionStore((s) => s.toggle)
+
+  // PFD Phase 5B: Spatial region auto-grow
+  const autoGrowRegion = useSpatialRegionStore((s) => s.autoGrowRegion)
+  const spatialRegions = useSpatialRegionStore((s) => s.regions)
   const [isDraggingFile, setIsDraggingFile] = useState(false)
   const [isDraggingNode, setIsDraggingNode] = useState(false)
   const [showThemeModal, setShowThemeModal] = useState(false)
   const [showThemeMenu, setShowThemeMenu] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [showCanvasTOC, setShowCanvasTOC] = useState(false)
+  const [showEdgeLegend, setShowEdgeLegend] = useState(false)
   const [isReady, setIsReady] = useState(false)
 
   // Connection hover state
@@ -204,8 +251,17 @@ function Canvas(): JSX.Element {
     sourceHandleId: string | null
   } | null>(null)
 
-  // Snap-to-guide state
-  const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([])
+  // Snap-to-guide state — use ref + counter to avoid full App re-render on every drag frame
+  const snapGuidesRef = useRef<SnapGuide[]>([])
+  const [snapGuidesVersion, setSnapGuidesVersion] = useState(0)
+  const snapGuides = snapGuidesRef.current
+  const setSnapGuides = useCallback((guides: SnapGuide[]) => {
+    const prev = snapGuidesRef.current
+    // Only trigger re-render if guides actually changed (empty→empty is common)
+    if (prev.length === 0 && guides.length === 0) return
+    snapGuidesRef.current = guides
+    setSnapGuidesVersion(v => v + 1)
+  }, [])
   const snapResultRef = useRef<{ x: number; y: number } | null>(null)
   const viewportRef = useRef<{ x: number; y: number; zoom: number }>({ x: 0, y: 0, zoom: 1 })
   const [indicatorZoom, setIndicatorZoom] = useState(1)
@@ -290,6 +346,22 @@ function Canvas(): JSX.Element {
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
   }, [showFps])
+
+  // PFD Phase 5B: Apply context-selection-ring CSS class to context-selected nodes
+  useEffect(() => {
+    const unsub = useContextSelectionStore.subscribe((state) => {
+      // Remove ring from all nodes first
+      document.querySelectorAll('.context-selection-ring').forEach(el => {
+        el.classList.remove('context-selection-ring')
+      })
+      // Add ring to context-selected nodes
+      state.selectedNodeIds.forEach(nodeId => {
+        const el = document.querySelector(`.react-flow__node[data-id="${nodeId}"]`)
+        if (el) el.classList.add('context-selection-ring')
+      })
+    })
+    return unsub
+  }, [])
 
   // Set data-theme attribute on body for CSS variable theming
   useEffect(() => {
@@ -429,6 +501,26 @@ function Canvas(): JSX.Element {
   const setSelectedNodes = useWorkspaceStore((state) => state.setSelectedNodes)
   const activeChatNodeId = useWorkspaceStore((state) => state.activeChatNodeId)
   const openChatNodeIds = useWorkspaceStore((state) => state.openChatNodeIds)
+
+  // PFD Phase 4: Context Visualization
+  const contextVizActive = useContextVisualizationStore((state) => state.active)
+  const contextVizTargetNodeId = useContextVisualizationStore((state) => state.targetNodeId)
+  const contextVizNodeIds = useContextVisualizationStore((state) => state.includedNodeIds)
+  const contextVizEdgeIds = useContextVisualizationStore((state) => state.includedEdgeIds)
+  const { showContextScope, hideContextScope } = useContextVisualization()
+
+  // PFD Phase 5A: In-Place Expansion
+  const inPlaceExpandedNodeId = useWorkspaceStore((state) => state.inPlaceExpandedNodeId)
+  const collapseInPlaceExpansion = useWorkspaceStore((state) => state.collapseInPlaceExpansion)
+
+  // PFD Phase 6C: Session interaction recording
+  const recordInteraction = useWorkspaceStore((state) => state.recordInteraction)
+  const lastSessionNodeId = useWorkspaceStore((state) => state.lastSessionNodeId)
+
+  // PFD Phase 7B: Calm Mode
+  const calmMode = useWorkspaceStore((state) => state.calmMode)
+  const toggleCalmMode = useWorkspaceStore((state) => state.toggleCalmMode)
+
   const undo = useWorkspaceStore((state) => state.undo)
   const redo = useWorkspaceStore((state) => state.redo)
   const history = useWorkspaceStore((state) => state.history)
@@ -677,13 +769,50 @@ function Canvas(): JSX.Element {
   }, [selectedNodeIds, nodes, combinedEdges])
 
   // Filter nodes based on hidden node types and archived status, plus ghost nodes
+  // Use className cache to avoid creating new node references during drag (breaks React Flow diffing)
+  const classNameCacheRef = useRef(new Map<string, typeof nodes[0]>())
   const filteredNodes = useMemo(() => {
+    const cache = classNameCacheRef.current
     const realNodes = nodes
       .filter(node => !node.data.isArchived && !hiddenNodeTypes.has(node.data.type))
-      .map(node => contextProviderNodeIds.has(node.id)
-        ? { ...node, className: 'context-provider-node' }
-        : node
-      )
+      .map(node => {
+        // Build className from multiple sources
+        const classes: string[] = []
+        if (contextProviderNodeIds.has(node.id)) {
+          classes.push('context-provider-node')
+        }
+
+        // PFD Phase 6C: Recency indicators
+        const updatedAt = (node.data as { updatedAt?: number }).updatedAt
+        if (updatedAt) {
+          const hoursAgo = (Date.now() - updatedAt) / (1000 * 60 * 60)
+          if (hoursAgo < 24) classes.push('recency-fresh')
+          else if (hoursAgo < 48) classes.push('recency-warm')
+        }
+
+        // PFD Phase 4: Context visualization classes
+        if (contextVizActive) {
+          if (node.id === contextVizTargetNodeId) {
+            classes.push('context-viz-target')
+          } else if (contextVizNodeIds.has(node.id)) {
+            const info = contextVizNodeIds.get(node.id)!
+            classes.push('context-viz-included')
+            if (info.depth >= 2) classes.push(`context-viz-depth-${Math.min(info.depth, 3)}`)
+          }
+        }
+
+        if (classes.length === 0) return node
+
+        const className = classes.join(' ')
+        // Reuse cached spread if the underlying node reference hasn't changed
+        const cached = cache.get(node.id)
+        if (cached && cached.id === node.id && cached.className === className && (cached as { _sourceRef?: unknown })._sourceRef === node) {
+          return cached
+        }
+        const withClass = { ...node, className, _sourceRef: node } as typeof node
+        cache.set(node.id, withClass)
+        return withClass
+      })
 
     // Append ghost nodes from proposal store (they have type: 'ghost')
     if (ghostNodes.length > 0) {
@@ -691,7 +820,27 @@ function Canvas(): JSX.Element {
     }
 
     return realNodes
-  }, [nodes, hiddenNodeTypes, contextProviderNodeIds, ghostNodes])
+  }, [nodes, hiddenNodeTypes, contextProviderNodeIds, ghostNodes, contextVizActive, contextVizTargetNodeId, contextVizNodeIds])
+
+  // PFD Phase 4: Apply context edge classes for visualization
+  const vizEdges = useMemo(() => {
+    if (!contextVizActive) return combinedEdges
+    return combinedEdges.map(edge => {
+      if (contextVizEdgeIds.has(edge.id)) {
+        return { ...edge, className: `${edge.className || ''} context-edge-included`.trim() }
+      }
+      return edge
+    })
+  }, [combinedEdges, contextVizActive, contextVizEdgeIds])
+
+  // PFD Phase 4: Activate/deactivate context viz when chat focus changes
+  useEffect(() => {
+    if (activeChatNodeId) {
+      showContextScope(activeChatNodeId)
+    } else {
+      hideContextScope()
+    }
+  }, [activeChatNodeId, showContextScope, hideContextScope])
 
   // Auto-focus newly created nodes (NoteNode, TaskNode editors)
   useEffect(() => {
@@ -1221,10 +1370,30 @@ function Canvas(): JSX.Element {
         }
       })
 
+      // PFD Phase 5B: Auto-grow spatial regions when nodes are dropped inside
+      draggedIds.forEach(id => {
+        const draggedNode = nodesRef.current.find(n => n.id === id)
+        if (!draggedNode) return
+        const nodeW = (draggedNode.width as number) || 280
+        const nodeH = (draggedNode.height as number) || 140
+        const nodeBounds = {
+          x: draggedNode.position.x,
+          y: draggedNode.position.y,
+          width: nodeW,
+          height: nodeH
+        }
+        // Check all regions and auto-grow if the node overlaps
+        for (const region of spatialRegions) {
+          if (rectsOverlap(nodeBounds, region.bounds)) {
+            autoGrowRegion(region.id, nodeBounds)
+          }
+        }
+      })
+
       // Resume physics after drag
       setIsDraggingNode(false)
     },
-    [addNodeToProject, removeNodeFromProject, selectedNodeIds, commitNodeDrag, onNodesChange, updateNode]
+    [addNodeToProject, removeNodeFromProject, selectedNodeIds, commitNodeDrag, onNodesChange, updateNode, spatialRegions, autoGrowRegion]
   )
 
   // File drop handler - creates artifact nodes from dropped files
@@ -1380,12 +1549,18 @@ function Canvas(): JSX.Element {
     [onNodesChange]
   )
 
-  // Node click handler - handles Ctrl/Cmd+click to toggle selection
+  // Node click handler - handles Ctrl/Cmd+click to toggle selection + context selection
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
       const isCtrlOrCmd = event.ctrlKey || event.metaKey
 
+      // PFD Phase 6C: Record interaction for session re-entry
+      recordInteraction(node.id, 'select')
+
       if (isCtrlOrCmd) {
+        // PFD Phase 5B: Toggle context selection for this node
+        toggleContextSelection(node.id)
+
         // Toggle this node's selection
         onNodesChange([
           {
@@ -1399,7 +1574,7 @@ function Canvas(): JSX.Element {
       }
       // Otherwise, let React Flow handle normally (default click behavior)
     },
-    [onNodesChange]
+    [onNodesChange, recordInteraction, toggleContextSelection]
   )
 
   // Canvas click handler - records position for template paste
@@ -1409,6 +1584,11 @@ function Canvas(): JSX.Element {
     (event: React.MouseEvent): void => {
       closeContextMenu()
       setQuickConnectPopup(null)
+
+      // PFD Phase 5A: Collapse in-place expansion on canvas click
+      if (inPlaceExpandedNodeId && event.button === 0) {
+        collapseInPlaceExpansion()
+      }
 
       // Close theme modal on left click only (not middle-click for panning)
       if (event.button === 0 && showThemeModal) {
@@ -1434,7 +1614,7 @@ function Canvas(): JSX.Element {
         sciFiToast('New conversation created', 'success', 1500)
       }
     },
-    [screenToFlowPosition, recordCanvasClick, closeContextMenu, showThemeModal, showSettingsModal, addNode, setSelectedNodes, animateNodeCreation]
+    [screenToFlowPosition, recordCanvasClick, closeContextMenu, showThemeModal, showSettingsModal, addNode, setSelectedNodes, animateNodeCreation, inPlaceExpandedNodeId, collapseInPlaceExpansion]
   )
 
   // Context menu handler
@@ -1563,9 +1743,11 @@ function Canvas(): JSX.Element {
         }
       }
 
-      // Escape: exit focus mode > clear clipboard > clear selection (progressive exit)
+      // Escape: collapse expansion > exit focus mode > clear clipboard > clear selection (progressive exit)
       if (e.key === 'Escape') {
-        if (focusModeNodeId) {
+        if (inPlaceExpandedNodeId) {
+          collapseInPlaceExpansion()
+        } else if (focusModeNodeId) {
           setFocusModeNode(null)
           sciFiToast('Focus mode exited', 'info', 1500)
         } else if (clipboardState) {
@@ -1622,6 +1804,54 @@ function Canvas(): JSX.Element {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F' && !isInputFocused) {
         e.preventDefault()
         setShowFps(prev => !prev)
+      }
+      // PFD Phase 7A: Toggle Canvas Table of Contents (Ctrl + Shift + T)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T' && !isInputFocused) {
+        e.preventDefault()
+        setShowCanvasTOC(prev => !prev)
+      }
+      // PFD Phase 7B: Toggle Calm Mode (Ctrl + Shift + M)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'M' && !isInputFocused) {
+        e.preventDefault()
+        toggleCalmMode()
+        sciFiToast(calmMode ? 'Calm Mode off' : 'Calm Mode on', 'info', 1500)
+      }
+      // PFD Phase 5B: Tidy-up layout (Ctrl + Shift + L)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L' && !isInputFocused) {
+        e.preventDefault()
+        const currentNodes = nodesRef.current
+        const currentEdges = edgesRef.current
+        // Use selected nodes, or all nodes if none selected
+        const targetNodeIds = selectedNodeIds.length > 0 ? selectedNodeIds : currentNodes.map(n => n.id)
+        const layoutNodes: LayoutNode[] = currentNodes
+          .filter(n => targetNodeIds.includes(n.id))
+          .map(n => ({
+            id: n.id,
+            x: n.position.x,
+            y: n.position.y,
+            width: (n.width as number) || 280,
+            height: (n.height as number) || 140,
+            pinned: (n.data as { layoutMode?: string })?.layoutMode === 'pinned' && !targetNodeIds.includes(n.id)
+          }))
+        const layoutEdges: LayoutEdge[] = currentEdges
+          .filter(edge => targetNodeIds.includes(edge.source) || targetNodeIds.includes(edge.target))
+          .map(edge => ({ source: edge.source, target: edge.target }))
+
+        const result = tidyUpLayout(layoutNodes, layoutEdges)
+        const changes = result.map(r => ({
+          type: 'position' as const,
+          id: r.id,
+          position: { x: r.x, y: r.y }
+        }))
+        if (changes.length > 0) {
+          onNodesChange(changes)
+          sciFiToast(`Tidied ${changes.length} nodes`, 'success', 1500)
+        }
+      }
+      // Edge Grammar Legend (Ctrl + Shift + E)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'E' && !isInputFocused) {
+        e.preventDefault()
+        setShowEdgeLegend(prev => !prev)
       }
       if (m('newWorkspace') && !isInputFocused) {
         e.preventDefault()
@@ -2093,6 +2323,8 @@ function Canvas(): JSX.Element {
     toggleFocusMode,
     focusModeNodeId,
     setFocusModeNode,
+    inPlaceExpandedNodeId,
+    collapseInPlaceExpansion,
     toggleBookmark,
     bookmarkedNodeId,
     setNumberedBookmark,
@@ -2102,12 +2334,15 @@ function Canvas(): JSX.Element {
     lastCanvasClick,
     addNode,
     getViewport,
-    keyboardOverrides
+    keyboardOverrides,
+    calmMode,
+    toggleCalmMode,
+    onNodesChange
   ])
 
   return (
     <div
-      className="h-screen w-screen relative flex"
+      className="h-screen w-screen relative flex overflow-hidden"
       onDrop={handleFileDrop}
       onDragOver={handleDragOver}
       onDragEnter={handleDragEnter}
@@ -2160,9 +2395,9 @@ function Canvas(): JSX.Element {
 
         <ClickSpark>
         <ReactFlow
-          className={`${semanticZoomClass} ${shiftDragState.isShiftHeld && !shiftDragState.isActive ? 'shift-drag-ready' : ''} ${shiftDragState.isActive ? 'shift-drag-active' : ''} ${focusModeNodeId ? 'focus-mode-active' : ''}`}
+          className={`${semanticZoomClass} ${shiftDragState.isShiftHeld && !shiftDragState.isActive ? 'shift-drag-ready' : ''} ${shiftDragState.isActive ? 'shift-drag-active' : ''} ${focusModeNodeId ? 'focus-mode-active' : ''} ${contextVizActive ? 'context-viz-active' : ''} ${inPlaceExpandedNodeId ? 'in-place-expansion-active' : ''} ${calmMode ? 'calm-mode-active' : ''}`}
           nodes={filteredNodes}
-          edges={combinedEdges}
+          edges={vizEdges}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
@@ -2231,7 +2466,15 @@ function Canvas(): JSX.Element {
         <EmptyCanvasHint />
         {minimapVisible && <CollapsibleMinimap />}
         <ZoomIndicator zoom={indicatorZoom} />
+        <CanvasDistrictOverlay />
         <SpatialRegionOverlay />
+        <ExecutionStatusOverlay />
+        <ContextScopeBadge />
+        <NodeHoverPreview />
+        <SessionReEntryPrompt />
+        {showCanvasTOC && <CanvasTableOfContents onClose={() => setShowCanvasTOC(false)} />}
+        <CognitiveLoadMeter />
+        {showEdgeLegend && <EdgeGrammarLegend onClose={() => setShowEdgeLegend(false)} />}
 
         {/* Snap alignment guide lines */}
         {snapGuides.length > 0 && (
@@ -2322,6 +2565,12 @@ function Canvas(): JSX.Element {
         {/* Multiplayer: Session expired modal */}
         <SessionExpiredModal onClose={() => { /* Modal auto-hides when status changes */ }} />
 
+        {/* PFD Phase 5B: Z-key zoom overlay */}
+        <ZoomOverlay />
+
+        {/* PFD Phase 5B: Keyboard mode indicator HUD */}
+        <KeyboardModeIndicator />
+
         {/* FPS counter overlay (toggle with Ctrl+Shift+F) */}
         {showFps && (
           <div
@@ -2395,10 +2644,10 @@ function Canvas(): JSX.Element {
         <ExtractionPanel />
         <ExtractionDragPreview />
 
-        {/* Bottom-left controls - filter & automation suggestions */}
+        {/* Bottom-left controls - filter & automation suggestions (offset right of React Flow Controls) */}
         <div
           className="fixed bottom-4 gui-z-panels flex items-center gap-2 transition-all duration-200"
-          style={{ left: leftSidebarOpen ? `${leftSidebarWidth + 62}px` : '24px' }}
+          style={{ left: leftSidebarOpen ? `${leftSidebarWidth + 100}px` : '60px' }}
         >
           <FilterViewDropdown />
           <SuggestedAutomations />

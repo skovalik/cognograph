@@ -17,6 +17,10 @@ import { registerOrchestratorHandlers } from './orchestratorHandlers'
 import { registerMCPClientHandlers, disconnectAllMCPServers } from './mcp/mcpClient'
 import { registerAuditHandlers } from './services/auditService'
 import { registerGraphIntelligenceHandlers } from './services/graphIntelligence'
+import { registerNotionHandlers } from './services/registerNotionHandlers'
+import { registerTerminalHandlers } from './services/registerTerminalHandlers'
+import { killAll as killAllTerminals } from './services/terminalManager'
+import { workflowSync } from './services/notionSync'
 import { createMCPServer, FileSyncProvider } from './mcp'
 import { startActivityWatcher, stopActivityWatcher, getEventHistory } from './services/activityWatcher'
 import {
@@ -35,6 +39,7 @@ import {
   listCredentials,
 } from './services/credentialStore'
 import { logger } from './utils/logger'
+import { loadPlugins, destroyPlugins, setMainWindow, emitPluginEvent } from '@plugins/registry'
 
 // Catch unhandled promise rejections to prevent silent crashes
 process.on('unhandledRejection', (reason) => {
@@ -224,7 +229,14 @@ app.whenReady().then(async () => {
     registerMCPClientHandlers()
     registerAuditHandlers()
     registerGraphIntelligenceHandlers()
+    registerNotionHandlers()
+    registerTerminalHandlers()
     setupDeepLinkListeners()
+
+    // Initialize Notion sync (replay queue from previous session)
+    workflowSync.initialize().catch(err => {
+      console.error('[Main] Failed to initialize Notion sync:', err)
+    })
 
     // Register CC Bridge IPC handlers
     ipcMain.handle('cc-bridge:getHistory', (_event, limit?: number) => {
@@ -284,7 +296,12 @@ app.whenReady().then(async () => {
     })
 
     // Credential Store IPC handlers
+    // Block renderer access to plugin credentials (workspaceId starting with '__').
+    // Plugin credentials are only accessible through plugin:call pathway.
     ipcMain.handle('credentials:set', (_event, workspaceId: string, credentialKey: string, value: string, label: string, credentialType: string) => {
+      if (workspaceId.startsWith('__')) {
+        return { success: false, error: 'Reserved namespace' }
+      }
       try {
         setCredential(workspaceId, credentialKey, value, label, credentialType)
         return { success: true }
@@ -294,14 +311,19 @@ app.whenReady().then(async () => {
     })
 
     ipcMain.handle('credentials:getMasked', (_event, workspaceId: string, credentialKey: string) => {
+      if (workspaceId.startsWith('__')) return null  // Silent deny
       return getMaskedCredential(workspaceId, credentialKey)
     })
 
     ipcMain.handle('credentials:getReal', (_event, workspaceId: string, credentialKey: string) => {
+      if (workspaceId.startsWith('__')) return null  // Silent deny
       return getRealCredential(workspaceId, credentialKey)
     })
 
     ipcMain.handle('credentials:delete', (_event, workspaceId: string, credentialKey: string) => {
+      if (workspaceId.startsWith('__')) {
+        return { success: false, error: 'Reserved namespace' }
+      }
       try {
         deleteCredential(workspaceId, credentialKey)
         return { success: true }
@@ -311,6 +333,7 @@ app.whenReady().then(async () => {
     })
 
     ipcMain.handle('credentials:list', (_event, workspaceId: string) => {
+      if (workspaceId.startsWith('__')) return []  // Silent deny
       return listCredentials(workspaceId)
     })
   }
@@ -385,6 +408,13 @@ app.whenReady().then(async () => {
     } catch (err) {
       console.error('[ActivityWatcher] Failed to start:', err)
     }
+
+    // Load plugins and emit app:ready event
+    if (mainWindow) {
+      setMainWindow(mainWindow)
+      await loadPlugins()
+      emitPluginEvent('app:ready', {})
+    }
   }
 
   app.on('activate', function () {
@@ -400,11 +430,27 @@ app.on('window-all-closed', () => {
   }
 })
 
-// Clean up activity watcher, dispatch server, and MCP client connections on quit
+// Clean up activity watcher, dispatch server, terminals, and MCP client connections on quit
 app.on('before-quit', () => {
   stopActivityWatcher()
   stopDispatchServer()
+  killAllTerminals()
   disconnectAllMCPServers().catch((err) => {
     console.error('[MCPClient] Error during shutdown cleanup:', err)
   })
+})
+
+// Plugin destroy needs async cleanup, so we use 'will-quit' (fires after 'before-quit' and windows close).
+// Lifecycle: before-quit → windows close → will-quit → quit
+// The guard flag prevents will-quit from re-firing when we call app.quit().
+let pluginsDestroyed = false
+app.on('will-quit', (e) => {
+  if (!pluginsDestroyed) {
+    e.preventDefault()
+    emitPluginEvent('app:quit', {})  // Fire before destroy — plugins can do last-second work
+    destroyPlugins().finally(() => {
+      pluginsDestroyed = true
+      app.quit()  // This re-fires before-quit + will-quit, but guard prevents re-entry
+    })
+  }
 })

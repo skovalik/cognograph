@@ -78,12 +78,76 @@ export function getCachedContext(
   return result
 }
 
+// ---------------------------------------------------------------------------
+// Traversal Cache (Phase 4: Context Transparency)
+// Separate from text cache — stores structured BFS results for visualization.
+// ---------------------------------------------------------------------------
+
+export interface ContextTraversalNode {
+  id: string
+  depth: number
+  role: string
+  priority: string
+  strengthPriority: number
+  type: string
+  title: string
+}
+
+export interface ContextTraversalEdge {
+  id: string
+  source: string
+  target: string
+  strength: string
+}
+
+export interface ContextTraversalResult {
+  nodes: ContextTraversalNode[]
+  edges: ContextTraversalEdge[]
+  text: string
+  nodeCount: number
+}
+
+interface TraversalCacheEntry {
+  result: ContextTraversalResult
+  graphHash: string
+  timestamp: number
+}
+
+const traversalCache = new Map<string, TraversalCacheEntry>()
+
+export function getCachedTraversal(
+  nodeId: string,
+  graphHash: string,
+  computeFn: () => ContextTraversalResult
+): ContextTraversalResult {
+  const cached = traversalCache.get(nodeId)
+
+  if (cached && cached.graphHash === graphHash && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
+    return cached.result
+  }
+
+  const result = computeFn()
+
+  if (traversalCache.size >= MAX_CACHE_SIZE) {
+    const entries = Array.from(traversalCache.entries())
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp)
+    const toRemove = entries.slice(0, Math.floor(MAX_CACHE_SIZE / 4))
+    for (const [key] of toRemove) {
+      traversalCache.delete(key)
+    }
+  }
+
+  traversalCache.set(nodeId, { result, graphHash, timestamp: Date.now() })
+  return result
+}
+
 /**
  * Invalidate the entire context cache.
  * Called when the workspace changes or on major graph modifications.
  */
 export function invalidateContextCache(): void {
   contextCache.clear()
+  traversalCache.clear()
 }
 
 /**

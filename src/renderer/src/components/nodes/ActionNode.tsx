@@ -9,6 +9,7 @@ import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
 import { EditableTitle } from '../EditableTitle'
 import { AttachmentBadge } from './AttachmentBadge'
 import { useNodeResize } from '../../hooks/useNodeResize'
+import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
 
 // TypeScript interface for node styles with CSS custom properties
@@ -130,8 +131,13 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
   const numberedBookmark = useNodeNumberedBookmark(id)
   const isCut = useWorkspaceStore(s => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id))
 
+  // LOD (Level of Detail) rendering based on zoom level
+  const { showContent, showTitle, showBadges, showLede, zoomLevel } = useNodeContentVisibility()
+
   // Show members mode - dim non-members
   const { nonMemberClass, memberHighlightClass } = useShowMembersClass(id, nodeData.parentId)
+  const showInteractiveControls = showContent
+  const showFooter = showBadges
 
   // Build className
   const nodeClassName = [
@@ -146,7 +152,8 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
     isPinned && 'node--pinned',
     isBookmarked && 'cognograph-node--bookmarked',
     isCut && 'cognograph-node--cut',
-    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`
+    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
+    `action-node--lod-${zoomLevel}`
   ].filter(Boolean).join(' ')
 
   // Build trigger summary
@@ -165,16 +172,27 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
   }, [id])
 
   const nodeContent = (
-    <div ref={nodeRef} className={nodeClassName} style={nodeStyle} data-transparent={transparent}>
-      {/* Handles */}
-      <Handle type="target" position={Position.Top} id="top-target" className="cognograph-handle" />
-      <Handle type="source" position={Position.Top} id="top-source" className="cognograph-handle" />
-      <Handle type="target" position={Position.Bottom} id="bottom-target" className="cognograph-handle" />
-      <Handle type="source" position={Position.Bottom} id="bottom-source" className="cognograph-handle" />
-      <Handle type="target" position={Position.Left} id="left-target" className="cognograph-handle" />
-      <Handle type="source" position={Position.Left} id="left-source" className="cognograph-handle" />
-      <Handle type="target" position={Position.Right} id="right-target" className="cognograph-handle" />
-      <Handle type="source" position={Position.Right} id="right-source" className="cognograph-handle" />
+    <div
+      ref={nodeRef}
+      className={nodeClassName}
+      style={nodeStyle}
+      data-lod={zoomLevel}
+      data-transparent={transparent}
+      {...(zoomLevel === 'far' ? { role: 'img', 'aria-label': `Action: ${nodeData.title}` } : {})}
+    >
+      {/* Handles - hidden at far zoom */}
+      {zoomLevel !== 'far' && (
+        <>
+          <Handle type="target" position={Position.Top} id="top-target" className="cognograph-handle" />
+          <Handle type="source" position={Position.Top} id="top-source" className="cognograph-handle" />
+          <Handle type="target" position={Position.Bottom} id="bottom-target" className="cognograph-handle" />
+          <Handle type="source" position={Position.Bottom} id="bottom-source" className="cognograph-handle" />
+          <Handle type="target" position={Position.Left} id="left-target" className="cognograph-handle" />
+          <Handle type="source" position={Position.Left} id="left-source" className="cognograph-handle" />
+          <Handle type="target" position={Position.Right} id="right-target" className="cognograph-handle" />
+          <Handle type="source" position={Position.Right} id="right-source" className="cognograph-handle" />
+        </>
+      )}
 
       {/* Numbered bookmark badge */}
       {numberedBookmark && (
@@ -183,99 +201,144 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
         </div>
       )}
 
-      {/* Header with icon and title */}
-      <div className="cognograph-node__header" style={{ borderBottomColor: `${nodeColor}30` }}>
-        <Zap className="w-4 h-4 flex-shrink-0" style={{ color: nodeColor }} />
-        <EditableTitle
-          value={nodeData.title}
-          onChange={(title) => updateNode(id, { title })}
-          className="cognograph-node__title"
-        />
-        {/* AI Property Assist */}
-        <NodeAIErrorBoundary compact>
-          <AIPropertyAssist
-            nodeId={id}
-            nodeData={nodeData}
-            compact={true}
-          />
-        </NodeAIErrorBoundary>
-        {/* Manual trigger button */}
-        <button
-          onClick={handleManualTrigger}
-          className="ml-auto p-1 rounded hover:bg-white/10 transition-colors flex-shrink-0"
-          title="Run manually"
-        >
-          <Play className="w-3 h-3" style={{ color: nodeColor }} />
-        </button>
-      </div>
+      {/* Enabled/disabled status dot - always visible (important state indicator) */}
+      <span
+        className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${nodeData.enabled ? 'bg-emerald-400' : 'bg-[var(--text-muted)]'}`}
+        title={nodeData.enabled ? 'Enabled' : 'Disabled'}
+        aria-label={nodeData.enabled ? 'Action enabled' : 'Action disabled'}
+      />
 
-      {/* Body - trigger and action summary */}
-      <div className="cognograph-node__body text-xs flex flex-col gap-1 overflow-hidden">
-        {/* Trigger line */}
-        <div className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
-          <span className="font-medium uppercase text-[10px] opacity-70">WHEN:</span>
-          <span className="truncate">{triggerLabel}</span>
-          {nodeData.trigger.type === 'property-change' && (
-            <span className="opacity-60 truncate">
-              ({(nodeData.trigger as { property?: string }).property || '?'})
+      {/* L0 far: Colored rectangle with Zap icon + title + status */}
+      {zoomLevel === 'far' && (
+        <div
+          className="flex items-center justify-center gap-1.5 h-full"
+          style={isDisabled ? { opacity: 0.5 } : undefined}
+          aria-hidden={false}
+        >
+          <Zap className="w-5 h-5 flex-shrink-0" style={{ color: nodeColor }} />
+          <span
+            className="text-[11px] font-medium truncate"
+            style={{ color: 'var(--node-text-primary)', maxWidth: '120px' }}
+          >
+            {nodeData.title}
+          </span>
+        </div>
+      )}
+
+      {/* Header - visible at mid + close */}
+      {showTitle && (
+        <div className="cognograph-node__header" style={{ borderBottomColor: `${nodeColor}30` }}>
+          <Zap className="w-4 h-4 flex-shrink-0" style={{ color: nodeColor }} />
+          <EditableTitle
+            value={nodeData.title}
+            onChange={(title) => updateNode(id, { title })}
+            className="cognograph-node__title"
+          />
+          {/* AI Property Assist - only at close */}
+          {showInteractiveControls && (
+            <NodeAIErrorBoundary compact>
+              <AIPropertyAssist
+                nodeId={id}
+                nodeData={nodeData}
+                compact={true}
+              />
+            </NodeAIErrorBoundary>
+          )}
+          {/* Manual trigger button - only at close */}
+          {showInteractiveControls && (
+            <button
+              onClick={handleManualTrigger}
+              className="ml-auto p-1 rounded hover:bg-white/10 transition-colors flex-shrink-0"
+              title="Run manually"
+            >
+              <Play className="w-3 h-3" style={{ color: nodeColor }} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Body - LOD-aware content */}
+      {(showContent || showLede) && (
+        <div className="cognograph-node__body text-xs flex flex-col gap-1 overflow-hidden" aria-hidden={!showContent && !showLede}>
+          {/* WHEN line - visible at mid (lede) + close */}
+          <div className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
+            <span className="font-medium uppercase text-[10px] opacity-70">WHEN:</span>
+            <span className="truncate">{triggerLabel}</span>
+            {nodeData.trigger.type === 'property-change' && (
+              <span className="opacity-60 truncate">
+                ({(nodeData.trigger as { property?: string }).property || '?'})
+              </span>
+            )}
+          </div>
+
+          {/* THEN + IF lines - only at close */}
+          {showContent && (
+            <>
+              {stepsLabels.length > 0 && (
+                <div className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
+                  <span className="font-medium uppercase text-[10px] opacity-70">THEN:</span>
+                  <span className="truncate">{stepsLabels.join(', ')}</span>
+                </div>
+              )}
+              {nodeData.conditions.length > 0 && (
+                <div className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
+                  <span className="font-medium uppercase text-[10px] opacity-70">IF:</span>
+                  <span>{nodeData.conditions.length} condition{nodeData.conditions.length > 1 ? 's' : ''}</span>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Run count badge at mid zoom */}
+          {showLede && !showContent && nodeData.runCount > 0 && (
+            <span className="text-[10px] text-[var(--node-text-muted)]">
+              Runs: {nodeData.runCount}
             </span>
           )}
         </div>
+      )}
 
-        {/* Actions line */}
-        {stepsLabels.length > 0 && (
-          <div className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
-            <span className="font-medium uppercase text-[10px] opacity-70">THEN:</span>
-            <span className="truncate">{stepsLabels.join(', ')}</span>
-          </div>
-        )}
-
-        {/* Conditions count */}
-        {nodeData.conditions.length > 0 && (
-          <div className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
-            <span className="font-medium uppercase text-[10px] opacity-70">IF:</span>
-            <span>{nodeData.conditions.length} condition{nodeData.conditions.length > 1 ? 's' : ''}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Footer - status */}
-      <div className="cognograph-node__footer flex items-center gap-2 text-[10px] text-[var(--node-text-muted)]">
-        <span className={`flex items-center gap-1 ${nodeData.enabled ? 'text-emerald-400' : 'text-[var(--text-muted)]'}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${nodeData.enabled ? 'bg-emerald-400' : 'bg-[var(--text-muted)]'}`} />
-          {nodeData.enabled ? 'Enabled' : 'Disabled'}
-        </span>
-        {nodeData.runCount > 0 && (
-          <span>Runs: {nodeData.runCount}</span>
-        )}
-        {nodeData.errorCount > 0 && (
-          <span className="text-red-400">Errors: {nodeData.errorCount}</span>
-        )}
-        {nodeData.lastError && (
-          <span className="text-red-400 truncate max-w-[150px]" title={nodeData.lastError}>
-            {nodeData.lastError}
+      {/* Footer - visible at mid + close */}
+      {showFooter && (
+        <div className="cognograph-node__footer flex items-center gap-2 text-[10px] text-[var(--node-text-muted)]">
+          <span className={`flex items-center gap-1 ${nodeData.enabled ? 'text-emerald-400' : 'text-[var(--text-muted)]'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${nodeData.enabled ? 'bg-emerald-400' : 'bg-[var(--text-muted)]'}`} />
+            {nodeData.enabled ? 'Enabled' : 'Disabled'}
           </span>
-        )}
-        {nodeData.attachments && nodeData.attachments.length > 0 && (
-          <AttachmentBadge count={nodeData.attachments.length} />
-        )}
-      </div>
+          {nodeData.runCount > 0 && (
+            <span>Runs: {nodeData.runCount}</span>
+          )}
+          {nodeData.errorCount > 0 && (
+            <span className="text-red-400">Errors: {nodeData.errorCount}</span>
+          )}
+          {nodeData.lastError && (
+            <span className="text-red-400 truncate max-w-[150px]" title={nodeData.lastError}>
+              {nodeData.lastError}
+            </span>
+          )}
+          {nodeData.attachments && nodeData.attachments.length > 0 && (
+            <AttachmentBadge count={nodeData.attachments.length} />
+          )}
+        </div>
+      )}
     </div>
   )
 
   return (
     <>
-      <NodeResizer
-        minWidth={MIN_WIDTH}
-        minHeight={MIN_HEIGHT}
-        isVisible={selected}
-        onResizeStart={handleResizeStart}
-        onResize={handleResize}
-        onResizeEnd={handleResizeEnd}
-        handleClassName="w-2 h-2"
-        handleStyle={{ borderColor: nodeColor, backgroundColor: nodeColor, opacity: 0.7 }}
-        lineStyle={{ borderColor: nodeColor, opacity: 0.4 }}
-      />
+      {showInteractiveControls && (
+        <NodeResizer
+          minWidth={MIN_WIDTH}
+          minHeight={MIN_HEIGHT}
+          isVisible={selected}
+          onResizeStart={handleResizeStart}
+          onResize={handleResize}
+          onResizeEnd={handleResizeEnd}
+          handleClassName="w-2 h-2"
+          handleStyle={{ borderColor: nodeColor, backgroundColor: nodeColor, opacity: 0.7 }}
+          lineStyle={{ borderColor: nodeColor, opacity: 0.4 }}
+        />
+      )}
       {nodeContent}
     </>
   )
