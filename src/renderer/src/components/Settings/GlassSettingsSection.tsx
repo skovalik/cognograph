@@ -236,7 +236,7 @@ function GlassSettingsSectionInner({
               })}
               className="w-4 h-4 rounded border-gui-border text-gui-accent-primary focus:ring-2 focus:ring-gui-accent-primary/20"
             />
-            <span className="text-sm gui-text">Node cards</span>
+            <span className="text-sm gui-text">Nodes</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input

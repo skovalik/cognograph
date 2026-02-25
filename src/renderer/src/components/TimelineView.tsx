@@ -314,7 +314,7 @@ function TimelineViewComponent({ isOpen, onClose }: TimelineViewProps): JSX.Elem
           className="px-4 py-2 text-[10px] border-t text-center"
           style={{ borderColor: 'var(--gui-border-subtle)', color: 'var(--gui-text-muted)' }}
         >
-          Click a node to navigate to its position on the canvas
+          Click a node to navigate to it
         </div>
       </div>
     </div>

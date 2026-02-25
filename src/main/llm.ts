@@ -96,11 +96,14 @@ async function streamAnthropic(request: LLMRequest): Promise<void> {
     }
   }
 
-  // Extract actual token usage from the finalized message
+  // Extract actual token usage from the finalized message (including cache tokens)
+  // Note: cache token fields may not be in SDK types yet but exist in API responses
   const finalMessage = await stream.finalMessage()
   const usage = finalMessage.usage ? {
     inputTokens: finalMessage.usage.input_tokens,
     outputTokens: finalMessage.usage.output_tokens,
+    cacheCreationTokens: (finalMessage.usage as any).cache_creation_input_tokens || 0,
+    cacheReadTokens: (finalMessage.usage as any).cache_read_input_tokens || 0,
     model: request.model || 'claude-sonnet-4-20250514'
   } : undefined
 

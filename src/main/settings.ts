@@ -11,7 +11,12 @@ interface SettingsSchema {
     anthropic?: string
     gemini?: string
     openai?: string
+    notion?: string
   }
+  // Notion integration settings
+  notionWorkflowsDbId?: string
+  notionExecLogDbId?: string
+  notionSyncEnabled?: boolean
 }
 
 const store = new Store<SettingsSchema>({

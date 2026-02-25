@@ -43,7 +43,7 @@ export async function createMCPServer(provider: MCPSyncProvider): Promise<Server
     const { name, arguments: args } = request.params
 
     try {
-      const result = handleToolCall(provider, name, (args as Record<string, unknown>) || {})
+      const result = await handleToolCall(provider, name, (args as Record<string, unknown>) || {})
       return {
         content: [
           {
