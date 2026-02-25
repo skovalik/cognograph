@@ -917,7 +917,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[600px] overflow-y-auto">
+      <SheetContent side="right" className="w-[600px] overflow-y-auto" noOverlay>
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Palette className="w-5 h-5" style={{ color: 'var(--gui-accent-primary)' }} />

@@ -44,6 +44,7 @@ import {
   Send,
   Workflow,
   Bot,
+  MapPin,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import {
@@ -684,6 +685,17 @@ function ContextMenuComponent(): JSX.Element | null {
                 close()
               }}
               shortcut="B"
+            />
+            <MenuItem
+              icon={<MapPin className="w-4 h-4" />}
+              label={(() => {
+                const node = useWorkspaceStore.getState().nodes.find(n => n.id === target.nodeId)
+                return node?.data.isLandmark ? 'Remove Landmark' : 'Set as Landmark'
+              })()}
+              onClick={() => {
+                useWorkspaceStore.getState().toggleLandmark(target.nodeId)
+                close()
+              }}
             />
             <MenuItem
               icon={<Save className="w-4 h-4" />}

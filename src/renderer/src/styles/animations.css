@@ -1069,14 +1069,44 @@
    14. MINIMAP ACTIVITY INDICATOR
    ============================================================================= */
 
-/* Pulse on minimap node when streaming */
+/* Pulse on minimap node when streaming (legacy class) */
 .react-flow__minimap-node.streaming {
+  animation: minimap-pulse 2s ease-in-out infinite;
+}
+
+/* Phase 1C: CC session pulse — streaming conversation nodes pulse in minimap */
+.minimap-node-streaming {
   animation: minimap-pulse 2s ease-in-out infinite;
 }
 
 @keyframes minimap-pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  50% { opacity: 0.4; }
+}
+
+/* Phase 1C: Respect prefers-reduced-motion for minimap animations */
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__minimap-node.streaming,
+  .minimap-node-streaming {
+    animation: none;
+  }
+}
+
+/* App-level reduced motion override */
+[data-reduce-motion="reduce"] .react-flow__minimap-node.streaming,
+[data-reduce-motion="reduce"] .minimap-node-streaming {
+  animation: none;
+}
+
+/* Legacy support */
+[data-reduce-motion="true"] .react-flow__minimap-node.streaming,
+[data-reduce-motion="true"] .minimap-node-streaming {
+  animation: none;
+}
+
+/* Phase 1C: District boundary rectangles in minimap overlay */
+.minimap-district {
+  transition: fill-opacity 0.2s ease;
 }
 
 /* =============================================================================

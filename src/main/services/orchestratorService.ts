@@ -10,6 +10,8 @@
  */
 
 import { BrowserWindow } from 'electron'
+import { execLogWriter } from './notionExecLog'
+import { emitPluginEvent } from '@plugins/registry'
 import type {
   OrchestratorNodeData,
   OrchestratorRun,
@@ -363,6 +365,8 @@ export async function startOrchestration(
       type: 'run-failed',
       error: run.error,
     })
+    // Emit plugin event for failed runs (exec log is triggered via plugin event handler)
+    emitPluginEvent('orchestrator:run-complete', run)
     activeRuns.delete(orchestratorId)
   })
 
@@ -607,6 +611,8 @@ async function runAgent(
   state.run.agentResults.push(result)
   state.run.totalInputTokens += result.inputTokens
   state.run.totalOutputTokens += result.outputTokens
+  state.run.totalCacheCreationTokens = (state.run.totalCacheCreationTokens || 0) + (result.cacheCreationTokens || 0)
+  state.run.totalCacheReadTokens = (state.run.totalCacheReadTokens || 0) + (result.cacheReadTokens || 0)
   state.run.totalCostUSD += result.costUSD
 
   agent.status = result.status === 'completed' ? 'completed' : 'failed'
@@ -725,6 +731,9 @@ function finishRun(state: ActiveRunState): void {
     totalCostUSD: run.totalCostUSD,
     error: run.error,
   })
+
+  // Emit plugin event for completed/successful runs (exec log is triggered via plugin event handler)
+  emitPluginEvent('orchestrator:run-complete', run)
 
   activeRuns.delete(orchestratorId)
 }

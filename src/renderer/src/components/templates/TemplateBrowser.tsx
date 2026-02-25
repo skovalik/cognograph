@@ -607,7 +607,7 @@ function TemplateBrowserComponent(): JSX.Element | null {
                   <Layers className="w-12 h-12 text-[var(--text-muted)] mb-3" />
                   <p className="text-[var(--text-secondary)]">No templates found</p>
                   <p className="text-sm text-[var(--text-muted)] mt-1">
-                    Select nodes on the canvas and save them as a template
+                    Select connected nodes and save them as a reusable template
                   </p>
                 </div>
               ) : viewMode === 'grid' ? (

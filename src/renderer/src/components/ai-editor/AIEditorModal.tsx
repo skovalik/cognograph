@@ -97,13 +97,13 @@ function AIEditorModalComponent(): JSX.Element | null {
       return lastModalPosition
     }
     return {
-      x: Math.max(50, (window.innerWidth - 400) / 2),
-      y: Math.max(50, (window.innerHeight - 500) / 2)
+      x: Math.max(50, (window.innerWidth - 380) / 2),
+      y: Math.max(50, (window.innerHeight - 420) / 2)
     }
   })
   const [isDragging, setIsDragging] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
-  const [size, setSize] = useState({ width: 400, height: 500 })
+  const [size, setSize] = useState({ width: 380, height: 420 })
 
   const dragStartPos = useRef<Position>({ x: 0, y: 0 })
   const modalRef = useRef<HTMLDivElement>(null)
@@ -276,6 +276,7 @@ function AIEditorModalComponent(): JSX.Element | null {
       ref={modalRef}
       className={`fixed z-[100] ${bgClass} glass-fluid border ${borderClass} rounded-lg shadow-2xl`}
       style={{
+        position: 'fixed', // Override glass-fluid's position: relative
         overflow: 'visible', // Prevent glass-fluid from clipping dropdowns
         left: position.x,
         top: position.y,
@@ -324,7 +325,7 @@ function AIEditorModalComponent(): JSX.Element | null {
 
       {/* Content */}
       {!isMinimized && (
-        <div className="h-[calc(100%-44px)] overflow-auto p-4">
+        <div className="h-[calc(100%-44px)] overflow-auto p-3">
           {isGeneratingPlan ? (
             <LoadingState
               mode={mode}
@@ -344,13 +345,13 @@ function AIEditorModalComponent(): JSX.Element | null {
               onToggleVisibility={togglePreviewVisibility}
             />
           ) : (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
               {/* Mode Selection */}
               <div>
-                <label className={`block text-xs font-medium ${textMutedClass} uppercase tracking-wide mb-2`}>
+                <label className={`block text-xs font-medium ${textMutedClass} uppercase tracking-wide mb-1.5`}>
                   Mode
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-1.5">
                   {(Object.keys(AI_EDITOR_MODE_DESCRIPTIONS) as AIEditorMode[]).map((m) => {
                     const Icon = modeIcons[m]
                     const isSelected = mode === m
@@ -358,7 +359,7 @@ function AIEditorModalComponent(): JSX.Element | null {
                       <button
                         key={m}
                         onClick={() => setMode(m)}
-                        className={`flex items-center gap-2 p-3 rounded-lg border transition-all ${
+                        className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md border text-xs transition-all ${
                           isSelected
                             ? ''
                             : `${borderClass} hover:bg-[var(--surface-panel-secondary)] ${textClass}`
@@ -370,22 +371,17 @@ function AIEditorModalComponent(): JSX.Element | null {
                         } : undefined}
                         aria-pressed={isSelected}
                       >
-                        <Icon className="w-4 h-4" />
-                        <div className="text-left">
-                          <div className="text-sm font-medium">{AI_EDITOR_MODE_DESCRIPTIONS[m].label}</div>
-                        </div>
+                        <Icon className="w-3.5 h-3.5" />
+                        <span className="font-medium">{AI_EDITOR_MODE_DESCRIPTIONS[m].label}</span>
                       </button>
                     )
                   })}
                 </div>
               </div>
 
-              {/* Scope Selection */}
-              <div>
-                <label className={`block text-xs font-medium ${textMutedClass} uppercase tracking-wide mb-2`}>
-                  Scope
-                </label>
-                <div className="flex gap-2">
+              {/* Scope + Agent Mode row */}
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1.5 flex-1">
                   {(Object.keys(AI_EDITOR_SCOPE_DESCRIPTIONS) as AIEditorScope[]).map((s) => {
                     const Icon = scopeIcons[s]
                     const isSelected = scope === s
@@ -395,7 +391,7 @@ function AIEditorModalComponent(): JSX.Element | null {
                         key={s}
                         onClick={() => !isDisabled && setScope(s)}
                         disabled={isDisabled}
-                        className={`flex-1 flex items-center justify-center gap-2 p-2 rounded-lg border transition-all ${
+                        className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md border text-xs transition-all ${
                           isDisabled
                             ? 'opacity-50 cursor-not-allowed'
                             : isSelected
@@ -411,68 +407,52 @@ function AIEditorModalComponent(): JSX.Element | null {
                         aria-pressed={isSelected}
                         aria-disabled={isDisabled}
                       >
-                        <Icon className="w-4 h-4" />
-                        <span className="text-sm">{AI_EDITOR_SCOPE_DESCRIPTIONS[s].label}</span>
+                        <Icon className="w-3.5 h-3.5" />
+                        <span>{AI_EDITOR_SCOPE_DESCRIPTIONS[s].label}</span>
                       </button>
                     )
                   })}
                 </div>
-                {scope === 'selection' && selectedNodeIds.length === 0 && (
-                  <p className="text-xs text-amber-500 mt-1">Select nodes on the canvas first</p>
-                )}
-              </div>
-
-              {/* Agent Mode Toggle */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 border-l border-[var(--border-subtle)] pl-2">
                   <Bot
-                    className={`w-4 h-4 ${useAgentMode ? '' : textMutedClass}`}
+                    className={`w-3.5 h-3.5 ${useAgentMode ? '' : textMutedClass}`}
                     style={useAgentMode ? { color: 'var(--gui-accent-primary)' } : undefined}
                   />
-                  <span className={`text-sm ${textClass}`}>Agent Mode</span>
-                </div>
-                <button
-                  onClick={() => setUseAgentMode(!useAgentMode)}
-                  className={`relative w-11 h-6 rounded-full transition-colors ${
-                    useAgentMode ? '' : 'bg-[var(--surface-panel-secondary)]'
-                  }`}
-                  style={useAgentMode ? { backgroundColor: 'var(--gui-accent-primary)' } : undefined}
-                  title={useAgentMode ? 'Agent mode: AI will use tools to explore workspace' : 'Standard mode: Faster but less context-aware'}
-                  role="switch"
-                  aria-checked={useAgentMode}
-                  aria-label="Toggle Agent Mode"
-                >
-                  <div
-                    className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                      useAgentMode ? 'translate-x-6' : 'translate-x-1'
+                  <button
+                    onClick={() => setUseAgentMode(!useAgentMode)}
+                    className={`relative w-9 h-5 rounded-full transition-colors ${
+                      useAgentMode ? '' : 'bg-[var(--surface-panel-secondary)]'
                     }`}
-                  />
-                </button>
+                    style={useAgentMode ? { backgroundColor: 'var(--gui-accent-primary)' } : undefined}
+                    title={useAgentMode ? 'Agent mode: AI explores workspace first' : 'Standard mode: Faster generation'}
+                    role="switch"
+                    aria-checked={useAgentMode}
+                    aria-label="Toggle Agent Mode"
+                  >
+                    <div
+                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                        useAgentMode ? 'translate-x-[18px]' : 'translate-x-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
               </div>
-              <p className={`text-xs ${textMutedClass} -mt-2`}>
-                {useAgentMode
-                  ? 'AI will explore your workspace using tools before generating plan'
-                  : 'Faster generation without workspace exploration'}
-              </p>
+              {scope === 'selection' && selectedNodeIds.length === 0 && (
+                <p className="text-xs text-amber-500 -mt-1">Select nodes first</p>
+              )}
 
               {/* Prompt Input */}
               <div>
-                <label className={`block text-xs font-medium ${textMutedClass} uppercase tracking-wide mb-2`}>
-                  Prompt
-                </label>
                 <textarea
                   ref={textareaRef}
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder={getPlaceholder(mode)}
-                  className={`w-full h-32 p-3 rounded-lg border ${inputBgClass} ${textClass} placeholder:text-[var(--text-muted)] resize-none focus:outline-none focus:ring-2`}
+                  className={`w-full h-28 p-2.5 rounded-lg border ${inputBgClass} ${textClass} placeholder:text-[var(--text-muted)] resize-none focus:outline-none focus:ring-2 text-sm`}
                   style={{ ['--tw-ring-color' as string]: 'var(--gui-accent-primary)' }}
                   onFocus={(e) => e.currentTarget.style.setProperty('--tw-ring-color', 'var(--gui-accent-primary)')}
                   aria-label="Enter your AI prompt"
                 />
-                <p className={`text-xs ${textMutedClass} mt-1`}>
-                  {AI_EDITOR_MODE_DESCRIPTIONS[mode].description}
-                </p>
               </div>
 
               {/* Error Display */}
@@ -487,7 +467,7 @@ function AIEditorModalComponent(): JSX.Element | null {
               <button
                 onClick={handleGenerate}
                 disabled={!prompt.trim() || (scope === 'selection' && selectedNodeIds.length === 0)}
-                className="flex items-center justify-center gap-2 p-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-2"
+                className="flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-2"
                 style={{
                   borderColor: 'var(--gui-accent-primary)',
                   color: 'var(--gui-accent-primary)',
@@ -502,11 +482,8 @@ function AIEditorModalComponent(): JSX.Element | null {
               >
                 <Wand2 className="w-4 h-4" />
                 Generate Plan
+                <span className={`text-xs ${textMutedClass} ml-1`}>Ctrl+Enter</span>
               </button>
-
-              <p className={`text-xs ${textMutedClass} text-center`}>
-                Press Ctrl+Enter to generate
-              </p>
             </div>
           )}
         </div>
@@ -525,8 +502,8 @@ function AIEditorModalComponent(): JSX.Element | null {
             const startHeight = size.height
 
             const handleResize = (moveE: MouseEvent): void => {
-              const newWidth = Math.max(350, startWidth + (moveE.clientX - startX))
-              const newHeight = Math.max(400, startHeight + (moveE.clientY - startY))
+              const newWidth = Math.max(320, startWidth + (moveE.clientX - startX))
+              const newHeight = Math.max(350, startHeight + (moveE.clientY - startY))
               setSize({ width: newWidth, height: newHeight })
             }
 

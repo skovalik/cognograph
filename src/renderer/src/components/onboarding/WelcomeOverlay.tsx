@@ -214,7 +214,7 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
                         Create your first conversation
                       </div>
                       <div className="text-xs gui-text-secondary mt-0.5">
-                        Start chatting with AI on the canvas
+                        Start a conversation -- connecting nodes configures AI context
                       </div>
                     </div>
                   </div>

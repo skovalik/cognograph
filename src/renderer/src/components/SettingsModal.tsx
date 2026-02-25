@@ -15,12 +15,13 @@ import { performThemeTransition } from '../utils/themeTransition'
 import type { PropertiesDisplayMode, ChatDisplayMode, ExtractionSettings, GlassSettings } from '@shared/types'
 import { DEFAULT_EXTRACTION_SETTINGS, DEFAULT_GLASS_SETTINGS, CONNECTOR_PROVIDER_INFO, type ConnectorProvider } from '@shared/types'
 import { logger } from '../utils/logger'
+import { getPluginSettingsTabs } from '@plugins/renderer-registry'
 
 // -----------------------------------------------------------------------------
 // Types
 // -----------------------------------------------------------------------------
 
-type SettingsCategory = 'workspace' | 'ai' | 'preferences' | 'keyboard' | 'defaults' | 'usage'
+type SettingsCategory = 'workspace' | 'ai' | 'preferences' | 'keyboard' | 'defaults' | 'usage' | `plugin:${string}`
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -76,15 +77,15 @@ function SettingsModalComponent({ isOpen, onClose }: SettingsModalProps): JSX.El
     logger.log('[SETTINGS] handleGlassSettingsChange called with:', updates)
     const currentGlass = themeSettings.glassSettings ?? DEFAULT_GLASS_SETTINGS
     logger.log('[SETTINGS] Current glass settings:', currentGlass)
-    // Ensure applyTo has defaults BEFORE merging
+    // Ensure all fields have defaults — protects against partial/corrupted glassSettings
     const currentApplyTo = currentGlass.applyTo ?? DEFAULT_GLASS_SETTINGS.applyTo
-    // Deep merge applyTo object to preserve unchecked checkboxes
     const newGlassSettings = {
+      ...DEFAULT_GLASS_SETTINGS,
       ...currentGlass,
       ...updates,
       applyTo: updates.applyTo
-        ? { ...currentApplyTo, ...updates.applyTo }
-        : currentApplyTo
+        ? { ...DEFAULT_GLASS_SETTINGS.applyTo, ...currentApplyTo, ...updates.applyTo }
+        : { ...DEFAULT_GLASS_SETTINGS.applyTo, ...currentApplyTo }
     }
     logger.log('[SETTINGS] New glass settings:', newGlassSettings)
     useWorkspaceStore.setState((state) => ({
@@ -198,6 +199,9 @@ function SettingsModalComponent({ isOpen, onClose }: SettingsModalProps): JSX.El
     { id: 'usage', label: 'Usage', icon: BarChart3 },
   ]
 
+  // Get plugin settings tabs from registry
+  const pluginTabs = getPluginSettingsTabs()
+
   return (
     <div className="fixed inset-0 gui-z-modals flex items-center justify-center pointer-events-none">
       <div ref={modalRef} className="gui-modal glass-fluid w-[680px] max-h-[80vh] flex flex-col pointer-events-auto" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
@@ -229,6 +233,24 @@ function SettingsModalComponent({ isOpen, onClose }: SettingsModalProps): JSX.El
                 {label}
               </button>
             ))}
+            {pluginTabs.length > 0 && (
+              <>
+                <div className="my-2 border-t gui-border" />
+                {pluginTabs.map(tab => {
+                  const isActive = activeCategory === `plugin:${tab.pluginId}`
+                  return (
+                    <button
+                      key={tab.pluginId}
+                      onClick={() => setActiveCategory(`plugin:${tab.pluginId}` as SettingsCategory)}
+                      className={`gui-nav-item w-full ${isActive ? 'gui-nav-item-active' : ''}`}
+                    >
+                      <tab.icon className="w-4 h-4" />
+                      {tab.label}
+                    </button>
+                  )
+                })}
+              </>
+            )}
           </div>
 
           {/* Right: Settings content */}
@@ -286,6 +308,12 @@ function SettingsModalComponent({ isOpen, onClose }: SettingsModalProps): JSX.El
             {activeCategory === 'usage' && (
               <UsageStats />
             )}
+
+            {activeCategory.startsWith('plugin:') && (() => {
+              const pluginId = activeCategory.slice('plugin:'.length)
+              const tab = pluginTabs.find(t => t.pluginId === pluginId)
+              return tab?.render() ?? null
+            })()}
           </div>
         </div>
 

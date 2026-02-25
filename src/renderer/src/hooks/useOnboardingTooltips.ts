@@ -29,7 +29,7 @@ export const ONBOARDING_TOOLTIPS: Record<string, TooltipDefinition> = {
   },
   'first-task': {
     id: 'first-task',
-    message: 'Tasks have status and priority. Track your work visually on the canvas.',
+    message: 'Tasks have status and priority. Connect them to conversations to provide AI context.',
     anchorNodeType: 'task'
   },
   'first-project': {

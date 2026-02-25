@@ -295,6 +295,12 @@ export {
   DEFAULT_GLASS_SETTINGS,
 } from './glass'
 
+// --- terminal.ts ---
+export type {
+  TerminalSpawnConfig,
+  TerminalSpawnResult,
+} from './terminal'
+
 // --- bridge.ts ---
 export type {
   AgentActivityStatus,

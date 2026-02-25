@@ -50,7 +50,8 @@ import {
 } from '../constants/properties'
 import { getPresetColors } from '../constants/themePresets'
 import { useSpatialRegionStore } from './spatialRegionStore'
-import { computeGraphHash, getCachedContext, invalidateContextCache } from '../utils/contextCache'
+import { computeGraphHash, getCachedContext, getCachedTraversal, invalidateContextCache } from '../utils/contextCache'
+import type { ContextTraversalResult } from '../utils/contextCache'
 
 // Import store types from dedicated types file
 import type {
@@ -114,8 +115,15 @@ interface WorkspaceState {
   hiddenNodeTypes: Set<NodeData['type']> // Node types to hide from canvas
   showMembersProjectId: string | null // When set, dims non-members of this project on canvas
   focusModeNodeId: string | null // When set, dims all nodes except this one (Focus Mode)
+  inPlaceExpandedNodeId: string | null // PFD Phase 5A: node expanded in-place on canvas for reading
+  calmMode: boolean // PFD Phase 7B: stimulus reduction toggle for overwhelm
+  reducedMotion: boolean // Phase 1B: matches prefers-reduced-motion media query
   bookmarkedNodeId: string | null // Visual bookmark - "current focus" node with jump-to hotkey
   numberedBookmarks: Record<number, string | null> // 1-9 numbered bookmarks for instant spatial anchors
+
+  // PFD Phase 6C: Session interaction log for re-entry navigation
+  sessionInteractions: Array<{ nodeId: string; timestamp: number; action: 'select' | 'edit' | 'chat' }>
+  lastSessionNodeId: string | null // Last node user interacted with (for "resume where you left off")
 
   // Extraction state
   pendingExtractions: PendingExtraction[]
@@ -276,6 +284,8 @@ interface WorkspaceState {
   setShowMembersProject: (projectId: string | null) => void
   setFocusModeNode: (nodeId: string | null) => void
   toggleFocusMode: () => void
+  expandNodeInPlace: (nodeId: string) => void
+  collapseInPlaceExpansion: () => void
   toggleNodeCollapsed: (nodeId: string) => void
   getChildNodeIds: (nodeId: string) => string[]
   setBookmarkedNode: (nodeId: string | null) => void
@@ -283,6 +293,9 @@ interface WorkspaceState {
   setNumberedBookmark: (num: number, nodeId: string | null) => void
   clearNumberedBookmark: (num: number) => void
   getNumberedBookmarkNodeId: (num: number) => string | null
+  toggleLandmark: (nodeId: string) => void
+  toggleCalmMode: () => void // PFD Phase 7B
+  recordInteraction: (nodeId: string, action: 'select' | 'edit' | 'chat') => void
   reorderLayers: (nodeIds: string[], targetIndex: number) => void
   moveNodesForward: (nodeIds: string[]) => void // Bring selected nodes forward (higher z-index)
   moveNodesBackward: (nodeIds: string[]) => void // Send selected nodes backward (lower z-index)
@@ -345,6 +358,7 @@ interface WorkspaceState {
   // Actions - Context
   getConnectedNodes: (nodeId: string) => Node<NodeData>[]
   getContextForNode: (nodeId: string) => string
+  getContextTraversalForNode: (nodeId: string) => ContextTraversalResult
 
   // Actions - Theme
   setThemeMode: (mode: 'dark' | 'light') => void
@@ -620,12 +634,20 @@ const migrateWorkspaceNodes = (nodes: Node<NodeData>[]): Node<NodeData>[] => {
 // History Action Label Helper
 // -----------------------------------------------------------------------------
 
+// PFD Phase 7D: Enhanced undo narration with node names and details.
+// Truncate long titles to keep toast readable.
+function truncTitle(title: string | undefined, max = 25): string {
+  if (!title) return ''
+  return title.length > max ? `"${title.slice(0, max)}..."` : `"${title}"`
+}
+
 export function getHistoryActionLabel(action: HistoryAction): string {
   switch (action.type) {
-    case 'MOVE_NODE':
-      return 'Move node'
+    case 'MOVE_NODE': {
+      return `Move node to (${Math.round(action.after.x)}, ${Math.round(action.after.y)})`
+    }
     case 'RESIZE_NODE':
-      return 'Resize node'
+      return `Resize node to ${action.after.width}×${action.after.height}`
     case 'ALIGN_NODES':
       return `Align ${action.updates.length} nodes`
     case 'DISTRIBUTE_NODES':
@@ -634,10 +656,14 @@ export function getHistoryActionLabel(action: HistoryAction): string {
       return `Snap ${action.updates.length} nodes to grid`
     case 'ARRANGE_GRID':
       return `Arrange ${action.updates.length} nodes in grid`
-    case 'ADD_NODE':
-      return 'Create node'
-    case 'DELETE_NODE':
-      return 'Delete node'
+    case 'ADD_NODE': {
+      const name = truncTitle(action.node.data?.title)
+      return name ? `Create node ${name}` : 'Create node'
+    }
+    case 'DELETE_NODE': {
+      const name = truncTitle(action.node.data?.title)
+      return name ? `Delete node ${name}` : 'Delete node'
+    }
     case 'UPDATE_NODE':
       return 'Edit node'
     case 'BULK_UPDATE_NODES':
@@ -660,6 +686,33 @@ export function getHistoryActionLabel(action: HistoryAction): string {
       return `Delete ${action.message.role} message`
     case 'BATCH':
       return `${action.actions.length} actions`
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Resize throttle — batch updateNodeDimensions to 1x per animation frame
+// -----------------------------------------------------------------------------
+let _pendingResize: { nodeId: string; width: number; height: number } | null = null
+let _resizeRafId: number | null = null
+
+function _flushPendingResize(set: (fn: (state: WorkspaceState) => void) => void): void {
+  if (_resizeRafId !== null) {
+    cancelAnimationFrame(_resizeRafId)
+    _resizeRafId = null
+  }
+  if (_pendingResize) {
+    const { nodeId, width, height } = _pendingResize
+    _pendingResize = null
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId)
+      if (node) {
+        node.width = Math.max(150, width)
+        node.height = Math.max(80, height)
+        ;(node.data as ContextMetadata).width = node.width
+        ;(node.data as ContextMetadata).height = node.height
+        state.isDirty = true
+      }
+    })
   }
 }
 
@@ -695,8 +748,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       hiddenNodeTypes: new Set<NodeData['type']>(),
       showMembersProjectId: null,
       focusModeNodeId: null,
+      inPlaceExpandedNodeId: null,
+      calmMode: false,
+      reducedMotion: typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false,
       bookmarkedNodeId: null,
       numberedBookmarks: { 1: null, 2: null, 3: null, 4: null, 5: null, 6: null, 7: null, 8: null, 9: null },
+      sessionInteractions: [],
+      lastSessionNodeId: null,
       pendingExtractions: [],
       extractionSourceFilter: null,
       isExtracting: null,
@@ -1794,17 +1852,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       },
 
       updateNodeDimensions: (nodeId, width, height) => {
-        set((state) => {
-          const node = state.nodes.find((n) => n.id === nodeId)
-          if (node) {
-            node.width = Math.max(150, width)
-            node.height = Math.max(80, height)
-            // Also update in data for persistence (all node types support this now)
-            ;(node.data as ContextMetadata).width = node.width
-            ;(node.data as ContextMetadata).height = node.height
-            state.isDirty = true
-          }
-        })
+        // Throttle to 1x per animation frame — NodeResizer handles visual resize directly
+        _pendingResize = { nodeId, width, height }
+        if (_resizeRafId === null) {
+          _resizeRafId = requestAnimationFrame(() => {
+            _resizeRafId = null
+            _flushPendingResize(set)
+          })
+        }
       },
 
       // ---------------------------------------------------------------------
@@ -2548,6 +2603,22 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         })
       },
 
+      expandNodeInPlace: (nodeId) => {
+        set((state) => {
+          // Only one node expanded at a time
+          state.inPlaceExpandedNodeId = nodeId
+          // Clear focus mode — expansion takes visual priority
+          state.focusModeNodeId = null
+          state.showMembersProjectId = null
+        })
+      },
+
+      collapseInPlaceExpansion: () => {
+        set((state) => {
+          state.inPlaceExpandedNodeId = null
+        })
+      },
+
       toggleNodeCollapsed: (nodeId) => {
         set((state) => {
           const node = state.nodes.find((n) => n.id === nodeId)
@@ -2643,6 +2714,32 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       getNumberedBookmarkNodeId: (num) => {
         return get().numberedBookmarks[num] ?? null
+      },
+
+      toggleLandmark: (nodeId) => {
+        set((state) => {
+          const node = state.nodes.find(n => n.id === nodeId)
+          if (node) {
+            node.data.isLandmark = !node.data.isLandmark
+          }
+        })
+      },
+
+      toggleCalmMode: () => {
+        set((state) => {
+          state.calmMode = !state.calmMode
+        })
+      },
+
+      recordInteraction: (nodeId, action) => {
+        set((state) => {
+          state.sessionInteractions.push({ nodeId, timestamp: Date.now(), action })
+          state.lastSessionNodeId = nodeId
+          // Cap at 1000 entries — prune oldest
+          if (state.sessionInteractions.length > 1000) {
+            state.sessionInteractions = state.sessionInteractions.slice(-1000)
+          }
+        })
       },
 
       reorderLayers: (nodeIds, targetIndex) => {
@@ -3441,6 +3538,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             // Restore expanded nodes, filtering out deleted nodes
             const validExpanded = (session.expandedNodeIds || []).filter(id => validNodeIds.has(id))
             state.expandedNodeIds = new Set(validExpanded)
+
+            // PFD Phase 6C: Restore session interactions (filter to valid nodes)
+            state.sessionInteractions = (session.interactions || []).filter(
+              (i: { nodeId: string }) => validNodeIds.has(i.nodeId)
+            )
+            state.lastSessionNodeId = session.lastNodeId && validNodeIds.has(session.lastNodeId)
+              ? session.lastNodeId
+              : null
           } else {
             state.selectedNodeIds = []
             state.leftSidebarOpen = false
@@ -3494,7 +3599,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             selectedNodeIds: state.selectedNodeIds.length > 0 ? state.selectedNodeIds : undefined,
             leftSidebarOpen: state.leftSidebarOpen || undefined,
             leftSidebarTab: state.leftSidebarTab !== 'layers' ? state.leftSidebarTab : undefined,
-            expandedNodeIds: state.expandedNodeIds.size > 0 ? Array.from(state.expandedNodeIds) : undefined
+            expandedNodeIds: state.expandedNodeIds.size > 0 ? Array.from(state.expandedNodeIds) : undefined,
+            // PFD Phase 6C: Session interaction log (capped, 7-day rolling)
+            interactions: state.sessionInteractions.length > 0 ? state.sessionInteractions.filter(
+              i => Date.now() - i.timestamp < 7 * 24 * 60 * 60 * 1000 // 7-day retention
+            ) : undefined,
+            lastNodeId: state.lastSessionNodeId || undefined
           },
           hiddenNodeTypes: state.hiddenNodeTypes.size > 0 ? Array.from(state.hiddenNodeTypes) : undefined,
           createdAt: state.createdAt || Date.now(),
@@ -3865,6 +3975,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       },
 
       commitNodeResize: (nodeId) => {
+        // Flush any pending rAF resize to ensure final dimensions are committed
+        _flushPendingResize(set)
         set((state) => {
           const before = state.resizeStartDimensions.get(nodeId)
           const node = state.nodes.find((n) => n.id === nodeId)
@@ -4307,6 +4419,189 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
         return contextParts.join('\n\n---\n\n')
         }) // end getCachedContext
+      },
+
+      // PFD Phase 4: Context Transparency — Structured BFS traversal
+      // Returns both the formatted text AND structured node/edge data
+      // for visualization. Uses same BFS algorithm as getContextForNode
+      // but also tracks traversed edges. Zero changes to getContextForNode.
+      getContextTraversalForNode: (nodeId) => {
+        const { nodes, edges, contextSettings } = get()
+        const maxDepth = contextSettings.globalDepth
+
+        // Same graph hash as getContextForNode for cache parity
+        const { workspaceId, historyIndex, isDirty } = get()
+        const nodeFingerprint = nodes.map(n => {
+          const title = (n.data as { title?: string }).title || ''
+          const content = (n.data as { content?: string }).content || ''
+          return `${n.id}:${title.slice(0, 20)}:${content.length}`
+        }).join(',')
+        const edgeFingerprint = edges.map(e => `${e.source}>${e.target}:${e.data?.active !== false ? '1' : '0'}:${e.data?.direction || 'd'}:${e.data?.strength || 'n'}`).join(',')
+        const graphHash = [
+          computeGraphHash(nodes.length, edges.length, get().lastSaved || 0),
+          workspaceId || '',
+          historyIndex,
+          isDirty ? '1' : '0',
+          maxDepth,
+          nodeFingerprint,
+          edgeFingerprint
+        ].join('|')
+
+        return getCachedTraversal(nodeId, graphHash, () => {
+          interface TraversalNode {
+            node: Node<NodeData>
+            depth: number
+            strengthPriority: number
+            path: string[]
+          }
+
+          const getEdgeStrengthPriority = (edge: Edge<EdgeData>): number => {
+            const migrated = edge.data ? migrateEdgeStrength(edge.data) : null
+            switch (migrated?.strength) {
+              case 'strong': return 3
+              case 'normal': return 2
+              case 'light': return 1
+              default: return 2
+            }
+          }
+
+          const visited = new Set<string>()
+          const result: TraversalNode[] = []
+          const queue: TraversalNode[] = []
+          const traversedEdgeIds = new Set<string>()
+
+          const getInboundEdges = (targetId: string) =>
+            edges.filter((e) => {
+              if (e.target !== targetId) return false
+              if (e.data?.active === false) return false
+              return true
+            })
+
+          const getBidirectionalEdges = (targetId: string) =>
+            edges.filter((e) => {
+              if (e.source !== targetId) return false
+              if (e.data?.active === false) return false
+              if (e.data?.direction !== 'bidirectional') return false
+              return true
+            })
+
+          // Seed queue with depth-1 nodes
+          const initialInbound = getInboundEdges(nodeId)
+          const initialBidirectional = getBidirectionalEdges(nodeId)
+
+          initialInbound.forEach((edge) => {
+            const sourceNode = nodes.find((n) => n.id === edge.source)
+            if (sourceNode && sourceNode.data.includeInContext !== false) {
+              queue.push({
+                node: sourceNode,
+                depth: 1,
+                strengthPriority: getEdgeStrengthPriority(edge),
+                path: [nodeId, sourceNode.id]
+              })
+              traversedEdgeIds.add(edge.id)
+            }
+          })
+
+          initialBidirectional.forEach((edge) => {
+            const targetNode = nodes.find((n) => n.id === edge.target)
+            if (targetNode && targetNode.data.includeInContext !== false && !visited.has(edge.target)) {
+              queue.push({
+                node: targetNode,
+                depth: 1,
+                strengthPriority: getEdgeStrengthPriority(edge),
+                path: [nodeId, targetNode.id]
+              })
+              traversedEdgeIds.add(edge.id)
+            }
+          })
+
+          // BFS traversal (identical to getContextForNode)
+          while (queue.length > 0) {
+            const current = queue.shift()!
+
+            if (visited.has(current.node.id)) continue
+            if (current.depth > maxDepth) continue
+
+            visited.add(current.node.id)
+            result.push(current)
+
+            if (current.depth < maxDepth) {
+              const nextInbound = getInboundEdges(current.node.id)
+              const nextBidirectional = getBidirectionalEdges(current.node.id)
+
+              nextInbound.forEach((edge) => {
+                if (!visited.has(edge.source) && !current.path.includes(edge.source)) {
+                  const sourceNode = nodes.find((n) => n.id === edge.source)
+                  if (sourceNode && sourceNode.data.includeInContext !== false) {
+                    queue.push({
+                      node: sourceNode,
+                      depth: current.depth + 1,
+                      strengthPriority: getEdgeStrengthPriority(edge),
+                      path: [...current.path, sourceNode.id]
+                    })
+                    traversedEdgeIds.add(edge.id)
+                  }
+                }
+              })
+
+              nextBidirectional.forEach((edge) => {
+                if (!visited.has(edge.target) && !current.path.includes(edge.target)) {
+                  const targetNode = nodes.find((n) => n.id === edge.target)
+                  if (targetNode && targetNode.data.includeInContext !== false) {
+                    queue.push({
+                      node: targetNode,
+                      depth: current.depth + 1,
+                      strengthPriority: getEdgeStrengthPriority(edge),
+                      path: [...current.path, targetNode.id]
+                    })
+                    traversedEdgeIds.add(edge.id)
+                  }
+                }
+              })
+            }
+          }
+
+          // Build structured traversal data
+          const traversalNodes = result.map(item => {
+            const nodeData = item.node.data as {
+              contextRole?: string
+              contextPriority?: string
+              title?: string
+            }
+            return {
+              id: item.node.id,
+              depth: item.depth,
+              role: nodeData.contextRole || 'reference',
+              priority: nodeData.contextPriority || 'medium',
+              strengthPriority: item.strengthPriority,
+              type: item.node.data.type,
+              title: nodeData.title || item.node.data.type
+            }
+          })
+
+          const traversalEdges = edges
+            .filter(e => traversedEdgeIds.has(e.id))
+            .map(e => {
+              const migrated = e.data ? migrateEdgeStrength(e.data) : null
+              return {
+                id: e.id,
+                source: e.source,
+                target: e.target,
+                strength: migrated?.strength || 'normal'
+              }
+            })
+
+          // Get the formatted text by calling getContextForNode
+          // (uses its own cache, so this is effectively free)
+          const text = get().getContextForNode(nodeId)
+
+          return {
+            nodes: traversalNodes,
+            edges: traversalEdges,
+            text,
+            nodeCount: traversalNodes.length
+          }
+        })
       },
 
       // ---------------------------------------------------------------------
