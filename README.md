@@ -207,9 +207,9 @@ Patent pending. Four provisional patent applications filed February 2026 coverin
 
 ## License
 
-[MIT](./LICENSE) — Free and open source. Patent pending.
+[AGPL-3.0](./LICENSE) — Open source, copyleft. Patent pending.
 
-Use it, modify it, self-host it.
+Use it, modify it, self-host it. If you distribute modified versions or run them as a network service, you must release your source code under the same license.
 
 ---
 
