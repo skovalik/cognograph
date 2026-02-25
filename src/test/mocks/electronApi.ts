@@ -126,6 +126,36 @@ export const mockElectronApi: ElectronAPI = {
     getReal: vi.fn().mockResolvedValue(null),
     delete: vi.fn().mockResolvedValue({ success: true }),
     list: vi.fn().mockResolvedValue([])
+  },
+  bridge: {
+    getEvents: vi.fn().mockResolvedValue([]),
+    onEvent: vi.fn().mockReturnValue(() => {}),
+    getInsights: vi.fn().mockResolvedValue([]),
+    onInsight: vi.fn().mockReturnValue(() => {}),
+    applyInsight: vi.fn().mockResolvedValue({ success: true }),
+    dismissInsight: vi.fn().mockResolvedValue({ success: true }),
+    getCostSummary: vi.fn().mockResolvedValue({ totalCost: 0, breakdown: [] })
+  } as ElectronAPI['bridge'],
+  notion: {
+    testConnection: vi.fn().mockResolvedValue({ success: true }),
+    isConnected: vi.fn().mockResolvedValue({ connected: false }),
+    health: vi.fn().mockResolvedValue({ circuitState: 'closed', syncEnabled: false, hasToken: false, hasConfig: false })
+  },
+  terminal: {
+    spawn: vi.fn().mockResolvedValue({ sessionId: 'mock-session', nodeId: 'mock-node', pid: 1234 }),
+    write: vi.fn().mockResolvedValue(undefined),
+    resize: vi.fn().mockResolvedValue(undefined),
+    kill: vi.fn().mockResolvedValue(undefined),
+    getScrollback: vi.fn().mockResolvedValue([]),
+    onData: vi.fn().mockReturnValue(() => {}),
+    onExit: vi.fn().mockReturnValue(() => {})
+  },
+  plugin: {
+    call: vi.fn().mockResolvedValue(undefined),
+    on: vi.fn().mockReturnValue(() => {})
+  },
+  plugins: {
+    getEnabledIds: vi.fn().mockResolvedValue([])
   }
 }
 

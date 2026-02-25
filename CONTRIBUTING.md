@@ -191,7 +191,7 @@ Before submitting:
 
 ## Need Help?
 
-- **Documentation:** Start with `CLAUDE.md` (routes to all docs)
+- **Documentation:** Start with `ARCHITECTURE.md` and `FEATURES.md`
 - **Architecture:** See `ARCHITECTURE.md`
 - **Common issues:** See `docs/guides/PITFALLS.md`
 - **Decisions:** See `DECISIONS.md` for rationale on key choices
@@ -201,7 +201,7 @@ Before submitting:
 
 ## Project Values
 
-1. **Build for Stefan First** — If it doesn't solve Stefan's problems, it doesn't ship
+1. **Solve Real Problems** — If it doesn't solve a real workflow problem, it doesn't ship
 2. **Working Software Over Plans** — Ship small and functional vs. plan big and theoretical
 3. **Spatial Thinking as First-Class** — Every feature respects the spatial metaphor
 4. **Progressive Disclosure** — Simple by default, powerful when needed

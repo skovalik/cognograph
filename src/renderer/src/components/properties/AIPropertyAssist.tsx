@@ -231,12 +231,12 @@ function AIPropertyAssistComponent({
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([])
   const [animatingOutId, setAnimatingOutId] = useState<string | null>(null)
 
-  // Store
+  // Store — only subscribe to nodes/edges when popover is open to avoid re-renders during drag
   const setNodeProperty = useWorkspaceStore((state) => state.setNodeProperty)
   const addPropertyOption = useWorkspaceStore((state) => state.addPropertyOption)
   const propertySchema = useWorkspaceStore((state) => state.propertySchema)
-  const nodes = useWorkspaceStore((state) => state.nodes)
-  const edges = useWorkspaceStore((state) => state.edges)
+  const nodes = useWorkspaceStore((state) => isOpen ? state.nodes : null)
+  const edges = useWorkspaceStore((state) => isOpen ? state.edges : null)
   const llmSettings = useWorkspaceStore((state) => state.llmSettings)
 
   // Get available properties for this node type
@@ -253,6 +253,9 @@ function AIPropertyAssistComponent({
 
   // Get connected nodes with full edge context and compute graph stats
   const { connectedNodes, graphStats } = useMemo(() => {
+    // When popover is closed, nodes/edges are null — return empty defaults
+    if (!nodes || !edges) return { connectedNodes: [] as ConnectedNodeContext[], graphStats: { incomingCount: 0, outgoingCount: 0, highPriorityConnections: 0, sharedTags: [] } as GraphStats }
+
     const connected: ConnectedNodeContext[] = []
     const tagCounts = new Map<string, number>()
     let highPriorityCount = 0

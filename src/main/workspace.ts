@@ -4,6 +4,8 @@ import { promises as fs, watch as fsWatch, type FSWatcher } from 'fs'
 import type { WorkspaceData, WorkspaceInfo } from '@shared/types'
 import { backupManager } from './backupManager'
 import { validateWorkspaceData } from './workspaceValidation'
+import { workflowSync } from './services/notionSync'
+import { emitPluginEvent, updateWorkspaceCache } from '@plugins/registry'
 
 // File watcher state
 const activeWatchers = new Map<string, FSWatcher>()
@@ -130,6 +132,30 @@ export function registerWorkspaceHandlers(): void {
         await fs.writeFile(settingsPath, JSON.stringify({ lastWorkspaceId: data.id }, null, 2), 'utf-8')
       }
 
+      // Emit workspace:saved event to all windows for Notion sync
+      try {
+        const windows = BrowserWindow.getAllWindows()
+        const eventData = {
+          filePath,
+          canvasId: data.id,
+          version: data.version
+        }
+
+        for (const win of windows) {
+          if (!win.isDestroyed()) {
+            win.webContents.send('workspace:saved', eventData)
+          }
+        }
+
+        // Emit plugin event and update workspace cache for plugin workspace-read access
+        // Note: workflowSync is triggered via plugin event handler, not directly
+        emitPluginEvent('workspace:saved', eventData)
+        updateWorkspaceCache({ nodes: data.nodes, edges: data.edges })
+      } catch (eventError) {
+        // Event emission failure should not break the save
+        console.warn('[Workspace] Failed to emit workspace:saved event:', eventError)
+      }
+
       return { success: true }
     } catch (error) {
       return { success: false, error: String(error) }
@@ -144,6 +170,15 @@ export function registerWorkspaceHandlers(): void {
       const parsed = JSON.parse(content)
       const data = validateWorkspaceData(parsed) as unknown as WorkspaceData
       backupManager.start(id)
+
+      // Populate plugin workspace cache and emit lifecycle event for NodeSyncEngine
+      try {
+        updateWorkspaceCache({ nodes: data.nodes, edges: data.edges })
+        emitPluginEvent('workspace:loaded', { filePath, canvasId: data.id })
+      } catch (loadEventError) {
+        console.warn('[Workspace] Failed to emit workspace:loaded event:', loadEventError)
+      }
+
       return { success: true, data }
     } catch (error) {
       return { success: false, error: String(error) }

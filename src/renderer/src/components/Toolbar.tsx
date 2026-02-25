@@ -65,9 +65,10 @@ interface ToolbarProps {
   showThemeMenu?: boolean
   onShowThemeMenuChange?: (show: boolean) => void
   onToggleAISidebar?: () => void
+  onOpenInlinePrompt?: () => void
 }
 
-function ToolbarComponent({ onSave, onSaveAs, onNew, onOpen, onOpenThemeSettings, onOpenSettings, showThemeMenu, onShowThemeMenuChange, onToggleAISidebar }: ToolbarProps): JSX.Element {
+function ToolbarComponent({ onSave, onSaveAs, onNew, onOpen, onOpenThemeSettings, onOpenSettings, showThemeMenu, onShowThemeMenuChange, onToggleAISidebar, onOpenInlinePrompt }: ToolbarProps): JSX.Element {
   const addNode = useWorkspaceStore((state) => state.addNode)
   const addAgentNode = useWorkspaceStore((state) => state.addAgentNode)
   const undo = useWorkspaceStore((state) => state.undo)
@@ -575,6 +576,7 @@ function ToolbarComponent({ onSave, onSaveAs, onNew, onOpen, onOpenThemeSettings
           onClose={handleAIMenuClose}
           anchorRect={aiMenuAnchor}
           onToggleAISidebar={onToggleAISidebar}
+          onOpenInlinePrompt={onOpenInlinePrompt}
         />
       </>
     )
@@ -603,6 +605,7 @@ function ToolbarComponent({ onSave, onSaveAs, onNew, onOpen, onOpenThemeSettings
           onClose={handleAIMenuClose}
           anchorRect={aiMenuAnchor}
           onToggleAISidebar={onToggleAISidebar}
+          onOpenInlinePrompt={onOpenInlinePrompt}
         />
       </>
     )
@@ -625,6 +628,8 @@ function ToolbarComponent({ onSave, onSaveAs, onNew, onOpen, onOpenThemeSettings
         isOpen={aiMenuOpen}
         onClose={handleAIMenuClose}
         anchorRect={aiMenuAnchor}
+        onToggleAISidebar={onToggleAISidebar}
+        onOpenInlinePrompt={onOpenInlinePrompt}
       />
     </>
   )

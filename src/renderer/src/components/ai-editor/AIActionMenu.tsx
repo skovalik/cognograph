@@ -26,6 +26,7 @@ interface AIActionMenuProps {
   onClose: () => void
   anchorRect: DOMRect | null
   onToggleAISidebar?: () => void
+  onOpenInlinePrompt?: () => void
 }
 
 interface MenuItem {
@@ -38,7 +39,7 @@ interface MenuItem {
   separator?: boolean
 }
 
-function AIActionMenuComponent({ isOpen, onClose, anchorRect, onToggleAISidebar }: AIActionMenuProps): JSX.Element | null {
+function AIActionMenuComponent({ isOpen, onClose, anchorRect, onToggleAISidebar, onOpenInlinePrompt }: AIActionMenuProps): JSX.Element | null {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const menuRef = useRef<HTMLDivElement>(null)
   const openModal = useAIEditorStore((state) => state.openModal)
@@ -106,7 +107,7 @@ function AIActionMenuComponent({ isOpen, onClose, anchorRect, onToggleAISidebar 
       icon: Slash,
       shortcut: '/',
       action: () => {
-        // Quick prompt is triggered by '/' key, just inform user
+        onOpenInlinePrompt?.()
         onClose()
       }
     }

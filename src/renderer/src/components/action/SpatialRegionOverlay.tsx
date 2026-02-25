@@ -5,20 +5,27 @@ import { useSpatialRegionStore } from '../../stores/spatialRegionStore'
 /**
  * Renders spatial regions as dashed-border overlays on the canvas.
  * These regions are used by Action Node spatial triggers (region-enter, region-exit, cluster-size).
+ * Districts (isDistrict=true) are rendered by CanvasDistrictOverlay instead.
  */
 function SpatialRegionOverlayComponent(): JSX.Element | null {
   const regions = useSpatialRegionStore((state) => state.regions)
   const viewport = useViewport()
 
-  // Don't render if no regions
-  if (regions.length === 0) return null
+  // Filter out districts — those are rendered by CanvasDistrictOverlay
+  const actionRegions = useMemo(
+    () => regions.filter(r => !r.isDistrict),
+    [regions]
+  )
+
+  // Don't render if no action regions
+  if (actionRegions.length === 0) return null
 
   return (
     <div
       className="absolute inset-0 pointer-events-none"
       style={{ zIndex: 0 }}
     >
-      {regions.map((region) => (
+      {actionRegions.map((region) => (
         <RegionRect
           key={region.id}
           x={region.bounds.x}

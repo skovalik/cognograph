@@ -108,7 +108,7 @@ export const WEB_PROJECT_ACTION_PRESETS: ActionPreset[] = [
   {
     id: 'wp-pull-content',
     name: 'Pull Content from WordPress',
-    description: 'Fetch content from WordPress and update page/note nodes on canvas',
+    description: 'Fetch content from WordPress and sync to page/note nodes',
     category: 'integration',
     icon: 'Download',
     projectTypes: ['wordpress-headless'],

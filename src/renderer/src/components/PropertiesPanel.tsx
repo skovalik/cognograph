@@ -836,7 +836,7 @@ function ConversationFields({
       <div>
         <label className="block text-xs font-medium gui-text-secondary mb-1">
           Mode
-          <HelpTooltip text="Chat mode is for interactive conversations. Agent mode allows the AI to autonomously create nodes, tasks, and connections on the canvas." />
+          <HelpTooltip text="Chat mode is for interactive conversations. Agent mode allows the AI to autonomously create nodes, tasks, and connections that configure context." />
         </label>
         <select
           value={data.mode || 'chat'}
@@ -1563,7 +1563,7 @@ function NoteFields({
             <button
               onClick={() => onToggleHidden('content')}
               className={`p-1 ${hiddenProperties?.includes('content') ? 'opacity-60' : 'opacity-0 group-hover:opacity-100'} gui-button rounded transition-all`}
-              title={hiddenProperties?.includes('content') ? 'Show on card' : 'Hide from card'}
+              title={hiddenProperties?.includes('content') ? 'Show on node' : 'Hide from node'}
             >
               {hiddenProperties?.includes('content') ? <EyeOff className="w-3 h-3 gui-text-secondary" /> : <Eye className="w-3 h-3 gui-text-secondary" />}
             </button>
@@ -1734,7 +1734,7 @@ function TaskFields({
             <button
               onClick={() => onToggleHidden('description')}
               className={`p-1 ${hiddenProperties?.includes('description') ? 'opacity-60' : 'opacity-0 group-hover:opacity-100'} gui-button rounded transition-all`}
-              title={hiddenProperties?.includes('description') ? 'Show on card' : 'Hide from card'}
+              title={hiddenProperties?.includes('description') ? 'Show on node' : 'Hide from node'}
             >
               {hiddenProperties?.includes('description') ? <EyeOff className="w-3 h-3 gui-text-secondary" /> : <Eye className="w-3 h-3 gui-text-secondary" />}
             </button>
@@ -1761,7 +1761,7 @@ function TaskFields({
             <button
               onClick={() => onToggleHidden('status')}
               className={`p-1 ${hiddenProperties?.includes('status') ? 'opacity-60' : 'opacity-0 group-hover:opacity-100'} gui-button rounded transition-all`}
-              title={hiddenProperties?.includes('status') ? 'Show on card' : 'Hide from card'}
+              title={hiddenProperties?.includes('status') ? 'Show on node' : 'Hide from node'}
             >
               {hiddenProperties?.includes('status') ? <EyeOff className="w-3 h-3 gui-text-secondary" /> : <Eye className="w-3 h-3 gui-text-secondary" />}
             </button>
@@ -1783,7 +1783,7 @@ function TaskFields({
             <button
               onClick={() => onToggleHidden('priority')}
               className={`p-1 ${hiddenProperties?.includes('priority') ? 'opacity-60' : 'opacity-0 group-hover:opacity-100'} gui-button rounded transition-all`}
-              title={hiddenProperties?.includes('priority') ? 'Show on card' : 'Hide from card'}
+              title={hiddenProperties?.includes('priority') ? 'Show on node' : 'Hide from node'}
             >
               {hiddenProperties?.includes('priority') ? <EyeOff className="w-3 h-3 gui-text-secondary" /> : <Eye className="w-3 h-3 gui-text-secondary" />}
             </button>
@@ -1805,7 +1805,7 @@ function TaskFields({
             <button
               onClick={() => onToggleHidden('complexity')}
               className={`p-1 ${hiddenProperties?.includes('complexity') ? 'opacity-60' : 'opacity-0 group-hover:opacity-100'} gui-button rounded transition-all`}
-              title={hiddenProperties?.includes('complexity') ? 'Show on card' : 'Hide from card'}
+              title={hiddenProperties?.includes('complexity') ? 'Show on node' : 'Hide from node'}
             >
               {hiddenProperties?.includes('complexity') ? <EyeOff className="w-3 h-3 gui-text-secondary" /> : <Eye className="w-3 h-3 gui-text-secondary" />}
             </button>
@@ -3124,7 +3124,7 @@ function DynamicPropertiesSection({
                   <button
                     onClick={() => onToggleHidden(definition.id)}
                     className={`p-1 ${isHidden ? 'opacity-60' : 'opacity-0 group-hover:opacity-100'} gui-button rounded transition-all`}
-                    title={isHidden ? 'Show on card' : 'Hide from card'}
+                    title={isHidden ? 'Show on node' : 'Hide from node'}
                   >
                     {isHidden ? (
                       <EyeOff className="w-3 h-3 gui-text-secondary" />

@@ -56,7 +56,7 @@ const QUERY_TOOLS: AgentToolDefinition[] = [
   },
   {
     name: 'get_selection',
-    description: 'Get currently selected nodes on the canvas',
+    description: 'Get currently selected nodes',
     input_schema: {
       type: 'object',
       properties: {}
@@ -77,7 +77,7 @@ const QUERY_TOOLS: AgentToolDefinition[] = [
 
 const CREATE_NODE_TOOL: AgentToolDefinition = {
   name: 'create_node',
-  description: 'Create a new node on the canvas',
+  description: 'Create a new node in the workspace',
   input_schema: {
     type: 'object',
     properties: {
@@ -104,7 +104,7 @@ const CREATE_NODE_TOOL: AgentToolDefinition = {
           x: { type: 'number' },
           y: { type: 'number' }
         },
-        description: 'Position on canvas. If omitted, positions near the agent conversation.'
+        description: 'Position in workspace. If omitted, positions near the agent conversation.'
       },
       connectTo: {
         type: 'string',
@@ -182,7 +182,7 @@ const UPDATE_NODE_TOOL: AgentToolDefinition = {
 
 const MOVE_NODE_TOOL: AgentToolDefinition = {
   name: 'move_node',
-  description: 'Move a node to a new position on the canvas',
+  description: 'Move a node to a new position in the workspace',
   input_schema: {
     type: 'object',
     properties: {

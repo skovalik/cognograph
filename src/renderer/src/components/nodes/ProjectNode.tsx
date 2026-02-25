@@ -1,6 +1,6 @@
 import { memo, useState, useCallback, useMemo, useEffect } from 'react'
 import { Handle, Position, type NodeProps, NodeResizer, useUpdateNodeInternals, useReactFlow, type ResizeParams } from '@xyflow/react'
-import { ChevronDown, ChevronRight, Plus, Link2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, Link2, FolderKanban } from 'lucide-react'
 import type { ProjectNodeData } from '@shared/types'
 import { DEFAULT_THEME_SETTINGS } from '@shared/types'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
@@ -18,7 +18,9 @@ import { measureTextWidth } from '../../utils/nodeUtils'
 import { ExtractionBadge, ExtractionControls } from '../extractions'
 import { FoldBadge } from './FoldBadge'
 import { useNodeResize } from '../../hooks/useNodeResize'
+import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
+import { StructuredContentPreview } from './StructuredContentPreview'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -34,7 +36,6 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
   const updateNodeDimensions = useWorkspaceStore((state) => state.updateNodeDimensions)
   const startNodeResize = useWorkspaceStore((state) => state.startNodeResize)
   const commitNodeResize = useWorkspaceStore((state) => state.commitNodeResize)
-  const nodes = useWorkspaceStore((state) => state.nodes)
   const propertySchema = useWorkspaceStore((state) => state.propertySchema)
   const propertyDefinitions = getPropertiesForNodeType('project', propertySchema)
   const themeSettings = useWorkspaceStore((state) => state.themeSettings)
@@ -78,10 +79,9 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
     }
   }, [nodeColor, themeSettings.nodeColors.project, isGlassEnabled, selected])
 
-  // Get current node dimensions - prefer props (from React Flow), fall back to store/defaults
-  const currentNode = nodes.find((n) => n.id === id)
-  const nodeWidth = width ?? currentNode?.width ?? nodeData.width ?? 280
-  const nodeHeight = height ?? currentNode?.height ?? nodeData.height ?? 250
+  // Get current node dimensions - prefer props (from React Flow), fall back to data/defaults
+  const nodeWidth = width ?? nodeData.width ?? 280
+  const nodeHeight = height ?? nodeData.height ?? 250
 
   const toggleCollapsed = (e: React.MouseEvent): void => {
     e.stopPropagation()
@@ -140,8 +140,25 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
     )
   }, [id, openContextMenu, screenToFlowPosition])
 
-  // Get child node titles for display
-  const childNodes = nodes.filter((n) => nodeData.childNodeIds.includes(n.id))
+  // Get child node titles for display — use targeted selector returning only titles (stable during drag)
+  const childNodeIds = nodeData.childNodeIds ?? []
+  const childNodeTitles = useWorkspaceStore((state) => {
+    if (childNodeIds.length === 0) return ''
+    return childNodeIds
+      .map(cid => {
+        const n = state.nodes.find(nd => nd.id === cid)
+        return n ? (n.data.title as string) : null
+      })
+      .filter(Boolean)
+      .join('\x00')  // Join as stable primitive string
+  })
+  const childNodes = useMemo(() => {
+    if (!childNodeTitles) return []
+    return childNodeTitles.split('\x00').map((title, i) => ({
+      id: childNodeIds[i],
+      data: { title }
+    }))
+  }, [childNodeTitles, childNodeIds])
 
   // Visual feedback states
   const isSpawning = useIsSpawning(id)
@@ -154,6 +171,10 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
   const numberedBookmark = useNodeNumberedBookmark(id)
   const isCut = useWorkspaceStore(s => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id))
 
+  // LOD (Level of Detail) rendering based on zoom level
+  const { showContent, showTitle, showBadges, showLede, zoomLevel } = useNodeContentVisibility()
+  const isFar = zoomLevel === 'far'
+
   // Build className with all animation states
   const nodeClassName = [
     'cognograph-node',
@@ -165,8 +186,12 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
     isPinned && 'node--pinned',
     isBookmarked && 'cognograph-node--bookmarked',
     isCut && 'cognograph-node--cut',
-    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`
+    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
+    `project-node--lod-${zoomLevel}`
   ].filter(Boolean).join(' ')
+
+  // Compute child count for LOD summary display
+  const childCount = (nodeData.childNodeIds ?? []).length
 
   const nodeContent = (
     <div
@@ -175,6 +200,7 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
       style={nodeStyle}
       data-project-id={id}
       data-transparent={transparent}
+      data-lod={zoomLevel}
       onDoubleClick={handleDoubleClick}
       onDragOver={(e) => {
         e.preventDefault()
@@ -183,15 +209,19 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
       onDragLeave={() => setIsDragOver(false)}
       onDrop={() => setIsDragOver(false)}
     >
-      {/* Handles on all four sides */}
-      <Handle type="target" position={Position.Top} id="top-target" />
-      <Handle type="source" position={Position.Top} id="top-source" />
-      <Handle type="target" position={Position.Bottom} id="bottom-target" />
-      <Handle type="source" position={Position.Bottom} id="bottom-source" />
-      <Handle type="target" position={Position.Left} id="left-target" />
-      <Handle type="source" position={Position.Left} id="left-source" />
-      <Handle type="target" position={Position.Right} id="right-target" />
-      <Handle type="source" position={Position.Right} id="right-source" />
+      {/* Handles on all four sides — hidden at far zoom */}
+      {!isFar && (
+        <>
+          <Handle type="target" position={Position.Top} id="top-target" />
+          <Handle type="source" position={Position.Top} id="top-source" />
+          <Handle type="target" position={Position.Bottom} id="bottom-target" />
+          <Handle type="source" position={Position.Bottom} id="bottom-source" />
+          <Handle type="target" position={Position.Left} id="left-target" />
+          <Handle type="source" position={Position.Left} id="left-source" />
+          <Handle type="target" position={Position.Right} id="right-target" />
+          <Handle type="source" position={Position.Right} id="right-source" />
+        </>
+      )}
 
       {/* Numbered bookmark badge */}
       {numberedBookmark && (
@@ -203,49 +233,125 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
       {/* Extraction badge for spatial extraction system */}
       <ExtractionBadge nodeId={id} nodeColor={nodeColor} />
 
-      <div className="cognograph-node__header">
-        <InlineIconPicker
-          nodeData={nodeData}
-          nodeColor={nodeColor}
-          onIconChange={(icon) => updateNode(id, { icon })}
-          onIconColorChange={(iconColor) => updateNode(id, { iconColor })}
-          className="cognograph-node__icon"
-        />
-        <EditableTitle
-          value={nodeData.title}
-          onChange={(newTitle) => updateNode(id, { title: newTitle })}
-          className="cognograph-node__title"
-          placeholder="Untitled Project"
-        />
-        {!!nodeData.properties?.url && (
-          <span title={nodeData.properties.url as string}>
-            <Link2
-              className="w-3 h-3 opacity-60 flex-shrink-0"
-              style={{ color: 'var(--node-text-secondary)' }}
-            />
-          </span>
-        )}
-        <NodeAIErrorBoundary compact>
-          <AIPropertyAssist
-            nodeId={id}
-            nodeData={nodeData}
-            compact={true}
-          />
-        </NodeAIErrorBoundary>
-        <ExtractionControls nodeId={id} />
-        <button
-          onClick={toggleCollapsed}
-          className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
-        >
-          {nodeData.collapsed ? (
-            <ChevronRight className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
-          ) : (
-            <ChevronDown className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
+      {/* === LOD: Far zoom — compact pill with icon + title + child count === */}
+      {isFar && (
+        <div className="flex items-center gap-2 px-2 py-1 h-full min-h-0 overflow-hidden">
+          <FolderKanban size={16} className="flex-shrink-0" style={{ color: nodeColor }} />
+          {showTitle && (
+            <span
+              className="text-xs font-medium truncate flex-1"
+              style={{ color: 'var(--node-text-primary)' }}
+            >
+              {nodeData.title || 'Untitled Project'}
+            </span>
           )}
-        </button>
-      </div>
+          {showBadges && childCount > 0 && (
+            <span
+              className="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0"
+              style={{
+                backgroundColor: 'var(--node-bg-secondary)',
+                color: 'var(--node-text-secondary)'
+              }}
+            >
+              {childCount} items
+            </span>
+          )}
+        </div>
+      )}
 
-      {!nodeData.collapsed && (
+      {/* === LOD: Mid + Close — full header === */}
+      {!isFar && (
+        <div className="cognograph-node__header">
+          <InlineIconPicker
+            nodeData={nodeData}
+            nodeColor={nodeColor}
+            onIconChange={(icon) => updateNode(id, { icon })}
+            onIconColorChange={(iconColor) => updateNode(id, { iconColor })}
+            className="cognograph-node__icon"
+          />
+          <EditableTitle
+            value={nodeData.title}
+            onChange={(newTitle) => updateNode(id, { title: newTitle })}
+            className="cognograph-node__title"
+            placeholder="Untitled Project"
+          />
+          {!!nodeData.properties?.url && (
+            <span title={nodeData.properties.url as string}>
+              <Link2
+                className="w-3 h-3 opacity-60 flex-shrink-0"
+                style={{ color: 'var(--node-text-secondary)' }}
+              />
+            </span>
+          )}
+          {showContent && (
+            <NodeAIErrorBoundary compact>
+              <AIPropertyAssist
+                nodeId={id}
+                nodeData={nodeData}
+                compact={true}
+              />
+            </NodeAIErrorBoundary>
+          )}
+          {showContent && <ExtractionControls nodeId={id} />}
+          <button
+            onClick={toggleCollapsed}
+            className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
+          >
+            {nodeData.collapsed ? (
+              <ChevronRight className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
+            ) : (
+              <ChevronDown className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* === LOD: Far zoom — skeleton density preview for description === */}
+      {isFar && !nodeData.collapsed && nodeData.description && (
+        <div className="cognograph-node__body" style={{ pointerEvents: 'none' }}>
+          <StructuredContentPreview content={nodeData.description} zoomLevel="far" />
+        </div>
+      )}
+
+      {/* === LOD: Mid zoom — summary with child count + truncated child names === */}
+      {showLede && !nodeData.collapsed && (
+        <div className="cognograph-node__body flex-1 overflow-hidden" style={{ maxHeight: '4.5em' }}>
+          {childCount > 0 ? (
+            <div className="space-y-1">
+              <span
+                className="text-xs font-medium"
+                style={{ color: 'var(--node-text-secondary)' }}
+              >
+                {childCount} items
+              </span>
+              {childNodes.slice(0, 3).map((child) => (
+                <div
+                  key={child.id}
+                  className="flex items-center gap-1 text-xs px-2 py-0.5 rounded truncate"
+                  style={{
+                    backgroundColor: 'var(--node-bg-secondary)',
+                    color: 'var(--node-text-secondary)'
+                  }}
+                >
+                  <span className="truncate">{child.data.title as string}</span>
+                </div>
+              ))}
+              {childNodes.length > 3 && (
+                <div className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>
+                  +{childNodes.length - 3} more
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-xs italic" style={{ color: 'var(--node-text-muted)' }}>
+              Empty project
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* === LOD: Close zoom — full content (default behavior) === */}
+      {showContent && !nodeData.collapsed && (
         <div className="cognograph-node__body flex-1 overflow-auto" onContextMenu={handleBodyContextMenu}>
           <EditableText
             value={nodeData.description || ''}
@@ -297,14 +403,17 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
         </div>
       )}
 
-      <div className="cognograph-node__footer">
-        <span>{nodeData.childNodeIds.length} items</span>
-        <AttachmentBadge count={nodeData.attachments?.length} />
-        <span style={{ color: 'var(--node-text-muted)' }}>Project</span>
-      </div>
+      {/* Footer — hidden at far zoom */}
+      {!isFar && (
+        <div className="cognograph-node__footer">
+          <span>{childCount} items</span>
+          <AttachmentBadge count={nodeData.attachments?.length} />
+          <span style={{ color: 'var(--node-text-muted)' }}>Project</span>
+        </div>
+      )}
 
-      {/* Socket bars showing connections */}
-      <NodeSocketBars nodeId={id} nodeColor={nodeColor} enabled={selected} />
+      {/* Socket bars showing connections — hidden at far zoom */}
+      {!isFar && <NodeSocketBars nodeId={id} nodeColor={nodeColor} enabled={selected} />}
 
       {/* Fold badge for collapsing children */}
       <FoldBadge nodeId={id} nodeColor={nodeColor} />
@@ -313,16 +422,19 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
 
   return (
     <div style={{ width: nodeWidth, height: nodeHeight, position: 'relative' }} onMouseDown={handleMouseDown}>
-      <NodeResizer
-        minWidth={250}
-        minHeight={200}
-        isVisible={selected}
-        onResizeStart={handleResizeStart}
-        onResize={handleResize}
-        onResizeEnd={handleResizeEnd}
-        handleStyle={{ borderColor: nodeColor, backgroundColor: nodeColor }}
-        lineStyle={{ borderColor: nodeColor }}
-      />
+      {/* NodeResizer: only at close zoom */}
+      {showContent && (
+        <NodeResizer
+          minWidth={250}
+          minHeight={200}
+          isVisible={selected}
+          onResizeStart={handleResizeStart}
+          onResize={handleResize}
+          onResizeEnd={handleResizeEnd}
+          handleStyle={{ borderColor: nodeColor, backgroundColor: nodeColor }}
+          lineStyle={{ borderColor: nodeColor }}
+        />
+      )}
       {nodeContent}
     </div>
   )

@@ -14,7 +14,10 @@ import {
   Download,
   Info,
   RefreshCw,
-  Eye
+  Eye,
+  FileCode,
+  FileImage,
+  File
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import type { ArtifactNodeData, ArtifactContentType, ArtifactFile, PreviewViewport } from '@shared/types'
@@ -30,7 +33,9 @@ import { EditableTitle } from '../EditableTitle'
 import { InlineIconPicker } from '../InlineIconPicker'
 import { measureTextWidth } from '../../utils/nodeUtils'
 import { useNodeResize } from '../../hooks/useNodeResize'
+import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
 import { PreviewToolbar } from './PreviewToolbar'
+import { StructuredContentPreview } from './StructuredContentPreview'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
 import {
   isAllowedPreviewUrl,
@@ -525,8 +530,36 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   const numberedBookmark = useNodeNumberedBookmark(id)
   const isCut = useWorkspaceStore(s => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id))
 
+  // LOD (Level of Detail) rendering based on zoom level
+  const { showContent, showTitle, showBadges, showLede, zoomLevel } = useNodeContentVisibility()
+  const isFar = zoomLevel === 'far'
+
   // Show members mode - dim non-members
   const { nonMemberClass, memberHighlightClass } = useShowMembersClass(id, nodeData.parentId)
+
+  // Get file-type icon for far zoom pill display
+  const fileTypeIcon = useMemo(() => {
+    const ct = activeContent.contentType
+    switch (ct) {
+      case 'code': return <FileCode size={16} style={{ color: nodeColor }} />
+      case 'image':
+      case 'svg': return <FileImage size={16} style={{ color: nodeColor }} />
+      case 'markdown':
+      case 'text': return <FileText size={16} style={{ color: nodeColor }} />
+      case 'html': return <Globe size={16} style={{ color: nodeColor }} />
+      case 'json': return <FileJson size={16} style={{ color: nodeColor }} />
+      case 'csv': return <Table size={16} style={{ color: nodeColor }} />
+      case 'mermaid': return <GitBranch size={16} style={{ color: nodeColor }} />
+      default: return <File size={16} style={{ color: nodeColor }} />
+    }
+  }, [activeContent.contentType, nodeColor])
+
+  // Truncated content preview for mid zoom (first 120 chars)
+  const ledePreview = useMemo(() => {
+    if (!activeContent.content) return ''
+    if (activeContent.contentType === 'image') return '[Image content]'
+    return activeContent.content.slice(0, 120).replace(/\n/g, ' ') + (activeContent.content.length > 120 ? '...' : '')
+  }, [activeContent.content, activeContent.contentType])
 
   const nodeClassName = [
     'cognograph-node',
@@ -540,20 +573,25 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
     isPinned && 'node--pinned',
     isBookmarked && 'cognograph-node--bookmarked',
     isCut && 'cognograph-node--cut',
-    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`
+    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
+    `artifact-node--lod-${zoomLevel}`
   ].filter(Boolean).join(' ')
 
   const nodeContent = (
-    <div ref={nodeRef} className={nodeClassName} style={nodeStyle} data-transparent={transparent} onDoubleClick={handleDoubleClick}>
-      {/* Handles on all four sides */}
-      <Handle type="target" position={Position.Top} id="top-target" />
-      <Handle type="source" position={Position.Top} id="top-source" />
-      <Handle type="target" position={Position.Bottom} id="bottom-target" />
-      <Handle type="source" position={Position.Bottom} id="bottom-source" />
-      <Handle type="target" position={Position.Left} id="left-target" />
-      <Handle type="source" position={Position.Left} id="left-source" />
-      <Handle type="target" position={Position.Right} id="right-target" />
-      <Handle type="source" position={Position.Right} id="right-source" />
+    <div ref={nodeRef} className={nodeClassName} style={nodeStyle} data-transparent={transparent} data-lod={zoomLevel} onDoubleClick={handleDoubleClick}>
+      {/* Handles on all four sides — hidden at far zoom */}
+      {!isFar && (
+        <>
+          <Handle type="target" position={Position.Top} id="top-target" />
+          <Handle type="source" position={Position.Top} id="top-source" />
+          <Handle type="target" position={Position.Bottom} id="bottom-target" />
+          <Handle type="source" position={Position.Bottom} id="bottom-source" />
+          <Handle type="target" position={Position.Left} id="left-target" />
+          <Handle type="source" position={Position.Left} id="left-source" />
+          <Handle type="target" position={Position.Right} id="right-target" />
+          <Handle type="source" position={Position.Right} id="right-source" />
+        </>
+      )}
 
       {/* Numbered bookmark badge */}
       {numberedBookmark && (
@@ -562,261 +600,352 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
         </div>
       )}
 
-      {/* Header — standard buttons or preview toggle */}
-      {isPreviewMode ? (
-          // Preview mode: minimal header with title + Eye icon for preview identification
-          <div className="cognograph-node__header">
-            <InlineIconPicker
-              nodeData={nodeData}
-              nodeColor={nodeColor}
-              onIconChange={(icon) => updateNode(id, { icon })}
-              onIconColorChange={(iconColor) => updateNode(id, { iconColor })}
-              className="cognograph-node__icon"
-            />
-            <EditableTitle
-              value={nodeData.title}
-              onChange={(newTitle) => updateNode(id, { title: newTitle })}
-              className="cognograph-node__title flex-1 truncate"
-              placeholder="Untitled Artifact"
-            />
-            <NodeAIErrorBoundary compact>
-              <AIPropertyAssist
-                nodeId={id}
+      {/* === LOD: Far zoom — compact pill with file-type icon + title + type badge === */}
+      {isFar && (
+        <div className="flex items-center gap-2 px-2 py-1 h-full min-h-0 overflow-hidden">
+          {fileTypeIcon}
+          {showTitle && (
+            <span
+              className="text-xs font-medium truncate flex-1"
+              style={{ color: 'var(--node-text-primary)' }}
+            >
+              {nodeData.title || 'Untitled Artifact'}
+            </span>
+          )}
+          {showBadges && (
+            <span
+              className="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0"
+              style={{
+                backgroundColor: 'var(--node-bg-secondary)',
+                color: 'var(--node-text-secondary)'
+              }}
+            >
+              {getContentTypeLabel(activeContent.contentType, nodeData.customContentType)}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* === LOD: Mid + Close — full header === */}
+      {!isFar && (
+        <>
+          {/* Header — standard buttons or preview toggle */}
+          {isPreviewMode ? (
+            // Preview mode: minimal header with title + Eye icon for preview identification
+            <div className="cognograph-node__header">
+              <InlineIconPicker
                 nodeData={nodeData}
-                compact={true}
+                nodeColor={nodeColor}
+                onIconChange={(icon) => updateNode(id, { icon })}
+                onIconColorChange={(iconColor) => updateNode(id, { iconColor })}
+                className="cognograph-node__icon"
               />
-            </NodeAIErrorBoundary>
-            <Eye className="w-4 h-4 mr-1" style={{ color: 'var(--node-text-muted)' }} />
-          </div>
-        ) : (
-          // Standard mode: Download, Properties, Collapse buttons
-          <div className="cognograph-node__header">
-            <InlineIconPicker
-              nodeData={nodeData}
-              nodeColor={nodeColor}
-              onIconChange={(icon) => updateNode(id, { icon })}
-              onIconColorChange={(iconColor) => updateNode(id, { iconColor })}
-              className="cognograph-node__icon"
-            />
-            <EditableTitle
-              value={nodeData.title}
-              onChange={(newTitle) => updateNode(id, { title: newTitle })}
-              className="cognograph-node__title flex-1 truncate"
-              placeholder="Untitled Artifact"
-            />
-            <NodeAIErrorBoundary compact>
-              <AIPropertyAssist
-                nodeId={id}
-                nodeData={nodeData}
-                compact={true}
+              <EditableTitle
+                value={nodeData.title}
+                onChange={(newTitle) => updateNode(id, { title: newTitle })}
+                className="cognograph-node__title flex-1 truncate"
+                placeholder="Untitled Artifact"
               />
-            </NodeAIErrorBoundary>
-            <button
-              onClick={handleDownload}
-              className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
-              title="Download artifact"
-            >
-              <Download className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
-            </button>
-            <button
-              onClick={handleOpenProperties}
-              className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
-              title="Open properties"
-            >
-              <Settings2 className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
-            </button>
-            <button
-              onClick={toggleCollapsed}
-              className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
-              title={nodeData.collapsed ? 'Expand' : 'Collapse'}
-            >
-              {nodeData.collapsed ? (
-                <ChevronDown className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
-              ) : (
-                <ChevronUp className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
+              {showContent && (
+                <NodeAIErrorBoundary compact>
+                  <AIPropertyAssist
+                    nodeId={id}
+                    nodeData={nodeData}
+                    compact={true}
+                  />
+                </NodeAIErrorBoundary>
               )}
-            </button>
-          </div>
-        )}
-
-        {/* Preview Toolbar (replaces file tabs in preview mode — LP-T15) */}
-        {isPreviewMode && (
-          <PreviewToolbar
-            viewport={previewViewport}
-            scale={previewScale}
-            autoRefresh={nodeData.previewAutoRefresh || false}
-            interactionMode={interactionMode}
-            previewUrl={fullPreviewUrl || nodeData.previewUrl || ''}
-            onViewportChange={handleViewportChange}
-            onScaleChange={handleScaleChange}
-            onAutoRefreshToggle={handleAutoRefreshToggle}
-            onRefresh={handlePreviewRefresh}
-            onInteractionModeToggle={handleInteractionModeToggle}
-            onPreviewToggle={handlePreviewToggle}
-          />
-        )}
-
-        {/* File Tabs (for multi-file artifacts, standard mode only) */}
-        {!isPreviewMode && isMultiFile && !nodeData.collapsed && (
-          <div
-            className="flex gap-0.5 px-2 py-1 border-b overflow-x-auto"
-            style={{
-              backgroundColor: 'var(--node-bg-secondary)',
-              borderColor: 'var(--node-border-secondary)'
-            }}
-          >
-            {files.sort((a, b) => a.order - b.order).map((file: ArtifactFile) => (
-              <button
-                key={file.id}
-                onClick={(e) => handleFileTabClick(e, file.id)}
-                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] whitespace-nowrap transition-colors ${
-                  activeFileId === file.id
-                    ? 'bg-cyan-600/30'
-                    : 'hover:bg-black/10 dark:hover:bg-white/10'
-                }`}
-                style={{
-                  color: activeFileId === file.id ? 'var(--node-text-primary)' : 'var(--node-text-secondary)'
-                }}
-              >
-                {getSmallContentTypeIcon(file.contentType)}
-                <span className="max-w-[80px] truncate">{file.filename}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Body — Preview iframe OR standard content */}
-        {isPreviewMode ? (
-          // ============ PREVIEW MODE BODY ============
-          <div className="cognograph-node__body" style={{ flex: 1, minHeight: 0 }}>
-            {!isUrlValid ? (
-              // Invalid URL message
-              <div
-                className="flex flex-col items-center justify-center gap-2 p-4 text-center h-full"
-                style={{ color: 'var(--node-text-muted)' }}
-              >
-                <Globe className="w-8 h-8 opacity-50" />
-                <span className="text-xs">
-                  Invalid preview URL. Only localhost URLs are allowed.
-                </span>
-              </div>
-            ) : iframeError ? (
-              // Unreachable URL — error state (LP-E01 / LP-T17)
-              <div
-                className="flex flex-col items-center justify-center gap-2 p-4 text-center h-full"
-                style={{ color: 'var(--node-text-muted)' }}
-              >
-                <Globe className="w-8 h-8 opacity-50" />
-                <span className="text-xs">
-                  Preview unavailable. Start your dev server at{' '}
-                  <span className="font-mono text-cyan-400">{fullPreviewUrl}</span>{' '}
-                  and click Refresh.
-                </span>
+              <Eye className="w-4 h-4 mr-1" style={{ color: 'var(--node-text-muted)' }} />
+            </div>
+          ) : (
+            // Standard mode: Download, Properties, Collapse buttons
+            <div className="cognograph-node__header">
+              <InlineIconPicker
+                nodeData={nodeData}
+                nodeColor={nodeColor}
+                onIconChange={(icon) => updateNode(id, { icon })}
+                onIconColorChange={(iconColor) => updateNode(id, { iconColor })}
+                className="cognograph-node__icon"
+              />
+              <EditableTitle
+                value={nodeData.title}
+                onChange={(newTitle) => updateNode(id, { title: newTitle })}
+                className="cognograph-node__title flex-1 truncate"
+                placeholder="Untitled Artifact"
+              />
+              {showContent && (
+                <NodeAIErrorBoundary compact>
+                  <AIPropertyAssist
+                    nodeId={id}
+                    nodeData={nodeData}
+                    compact={true}
+                  />
+                </NodeAIErrorBoundary>
+              )}
+              {showContent && (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handlePreviewRefresh()
-                  }}
-                  className="flex items-center gap-1 px-2 py-1 mt-1 text-xs rounded transition-colors hover:bg-black/10 dark:hover:bg-white/10"
-                  style={{ color: 'var(--node-text-secondary)' }}
+                  onClick={handleDownload}
+                  className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
+                  title="Download artifact"
                 >
-                  <RefreshCw className="w-3 h-3" />
-                  Refresh
+                  <Download className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
                 </button>
-              </div>
-            ) : (
-              // iframe container with overlay
-              <div
-                className="relative flex-1"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  overflow: 'hidden',
-                }}
-              >
-                {/* Scaled iframe container */}
-                <div
-                  style={{
-                    width: viewportWidth,
-                    maxWidth: '100%',
-                    height: '100%',
-                    transformOrigin: 'top left',
-                    transform: `scale(${previewScale})`,
-                  }}
+              )}
+              {showContent && (
+                <button
+                  onClick={handleOpenProperties}
+                  className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
+                  title="Open properties"
                 >
-                  <iframe
-                    ref={iframeRef}
-                    src={iframeSrc}
-                    sandbox="allow-scripts allow-same-origin"
-                    style={{
-                      width: '100%',
-                      height: `${100 / previewScale}%`,
-                      border: '1px solid var(--node-border-secondary)',
-                      borderRadius: '4px',
-                      backgroundColor: 'white',
-                    }}
-                    title={`Preview: ${nodeData.title}`}
-                  />
-                </div>
-
-                {/* Click overlay — captures pointer events for React Flow (LP-T08) */}
-                {!interactionMode && (
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      cursor: 'grab',
-                      zIndex: 1,
-                      // Transparent but clickable
-                      backgroundColor: 'transparent',
-                    }}
-                    onDoubleClick={(e) => {
-                      e.stopPropagation()
-                      setInteractionMode(true)
-                    }}
-                    title="Double-click to interact with preview"
-                  />
+                  <Settings2 className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
+                </button>
+              )}
+              <button
+                onClick={toggleCollapsed}
+                className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
+                title={nodeData.collapsed ? 'Expand' : 'Collapse'}
+              >
+                {nodeData.collapsed ? (
+                  <ChevronDown className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
+                ) : (
+                  <ChevronUp className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
                 )}
-              </div>
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* === LOD: Far zoom — skeleton density preview for file content === */}
+      {isFar && !nodeData.collapsed && activeContent.content && activeContent.contentType !== 'image' && (
+        <div className="cognograph-node__body" style={{ pointerEvents: 'none' }}>
+          <StructuredContentPreview content={activeContent.content} zoomLevel="far" />
+        </div>
+      )}
+
+      {/* === LOD: Mid zoom — summary with content preview (lede) === */}
+      {showLede && !isFar && !nodeData.collapsed && (
+        <div className="cognograph-node__body" style={{ maxHeight: '4.5em', overflow: 'hidden' }}>
+          <div className="flex items-center gap-2 mb-1">
+            <span
+              className="text-[10px] px-1.5 py-0.5 rounded"
+              style={{
+                backgroundColor: 'var(--node-bg-secondary)',
+                color: 'var(--node-text-secondary)'
+              }}
+            >
+              {getContentTypeLabel(activeContent.contentType, nodeData.customContentType)}
+            </span>
+            {activeContent.language && (
+              <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>
+                {activeContent.language}
+              </span>
+            )}
+            {isMultiFile && (
+              <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>
+                {totalFiles} files
+              </span>
             )}
           </div>
-        ) : (
-          // ============ STANDARD MODE BODY ============
-          <>
-            {!nodeData.collapsed && (
-              <div className="cognograph-node__body">
-                {activeContent.contentType === 'image' && activeContent.content ? (
-                  <div className="flex justify-center">
-                    <img
-                      src={activeContent.content}
-                      alt={nodeData.title}
-                      className="max-h-32 max-w-full rounded object-contain"
-                    />
-                  </div>
-                ) : (
-                  <pre
-                    className="text-xs font-mono whitespace-pre-wrap overflow-hidden p-2 rounded flex-1"
+          {ledePreview && (
+            <pre
+              className="text-[10px] font-mono whitespace-pre-wrap overflow-hidden p-1 rounded"
+              style={{
+                backgroundColor: 'var(--node-bg-secondary)',
+                color: 'var(--node-text-muted)',
+                maxHeight: '2.4em'
+              }}
+            >
+              {ledePreview}
+            </pre>
+          )}
+        </div>
+      )}
+
+      {/* === LOD: Close zoom — full content === */}
+      {showContent && !isFar && (
+        <>
+          {/* Preview Toolbar (replaces file tabs in preview mode — LP-T15) */}
+          {isPreviewMode && (
+            <PreviewToolbar
+              viewport={previewViewport}
+              scale={previewScale}
+              autoRefresh={nodeData.previewAutoRefresh || false}
+              interactionMode={interactionMode}
+              previewUrl={fullPreviewUrl || nodeData.previewUrl || ''}
+              onViewportChange={handleViewportChange}
+              onScaleChange={handleScaleChange}
+              onAutoRefreshToggle={handleAutoRefreshToggle}
+              onRefresh={handlePreviewRefresh}
+              onInteractionModeToggle={handleInteractionModeToggle}
+              onPreviewToggle={handlePreviewToggle}
+            />
+          )}
+
+          {/* File Tabs (for multi-file artifacts, standard mode only) */}
+          {!isPreviewMode && isMultiFile && !nodeData.collapsed && (
+            <div
+              className="flex gap-0.5 px-2 py-1 border-b overflow-x-auto"
+              style={{
+                backgroundColor: 'var(--node-bg-secondary)',
+                borderColor: 'var(--node-border-secondary)'
+              }}
+            >
+              {files.sort((a, b) => a.order - b.order).map((file: ArtifactFile) => (
+                <button
+                  key={file.id}
+                  onClick={(e) => handleFileTabClick(e, file.id)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] whitespace-nowrap transition-colors ${
+                    activeFileId === file.id
+                      ? 'bg-cyan-600/30'
+                      : 'hover:bg-black/10 dark:hover:bg-white/10'
+                  }`}
+                  style={{
+                    color: activeFileId === file.id ? 'var(--node-text-primary)' : 'var(--node-text-secondary)'
+                  }}
+                >
+                  {getSmallContentTypeIcon(file.contentType)}
+                  <span className="max-w-[80px] truncate">{file.filename}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Body — Preview iframe OR standard content */}
+          {isPreviewMode ? (
+            // ============ PREVIEW MODE BODY ============
+            <div className="cognograph-node__body" style={{ flex: 1, minHeight: 0 }}>
+              {!isUrlValid ? (
+                // Invalid URL message
+                <div
+                  className="flex flex-col items-center justify-center gap-2 p-4 text-center h-full"
+                  style={{ color: 'var(--node-text-muted)' }}
+                >
+                  <Globe className="w-8 h-8 opacity-50" />
+                  <span className="text-xs">
+                    Invalid preview URL. Only localhost URLs are allowed.
+                  </span>
+                </div>
+              ) : iframeError ? (
+                // Unreachable URL — error state (LP-E01 / LP-T17)
+                <div
+                  className="flex flex-col items-center justify-center gap-2 p-4 text-center h-full"
+                  style={{ color: 'var(--node-text-muted)' }}
+                >
+                  <Globe className="w-8 h-8 opacity-50" />
+                  <span className="text-xs">
+                    Preview unavailable. Start your dev server at{' '}
+                    <span className="font-mono text-cyan-400">{fullPreviewUrl}</span>{' '}
+                    and click Refresh.
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handlePreviewRefresh()
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 mt-1 text-xs rounded transition-colors hover:bg-black/10 dark:hover:bg-white/10"
+                    style={{ color: 'var(--node-text-secondary)' }}
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Refresh
+                  </button>
+                </div>
+              ) : (
+                // iframe container with overlay
+                <div
+                  className="relative flex-1"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {/* Scaled iframe container */}
+                  <div
                     style={{
-                      backgroundColor: 'var(--node-bg-secondary)',
-                      color: 'var(--node-text-secondary)'
+                      width: viewportWidth,
+                      maxWidth: '100%',
+                      height: '100%',
+                      transformOrigin: 'top left',
+                      transform: `scale(${previewScale})`,
                     }}
                   >
-                    {getPreviewContent() || <span className="italic" style={{ color: 'var(--node-text-muted)' }}>Empty artifact</span>}
-                  </pre>
-                )}
+                    <iframe
+                      ref={iframeRef}
+                      src={iframeSrc}
+                      sandbox="allow-scripts allow-same-origin"
+                      style={{
+                        width: '100%',
+                        height: `${100 / previewScale}%`,
+                        border: '1px solid var(--node-border-secondary)',
+                        borderRadius: '4px',
+                        backgroundColor: 'white',
+                      }}
+                      title={`Preview: ${nodeData.title}`}
+                    />
+                  </div>
 
-                {/* Property Badges */}
-                <PropertyBadges
-                  properties={nodeData.properties || {}}
-                  definitions={propertyDefinitions}
-                  hiddenProperties={nodeData.hiddenProperties}
-                  compact
-                />
-              </div>
-            )}
-          </>
-        )}
+                  {/* Click overlay — captures pointer events for React Flow (LP-T08) */}
+                  {!interactionMode && (
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        cursor: 'grab',
+                        zIndex: 1,
+                        // Transparent but clickable
+                        backgroundColor: 'transparent',
+                      }}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation()
+                        setInteractionMode(true)
+                      }}
+                      title="Double-click to interact with preview"
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            // ============ STANDARD MODE BODY ============
+            <>
+              {!nodeData.collapsed && (
+                <div className="cognograph-node__body">
+                  {activeContent.contentType === 'image' && activeContent.content ? (
+                    <div className="flex justify-center">
+                      <img
+                        src={activeContent.content}
+                        alt={nodeData.title}
+                        className="max-h-32 max-w-full rounded object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <pre
+                      className="text-xs font-mono whitespace-pre-wrap overflow-hidden p-2 rounded flex-1"
+                      style={{
+                        backgroundColor: 'var(--node-bg-secondary)',
+                        color: 'var(--node-text-secondary)'
+                      }}
+                    >
+                      {getPreviewContent() || <span className="italic" style={{ color: 'var(--node-text-muted)' }}>Empty artifact</span>}
+                    </pre>
+                  )}
 
-        {/* Footer */}
+                  {/* Property Badges */}
+                  <PropertyBadges
+                    properties={nodeData.properties || {}}
+                    definitions={propertyDefinitions}
+                    hiddenProperties={nodeData.hiddenProperties}
+                    compact
+                  />
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {/* Footer — hidden at far zoom */}
+      {!isFar && (
         <div className="cognograph-node__footer">
           <div className="flex items-center gap-2">
             {isPreviewMode ? (
@@ -874,24 +1003,28 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
             )}
           </div>
         </div>
+      )}
 
-      {/* Socket bars showing connections */}
-      <NodeSocketBars nodeId={id} nodeColor={nodeColor} enabled={selected} />
+      {/* Socket bars showing connections — hidden at far zoom */}
+      {!isFar && <NodeSocketBars nodeId={id} nodeColor={nodeColor} enabled={selected} />}
     </div>
   )
 
   return (
     <>
-      <NodeResizer
-        minWidth={effectiveMinWidth}
-        minHeight={effectiveMinHeight}
-        isVisible={selected}
-        onResizeStart={handleResizeStart}
-        onResize={handleResize}
-        onResizeEnd={handleResizeEnd}
-        handleStyle={{ borderColor: nodeColor, backgroundColor: nodeColor }}
-        lineStyle={{ borderColor: nodeColor }}
-      />
+      {/* NodeResizer: only at close zoom */}
+      {showContent && (
+        <NodeResizer
+          minWidth={effectiveMinWidth}
+          minHeight={effectiveMinHeight}
+          isVisible={selected}
+          onResizeStart={handleResizeStart}
+          onResize={handleResize}
+          onResizeEnd={handleResizeEnd}
+          handleStyle={{ borderColor: nodeColor, backgroundColor: nodeColor }}
+          lineStyle={{ borderColor: nodeColor }}
+        />
+      )}
       {nodeContent}
     </>
   )

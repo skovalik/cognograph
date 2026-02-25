@@ -61,9 +61,13 @@ nsis:
 
 # --- macOS -------------------------------------------------------------------
 mac:
-  icon: build/icon.icns
+  icon: build/icon.png
   category: public.app-category.productivity
   target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
     - target: zip
       arch:
         - x64

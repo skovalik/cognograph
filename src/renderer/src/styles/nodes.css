@@ -765,18 +765,15 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
   cursor: ew-resize !important;
 }
 
-/* TEMPORARY FIX: Hide resize handles completely to unblock node clicks
-   TODO: Implement proper pointer-events management for resize controls
+/* Resize controls: hide line controls (they span entire edges and block clicks),
+   show only corner handle controls on hover/selected (Figma-style pattern) */
+.react-flow__resize-control.line {
+  display: none !important;
+}
 
-   Problem: Resize controls with pointer-events: auto block clicks on node content.
-   Resize controls span entire edges (line controls) and corners (handle controls).
-   CSS :hover paradox: can't enable pointer-events on :hover when base has pointer-events: none.
-
-   Proper fix needs: JS-based proximity detection OR invisible interaction layer OR
-   different UX pattern (e.g., resize only from bottom-right corner like Figma).
-*/
-.react-flow__resize-control {
-  display: none !important; /* Completely hide until proper fix implemented */
+/* Corner handles are small enough to not block content — show them */
+.react-flow__resize-control.handle {
+  pointer-events: auto !important;
 }
 
 .priority-badge {
@@ -1341,6 +1338,114 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
    Each number has a distinct color for quick visual identification
    ============================================================================= */
 
+/* =============================================================================
+   PFD PHASE 6C: SESSION RE-ENTRY — RECENCY INDICATORS
+   ============================================================================= */
+
+/* Nodes modified within 24 hours get a subtle fresh indicator */
+.react-flow__node.recency-fresh .cognograph-node {
+  box-shadow: 0 0 6px 1px rgba(34, 197, 94, 0.15);
+}
+
+/* Nodes modified 24-48 hours ago get a fainter warm indicator */
+.react-flow__node.recency-warm .cognograph-node {
+  box-shadow: 0 0 4px 1px rgba(34, 197, 94, 0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__node.recency-fresh .cognograph-node,
+  .react-flow__node.recency-warm .cognograph-node {
+    box-shadow: none;
+    border-left: 3px solid rgba(34, 197, 94, 0.25);
+  }
+}
+
+/* Session re-entry prompt */
+.session-reentry-prompt {
+  position: fixed;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--gui-panel-bg, rgba(30, 30, 30, 0.95));
+  border: 1px solid var(--gui-border, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(12px);
+  animation: reentry-slide-in 300ms ease-out;
+}
+
+@keyframes reentry-slide-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.session-reentry-prompt__text {
+  font-size: 0.8rem;
+  color: var(--gui-text-secondary, #aaa);
+}
+
+.session-reentry-prompt__action {
+  cursor: pointer;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+  font-size: 0.8rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  transition: background 150ms ease;
+}
+
+.session-reentry-prompt__action:hover {
+  background: rgba(34, 197, 94, 0.25);
+}
+
+.session-reentry-prompt__dismiss {
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--gui-text-tertiary, #666);
+  font-size: 1rem;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.session-reentry-prompt__dismiss:hover {
+  color: var(--gui-text-secondary, #aaa);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .session-reentry-prompt {
+    animation: none;
+  }
+}
+
+/* PFD Phase 6B: Landmark badge — always visible, all zoom levels */
+.landmark-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+  color: #c8963e;
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* Landmark badge stays visible at all zoom levels */
+.note-node--lod-ultra-far .landmark-badge,
+.note-node--lod-far .landmark-badge,
+.note-node--lod-mid .landmark-badge {
+  display: block;
+}
+
 .numbered-bookmark-badge {
   position: absolute;
   top: -7px;
@@ -1391,76 +1496,1055 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
    Philosophy: Fade don't hide. Preserve visual context at all zoom levels.
    ============================================================================= */
 
-/* Far zoom (<25%): Reduce opacity, disable interaction, but keep everything visible */
-.semantic-zoom-far .cognograph-node {
-  position: relative;
+/* =============================================================================
+   Shared LOD Rules (Phase 1B) — CSS-driven LOD via data-lod attribute.
+   Applied to all node types via [data-lod] attribute selectors.
+   These complement per-node LOD rules (e.g. .note-node--lod-far) below.
+   ============================================================================= */
+
+/* Ultra-far: Colored dot mode — collapse to minimum, hide all sections */
+[data-lod="ultra-far"] {
+  min-height: 24px;
+  contain: content;
 }
 
-.semantic-zoom-far .cognograph-node__body {
-  opacity: 0.5;
+[data-lod="ultra-far"] .cognograph-node__header,
+[data-lod="ultra-far"] .cognograph-node__body,
+[data-lod="ultra-far"] .cognograph-node__footer {
+  display: none;
+}
+
+/* Far: Shape + color mode — body non-interactive, footer hidden */
+[data-lod="far"] .cognograph-node__body {
   pointer-events: none;
-  transition: opacity 0.2s ease;
 }
 
-.semantic-zoom-far .cognograph-node__title {
-  opacity: 0.6;
+[data-lod="far"] .cognograph-node__footer {
+  display: none;
 }
 
-.semantic-zoom-far .cognograph-node__footer {
+/* Mid: Summary card mode — footer slightly dimmed */
+[data-lod="mid"] .cognograph-node__footer {
+  opacity: 0.7;
+}
+
+/* Ultra-close: Expanded detail mode — no height caps */
+[data-lod="ultra-close"] {
+  max-height: none;
+}
+
+/* =============================================================================
+   Artboard Classes (Phase 3C) — Card-to-artboard transition animations.
+   Card identity persists: accent color, glow ring, dimmed surroundings.
+   ============================================================================= */
+
+/* Primary artboard node: elevated with outer glow ring matching accent color */
+.artboard-primary {
+  z-index: 10;
+  box-shadow:
+    0 0 0 3px var(--node-accent, var(--accent)),
+    0 0 24px color-mix(in srgb, var(--node-accent, #6366f1) 35%, transparent),
+    0 0 48px color-mix(in srgb, var(--node-accent, #6366f1) 15%, transparent);
+  transition: box-shadow 300ms ease-out;
+}
+
+/* Dimmed (non-primary) nodes: faded with blur and no interaction */
+.artboard-dimmed {
   opacity: 0.4;
+  filter: blur(1px);
+  pointer-events: none;
+  transition: opacity 300ms ease-out, filter 300ms ease-out;
 }
 
-.semantic-zoom-far .property-badges {
-  opacity: 0.5;
+/* Width/height expansion transition for the expanding node */
+.artboard-transition {
+  transition: width 300ms ease-out, height 300ms ease-out, box-shadow 300ms ease-out;
+}
+
+/* Artboard accent bar — left border emphasizing card identity */
+.node-artboard__header--accented {
+  border-left: 3px solid var(--node-accent, #6366f1);
+}
+
+/* Close button escape hint */
+.node-artboard__header-close-hint {
+  font-size: 10px;
+  color: var(--text-muted, #666);
+  margin-left: 2px;
+  opacity: 0.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .artboard-primary,
+  .artboard-dimmed,
+  .artboard-transition {
+    transition: none;
+  }
+}
+
+/* =============================================================================
+   Per-Node LOD (Level of Detail) — True content switching, not opacity fading.
+   PFD Phase 1: Nodes render different DOM at each zoom level.
+   LOD transitions animate with 200ms ease for object constancy.
+   ============================================================================= */
+
+/* LOD transition animation (respects reduced motion preference) */
+.note-node--lod-ultra-far .cognograph-node__body,
+.note-node--lod-far .cognograph-node__body,
+.note-node--lod-mid .cognograph-node__body,
+.note-node--lod-close .cognograph-node__body,
+.note-node--lod-ultra-close .cognograph-node__body,
+.note-node--lod-ultra-far .cognograph-node__footer,
+.note-node--lod-far .cognograph-node__footer,
+.note-node--lod-mid .cognograph-node__footer,
+.note-node--lod-close .cognograph-node__footer,
+.note-node--lod-ultra-close .cognograph-node__footer {
+  transition: opacity 200ms ease-out, max-height 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-node--lod-ultra-far .cognograph-node__body,
+  .note-node--lod-far .cognograph-node__body,
+  .note-node--lod-mid .cognograph-node__body,
+  .note-node--lod-close .cognograph-node__body,
+  .note-node--lod-ultra-close .cognograph-node__body,
+  .note-node--lod-ultra-far .cognograph-node__footer,
+  .note-node--lod-far .cognograph-node__footer,
+  .note-node--lod-mid .cognograph-node__footer,
+  .note-node--lod-close .cognograph-node__footer,
+  .note-node--lod-ultra-close .cognograph-node__footer {
+    transition: none;
+  }
+}
+
+/* Ultra-far zoom: Cluster/shapes mode — shape + color only, no text */
+.note-node--lod-ultra-far .cognograph-node__body {
+  pointer-events: none;
+}
+
+.note-node--lod-ultra-far .cognograph-node__footer {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.note-node--lod-ultra-far .property-badges {
+  display: none;
+}
+
+.note-node--lod-ultra-far .cognograph-node__header {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Far zoom: Show structured content preview — non-interactive but visible */
+.note-node--lod-far .cognograph-node__body {
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.note-node--lod-far .cognograph-node__footer {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.note-node--lod-far .property-badges {
+  display: none;
+}
+
+/* Hidden body wrapper for TipTap preservation at far zoom */
+.note-node__body-hidden {
+  visibility: hidden;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Ultra-far zoom: Make numbered bookmarks even more prominent */
+.note-node--lod-ultra-far .numbered-bookmark-badge {
+  transform: scale(1.8);
+  opacity: 1;
+}
+
+.note-node--lod-ultra-far .numbered-bookmark-badge:hover {
+  transform: scale(2.0);
 }
 
 /* Far zoom: Make numbered bookmarks more prominent (they're navigation aids) */
-.semantic-zoom-far .numbered-bookmark-badge {
+.note-node--lod-far .numbered-bookmark-badge {
   transform: scale(1.5);
   opacity: 1;
 }
 
-.semantic-zoom-far .numbered-bookmark-badge:hover {
+.note-node--lod-far .numbered-bookmark-badge:hover {
   transform: scale(1.7);
 }
 
-/* Mid zoom (25-50%): Slightly reduced opacity, full content visible */
-.semantic-zoom-mid .cognograph-node__body {
-  opacity: 0.85;
-  transition: opacity 0.2s ease;
-}
-
-.semantic-zoom-mid .cognograph-node__title {
-  opacity: 0.9;
-}
-
-.semantic-zoom-mid .cognograph-node__footer {
+/* Mid zoom: Summary card mode — title + lede + badges */
+.note-node--lod-mid .cognograph-node__footer {
   opacity: 0.7;
 }
 
-.semantic-zoom-mid .property-badges {
+.note-node--lod-mid .property-badges {
   opacity: 0.8;
 }
 
-/* Close zoom (>50%): Full visibility (default) */
-.semantic-zoom-close .cognograph-node__body {
+/* Close zoom: Document mode — full rendering (default behavior) */
+.note-node--lod-close .cognograph-node__body {
   opacity: 1;
   max-height: none;
 }
 
-.semantic-zoom-close .cognograph-node__title {
+.note-node--lod-close .cognograph-node__footer {
   opacity: 1;
 }
 
-.semantic-zoom-close .cognograph-node__footer {
+.note-node--lod-close .property-badges {
   opacity: 1;
 }
 
-.semantic-zoom-close .property-badges {
+/* Ultra-close zoom: Enhanced document mode — full rendering + expanded toolbar */
+.note-node--lod-ultra-close .cognograph-node__body {
+  opacity: 1;
+  max-height: none;
+}
+
+.note-node--lod-ultra-close .cognograph-node__footer {
   opacity: 1;
 }
 
-/* Text nodes in semantic zoom - same philosophy: fade, don't hide */
+.note-node--lod-ultra-close .property-badges {
+  opacity: 1;
+}
+
+/* =============================================================================
+   LOD for OrchestratorNode — orchestrator-node--lod-{far|mid|close}
+   ============================================================================= */
+
+/* LOD transition animation */
+.orchestrator-node--lod-far .cognograph-node__body,
+.orchestrator-node--lod-mid .cognograph-node__body,
+.orchestrator-node--lod-close .cognograph-node__body,
+.orchestrator-node--lod-far .cognograph-node__footer,
+.orchestrator-node--lod-mid .cognograph-node__footer,
+.orchestrator-node--lod-close .cognograph-node__footer {
+  transition: opacity 200ms ease-out, max-height 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orchestrator-node--lod-far .cognograph-node__body,
+  .orchestrator-node--lod-mid .cognograph-node__body,
+  .orchestrator-node--lod-close .cognograph-node__body,
+  .orchestrator-node--lod-far .cognograph-node__footer,
+  .orchestrator-node--lod-mid .cognograph-node__footer,
+  .orchestrator-node--lod-close .cognograph-node__footer {
+    transition: none;
+  }
+}
+
+.orchestrator-node--lod-far .cognograph-node__body {
+  pointer-events: none;
+}
+
+.orchestrator-node--lod-far .cognograph-node__footer {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.orchestrator-node--lod-mid .cognograph-node__footer {
+  opacity: 0.7;
+}
+
+/* =============================================================================
+   LOD for ActionNode — action-node--lod-{far|mid|close}
+   ============================================================================= */
+
+.action-node--lod-far .cognograph-node__body,
+.action-node--lod-mid .cognograph-node__body,
+.action-node--lod-close .cognograph-node__body,
+.action-node--lod-far .cognograph-node__footer,
+.action-node--lod-mid .cognograph-node__footer,
+.action-node--lod-close .cognograph-node__footer {
+  transition: opacity 200ms ease-out, max-height 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action-node--lod-far .cognograph-node__body,
+  .action-node--lod-mid .cognograph-node__body,
+  .action-node--lod-close .cognograph-node__body,
+  .action-node--lod-far .cognograph-node__footer,
+  .action-node--lod-mid .cognograph-node__footer,
+  .action-node--lod-close .cognograph-node__footer {
+    transition: none;
+  }
+}
+
+.action-node--lod-far .cognograph-node__body {
+  pointer-events: none;
+}
+
+.action-node--lod-far .cognograph-node__footer {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.action-node--lod-mid .cognograph-node__footer {
+  opacity: 0.7;
+}
+
+/* =============================================================================
+   LOD for WorkspaceNode — workspace-node--lod-{far|mid|close}
+   ============================================================================= */
+
+.workspace-node--lod-far .cognograph-node__body,
+.workspace-node--lod-mid .cognograph-node__body,
+.workspace-node--lod-close .cognograph-node__body,
+.workspace-node--lod-far .cognograph-node__footer,
+.workspace-node--lod-mid .cognograph-node__footer,
+.workspace-node--lod-close .cognograph-node__footer {
+  transition: opacity 200ms ease-out, max-height 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-node--lod-far .cognograph-node__body,
+  .workspace-node--lod-mid .cognograph-node__body,
+  .workspace-node--lod-close .cognograph-node__body,
+  .workspace-node--lod-far .cognograph-node__footer,
+  .workspace-node--lod-mid .cognograph-node__footer,
+  .workspace-node--lod-close .cognograph-node__footer {
+    transition: none;
+  }
+}
+
+.workspace-node--lod-far .cognograph-node__body {
+  pointer-events: none;
+}
+
+.workspace-node--lod-far .cognograph-node__footer {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.workspace-node--lod-mid .cognograph-node__footer {
+  opacity: 0.7;
+}
+
+/* Workspace member count badge - elevated z-index at far zoom */
+.workspace-node--lod-far {
+  z-index: 2;
+}
+
+/* =============================================================================
+   LOD for TextNode — text-node--lod-{far|mid|close}
+   ============================================================================= */
+
+.text-node--lod-far .text-node-body,
+.text-node--lod-mid .text-node-body,
+.text-node--lod-close .text-node-body {
+  transition: opacity 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text-node--lod-far .text-node-body,
+  .text-node--lod-mid .text-node-body,
+  .text-node--lod-close .text-node-body {
+    transition: none;
+  }
+}
+
+.text-node--lod-far {
+  pointer-events: none;
+}
+
+.text-node--lod-far .text-node-body {
+  pointer-events: none;
+}
+
+/* Expand trigger button (replaces passive "..." indicator) */
+.cognograph-node__expand-trigger {
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--salt-11, #888);
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-align: center;
+  width: 100%;
+  transition: background-color 150ms ease;
+}
+
+.cognograph-node__expand-trigger:hover {
+  background-color: var(--salt-a4, rgba(128,128,128,0.1));
+  color: var(--salt-12, #fff);
+}
+
+/* Focus mode trigger button (appears in header on hover at close zoom) */
+.cognograph-node__focus-trigger {
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--node-text-secondary, #888);
+  padding: 2px;
+  border-radius: 3px;
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity 150ms ease, background-color 150ms ease;
+}
+
+.cognograph-node:hover .cognograph-node__focus-trigger,
+.cognograph-node__focus-trigger:focus-visible {
+  opacity: 0.6;
+}
+
+.cognograph-node__focus-trigger:hover {
+  opacity: 1;
+  background-color: var(--salt-a4, rgba(128,128,128,0.1));
+}
+
+/* =============================================================================
+   Content Density Brackets
+
+   Color = NoteMode type (via --density-accent CSS variable).
+   Geometry = content density (progressive border treatment).
+
+   Far zoom: 3 tiers (empty, has-content, dense)
+   Mid/Close zoom: 5 tiers (empty, sparse, medium, substantial, dense)
+   ============================================================================= */
+
+/* --- Tier 1: Empty (0-30 words) — Standard frame only --- */
+.density--empty {
+  /* No additional treatment — standard 1px border from node mode */
+}
+
+/* --- Tier 2 (far): Has Content (31-299 words) — Left accent bar --- */
+.density--has-content {
+  border-left: 3px solid var(--density-accent, var(--node-accent)) !important;
+}
+
+/* --- Tier 2 (mid/close): Sparse (31-99 words) — Left bracket --- */
+.density--sparse {
+  border-left: 3px solid var(--density-accent, var(--node-accent)) !important;
+}
+
+/* --- Tier 3 (mid/close): Medium (100-299 words) — Left bracket + top bar --- */
+.density--medium {
+  border-left: 3px solid var(--density-accent, var(--node-accent)) !important;
+  border-top: 3px solid var(--density-accent, var(--node-accent)) !important;
+}
+
+/* --- Tier 4 (mid/close): Substantial (300-599 words) — Corner notch (L-shaped) --- */
+.density--substantial {
+  position: relative;
+}
+
+.density--substantial::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 32px;
+  height: 3px;
+  background: var(--density-accent, var(--node-accent));
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 2px 0 0 0;
+}
+
+.density--substantial::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 3px;
+  height: 32px;
+  background: var(--density-accent, var(--node-accent));
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 2px 0 0 0;
+}
+
+/* --- Tier 5: Dense (600+ words) — Extended corner notch --- */
+.density--dense {
+  position: relative;
+}
+
+.density--dense::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 48px;
+  height: 3px;
+  background: var(--density-accent, var(--node-accent));
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 2px 0 0 0;
+}
+
+.density--dense::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 3px;
+  height: 48px;
+  background: var(--density-accent, var(--node-accent));
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 2px 0 0 0;
+}
+
+/* Dense tier at far/ultra-far zoom: slightly increased node opacity for visual weight */
+.note-node--lod-ultra-far.density--dense,
+.note-node--lod-far.density--dense {
+  opacity: 1;
+}
+
+/* Selection state: density pseudo-elements render behind selection highlight */
+.cognograph-node.selected.density--substantial::before,
+.cognograph-node.selected.density--substantial::after,
+.cognograph-node.selected.density--dense::before,
+.cognograph-node.selected.density--dense::after {
+  z-index: 0;
+}
+
+/* Density transitions (respects reduced motion) */
+.density--sparse,
+.density--has-content,
+.density--medium {
+  transition: border-color 200ms ease-out, border-width 200ms ease-out;
+}
+
+.density--substantial::before,
+.density--substantial::after,
+.density--dense::before,
+.density--dense::after {
+  transition: width 200ms ease-out, height 200ms ease-out, background 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .density--sparse,
+  .density--has-content,
+  .density--medium {
+    transition: none;
+  }
+
+  .density--substantial::before,
+  .density--substantial::after,
+  .density--dense::before,
+  .density--dense::after {
+    transition: none;
+  }
+}
+
+/* =============================================================================
+   PFD PHASE 4: CONTEXT VISUALIZATION
+   When context viz is active, dim non-included nodes and highlight included ones.
+   Luminance-based depth encoding — no hue (reserved for NoteMode type).
+   ============================================================================= */
+
+/* Dim ALL nodes when context viz is active */
+.context-viz-active .react-flow__node {
+  opacity: 0.3;
+  transition: opacity 300ms ease, filter 300ms ease;
+}
+
+/* Target node — full brightness */
+.context-viz-active .react-flow__node.context-viz-target {
+  opacity: 1;
+  filter: brightness(1.15);
+}
+
+/* Included nodes — brightness by depth */
+.context-viz-active .react-flow__node.context-viz-included {
+  opacity: 1;
+  filter: brightness(1.1);
+}
+
+.context-viz-active .react-flow__node.context-viz-depth-2 {
+  opacity: 0.9;
+  filter: brightness(1.0);
+}
+
+.context-viz-active .react-flow__node.context-viz-depth-3 {
+  opacity: 0.75;
+  filter: brightness(0.95);
+}
+
+/* Selected nodes always visible regardless of context viz */
+.context-viz-active .react-flow__node.selected {
+  opacity: 1;
+  filter: none;
+}
+
+/* Dim ALL edges when context viz is active */
+.context-viz-active .react-flow__edge {
+  opacity: 0.15;
+  transition: opacity 300ms ease;
+}
+
+/* Included edges — glow effect */
+.context-viz-active .react-flow__edge.context-edge-included {
+  opacity: 1;
+}
+
+.context-viz-active .react-flow__edge.context-edge-included path.react-flow__edge-path {
+  stroke-width: 3;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
+}
+
+/* Selected edges always visible */
+.context-viz-active .react-flow__edge.selected {
+  opacity: 1;
+}
+
+/* =============================================================================
+   CONTEXT SCOPE BADGE
+   ============================================================================= */
+
+.context-scope-badge {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: var(--gui-surface, rgba(30, 30, 30, 0.95));
+  border: 1px solid var(--gui-border, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--gui-text-secondary, rgba(255, 255, 255, 0.7));
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+  cursor: default;
+  user-select: none;
+}
+
+.context-scope-badge__count strong {
+  color: var(--gui-text-primary, rgba(255, 255, 255, 0.95));
+  font-weight: 600;
+}
+
+.context-scope-badge__detail {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--gui-border, rgba(255, 255, 255, 0.08));
+  display: flex;
+  gap: 16px;
+  min-width: 200px;
+}
+
+.context-scope-badge__section {
+  flex: 1;
+}
+
+.context-scope-badge__label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gui-text-tertiary, rgba(255, 255, 255, 0.4));
+  margin-bottom: 4px;
+}
+
+.context-scope-badge__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* =============================================================================
+   PFD PHASE 4B: CONTEXT ROLE LABELS
+   Small role badges visible only during context visualization.
+   ============================================================================= */
+
+.context-role-badge {
+  display: none;
+  position: absolute;
+  top: -18px;
+  right: 8px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: 3px;
+  z-index: 10;
+  pointer-events: none;
+  white-space: nowrap;
+  background: rgba(40, 40, 40, 0.9);
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Show only when context viz is active AND node is included */
+.context-viz-active .react-flow__node.context-viz-included .context-role-badge,
+.context-viz-active .react-flow__node.context-viz-target .context-role-badge {
+  display: block;
+}
+
+/* Role-specific accent colors (subtle left border) */
+.context-role-badge[data-role="instruction"] {
+  border-left: 2px solid #8b5cf6;
+  color: #c4b5fd;
+}
+
+.context-role-badge[data-role="reference"] {
+  border-left: 2px solid #3b82f6;
+  color: #93c5fd;
+}
+
+.context-role-badge[data-role="example"] {
+  border-left: 2px solid #f59e0b;
+  color: #fcd34d;
+}
+
+.context-role-badge[data-role="background"] {
+  border-left: 2px solid #6b7280;
+  color: #9ca3af;
+}
+
+.context-role-badge[data-role="scope"] {
+  border-left: 2px solid #10b981;
+  color: #6ee7b7;
+}
+
+/* =============================================================================
+   PFD PHASE 5B: HOVER PREVIEW (QUICK-LOOK)
+   Tooltip-like preview of node content on hover.
+   ============================================================================= */
+
+.node-hover-preview {
+  position: fixed;
+  z-index: 1000;
+  max-width: 320px;
+  min-width: 180px;
+  background: var(--gui-surface, rgba(28, 28, 28, 0.97));
+  border: 1px solid var(--gui-border, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  padding: 10px 12px;
+  pointer-events: none;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.node-hover-preview__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gui-text-primary, rgba(255, 255, 255, 0.9));
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-hover-preview__meta {
+  font-size: 10px;
+  color: var(--gui-text-tertiary, rgba(255, 255, 255, 0.4));
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.node-hover-preview__content {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--gui-text-secondary, rgba(255, 255, 255, 0.65));
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  max-height: 66px;
+}
+
+.node-hover-preview__empty {
+  font-size: 11px;
+  color: var(--gui-text-tertiary, rgba(255, 255, 255, 0.3));
+  font-style: italic;
+}
+
+/* =============================================================================
+   PFD PHASE 5A: IN-PLACE EXPANSION
+   ============================================================================= */
+
+/* Expanded node gets flexbox layout for scrollable body */
+.cognograph-node--in-place-expanded {
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  box-shadow: 0 0 0 3px var(--ring-color, #f59e0b), 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Body takes remaining flex space and scrolls */
+.cognograph-node__body--expanded {
+  flex: 1;
+  overflow: auto;
+  overscroll-behavior: contain;
+  min-height: 0; /* Required for flex scroll */
+}
+
+/* Collapse trigger button */
+.cognograph-node__collapse-trigger {
+  cursor: pointer;
+  background: var(--salt-a3, rgba(128,128,128,0.08));
+  border: 1px solid var(--salt-a5, rgba(128,128,128,0.15));
+  color: var(--salt-11, #888);
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-align: center;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.cognograph-node__collapse-trigger:hover {
+  background-color: var(--salt-a5, rgba(128,128,128,0.15));
+  color: var(--salt-12, #fff);
+}
+
+/* Dim non-expanded nodes when expansion is active */
+.in-place-expansion-active .react-flow__node {
+  opacity: 0.3;
+  transition: opacity 200ms ease-out;
+}
+
+.in-place-expansion-active .react-flow__node.cognograph-node--in-place-expanded,
+.in-place-expansion-active .react-flow__node:has(.cognograph-node--in-place-expanded) {
+  opacity: 1;
+}
+
+/* Dim edges when expansion is active */
+.in-place-expansion-active .react-flow__edge {
+  opacity: 0.15;
+  transition: opacity 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .in-place-expansion-active .react-flow__node,
+  .in-place-expansion-active .react-flow__edge {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .context-viz-active .react-flow__node,
+  .context-viz-active .react-flow__edge {
+    transition: none;
+  }
+}
+
+/* =============================================================================
+   PFD PHASE 7A: CANVAS TABLE OF CONTENTS
+   ============================================================================= */
+
+.canvas-toc {
+  position: fixed;
+  top: 72px;
+  right: 16px;
+  width: 320px;
+  max-height: calc(100vh - 100px);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--gui-panel-bg, rgba(30, 30, 30, 0.95));
+  border: 1px solid var(--gui-border, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  animation: toc-slide-in 200ms ease-out;
+}
+
+@keyframes toc-slide-in {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.canvas-toc__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--gui-border, rgba(255, 255, 255, 0.1));
+}
+
+.canvas-toc__title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gui-text-primary, #eee);
+}
+
+.canvas-toc__count {
+  font-size: 0.7rem;
+  color: var(--gui-text-tertiary, #666);
+  margin-left: auto;
+}
+
+.canvas-toc__close {
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--gui-text-tertiary, #666);
+  padding: 2px;
+  border-radius: 4px;
+  transition: color 150ms;
+}
+
+.canvas-toc__close:hover {
+  color: var(--gui-text-primary, #eee);
+}
+
+.canvas-toc__controls {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-bottom: 1px solid var(--gui-border, rgba(255, 255, 255, 0.06));
+}
+
+.canvas-toc__search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.canvas-toc__search-icon {
+  position: absolute;
+  left: 8px;
+  color: var(--gui-text-tertiary, #666);
+  pointer-events: none;
+}
+
+.canvas-toc__search {
+  width: 100%;
+  padding: 5px 8px 5px 28px;
+  background: var(--gui-input-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--gui-border, rgba(255, 255, 255, 0.1));
+  border-radius: 4px;
+  color: var(--gui-text-primary, #eee);
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.canvas-toc__search:focus {
+  border-color: var(--gui-accent, #f59e0b);
+}
+
+.canvas-toc__filters {
+  display: flex;
+  gap: 6px;
+}
+
+.canvas-toc__sort-btn {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--gui-input-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--gui-border, rgba(255, 255, 255, 0.1));
+  border-radius: 4px;
+  color: var(--gui-text-secondary, #aaa);
+  font-size: 0.7rem;
+  padding: 3px 8px;
+  transition: background 150ms;
+}
+
+.canvas-toc__sort-btn:hover {
+  background: var(--salt-a4, rgba(128, 128, 128, 0.1));
+}
+
+.canvas-toc__type-filter {
+  background: var(--gui-input-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--gui-border, rgba(255, 255, 255, 0.1));
+  border-radius: 4px;
+  color: var(--gui-text-secondary, #aaa);
+  font-size: 0.7rem;
+  padding: 3px 6px;
+  outline: none;
+}
+
+.canvas-toc__list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1;
+  min-height: 0;
+  max-height: 400px;
+}
+
+.canvas-toc__item {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--gui-border, rgba(255, 255, 255, 0.04));
+  color: var(--gui-text-primary, #eee);
+  font-size: 0.8rem;
+  text-align: left;
+  transition: background 100ms;
+}
+
+.canvas-toc__item:hover {
+  background: var(--salt-a3, rgba(128, 128, 128, 0.08));
+}
+
+.canvas-toc__item-type {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gui-text-tertiary, #666);
+  min-width: 48px;
+}
+
+.canvas-toc__item-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas-toc__item-mode {
+  font-size: 0.65rem;
+  color: var(--gui-text-tertiary, #888);
+  background: var(--salt-a3, rgba(128, 128, 128, 0.08));
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.canvas-toc__item-words {
+  font-size: 0.65rem;
+  color: var(--gui-text-tertiary, #555);
+  min-width: 24px;
+  text-align: right;
+}
+
+.canvas-toc__empty {
+  padding: 20px 12px;
+  text-align: center;
+  color: var(--gui-text-tertiary, #666);
+  font-size: 0.8rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-toc {
+    animation: none;
+  }
+}
+
+/* Legacy canvas-level semantic zoom classes (kept for non-NoteNode types) */
+.semantic-zoom-ultra-far .text-node-body {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .semantic-zoom-far .text-node-body {
   opacity: 0.5;
   pointer-events: none;
@@ -1528,5 +2612,698 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
   .auto-fit-button,
   .fold-badge {
     transition: none;
+  }
+}
+
+/* =============================================================================
+   PFD PHASE 7B: CALM MODE
+   Stimulus reduction toggle. Hides non-essential visual signals.
+   Shows only: title, node outline, connections. Everything else fades.
+   ============================================================================= */
+
+.calm-mode-active .react-flow__node .cognograph-node__density-bar,
+.calm-mode-active .react-flow__node .cognograph-node__tags,
+.calm-mode-active .react-flow__node .cognograph-node__mode-badge,
+.calm-mode-active .react-flow__node .cognograph-node__word-count,
+.calm-mode-active .react-flow__node .cognograph-node__context-label,
+.calm-mode-active .react-flow__node .numbered-bookmark-badge,
+.calm-mode-active .react-flow__node .landmark-badge,
+.calm-mode-active .react-flow__node .cognograph-node__body {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.calm-mode-active .react-flow__node {
+  box-shadow: none !important;
+  filter: none !important;
+  border-color: var(--gui-border-subtle, rgba(255, 255, 255, 0.1)) !important;
+}
+
+.calm-mode-active .react-flow__node .cognograph-node__header {
+  opacity: 0.85;
+}
+
+.calm-mode-active .react-flow__edge-path {
+  opacity: 0.35 !important;
+}
+
+.calm-mode-active .canvas-district-overlay,
+.calm-mode-active .spatial-region-overlay {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.calm-mode-active .context-scope-badge,
+.calm-mode-active .recency-fresh,
+.calm-mode-active .recency-warm {
+  box-shadow: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calm-mode-active .react-flow__node .cognograph-node__density-bar,
+  .calm-mode-active .react-flow__node .cognograph-node__tags,
+  .calm-mode-active .react-flow__node .cognograph-node__mode-badge,
+  .calm-mode-active .react-flow__node .cognograph-node__word-count,
+  .calm-mode-active .react-flow__node .cognograph-node__context-label,
+  .calm-mode-active .react-flow__node .numbered-bookmark-badge,
+  .calm-mode-active .react-flow__node .landmark-badge,
+  .calm-mode-active .react-flow__node .cognograph-node__body {
+    transition: none;
+  }
+}
+
+/* =============================================================================
+   PFD PHASE 7C: COGNITIVE LOAD METER
+   Compact bar showing visible node count at overview zoom.
+   ============================================================================= */
+
+.cognitive-load-meter {
+  position: fixed;
+  bottom: 140px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--gui-bg-secondary, rgba(17, 24, 39, 0.85));
+  border: 1px solid var(--gui-border-subtle, rgba(255, 255, 255, 0.06));
+  border-radius: 6px;
+  backdrop-filter: blur(8px);
+  z-index: 10;
+  pointer-events: auto;
+  user-select: none;
+  animation: cognitive-load-fade-in 0.3s ease;
+}
+
+.cognitive-load-meter__bar {
+  width: 40px;
+  height: 4px;
+  background: var(--gui-bg-tertiary, rgba(255, 255, 255, 0.05));
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.cognitive-load-meter__fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease, background-color 0.5s ease;
+}
+
+.cognitive-load-meter__label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+@keyframes cognitive-load-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cognitive-load-meter {
+    animation: none;
+  }
+  .cognitive-load-meter__fill {
+    transition: none;
+  }
+}
+
+/* =============================================================================
+   EDGE GRAMMAR LEGEND
+   Togglable legend showing edge visual encoding meaning.
+   ============================================================================= */
+
+.edge-grammar-legend {
+  position: fixed;
+  bottom: 60px;
+  right: 12px;
+  width: 240px;
+  background: var(--gui-bg-secondary, rgba(17, 24, 39, 0.92));
+  border: 1px solid var(--gui-border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 50;
+  animation: edge-legend-slide-in 0.25s ease;
+  overflow: hidden;
+}
+
+.edge-grammar-legend__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--gui-border-subtle, rgba(255, 255, 255, 0.06));
+}
+
+.edge-grammar-legend__title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gui-text-primary, #e5e7eb);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.edge-grammar-legend__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--gui-text-muted, #6b7280);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.edge-grammar-legend__close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--gui-text-primary, #e5e7eb);
+}
+
+.edge-grammar-legend__body {
+  padding: 8px 12px 12px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.edge-grammar-legend__group {
+  margin-bottom: 10px;
+}
+
+.edge-grammar-legend__group:last-child {
+  margin-bottom: 0;
+}
+
+.edge-grammar-legend__group-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--gui-text-muted, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.edge-grammar-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.edge-grammar-legend__swatch {
+  flex-shrink: 0;
+}
+
+.edge-grammar-legend__label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--gui-text-primary, #e5e7eb);
+  white-space: nowrap;
+  min-width: 55px;
+}
+
+.edge-grammar-legend__desc {
+  font-size: 0.65rem;
+  color: var(--gui-text-muted, #6b7280);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes edge-legend-slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edge-grammar-legend {
+    animation: none;
+  }
+}
+
+/* =============================================================================
+   EXECUTION STATUS BADGES — Phase 5A
+   Shape-coded status indicators for orchestrated workflow nodes.
+   WCAG 1.4.1: shapes differentiate status, not color alone.
+   ============================================================================= */
+
+.execution-status-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  line-height: 0;
+}
+
+.execution-status-badge--active {
+  animation: execution-pulse 1.5s ease-in-out infinite;
+}
+
+.execution-status-badge--queued {
+  /* Static — no animation */
+}
+
+.execution-status-badge--complete {
+  /* Static — no animation */
+}
+
+.execution-status-badge--error {
+  /* Static — no animation */
+}
+
+@keyframes execution-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .execution-status-badge--active {
+    animation: none;
+  }
+}
+
+/* =============================================================================
+   PFD Phase 5B: Context Selection Ring
+   ============================================================================= */
+
+.context-selection-ring {
+  outline: 2px dashed var(--gui-accent-primary, #3b82f6);
+  outline-offset: 3px;
+  animation: context-ring-dash 1.5s linear infinite;
+  border-radius: 8px;
+}
+
+@keyframes context-ring-dash {
+  0% {
+    outline-offset: 3px;
+    outline-color: var(--gui-accent-primary, #3b82f6);
+  }
+  50% {
+    outline-offset: 5px;
+    outline-color: var(--gui-accent-secondary, #8b5cf6);
+  }
+  100% {
+    outline-offset: 3px;
+    outline-color: var(--gui-accent-primary, #3b82f6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .context-selection-ring {
+    animation: none;
+    outline: 2px dashed var(--gui-accent-primary, #3b82f6);
+    outline-offset: 3px;
+  }
+}
+
+/* =============================================================================
+   ARTBOARD MODE — Phase 3A
+   ============================================================================= */
+
+.node-artboard {
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-panel, #1a1a2e);
+  border: 2px solid var(--node-accent, #6366f1);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--node-accent, #6366f1) 20%, transparent);
+}
+
+.node-artboard__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--node-accent) 30%, transparent);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary, #e5e5e5);
+  flex-shrink: 0;
+}
+
+.node-artboard__header-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--node-accent);
+  flex-shrink: 0;
+}
+
+.node-artboard__header-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-artboard__header-close {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #999);
+  cursor: pointer;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.node-artboard__header-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.node-artboard__body {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+/* Tab bar */
+.artboard-tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 36px;
+  padding: 0 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.artboard-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-secondary, #999);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  transition: color 150ms, border-color 150ms;
+  white-space: nowrap;
+}
+
+.artboard-tab:hover {
+  color: var(--text-primary);
+}
+
+.artboard-tab--active {
+  color: var(--node-accent);
+  border-bottom-color: var(--node-accent);
+}
+
+/* Split pane */
+.artboard-split-pane {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.artboard-split-pane__left,
+.artboard-split-pane__right {
+  overflow: auto;
+  min-width: 0;
+}
+
+.artboard-split-pane__divider {
+  width: 4px;
+  cursor: col-resize;
+  background: rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+  transition: background 150ms;
+}
+
+.artboard-split-pane__divider:hover,
+.artboard-split-pane__divider:active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .artboard-tab,
+  .artboard-split-pane__divider {
+    transition: none;
+  }
+}
+
+/* =============================================================================
+   CC SESSION VISUAL IDENTITY — Phase 4E
+   Terminal session nodes with accent colors and status indicators
+   ============================================================================= */
+
+.conversation-node--cc-session {
+  background: color-mix(in srgb, var(--surface-panel, #1a1a2e) 95%, #000 5%);
+}
+
+.cc-session-badge {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
+/* Session status indicator animations */
+.session-status--running {
+  animation: session-pulse 2s ease-in-out infinite;
+}
+
+@keyframes session-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .session-status--running {
+    animation: none;
+  }
+}
+
+
+/* =============================================================================
+   DEPTH-OF-FIELD RINGS -- Phase 6A
+   Visual focal gradient based on BFS graph distance from a focus node.
+   Ring 0 = focus node (no change), Ring 1-3 = increasing dimming,
+   Out-of-scope = disconnected nodes (near-invisible).
+   ============================================================================= */
+
+.dof-ring-0 {
+  /* Focus node -- no visual modification */
+}
+
+.dof-ring-1 {
+  opacity: 0.85;
+  filter: saturate(0.9);
+  transition: opacity 200ms ease, filter 200ms ease;
+}
+
+.dof-ring-2 {
+  opacity: 0.65;
+  filter: saturate(0.7) brightness(0.95);
+  transition: opacity 200ms ease, filter 200ms ease;
+}
+
+.dof-ring-3 {
+  opacity: 0.5;
+  filter: saturate(0.5) brightness(0.9);
+  transition: opacity 200ms ease, filter 200ms ease;
+}
+
+.dof-out-of-scope {
+  opacity: 0.25;
+  filter: saturate(0.3) brightness(0.85) blur(0.5px);
+  transition: opacity 200ms ease, filter 200ms ease;
+}
+
+/*
+ * Minimum opacity floor: nodes with visible text content (mid, close, ultra-close)
+ * should never go below 0.4 opacity even when out of DoF scope.
+ * Nodes at far/ultra-far LOD can go down to 0.25.
+ */
+[data-lod="mid"].dof-out-of-scope,
+[data-lod="close"].dof-out-of-scope,
+[data-lod="ultra-close"].dof-out-of-scope {
+  opacity: 0.4;
+}
+
+[data-lod="mid"].dof-ring-3,
+[data-lod="close"].dof-ring-3,
+[data-lod="ultra-close"].dof-ring-3 {
+  opacity: 0.5;
+}
+
+/* DoF reduced-motion: instant opacity, no filter transitions */
+@media (prefers-reduced-motion: reduce) {
+  .dof-ring-1,
+  .dof-ring-2,
+  .dof-ring-3,
+  .dof-out-of-scope {
+    transition: none;
+  }
+}
+
+/* =============================================================================
+   CALM MODE LEVELS — Phase 6F
+   Stepped calm mode slider: 4 levels of progressive visual reduction.
+   Applied via data-calm attribute on the canvas container.
+   Level 0: Normal (no attribute needed)
+   Level 1: Subtle desaturation
+   Level 2: More desaturation + dimming, suppress animations
+   Level 3: Maximum reduction, text-only mode
+   ============================================================================= */
+
+[data-calm="1"] {
+  filter: saturate(0.85);
+}
+
+[data-calm="2"] {
+  filter: saturate(0.7) brightness(0.95);
+}
+
+[data-calm="2"] *,
+[data-calm="2"] *::before,
+[data-calm="2"] *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}
+
+[data-calm="3"] {
+  filter: saturate(0.5) brightness(0.9);
+}
+
+[data-calm="3"] *,
+[data-calm="3"] *::before,
+[data-calm="3"] *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* Calm mode indicator pill */
+.calm-mode-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--surface-panel, #1a1a2e) 90%, transparent);
+  color: var(--text-secondary, #999);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 200ms ease, background 200ms ease;
+}
+
+.calm-mode-indicator[data-level="0"] {
+  opacity: 0;
+}
+
+.calm-mode-indicator[data-level="1"] {
+  opacity: 0.7;
+  color: var(--gui-accent-success, #10b981);
+}
+
+.calm-mode-indicator[data-level="2"] {
+  opacity: 0.85;
+  color: var(--gui-accent-warning, #f59e0b);
+}
+
+.calm-mode-indicator[data-level="3"] {
+  opacity: 1;
+  color: var(--gui-accent-danger, #ef4444);
+}
+
+
+/* =============================================================================
+   PFD PHASE 6B: CLUSTER OVERLAY
+   Summary bubbles rendered at L0 (ultra-far) zoom showing spatial clusters.
+   ============================================================================= */
+
+.cluster-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.cluster-bubble {
+  pointer-events: auto;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  backdrop-filter: blur(4px);
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.cluster-bubble:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.cluster-bubble-icon {
+  opacity: 0.8;
+}
+
+.cluster-bubble-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary, #e2e8f0);
+  line-height: 1;
+}
+
+.cluster-bubble-status {
+  font-size: 8px;
+  color: var(--text-secondary, #94a3b8);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cluster-bubble {
+    transition: none;
+  }
+}
+
+/* =============================================================================
+   Global Reduced Motion (Phase 1B)
+   Kills ALL animations and transitions for users who prefer reduced motion.
+   Individual @media (prefers-reduced-motion) blocks above handle specific cases;
+   this is the nuclear option that catches everything else.
+   ============================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

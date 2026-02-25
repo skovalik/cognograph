@@ -8,11 +8,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AurochsDigital/cognograph.git"
+    "url": "https://github.com/skovalik/cognograph.git"
   },
-  "homepage": "https://github.com/AurochsDigital/cognograph#readme",
+  "homepage": "https://github.com/skovalik/cognograph#readme",
   "bugs": {
-    "url": "https://github.com/AurochsDigital/cognograph/issues"
+    "url": "https://github.com/skovalik/cognograph/issues"
   },
   "keywords": [
     "ai",
@@ -51,6 +51,7 @@
     "validate:arch": "depcruise src --config .dependency-cruiser.cjs",
     "validate:deps": "knip",
     "validate": "npm run typecheck && npm run validate:arch && npm run validate:deps",
+    "postinstall": "electron-rebuild",
     "prepare": "husky",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
@@ -65,6 +66,7 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@google/generative-ai": "^0.19.0",
     "@modelcontextprotocol/sdk": "^1.25.2",
+    "@notionhq/client": "^5.9.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.8",
@@ -107,6 +109,8 @@
     "@types/dagre": "^0.7.53",
     "@types/express": "^5.0.6",
     "@types/react-window": "^1.8.8",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "@xyflow/react": "^12.3.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

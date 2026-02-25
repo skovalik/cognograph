@@ -314,5 +314,20 @@ export const TOOL_DEFINITIONS = [
       type: 'object',
       properties: {}
     }
+  },
+  {
+    name: 'get_initial_context',
+    description:
+      'Get the full canvas context for a node, including all connected nodes via BFS traversal. Use this at the start of a session to understand the workspace topology.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        nodeId: {
+          type: 'string',
+          description:
+            'The node ID to get context for. If not provided, uses the COGNOGRAPH_NODE_ID env var.'
+        }
+      }
+    }
   }
 ]

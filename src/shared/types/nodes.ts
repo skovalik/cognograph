@@ -31,8 +31,21 @@ export interface ConversationNodeData extends ContextMetadata {
   extractedTitles?: string[] // For duplicate detection
 
   // Agent mode settings
-  mode?: 'chat' | 'agent' // Default: 'chat' (undefined = 'chat' for migration)
+  mode?: 'chat' | 'agent' | 'cc-session' // Default: 'chat' (undefined = 'chat' for migration)
   agentSettings?: AgentSettings
+
+  // CC Session fields (only meaningful when mode === 'cc-session')
+  ccSession?: {
+    sessionId: string               // CLAUDE_SESSION_ID
+    origin: 'embedded' | 'external'
+    workingDirectory: string
+    model?: string
+    terminalState: 'running' | 'idle' | 'exited'
+    exitCode?: number
+    startedAt: number               // Unix ms
+    lastActivityAt: number
+    accentColor: string             // From SESSION_ACCENT_COLORS palette
+  }
 
   // Agent-specific fields (only meaningful when mode === 'agent')
   agentPreset?: string               // Preset template ID (e.g., 'canvas', 'code', 'research', 'custom')
@@ -453,8 +466,13 @@ export interface AgentRunSummary {
   completedAt?: string    // ISO timestamp
   status: 'completed' | 'error' | 'cancelled' | 'paused'
   toolCallCount: number
-  tokensUsed: number
+  tokensUsed: number      // Backwards compat: inputTokens + outputTokens
   costUSD: number
+  // New token tracking fields (Phase 2 P0)
+  inputTokens: number
+  outputTokens: number
+  cacheCreationTokens?: number
+  cacheReadTokens?: number
   errorMessage?: string
   summary?: string        // Agent-generated summary of what it did
 }
@@ -653,6 +671,8 @@ export interface OrchestratorAgentResult {
   /** Token usage for this agent run */
   inputTokens: number
   outputTokens: number
+  cacheCreationTokens?: number
+  cacheReadTokens?: number
   costUSD: number
   /** Duration in ms */
   durationMs: number
@@ -682,6 +702,8 @@ export interface OrchestratorRun {
   /** Aggregate token usage */
   totalInputTokens: number
   totalOutputTokens: number
+  totalCacheCreationTokens?: number
+  totalCacheReadTokens?: number
   totalCostUSD: number
   /** Total duration in ms */
   totalDurationMs: number
@@ -689,6 +711,10 @@ export interface OrchestratorRun {
   error?: string
   /** ID of the parent orchestration if triggered by another orchestrator (cycle detection) */
   parentOrchestrationId?: string
+  /** Workspace/canvas ID this run belongs to */
+  workspaceId?: string
+  /** Model used for this run (extracted from first agent config) */
+  model?: string
 }
 
 export interface OrchestratorNodeData extends ContextMetadata {

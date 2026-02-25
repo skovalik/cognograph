@@ -41,6 +41,21 @@ export function useActionSubscription(): void {
         const prevMap = prevNodesRef.current
         const currentMap = new Map<string, Node<NodeData>>()
 
+        // Quick bailout: if same length and no data references changed, skip (drag-only update)
+        if (nodes.length === prevMap.size) {
+          let hasDataChange = false
+          for (const node of nodes) {
+            const prev = prevMap.get(node.id)
+            if (!prev || prev.data !== node.data) { hasDataChange = true; break }
+          }
+          if (!hasDataChange) {
+            // Rebuild map with new references but skip expensive event processing
+            for (const node of nodes) currentMap.set(node.id, node)
+            prevNodesRef.current = currentMap
+            return
+          }
+        }
+
         // Build current node map
         for (const node of nodes) {
           currentMap.set(node.id, node)

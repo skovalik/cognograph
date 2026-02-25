@@ -598,6 +598,7 @@ function CustomEdgeComponent({
   const edgeStyle: EdgeStyle = edgeData.edgeStyle || globalEdgeStyle
 
   // Node colors for gradients (with defensive fallback to hardcoded defaults)
+  // Return primitives to avoid new object references causing re-renders on every drag frame
   const sourceColor = useWorkspaceStore((state) => {
     const node = state.nodes.find(n => n.id === source)
     const nodeType = node?.data?.type || 'conversation'
@@ -609,15 +610,25 @@ function CustomEdgeComponent({
     return node?.data?.color || state.themeSettings.nodeColors[nodeType] || NODE_TYPE_COLORS[nodeType] || '#64748b'
   })
 
-  // Node metadata for context flow indicators
-  const sourceNodeInfo = useWorkspaceStore((state) => {
+  // Node metadata for context flow indicators — return primitives, not objects
+  const sourceNodeType = useWorkspaceStore((state) => {
     const node = state.nodes.find(n => n.id === source)
-    return node ? { type: node.data?.type, title: node.data?.title || 'Untitled' } : null
+    return node?.data?.type ?? null
   })
-  const targetNodeInfo = useWorkspaceStore((state) => {
+  const sourceNodeTitle = useWorkspaceStore((state) => {
+    const node = state.nodes.find(n => n.id === source)
+    return node?.data?.title || 'Untitled'
+  })
+  const targetNodeType = useWorkspaceStore((state) => {
     const node = state.nodes.find(n => n.id === target)
-    return node ? { type: node.data?.type, title: node.data?.title || 'Untitled' } : null
+    return node?.data?.type ?? null
   })
+  const targetNodeTitle = useWorkspaceStore((state) => {
+    const node = state.nodes.find(n => n.id === target)
+    return node?.data?.title || 'Untitled'
+  })
+  const sourceNodeInfo = sourceNodeType != null ? { type: sourceNodeType, title: sourceNodeTitle } : null
+  const targetNodeInfo = targetNodeType != null ? { type: targetNodeType, title: targetNodeTitle } : null
 
   // Determine if this edge carries context (inbound to conversation, or bidirectional)
   const isContextEdge = useMemo(() => {
@@ -1247,6 +1258,31 @@ function CustomEdgeComponent({
       updateEdge(id, { waypoints: [newWaypoint], centerOffset: undefined })
     }
   }, [id, waypoints, sourceX, sourceY, targetX, targetY, updateEdge, isWorkspaceLink])
+
+  // ==========================================================================
+  // EDGE LOD (Level of Detail) — PFD Phase 3A
+  // Far zoom: strong edges only. Mid: strong + normal. Close: all edges.
+  // Selected, workspace-link, and context-highlighted edges always visible.
+  // ==========================================================================
+
+  const edgeLodHidden = useMemo(() => {
+    if (selected || isWorkspaceLink || isContextProviderHighlighted || showContextFlow) return false
+    const strength = edgeData.strength || 'normal'
+    if (zoom < 0.25) {
+      // Far zoom: only strong edges
+      return strength !== 'strong'
+    }
+    if (zoom < 0.5) {
+      // Mid zoom: strong + normal edges
+      return strength === 'light'
+    }
+    // Close zoom: all edges
+    return false
+  }, [zoom, edgeData.strength, selected, isWorkspaceLink, isContextProviderHighlighted, showContextFlow])
+
+  if (edgeLodHidden) {
+    return <g />
+  }
 
   // ==========================================================================
   // RENDER

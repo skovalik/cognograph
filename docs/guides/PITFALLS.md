@@ -430,7 +430,7 @@ Plan/roadmap documents (like `docs/NEXT_PHASE_PLAN.md`) describe features as "ne
 3. **On session end:** Review which plan items you touched and update their status.
 4. **Standard markers:** `✅ DONE`, `🟡 PARTIAL`, `❌ REMAINING`, `⏳ DEFERRED`
 
-See also: `CLAUDE.md` → "Plan Drift Prevention" section.
+Keep plan documents current to avoid re-implementing completed work.
 
 ---
 

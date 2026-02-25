@@ -352,6 +352,14 @@ export interface SpatialRegion {
   color?: string
   linkedActionIds?: string[]
   nodes?: string[] // Node IDs contained in this region (used by spatial analysis)
+
+  // PFD Phase 3B: Canvas Districts
+  isDistrict?: boolean           // true = visual grouping district, false/undefined = action trigger region
+  districtStyle?: 'tint' | 'hatching'  // Background treatment (grayscale only — hue reserved for NoteMode)
+  districtOpacity?: number       // 0.0-1.0, default 0.04
+
+  // PFD Phase 5C: Presentation Mode
+  presentationOrder?: number     // Manual slide ordering (lower = earlier); fallback: sort by x-position
 }
 
 // -----------------------------------------------------------------------------

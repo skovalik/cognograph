@@ -83,7 +83,7 @@ export const AgentSettingsEditor: React.FC<AgentSettingsEditorProps> = ({
                   <span className="gui-text-primary">Can Create Nodes</span>
                   <span
                     className="text-[var(--text-muted)] ml-auto"
-                    title="Allow agent to create new nodes on canvas"
+                    title="Allow agent to create new nodes and configure context"
                   >
                     <HelpCircle className="w-3 h-3" />
                   </span>

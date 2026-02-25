@@ -412,7 +412,7 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
   const inactiveButtonClass = 'gui-text-secondary'
 
   return (
-    <div className="h-full flex flex-col glass-soft gui-panel">
+    <div className="h-full flex flex-col">
       {/* Search bar */}
       <div className={`p-2 border-b ${borderClass}`}>
         <div className="relative">

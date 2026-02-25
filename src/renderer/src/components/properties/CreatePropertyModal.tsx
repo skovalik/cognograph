@@ -209,7 +209,7 @@ export const CreatePropertyModal = memo(function CreatePropertyModal({
                   onChange={(e) => setShowInCard(e.target.checked)}
                   className="rounded border-[var(--border-subtle)] bg-[var(--surface-panel)] text-blue-500 focus:ring-blue-500"
                 />
-                Show on node card
+                Show on node
               </label>
               <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
                 <input

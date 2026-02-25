@@ -402,7 +402,7 @@ function CommandPaletteComponent({ isOpen, onClose }: CommandPaletteProps): JSX.
       {
         id: 'ai:organize',
         label: 'AI: Organize Layout',
-        description: 'Arrange and structure nodes on canvas',
+        description: 'Arrange and structure connected nodes',
         icon: LayoutGrid,
         category: 'ai',
         action: () => { onClose(); openAIEditor({ mode: 'organize' }) }

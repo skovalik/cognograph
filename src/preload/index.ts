@@ -12,6 +12,7 @@ export interface WorkspaceAPI {
   watch: (id: string) => Promise<{ success: boolean; error?: string }>
   unwatch: (id: string) => Promise<{ success: boolean; error?: string }>
   onExternalChange: (callback: (id: string) => void) => () => void
+  onWorkspaceSaved: (callback: (data: { filePath: string; canvasId: string; version: number }) => void) => () => void
   resetForTest: () => Promise<{ success: boolean; error?: string }>
 }
 
@@ -242,17 +243,51 @@ export interface AgentRequestPayload {
   systemPromptPrefix?: string
 }
 
-export interface AgentStreamChunk {
-  requestId: string
-  conversationId: string
-  type: 'text_delta' | 'tool_use_start' | 'tool_use_delta' | 'tool_use_end' | 'done' | 'error'
-  content?: string // For text_delta
-  toolUseId?: string // For tool_use_*
-  toolName?: string // For tool_use_start
-  toolInput?: string // Partial JSON for tool_use_delta
-  stopReason?: string // For done
-  error?: string // For error
-}
+export type AgentStreamChunk =
+  | {
+      requestId: string
+      conversationId: string
+      type: 'text_delta'
+      content: string
+    }
+  | {
+      requestId: string
+      conversationId: string
+      type: 'tool_use_start'
+      toolUseId: string
+      toolName: string
+    }
+  | {
+      requestId: string
+      conversationId: string
+      type: 'tool_use_delta'
+      toolUseId: string
+      toolInput: string // Partial JSON
+    }
+  | {
+      requestId: string
+      conversationId: string
+      type: 'tool_use_end'
+      toolUseId: string
+    }
+  | {
+      requestId: string
+      conversationId: string
+      type: 'done'
+      stopReason: string
+      usage?: {
+        input_tokens: number
+        output_tokens: number
+        cache_creation_input_tokens?: number
+        cache_read_input_tokens?: number
+      }
+    }
+  | {
+      requestId: string
+      conversationId: string
+      type: 'error'
+      error: string
+    }
 
 export interface AgentAPI {
   sendWithTools: (payload: AgentRequestPayload) => Promise<void>
@@ -479,6 +514,25 @@ export interface BridgeAPI {
   onInsights: (callback: (insights: unknown[]) => void) => () => void
 }
 
+export interface NotionAPI {
+  testConnection: () => Promise<{ success: boolean; workspaceName?: string; error?: string }>
+  isConnected: () => Promise<{ connected: boolean; config?: { workflowsDbId: string; execLogDbId: string } }>
+  health: () => Promise<{ circuitState: string; syncEnabled: boolean; hasToken: boolean; hasConfig: boolean }>
+}
+
+export interface TerminalAPI {
+  spawn: (config: { nodeId: string; sessionId: string; cwd?: string; cols?: number; rows?: number }) =>
+    Promise<{ sessionId: string; nodeId: string; pid: number }>
+  write: (nodeId: string, data: string) => Promise<void>
+  resize: (nodeId: string, cols: number, rows: number) => Promise<void>
+  kill: (nodeId: string) => Promise<void>
+  getScrollback: (nodeId: string) => Promise<string[]>
+  /** Subscribe to PTY data events for a specific node. Returns cleanup function. */
+  onData: (nodeId: string, callback: (data: string) => void) => () => void
+  /** Subscribe to PTY exit events for a specific node. Returns cleanup function. */
+  onExit: (nodeId: string, callback: (exitCode: number) => void) => () => void
+}
+
 export interface ElectronAPI {
   workspace: WorkspaceAPI
   settings: SettingsAPI
@@ -498,6 +552,15 @@ export interface ElectronAPI {
   mcpClient: MCPClientAPI
   credentials: CredentialAPI
   bridge: BridgeAPI
+  notion: NotionAPI
+  terminal: TerminalAPI
+  plugin: {
+    call: (pluginId: string, method: string, ...args: unknown[]) => Promise<unknown>
+    on: (pluginId: string, event: string, callback: (...args: unknown[]) => void) => () => void
+  }
+  plugins: {
+    getEnabledIds: () => Promise<string[]>
+  }
 }
 
 // Expose APIs to renderer
@@ -518,6 +581,13 @@ const api: ElectronAPI = {
       const handler = (_event: Electron.IpcRendererEvent, id: string): void => callback(id)
       ipcRenderer.on('workspace:external-change', handler)
       return () => ipcRenderer.removeListener('workspace:external-change', handler)
+    },
+    onWorkspaceSaved: (callback) => {
+      // Remove all existing listeners first to prevent duplicates from hot reload
+      ipcRenderer.removeAllListeners('workspace:saved')
+      const handler = (_event: Electron.IpcRendererEvent, data: { filePath: string; canvasId: string; version: number }): void => callback(data)
+      ipcRenderer.on('workspace:saved', handler)
+      return () => ipcRenderer.removeListener('workspace:saved', handler)
     },
     resetForTest: () => ipcRenderer.invoke('workspace:reset-for-test')
   },
@@ -728,6 +798,57 @@ const api: ElectronAPI = {
       ipcRenderer.on('bridge:insights', handler)
       return () => ipcRenderer.removeListener('bridge:insights', handler)
     },
+  },
+  notion: {
+    testConnection: () => ipcRenderer.invoke('notion:testConnection'),
+    isConnected: () => ipcRenderer.invoke('notion:isConnected'),
+    health: () => ipcRenderer.invoke('notion:health')
+  },
+  terminal: {
+    spawn: (config) => ipcRenderer.invoke('terminal:spawn', config),
+    write: (nodeId, data) => ipcRenderer.invoke('terminal:write', nodeId, data),
+    resize: (nodeId, cols, rows) => ipcRenderer.invoke('terminal:resize', nodeId, cols, rows),
+    kill: (nodeId) => ipcRenderer.invoke('terminal:kill', nodeId),
+    getScrollback: (nodeId) => ipcRenderer.invoke('terminal:getScrollback', nodeId),
+    onData: (nodeId, callback) => {
+      const handler = (_event: Electron.IpcRendererEvent, id: string, data: string): void => {
+        if (id === nodeId) callback(data)
+      }
+      ipcRenderer.on('terminal:data', handler)
+      return () => ipcRenderer.removeListener('terminal:data', handler)
+    },
+    onExit: (nodeId, callback) => {
+      const handler = (_event: Electron.IpcRendererEvent, id: string, exitCode: number): void => {
+        if (id === nodeId) callback(exitCode)
+      }
+      ipcRenderer.on('terminal:exit', handler)
+      return () => ipcRenderer.removeListener('terminal:exit', handler)
+    }
+  },
+  plugin: {
+    call: (pluginId: string, method: string, ...args: unknown[]) => {
+      // Validate at the preload boundary — defense-in-depth (main validates too)
+      if (!/^[a-z][a-z0-9-]{0,63}$/.test(pluginId)) throw new Error(`Invalid plugin ID: ${pluginId}`)
+      if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(method)) throw new Error(`Invalid method: ${method}`)
+      return ipcRenderer.invoke('plugin:call', pluginId, method, ...args)
+    },
+
+    on: (pluginId: string, event: string, callback: (...args: unknown[]) => void) => {
+      if (!/^[a-z][a-z0-9-]{0,63}$/.test(pluginId)) throw new Error(`Invalid plugin ID: ${pluginId}`)
+      if (!/^[a-zA-Z][a-zA-Z0-9._-]*$/.test(event)) throw new Error(`Invalid event: ${event}`)
+      const channel = `plugin:${pluginId}:${event}`
+      // LIMITATION: removeAllListeners means only ONE listener per (pluginId, event) pair.
+      // This is intentional — prevents StrictMode double-mount accumulation.
+      // If multiple components need the same event, use a shared store or context.
+      ipcRenderer.removeAllListeners(channel)
+      const handler = (_event: Electron.IpcRendererEvent, ...args: unknown[]) => callback(...args)
+      ipcRenderer.on(channel, handler)
+      return () => { ipcRenderer.removeListener(channel, handler) }
+    }
+  },
+  // Separate namespace — not routed through plugin:call (avoids method regex validation)
+  plugins: {
+    getEnabledIds: () => ipcRenderer.invoke('plugins:getEnabledIds')
   }
 }
 
