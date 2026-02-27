@@ -36,8 +36,13 @@ files:
 # Pack into ASAR archive for faster loading and path length mitigation on Windows
 asar: true
 
-# Don't rebuild native modules (we don't have any currently)
-npmRebuild: false
+# node-pty is a native module that must be unpacked from the ASAR archive
+# so that its .node bindings can be loaded by the OS at runtime.
+asarUnpack:
+  - "**/node_modules/node-pty/**"
+
+# Rebuild native modules (node-pty) for the target Electron version
+npmRebuild: true
 
 # --- Windows ----------------------------------------------------------------
 win:
@@ -61,14 +66,10 @@ nsis:
 
 # --- macOS -------------------------------------------------------------------
 mac:
-  icon: build/icon.png
+  icon: build/icon.icns
   category: public.app-category.productivity
   target:
     - target: dmg
-      arch:
-        - x64
-        - arm64
-    - target: zip
       arch:
         - x64
         - arm64
