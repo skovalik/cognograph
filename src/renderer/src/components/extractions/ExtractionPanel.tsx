@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useCallback, useState, useEffect, useRef } from 'react'
 import { Sparkles, X } from 'lucide-react'
 import { useReactFlow } from '@xyflow/react'

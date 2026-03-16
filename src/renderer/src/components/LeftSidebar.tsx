@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useCallback, useRef, useState } from 'react'
 import { GripVertical } from 'lucide-react'
 import { useWorkspaceStore } from '../stores/workspaceStore'

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import * as React from 'react'
 import * as LabelPrimitive from '@radix-ui/react-label'
 import { cva, type VariantProps } from 'class-variance-authority'

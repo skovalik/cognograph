@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { X, ArrowRight, ArrowLeftRight, Trash2, RefreshCw, Type, Bold, Italic, Palette, RotateCcw, Minus, Circle, Diamond, ChevronRight, Spline, CornerDownRight, MoveRight, GitBranch, Layers } from 'lucide-react'
 import { useState, useCallback, useMemo } from 'react'
 import { useWorkspaceStore } from '../stores/workspaceStore'

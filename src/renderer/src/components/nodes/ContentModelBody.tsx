@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // ContentModelBody -- Renders inside NoteNode when noteMode === 'content-model'
 // Displays WordPress CPT definition: post type, fields, taxonomies, and GraphQL names
 

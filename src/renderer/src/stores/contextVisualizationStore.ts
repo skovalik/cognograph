@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // Context Visualization Store — PFD Phase 4: AI Context Transparency
 // Manages the visual state of context scope highlighting on the canvas.
 // Activated when chat input is focused on a node.

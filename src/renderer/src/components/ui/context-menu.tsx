@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import * as React from 'react'
 import * as ContextMenuPrimitive from '@radix-ui/react-context-menu'
 import { Check, ChevronRight, Circle } from 'lucide-react'

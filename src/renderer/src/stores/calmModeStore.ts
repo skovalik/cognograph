@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // Calm Mode Store — PFD Phase 6F: Stepped Calm Mode Slider
 //
 // Replaces the boolean calmMode toggle with a 4-level stepped system.

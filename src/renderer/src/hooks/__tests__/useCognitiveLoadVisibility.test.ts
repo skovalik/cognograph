@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 /**
  * useCognitiveLoadVisibility (Phase 6F) -- Cognitive load meter visibility tests
  *

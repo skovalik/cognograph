@@ -1,6 +1,9 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 'use client';
 import React, { useRef, useEffect, useCallback, useMemo } from 'react';
-import { gsap } from 'gsap';
+import { animate, type AnimationPlaybackControls } from 'framer-motion';
 
 const throttle = (func: (...args: any[]) => void, limit: number) => {
   let lastCall = 0;
@@ -28,6 +31,7 @@ interface Dot {
   xOffset: number;
   yOffset: number;
   _inertiaApplied: boolean;
+  _controls: AnimationPlaybackControls[];
 }
 
 export interface DotGridProps {
@@ -129,7 +133,7 @@ const DotGrid: React.FC<DotGridProps> = ({
       for (let x = 0; x < cols; x++) {
         const cx = startX + x * cell;
         const cy = startY + y * cell;
-        dots.push({ cx, cy, xOffset: 0, yOffset: 0, _inertiaApplied: false });
+        dots.push({ cx, cy, xOffset: 0, yOffset: 0, _inertiaApplied: false, _controls: [] });
       }
     }
     dotsRef.current = dots;
@@ -229,7 +233,8 @@ const DotGrid: React.FC<DotGridProps> = ({
         const dist = Math.hypot(dot.cx - pr.x, dot.cy - pr.y);
         if (speed > speedTrigger && dist < proximity && !dot._inertiaApplied) {
           dot._inertiaApplied = true;
-          gsap.killTweensOf(dot);
+          dot._controls.forEach(c => c.stop());
+          dot._controls = [];
           let pushX = (dot.cx - pr.x) * 0.3 + vx * 0.001;
           let pushY = (dot.cy - pr.y) * 0.3 + vy * 0.001;
           // Cap displacement so dots never fly far from home
@@ -241,21 +246,32 @@ const DotGrid: React.FC<DotGridProps> = ({
             pushY *= clamp;
           }
           const driftDuration = Math.min(2, resistance / 1000);
-          gsap.to(dot, {
-            xOffset: pushX,
-            yOffset: pushY,
+          const cx = animate(dot.xOffset, pushX, {
             duration: driftDuration,
-            ease: 'power2.out',
-            onComplete: () => {
-              gsap.to(dot, {
-                xOffset: 0,
-                yOffset: 0,
-                duration: returnDuration,
-                ease: 'power3.out'
-              });
-              dot._inertiaApplied = false;
-            }
+            ease: [0.33, 1, 0.68, 1],
+            onUpdate: (v) => { dot.xOffset = v; },
           });
+          const cy2 = animate(dot.yOffset, pushY, {
+            duration: driftDuration,
+            ease: [0.33, 1, 0.68, 1],
+            onUpdate: (v) => { dot.yOffset = v; },
+            onComplete: () => {
+              dot._controls = [];
+              const rx = animate(dot.xOffset, 0, {
+                duration: returnDuration,
+                ease: [0.22, 1, 0.36, 1],
+                onUpdate: (v) => { dot.xOffset = v; },
+              });
+              const ry = animate(dot.yOffset, 0, {
+                duration: returnDuration,
+                ease: [0.22, 1, 0.36, 1],
+                onUpdate: (v) => { dot.yOffset = v; },
+                onComplete: () => { dot._inertiaApplied = false; },
+              });
+              dot._controls = [rx, ry];
+            },
+          });
+          dot._controls = [cx, cy2];
         }
       }
     };
@@ -264,16 +280,17 @@ const DotGrid: React.FC<DotGridProps> = ({
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
-      const cx = e.clientX - rect.left;
-      const cy = e.clientY - rect.top;
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
       for (const dot of dotsRef.current) {
-        const dist = Math.hypot(dot.cx - cx, dot.cy - cy);
+        const dist = Math.hypot(dot.cx - clickX, dot.cy - clickY);
         if (dist < shockRadius && !dot._inertiaApplied) {
           dot._inertiaApplied = true;
-          gsap.killTweensOf(dot);
+          dot._controls.forEach(c => c.stop());
+          dot._controls = [];
           const falloff = Math.max(0, 1 - dist / shockRadius);
-          let pushX = (dot.cx - cx) * shockStrength * falloff;
-          let pushY = (dot.cy - cy) * shockStrength * falloff;
+          let pushX = (dot.cx - clickX) * shockStrength * falloff;
+          let pushY = (dot.cy - clickY) * shockStrength * falloff;
           // Cap shock displacement
           const pushMag = Math.hypot(pushX, pushY);
           const maxPush = (dotSize + gap) * 1.5;
@@ -283,21 +300,32 @@ const DotGrid: React.FC<DotGridProps> = ({
             pushY *= clamp;
           }
           const driftDuration = Math.min(2, resistance / 1000);
-          gsap.to(dot, {
-            xOffset: pushX,
-            yOffset: pushY,
+          const ax = animate(dot.xOffset, pushX, {
             duration: driftDuration,
-            ease: 'power2.out',
-            onComplete: () => {
-              gsap.to(dot, {
-                xOffset: 0,
-                yOffset: 0,
-                duration: returnDuration,
-                ease: 'power3.out'
-              });
-              dot._inertiaApplied = false;
-            }
+            ease: [0.33, 1, 0.68, 1],
+            onUpdate: (v) => { dot.xOffset = v; },
           });
+          const ay = animate(dot.yOffset, pushY, {
+            duration: driftDuration,
+            ease: [0.33, 1, 0.68, 1],
+            onUpdate: (v) => { dot.yOffset = v; },
+            onComplete: () => {
+              dot._controls = [];
+              const rx = animate(dot.xOffset, 0, {
+                duration: returnDuration,
+                ease: [0.22, 1, 0.36, 1],
+                onUpdate: (v) => { dot.xOffset = v; },
+              });
+              const ry = animate(dot.yOffset, 0, {
+                duration: returnDuration,
+                ease: [0.22, 1, 0.36, 1],
+                onUpdate: (v) => { dot.yOffset = v; },
+                onComplete: () => { dot._inertiaApplied = false; },
+              });
+              dot._controls = [rx, ry];
+            },
+          });
+          dot._controls = [ax, ay];
         }
       }
     };

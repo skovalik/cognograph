@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // ExecutionStatusOverlay — Phase 5A: Canvas-Level Execution Badges
 // Renders ExecutionStatusBadge on all participating nodes during an
 // orchestrated execution. Positioned at the canvas level so ANY node

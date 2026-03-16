@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // PresentationMode — PFD Phase 5C: Region-Based Presentation Mode
 // Turns named spatial regions into "slides" and iterates through them,
 // fitting each region to the viewport with animated transitions.

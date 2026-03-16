@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // CanvasDistrictOverlay — PFD Phase 3B: Canvas Districts
 // Renders user-designated regions as grayscale background tints
 // Spec: COGNOGRAPH-PFD-IMPLEMENTATION-PLAN.md Phase 3B

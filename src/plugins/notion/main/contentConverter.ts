@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // ContentConverter — TipTap HTML ↔ Notion block conversion
 // Spec: COGNOGRAPH-NOTION-NODE-SYNC-SPEC.md Section 6
 //

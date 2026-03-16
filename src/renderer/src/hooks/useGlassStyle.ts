@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 /**
  * React hook for accessing effective glass style.
  *
@@ -6,7 +9,7 @@
  */
 
 import { useMemo } from 'react'
-import { useWorkspaceStore } from '@/store'
+import { useWorkspaceStore } from '@/stores'
 import { getGPUTier } from '@/utils/gpuDetection'
 import { resolveGlassStyle } from '@/utils/glassUtils'
 import { DEFAULT_GLASS_SETTINGS } from '@shared/types'

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useState, useCallback, useEffect, useRef } from 'react'
 import { X, Settings, Monitor, Palette, Layout, FolderOpen, Info, Coins, Brain, SlidersHorizontal, Accessibility, Eye, Volume2, Keyboard, Save, Download, Upload, BarChart3 } from 'lucide-react'
 import { useWorkspaceStore } from '../stores/workspaceStore'

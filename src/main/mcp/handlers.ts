@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // Tool call handlers - Phase 14
 // Implements each MCP tool using the FileSyncProvider directly
 

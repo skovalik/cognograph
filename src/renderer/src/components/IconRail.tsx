@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useCallback, useState, useEffect, useRef } from 'react'
 import { Layers, Activity, Zap, Terminal, Settings, Share2, PanelRight, User, LayoutDashboard, LogOut } from 'lucide-react'
 import { useWorkspaceStore } from '../stores/workspaceStore'

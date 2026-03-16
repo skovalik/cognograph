@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // SyncLogger — Structured log file writer for node-level sync
 // Spec: COGNOGRAPH-NOTION-NODE-SYNC-SPEC.md Section 9e
 //

@@ -6,7 +6,7 @@ Add full composed component demos to `docs/design/styleguide-master.html`. Secti
 
 ## File to Edit
 
-`F:\Work Work\Aurochs\cognograph_02\docs\design\styleguide-master.html`
+`docs/design/styleguide-master.html`
 
 ## What Already Exists (DO NOT recreate)
 

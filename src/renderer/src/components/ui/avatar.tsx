@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import * as React from 'react'
 import * as AvatarPrimitive from '@radix-ui/react-avatar'
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // CognitiveLoadMeter — PFD Phase 7C: Canvas Complexity Indicator
 // Real-time indicator of current canvas complexity.
 // Not for gamification — for self-awareness.

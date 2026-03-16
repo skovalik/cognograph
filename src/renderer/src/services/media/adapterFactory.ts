@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import type { ProviderAdapter, ProviderCapability } from './providerAdapter'
 import { StabilityAdapter } from './adapters/stabilityAdapter'
 import { GeminiAdapter } from './adapters/geminiAdapter'

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useState, useCallback, useMemo, useEffect } from 'react'
 import { Handle, Position, type NodeProps, NodeResizer, useUpdateNodeInternals, useReactFlow, type ResizeParams } from '@xyflow/react'
 import { ChevronDown, ChevronRight, Plus, Link2, FolderKanban } from 'lucide-react'

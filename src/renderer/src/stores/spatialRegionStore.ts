@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { v4 as uuid } from 'uuid'

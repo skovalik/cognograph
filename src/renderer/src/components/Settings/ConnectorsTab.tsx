@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useState, useCallback, useEffect } from 'react'
 import { Plus, Plug, Server, Trash2, Edit2, Play, Circle, Loader2, CheckCircle, AlertTriangle, X, Database, Link } from 'lucide-react'
 import { useConnectorStore } from '../../stores/connectorStore'

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { ipcMain, app, dialog, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { promises as fs, watch as fsWatch, type FSWatcher } from 'fs'

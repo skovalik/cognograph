@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // Pre-existing custom components
 export { Button } from './Button'
 export { Input } from './Input'

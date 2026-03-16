@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // ContextScopeBadge — PFD Phase 4: AI Context Transparency
 // Shows "AI sees N nodes" badge near chat panel when context visualization is active.
 // Breakdown on hover: nodes by depth and role.

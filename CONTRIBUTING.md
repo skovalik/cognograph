@@ -132,7 +132,7 @@ describe('MyComponent', () => {
 
 ### Creating a New Node Type
 
-See `docs/wiki/components/node-component-guide.md` (coming soon) or study `TextNode.tsx` (simplest example) and `ConversationNode.tsx` (full-featured).
+Study `TextNode.tsx` (simplest example) and `ConversationNode.tsx` (full-featured).
 
 ### IPC Communication
 

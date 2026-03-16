@@ -2,6 +2,7 @@
   "name": "cognograph-agent",
   "version": "0.1.0",
   "description": "Local terminal agent for Cognograph canvas",
+  "license": "AGPL-3.0-only",
   "bin": { "cognograph-agent": "./dist/index.js" },
   "scripts": {
     "build": "tsc",

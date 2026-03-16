@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // credentialStore -- Encrypted credential storage for workspace-scoped secrets
 //
 // Uses Electron's safeStorage API to encrypt/decrypt credentials at rest.
