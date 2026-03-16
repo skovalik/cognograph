@@ -188,6 +188,10 @@ interface WorkspaceState {
   // Trash (soft delete)
   trash: TrashedItem[]
 
+  // Demo mode (workspace.cognograph.app read-only demo)
+  demoMode: boolean
+  setDemoMode: (enabled: boolean) => void
+
   // Actions - Nodes
   addNode: (type: NodeData['type'], position: { x: number; y: number }) => string
   addAgentNode: (position: { x: number; y: number }) => string
@@ -361,7 +365,7 @@ interface WorkspaceState {
   getContextTraversalForNode: (nodeId: string) => ContextTraversalResult
 
   // Actions - Theme
-  setThemeMode: (mode: 'dark' | 'light') => void
+  setThemeMode: (mode: 'dark' | 'light', source?: 'system' | 'manual') => void
   setThemeColor: (nodeType: NodeData['type'], color: string) => void
   setCanvasBackground: (color: string) => void
   setCanvasGridColor: (color: string) => void
@@ -739,7 +743,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       activeChatNodeId: null,
       openChatNodeIds: [],
       leftSidebarOpen: false,
-      leftSidebarWidth: 280,
+      leftSidebarWidth: 220,
       leftSidebarTab: 'layers',
       expandedNodeIds: new Set<string>(),
       layersSortMode: 'hierarchy' as const,
@@ -786,6 +790,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       clipboardEdges: [],
       clipboardState: null,
       trash: [],
+      demoMode: false,
+      setDemoMode: (enabled: boolean) => set((state) => { state.demoMode = enabled }),
 
       // ---------------------------------------------------------------------
       // Node Actions
@@ -3433,12 +3439,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       loadWorkspace: (data) => {
         // Migrate nodes to use properties system
-        const migratedNodes = migrateWorkspaceNodes(data.nodes)
+        const migratedNodes = migrateWorkspaceNodes(data.nodes ?? [])
 
         // Migrate edges to include EdgeData and custom type if missing
         // Also sanitize handles: sourceHandle must end with -source, targetHandle with -target
         // And migrate legacy weight-based edges to strength-based edges
-        const migratedEdges: Edge<EdgeData>[] = data.edges.map((edge) => {
+        const migratedEdges: Edge<EdgeData>[] = (data.edges ?? []).map((edge) => {
           let { sourceHandle, targetHandle } = edge
 
           // Fix swapped handles (e.g., from reversed edges)
@@ -4021,6 +4027,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       getContextForNode: (nodeId) => {
         const { nodes, edges, contextSettings } = get()
         const maxDepth = contextSettings.globalDepth
+        const tokenBudget = contextSettings.globalTokenBudget || 8000
+        const TOKEN_SAFETY_MARGIN = 0.9
 
         // Use context BFS cache (Optimization #9) to avoid redundant traversals.
         // Cache invalidates when graph structure changes. The hash includes:
@@ -4047,6 +4055,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           historyIndex,
           isDirty ? '1' : '0',
           maxDepth,
+          tokenBudget,
           nodeFingerprint,
           edgeFingerprint
         ].join('|')
@@ -4233,8 +4242,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         })
 
         const contextParts: string[] = []
+        let accumulatedTokens = 0
+        const effectiveBudget = Math.floor(tokenBudget * TOKEN_SAFETY_MARGIN)
 
         finalSortedNodes.forEach((node) => {
+          // Token budget enforcement (Patent 1, Claims 1e/3/14c):
+          // Stop adding nodes once accumulated tokens reach the budget
+          if (accumulatedTokens >= effectiveBudget) return
           const nodeData = node.data as {
             contextLabel?: string
             contextRole?: string
@@ -4414,6 +4428,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             ).join('\n')
             const nodeTitle = (node.data as { title?: string }).title || node.data.type || 'Node'
             contextParts.push(`[Attached files: ${nodeTitle}]\n${attachmentList}`)
+          }
+
+          // Track accumulated tokens after adding this node's context
+          // Uses ~4 chars/token estimate (same as tokenEstimation.ts)
+          const lastPart = contextParts[contextParts.length - 1]
+          if (lastPart) {
+            accumulatedTokens += Math.ceil(lastPart.length / 4)
           }
         })
 
@@ -4608,10 +4629,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       // Theme Actions
       // ---------------------------------------------------------------------
 
-      setThemeMode: (mode) => {
+      setThemeMode: (mode, source?: 'system' | 'manual') => {
         set((state) => {
           const prevMode = state.themeSettings.mode
           state.themeSettings.mode = mode
+          // Mark as manual when user explicitly toggles (not system-driven)
+          if (source === 'manual') {
+            state.themeSettings.themeSource = 'manual'
+          }
 
           // If on a preset, re-apply preset colors for the new mode
           if (state.themeSettings.currentPresetId) {
@@ -4703,6 +4728,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const presetColors = getPresetColors(presetId, state.themeSettings.mode)
           if (presetColors) {
             state.themeSettings.currentPresetId = presetId
+            state.themeSettings.accentIndex = 0 // Reset to default accent for new preset
             state.themeSettings.canvasBackground = presetColors.canvasBackground
             state.themeSettings.canvasGridColor = presetColors.canvasGridColor
             state.themeSettings.nodeColors = { ...presetColors.nodeColors }
@@ -5831,3 +5857,6 @@ export const useExtractionDrag = () => useWorkspaceStore((state) => state.extrac
 
 /** Get last accepted extraction for undo */
 export const useLastAcceptedExtraction = () => useWorkspaceStore((state) => state.lastAcceptedExtraction)
+
+/** Demo mode flag for workspace.cognograph.app */
+export const useDemoMode = () => useWorkspaceStore((s) => s.demoMode)

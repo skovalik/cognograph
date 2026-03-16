@@ -76,6 +76,7 @@ const Silk         = React.lazy(() => import('./effects/Silk'))
 const LightPillar  = React.lazy(() => import('./effects/LightPillar'))
 const Prism        = React.lazy(() => import('./effects/Prism'))
 const LiquidEther  = React.lazy(() => import('./effects/LiquidEther'))
+const DitherCursor = React.lazy(() => import('./effects/DitherCursor'))
 
 // ---------------------------------------------------------------------------
 // Registry entries
@@ -651,6 +652,33 @@ const ENTRIES: EffectRegistryEntry[] = [
     ],
     themeColorProps: [],
   },
+  // ── Cursor ──────────────────────────────────────────────────────────
+  {
+    id: 'dither-cursor',
+    name: 'Dither Cursor',
+    category: 'Cursor',
+    icon: '▓·▓',
+    component: DitherCursor,
+    defaultProps: {
+      color: [0.78, 0.59, 0.24],
+      radius: 0.08,
+      decay: 0.015,
+      intensity: 0.2,
+      ditherSize: 3.0,
+      exponent: 2.5,
+      opacity: 1,
+    },
+    propSchema: [
+      { key: 'color', label: 'Color', controlType: 'color', isThemeLinked: true, colorFormat: 'rgb-float' },
+      { key: 'radius', label: 'Brush Radius', controlType: 'slider', min: 0.01, max: 0.5, step: 0.01 },
+      { key: 'decay', label: 'Fade Speed', controlType: 'slider', min: 0.001, max: 0.05, step: 0.001 },
+      { key: 'intensity', label: 'Intensity', controlType: 'slider', min: 0.05, max: 1, step: 0.05 },
+      { key: 'ditherSize', label: 'Dither Size', controlType: 'slider', min: 1, max: 8, step: 0.5 },
+      { key: 'exponent', label: 'Contrast', controlType: 'slider', min: 1, max: 4, step: 0.1 },
+      { key: 'opacity', label: 'Opacity', controlType: 'slider', min: 0.05, max: 1, step: 0.05 },
+    ],
+    themeColorProps: ['color'],
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -666,7 +694,7 @@ export const EFFECT_REGISTRY: Record<string, EffectRegistryEntry> = Object.fromE
 export const ALL_EFFECT_IDS: AmbientEffectType[] = ENTRIES.map((e) => e.id)
 
 /** Unique categories in display order */
-export const EFFECT_CATEGORIES = ['Patterns', 'Atmosphere', 'Particles', 'Fluid', 'Light'] as const
+export const EFFECT_CATEGORIES = ['Patterns', 'Atmosphere', 'Particles', 'Fluid', 'Light', 'Cursor'] as const
 
 /** Effects grouped by category */
 export const EFFECTS_BY_CATEGORY = EFFECT_CATEGORIES.map((cat) => ({

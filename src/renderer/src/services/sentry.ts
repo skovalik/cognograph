@@ -14,6 +14,7 @@ declare global {
     env: {
       VITE_SENTRY_DSN?: string
       VITE_APP_VERSION?: string
+      VITE_BUILD_TARGET?: string
       MODE: string
       PROD: boolean
       DEV: boolean

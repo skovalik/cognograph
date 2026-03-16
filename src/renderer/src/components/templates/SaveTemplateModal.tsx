@@ -162,7 +162,7 @@ function SaveTemplateModalComponent(): JSX.Element | null {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-[600px] max-h-[80vh] bg-[var(--surface-panel)] glass-fluid border border-[var(--border-subtle)] rounded-lg shadow-xl flex flex-col">
+      <div className="w-[600px] max-w-[calc(100vw-32px)] max-h-[80vh] bg-[var(--surface-panel)] glass-fluid border border-[var(--border-subtle)] rounded-lg shadow-xl flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[var(--border-subtle)] flex-shrink-0">
           <div className="flex items-center gap-2">

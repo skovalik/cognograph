@@ -26,6 +26,7 @@ import { useNodeResize } from '../../hooks/useNodeResize'
 import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
 import { StructuredContentPreview } from './StructuredContentPreview'
+import { NodePropertyControls } from './NodePropertyControls'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -131,7 +132,7 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   const {
     showContent, showTitle, showBadges, showLede,
     showHeader, showFooter, showInteractiveControls,
-    showEmbeddedContent, zoomLevel
+    showPlaceholders, showEmbeddedContent, zoomLevel, lodLevel
   } = useNodeContentVisibility()
 
   const isUltraFar = zoomLevel === 'ultra-far'
@@ -155,26 +156,15 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   const effectiveHeight = Math.max(contentMinHeight, nodeHeight)
 
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
-    const baseOpacity = 25
-    const tintOpacity = themeSettings.isDarkMode ? Math.round(baseOpacity * 0.5) : baseOpacity
-    const borderWidth = 2
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.task ?? '#10b981'
 
     return {
-      borderWidth: `${borderWidth}px`,
-      borderStyle: 'solid', // FORCE solid borders
-      borderColor: safeNodeColor,
-      // ALWAYS add opaque background (CSS overrides when glass enabled)
-      background: `color-mix(in srgb, ${safeNodeColor} ${tintOpacity}%, var(--node-bg))`,
-      boxShadow: selected ? `0 0 0 2px ${safeNodeColor}40, 0 0 20px ${safeNodeColor}30` : 'none',
+      '--ring-color': safeNodeColor,
+      '--node-accent': safeNodeColor,
       width: nodeWidth,
       height: effectiveHeight,
-      transition: 'background 200ms ease-out, border-color 200ms ease-out, backdrop-filter 200ms ease-out, opacity 200ms ease-out',
-      // CSS custom properties for dynamic theming
-      '--ring-color': safeNodeColor,    // Edge handles color
-      '--node-accent': safeNodeColor     // Glass background tint
     }
-  }, [nodeColor, themeSettings.nodeColors.task, isGlassEnabled, selected, nodeWidth, effectiveHeight])
+  }, [nodeColor, themeSettings.nodeColors.task, nodeWidth, effectiveHeight])
 
   // Handle resize - also update node internals to trigger edge recalculation
   const handleResizeStart = useCallback(() => {
@@ -266,7 +256,7 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
       // Clear celebration after animation
       timer = setTimeout(() => {
         setIsCelebrating(false)
-      }, 1000)
+      }, 600)
     }
     prevStatusRef.current = nodeData.status
 
@@ -277,6 +267,9 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
 
   // Status color for L0/L1 rendering
   const statusColor = getStatusColor(nodeData.status)
+
+  // Activity indicator: tasks use in-progress status as "processing" analog
+  const isProcessing = nodeData.status === 'in-progress'
 
   // Lede text for L2 (mid zoom) — description truncated to 80 chars
   const ledeText = useMemo(() => {
@@ -290,6 +283,8 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
     'cognograph-node',
     'cognograph-node--task',
     selected && 'selected',
+    // is-active reserved for functional state only (not selection)
+    isProcessing && 'is-thinking',
     isDisabled && 'cognograph-node--disabled',
     isSpawning && 'spawning',
     nonMemberClass,
@@ -310,8 +305,14 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
       style={nodeStyle}
       data-transparent={transparent}
       data-lod={zoomLevel}
+      data-lod-level={lodLevel}
       onDoubleClick={handleDoubleClick}
     >
+      {/* Type label: floats above node */}
+      <div className="cognograph-node__type-label">
+        TASK
+      </div>
+
       {/* Remote selection indicator */}
       <SelectionIndicator selectors={remoteSelectors} />
 
@@ -409,25 +410,30 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
           )}
           {/* AI Property Assist — L3+ only (interactive control) */}
           {showInteractiveControls && (
-            <NodeAIErrorBoundary compact>
-              <AIPropertyAssist
-                nodeId={id}
-                nodeData={nodeData}
-                compact={true}
-              />
-            </NodeAIErrorBoundary>
+            <div className="node-chrome--hover">
+              <NodeAIErrorBoundary compact>
+                <AIPropertyAssist
+                  nodeId={id}
+                  nodeData={nodeData}
+                  compact={true}
+                />
+              </NodeAIErrorBoundary>
+            </div>
           )}
           {/* Extraction controls — L3+ only */}
           {showInteractiveControls && (
-            <ExtractionControls nodeId={id} />
+            <div className="node-chrome--hover">
+              <ExtractionControls nodeId={id} />
+            </div>
           )}
         </div>
       )}
 
       {/* ================================================================
           L1 (far): Skeleton density preview for description content
+          showPlaceholders is true only at L1 — replaces manual !isUltraFar && !showLede && !showContent check
           ================================================================ */}
-      {!isUltraFar && !showLede && !showContent && nodeData.description && (
+      {showPlaceholders && nodeData.description && (
         <div className="cognograph-node__body" style={{ pointerEvents: 'none' }}>
           <StructuredContentPreview content={nodeData.description} zoomLevel="far" />
         </div>
@@ -521,6 +527,7 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
           ================================================================ */}
       {showFooter && showContent && (
         <div className="cognograph-node__footer">
+          <NodePropertyControls nodeId={id} nodeType="task" data={data as Record<string, unknown>} />
           <PropertyBadges
             properties={mergedProperties}
             definitions={propertyDefinitions}

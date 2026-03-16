@@ -4,6 +4,37 @@
 
 ---
 
+## 🔒 License & Legal Integrity Protocol
+
+**The Problem:**
+LICENSE was overwritten from AGPL-3.0 + Defensive Patent Pledge to MIT and nobody caught it for weeks. It shipped live on GitHub with the wrong license.
+
+**The Rule — NEVER modify legal files without explicit Stefan approval:**
+- `LICENSE` — The original is an 8-line AGPL-3.0 header with copyright + Defensive Patent Pledge
+- `PATENTS` — Lists 4 provisional patent applications (must exist in public repo)
+- `package.json` `"license"` field — Must be `"AGPL-3.0-only"`
+- README License section — Must say "Free for personal use. Commercial license available."
+
+**Before ANY change to legal files:**
+1. Show Stefan the exact diff BEFORE committing
+2. Verify against the canonical source: public repo commit `3a9740d` (the first push)
+3. If a license reference exists in docs but contradicts the LICENSE file, the LICENSE file is canonical — not the doc
+
+**Business Model (for context):**
+- AGPL-3.0 Open Core = personal use free, commercial use requires commercial license
+- This is NOT MIT (permissive) — AGPL is copyleft
+- Defensive Patent Pledge protects users from patent assertion
+
+**Cross-repo sync checklist (when touching license):**
+- [ ] `cognograph_02/LICENSE` matches `cognograph_public/LICENSE`
+- [ ] `cognograph_02/PATENTS` matches `cognograph_public/PATENTS`
+- [ ] Both `package.json` say `"AGPL-3.0-only"`
+- [ ] `package-lock.json` root entry says `"AGPL-3.0-only"` (stale after `npm install`)
+- [ ] Both README License sections match
+- [ ] DECISIONS.md updated
+
+---
+
 ## 🚨 Critical Pitfalls (Will Break the App)
 
 ### Pitfall 1: React Flow Node Data Mutation
@@ -430,7 +461,7 @@ Plan/roadmap documents (like `docs/NEXT_PHASE_PLAN.md`) describe features as "ne
 3. **On session end:** Review which plan items you touched and update their status.
 4. **Standard markers:** `✅ DONE`, `🟡 PARTIAL`, `❌ REMAINING`, `⏳ DEFERRED`
 
-Keep plan documents current to avoid re-implementing completed work.
+See also: `CLAUDE.md` → "Plan Drift Prevention" section.
 
 ---
 

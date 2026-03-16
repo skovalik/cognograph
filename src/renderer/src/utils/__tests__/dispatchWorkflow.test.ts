@@ -49,11 +49,11 @@ describe('createDispatchNodeData', () => {
     expect(result.data.title).toBe('CLI: Deploy service')
   })
 
-  it('sets mode to cc-session', () => {
+  it('sets mode to terminal', () => {
     const task = makeTaskNode()
     const result = createDispatchNodeData(task, { x: 0, y: 0 })
 
-    expect(result.data.mode).toBe('cc-session')
+    expect(result.data.mode).toBe('terminal')
   })
 
   it('sets the node type to conversation', () => {

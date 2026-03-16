@@ -31,20 +31,22 @@ export interface ConversationNodeData extends ContextMetadata {
   extractedTitles?: string[] // For duplicate detection
 
   // Agent mode settings
-  mode?: 'chat' | 'agent' | 'cc-session' // Default: 'chat' (undefined = 'chat' for migration)
+  mode?: 'chat' | 'agent' | 'terminal' // Default: 'chat' (undefined = 'chat' for migration)
   agentSettings?: AgentSettings
 
-  // CC Session fields (only meaningful when mode === 'cc-session')
-  ccSession?: {
+  // Terminal fields (only meaningful when mode === 'terminal')
+  terminal?: {
     sessionId: string               // CLAUDE_SESSION_ID
     origin: 'embedded' | 'external'
     workingDirectory: string
     model?: string
+    shell?: string                  // default shell or specific CLI path
     terminalState: 'running' | 'idle' | 'exited'
     exitCode?: number
     startedAt: number               // Unix ms
     lastActivityAt: number
     accentColor: string             // From SESSION_ACCENT_COLORS palette
+    source: 'local' | 'cloud'      // local agent vs Fly Machine
   }
 
   // Agent-specific fields (only meaningful when mode === 'agent')
@@ -264,6 +266,9 @@ export type ArtifactContentType =
   | 'text' // Plain text
   | 'csv' // Tabular data
   | 'image' // Base64 encoded images
+  | 'video' // MP4/WebM, rendered with HTML5 <video>
+  | 'audio' // MP3/WAV/OGG, rendered with <audio> + waveform
+  | '3d-model' // GLB/GLTF, rendered with Three.js mini-viewport
   | 'custom' // User-defined custom type
 
 export type ArtifactSource =
@@ -339,7 +344,22 @@ export interface ArtifactNodeData extends ContextMetadata {
   createdAt: number
   updatedAt: number
   properties?: Record<string, unknown> // Flexible property storage
+  // Media metadata (for video/audio/3d-model/image content types)
+  metadata?: ArtifactMediaMetadata
+
   [key: string]: unknown
+}
+
+export interface ArtifactMediaMetadata {
+  provider: string
+  prompt?: string
+  generatedAt: number
+  duration?: number
+  dimensions?: { width: number; height: number }
+  fileSize?: number
+  mimeType: string
+  storageUrl: string
+  thumbnailUrl?: string
 }
 
 // -----------------------------------------------------------------------------

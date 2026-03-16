@@ -1,10 +1,10 @@
 import { memo, useCallback, useMemo, useState, useEffect, useRef } from 'react'
 import { Handle, Position, NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
-import { Sparkles, Wand2, ChevronDown, ChevronUp, Link2, Play, Pause, Square, Bot, MessageSquare, RotateCcw, Terminal, Maximize2 } from 'lucide-react'
+import { Sparkles, Wand2, ChevronDown, ChevronUp, Link2, Play, Pause, Square, Bot, MessageSquare, RotateCcw, Terminal, Maximize2, Minimize2 } from 'lucide-react'
 import type { ConversationNodeData, AgentStatus } from '@shared/types'
 import { formatCost } from '../../utils/tokenEstimator'
 import { DEFAULT_EXTRACTION_SETTINGS, DEFAULT_THEME_SETTINGS } from '@shared/types'
-import { useWorkspaceStore, useIsStreaming, useIsSpawning, useNodeWarmth, useIsNodePinned, useIsNodeBookmarked, useNodeNumberedBookmark } from '../../stores/workspaceStore'
+import { useWorkspaceStore, useIsStreaming, useIsSpawning, useNodeWarmth, useIsNodePinned, useIsNodeBookmarked, useNodeNumberedBookmark, useDemoMode } from '../../stores/workspaceStore'
 import { useShowMembersClass } from '../../hooks/useShowMembersClass'
 import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
 import { PropertyBadges } from '../properties/PropertyBadge'
@@ -16,18 +16,22 @@ import { EditableTitle } from '../EditableTitle'
 import { InlineIconPicker } from '../InlineIconPicker'
 import { measureTextWidth } from '../../utils/nodeUtils'
 import { ExtractionBadge } from '../extractions'
-import { AutoFitButton } from './AutoFitButton'
+
+import { hasTerminalAccess } from '../../utils/terminalAccess'
 import { FoldBadge } from './FoldBadge'
 import { NodeModeDropdown } from './NodeModeDropdown'
+import { useIsTouch } from '../../hooks/useIsMobile'
 import { useNodeResize } from '../../hooks/useNodeResize'
 import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
 import { StructuredContentPreview } from './StructuredContentPreview'
+import { NodePropertyControls } from './NodePropertyControls'
 import { getPresetById } from '../../constants/agentPresets'
 import { runAgent, pauseAgent, stopAgent, retryAgent } from '../../services/agentService'
 import { CountUp } from '../ui/react-bits'
 import { AgentActivityBadge } from '../bridge/AgentActivityBadge'
 import { InlineErrorBoundary } from '../ErrorBoundary'
 import { SessionStatusIndicator } from '../SessionStatusIndicator'
+import { ChatPanel } from '../ChatPanel'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -41,9 +45,13 @@ const DEFAULT_HEIGHT = 200
 const MIN_WIDTH = 280
 const MIN_HEIGHT = 150
 
+// Expanded (in-node chat) dimensions
+const EXPANDED_WIDTH = 520
+const EXPANDED_HEIGHT = 680
+
 /**
  * Mode icon for ultra-far (L0) rendering.
- * Shows conversation mode at a glance: chat, agent, or cc-session.
+ * Shows conversation mode at a glance: chat, agent, or terminal.
  */
 function ModeIcon({ mode, color }: { mode: string; color: string }): JSX.Element {
   const iconProps = { size: 16, style: { color }, strokeWidth: 2.5 }
@@ -69,6 +77,8 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
   const setLeftSidebarTab = useWorkspaceStore((state) => state.setLeftSidebarTab)
   const toggleLeftSidebar = useWorkspaceStore((state) => state.toggleLeftSidebar)
   const leftSidebarOpen = useWorkspaceStore((state) => state.leftSidebarOpen)
+  const demoMode = useDemoMode()
+  const isTouch = useIsTouch()
   const setIsExtracting = useWorkspaceStore((state) => state.setIsExtracting)
   const addPendingExtraction = useWorkspaceStore((state) => state.addPendingExtraction)
   const isExtracting = useWorkspaceStore((state) => state.isExtracting)
@@ -95,6 +105,10 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
   const [showParticles, setShowParticles] = useState(false)
   const wasExtractingRef = useRef(false)
 
+  // In-node chat expansion state
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [preExpandSize, setPreExpandSize] = useState<{ w: number; h: number } | null>(null)
+
   // Trigger particles when extraction completes
   useEffect(() => {
     const wasExtracting = wasExtractingRef.current
@@ -111,9 +125,9 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
 
   const extractionSettings = nodeData.extractionSettings || DEFAULT_EXTRACTION_SETTINGS
 
-  // CC Session identity
-  const isCcSession = nodeData.mode === 'cc-session' && !!nodeData.ccSession
-  const ccAccentColor = isCcSession ? nodeData.ccSession?.accentColor : undefined
+  // Terminal identity — mode alone is sufficient for terminal rendering
+  const isTerminal = nodeData.mode === 'terminal'
+  const terminalAccentColor = isTerminal ? nodeData.terminal?.accentColor : undefined
 
   // Calculate dynamic node color
   const nodeColor = nodeData.color || themeSettings.nodeColors.conversation || DEFAULT_THEME_SETTINGS.nodeColors.conversation
@@ -126,38 +140,26 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
   const transparent = nodeData.transparent
   const isGlassEnabled = useIsGlassEnabled('nodes', transparent)
 
-  const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
-    const isAgent = nodeData.mode === 'agent'
-    // Agent mode: 30% tint (darker), Chat mode: 20% tint (lighter)
-    // Dark mode: use lower opacity for better text contrast
-    const baseOpacity = isAgent ? 30 : 20
-    const tintOpacity = themeSettings.isDarkMode ? Math.round(baseOpacity * 0.5) : baseOpacity
-    const borderWidth = 2
+  // Terminal pulse class for L0-L1 ambient status
+  const terminalPulseClass = isTerminal
+    ? nodeData.terminal?.terminalState === 'running'
+      ? 'terminal-node-pulse'
+      : nodeData.terminal?.terminalState === 'idle'
+        ? 'terminal-node-idle'
+        : 'terminal-node-exited'
+    : ''
 
-    // Fallback chain for undefined nodeColor
+  const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.conversation ?? '#3b82f6' // blue-500
 
-    // Agent mode uses conversation blue, same as chat mode
-    const effectiveBorderColor = safeNodeColor
-    const effectiveTintColor = safeNodeColor
-
     return {
-      borderWidth: `${borderWidth}px`,
-      borderStyle: 'solid', // FORCE solid borders
-      borderColor: effectiveBorderColor, // Blue for both chat and agent
-      // ALWAYS add opaque background (CSS overrides when glass enabled)
-      background: `color-mix(in srgb, ${effectiveTintColor} ${tintOpacity}%, var(--node-bg))`,
-      boxShadow: selected ? `0 0 0 2px ${safeNodeColor}40, 0 0 20px ${safeNodeColor}30` : 'none',
+      '--ring-color': safeNodeColor,
+      '--node-accent': safeNodeColor,
+      '--pulse-color': terminalAccentColor || '#22d3ee',
       width: nodeWidth,
-      height: nodeHeight,
-      transition: 'background 200ms ease-out, border-color 200ms ease-out, backdrop-filter 200ms ease-out, opacity 200ms ease-out',
-      // CSS custom properties for dynamic theming
-      '--ring-color': effectiveBorderColor,    // Edge handles color
-      '--node-accent': effectiveBorderColor,   // Glass background tint
-      // CC Session: 3px left accent border
-      ...(ccAccentColor ? { borderLeft: `3px solid ${ccAccentColor}` } : {})
+      height: demoMode && isTerminal ? undefined : nodeHeight,
     }
-  }, [nodeColor, selected, nodeWidth, nodeHeight, nodeData.mode, isGlassEnabled, themeSettings.nodeColors.conversation, themeSettings.isDarkMode, ccAccentColor])
+  }, [nodeColor, nodeWidth, nodeHeight, themeSettings.nodeColors.conversation, terminalAccentColor, demoMode, isTerminal])
 
   // Handle resize - also update node internals to trigger edge recalculation
   const handleResizeStart = useCallback(() => {
@@ -182,6 +184,29 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
     return () => cancelAnimationFrame(rafId)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handleCollapseChat = useCallback((): void => {
+    setIsExpanded(false)
+    if (preExpandSize) {
+      startNodeResize(id)
+      updateNodeDimensions(id, preExpandSize.w, preExpandSize.h)
+      updateNodeInternals(id)
+      commitNodeResize(id)
+      setPreExpandSize(null)
+    }
+  }, [preExpandSize, id, startNodeResize, updateNodeDimensions, updateNodeInternals, commitNodeResize])
+
+  // Escape key to collapse expanded chat
+  useEffect(() => {
+    if (!isExpanded || !selected) return
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') {
+        handleCollapseChat()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isExpanded, selected, handleCollapseChat])
+
   const showTokenEstimates = useWorkspaceStore(
     (state) => state.workspacePreferences.showTokenEstimates
   )
@@ -193,8 +218,22 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
     return nodeData.messages.reduce((sum, m) => sum + (m.costUSD ?? 0), 0)
   }, [nodeData.messages])
 
+  // Expand node for in-node chat — touch-aware dimensions
+  const handleExpandChat = useCallback((): void => {
+    const expandedWidth = isTouch ? Math.min(EXPANDED_WIDTH, window.innerWidth - 32) : EXPANDED_WIDTH
+    // Mobile: 70% viewport height (not full), leaves room for bottom bar + breathing room
+    const expandedHeight = isTouch ? Math.min(EXPANDED_HEIGHT, Math.round(window.innerHeight * 0.7)) : EXPANDED_HEIGHT
+    setPreExpandSize({ w: nodeWidth, h: nodeHeight })
+    setIsExpanded(true)
+    startNodeResize(id)
+    updateNodeDimensions(id, expandedWidth, expandedHeight)
+    updateNodeInternals(id)
+    commitNodeResize(id)
+  }, [isTouch, nodeWidth, nodeHeight, id, startNodeResize, updateNodeDimensions, updateNodeInternals, commitNodeResize])
+
   const handleDoubleClick = useCallback((e: React.MouseEvent): void => {
     if (e.ctrlKey) {
+      // Ctrl+double-click: auto-fit width to title
       e.stopPropagation()
       startNodeResize(id)
       const titleWidth = measureTextWidth(nodeData.title, '14px Inter, sans-serif')
@@ -202,10 +241,18 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
       updateNodeDimensions(id, newWidth, nodeHeight)
       updateNodeInternals(id)
       commitNodeResize(id)
+    } else if (isExpanded) {
+      // Double-click while expanded: collapse back
+      handleCollapseChat()
     } else {
-      openChat(id)
+      // Double-click: expand for in-node chat
+      handleExpandChat()
     }
-  }, [nodeData.title, id, nodeHeight, updateNodeDimensions, updateNodeInternals, openChat, startNodeResize, commitNodeResize])
+  }, [
+    nodeData.title, id, nodeWidth, nodeHeight, isExpanded,
+    updateNodeDimensions, updateNodeInternals, startNodeResize, commitNodeResize,
+    handleCollapseChat, handleExpandChat
+  ])
 
   // Handle collapse toggle
   const toggleCollapsed = useCallback((e: React.MouseEvent): void => {
@@ -296,7 +343,7 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
   )
 
   // Mode change handler for dropdown
-  const handleModeChange = useCallback((newMode: 'chat' | 'agent') => {
+  const handleModeChange = useCallback((newMode: 'chat' | 'agent' | 'terminal') => {
     if (newMode === 'agent') {
       // Initialize agent mode fields if not set
       updateNode(id, {
@@ -304,27 +351,54 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
         agentPreset: nodeData.agentPreset || 'custom',
         agentStatus: nodeData.agentStatus || 'idle'
       })
+    } else if (newMode === 'terminal') {
+      // Initialize terminal fields if not set
+      updateNode(id, {
+        title: nodeData.title === 'Conversation' ? 'Terminal' : nodeData.title,
+        mode: 'terminal',
+        terminal: nodeData.terminal || {
+          sessionId: crypto.randomUUID(),
+          origin: 'embedded',
+          workingDirectory: '',
+          terminalState: 'idle',
+          startedAt: Date.now(),
+          lastActivityAt: Date.now(),
+          accentColor: '#22d3ee',
+        },
+      })
     } else {
       // Switch to chat mode (preserve agent data for later)
       updateNode(id, { mode: 'chat' })
     }
-  }, [id, nodeData.agentPreset, nodeData.agentStatus, updateNode])
+  }, [id, nodeData.title, nodeData.agentPreset, nodeData.agentStatus, nodeData.terminal, updateNode])
 
   // Mode dropdown options
-  const modeOptions = useMemo(() => [
-    {
-      value: 'chat',
-      label: 'Chat',
-      icon: MessageSquare,
-      description: 'Interactive chat with AI'
-    },
-    {
-      value: 'agent',
-      label: 'Agent',
-      icon: Bot,
-      description: 'Autonomous AI that creates nodes'
+  const modeOptions = useMemo(() => {
+    const options = [
+      {
+        value: 'chat',
+        label: 'Chat',
+        icon: MessageSquare,
+        description: 'Interactive chat with AI'
+      },
+      {
+        value: 'agent',
+        label: 'Agent',
+        icon: Bot,
+        description: 'Autonomous AI that creates nodes'
+      },
+    ]
+    // Terminal mode available when local agent or cloud terminal is accessible
+    if (hasTerminalAccess()) {
+      options.push({
+        value: 'terminal',
+        label: 'Terminal',
+        icon: Terminal,
+        description: 'Embedded CLI with project context'
+      })
     }
-  ], [])
+    return options
+  }, [])
 
   // Check if node is disabled
   const isDisabled = nodeData.enabled === false
@@ -342,10 +416,12 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
     'cognograph-node',
     'cognograph-node--conversation',
     nodeData.mode === 'agent' && 'conversation-node--agent',
-    isCcSession && 'conversation-node--cc-session',
+    isTerminal && 'conversation-node--terminal',
     selected && 'selected',
     isDisabled && 'cognograph-node--disabled',
     isStreaming && 'streaming',
+    isStreaming && 'is-thinking',
+    // is-active reserved for functional state only (not selection)
     nonMemberClass,
     memberHighlightClass,
     isExtracting === id && 'extracting',
@@ -354,7 +430,8 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
     isPinned && 'node--pinned',
     isBookmarked && 'cognograph-node--bookmarked',
     isCut && 'cognograph-node--cut',
-    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`
+    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
+    terminalPulseClass
   ].filter(Boolean).join(' ')
 
   const nodeContent = (
@@ -366,6 +443,11 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
       data-lod={zoomLevel}
       onDoubleClick={handleDoubleClick}
     >
+      {/* Type label: floats above node */}
+      <div className="cognograph-node__type-label">
+        {nodeData.mode === 'agent' ? 'AGENT' : isTerminal ? 'CC SESSION' : 'CONVERSATION'}
+      </div>
+
       {/* ================================================================
           L0 (ultra-far): Colored pill with mode icon only.
           Minimal DOM — ~5 elements. No handles, no text, no editor.
@@ -384,20 +466,6 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
             />
           )}
         </div>
-      )}
-
-      {/* ================================================================
-          L1+ (far and above): Auto-fit button
-          ================================================================ */}
-      {showInteractiveControls && (
-        <AutoFitButton
-          nodeId={id}
-          title={nodeData.title}
-          selected={selected}
-          nodeColor={nodeColor}
-          minWidth={MIN_WIDTH}
-          minHeight={MIN_HEIGHT}
-        />
       )}
 
       {/* ================================================================
@@ -445,14 +513,14 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
         </InlineErrorBoundary>
       )}
 
-      {/* CC Session: ARIA live region for screen reader status announcements */}
-      {isCcSession && (
+      {/* Terminal: ARIA live region for screen reader status announcements */}
+      {isTerminal && (
         <div
           role="status"
           aria-live="polite"
           className="sr-only"
         >
-          {`CC session ${nodeData.ccSession?.terminalState} for ${nodeData.title}`}
+          {`Terminal ${nodeData.terminal?.terminalState} for ${nodeData.title}`}
         </div>
       )}
 
@@ -461,9 +529,9 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
           ================================================================ */}
       {showHeader && (
         <div className="cognograph-node__header">
-          {/* CC Session: Terminal badge (L1+ far zoom) */}
-          {isCcSession && (
-            <span className="cc-session-badge" style={{ color: ccAccentColor }}>{'>'}_</span>
+          {/* Terminal: Terminal badge (L1+ far zoom) */}
+          {isTerminal && (
+            <span className="terminal-badge" style={{ color: terminalAccentColor }}>{'>'}_</span>
           )}
           <InlineIconPicker
             nodeData={{
@@ -484,11 +552,11 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
               placeholder="Untitled Conversation"
             />
           )}
-          {/* CC Session: Status indicator (L2+ mid zoom) */}
-          {isCcSession && nodeData.ccSession && (
+          {/* Terminal: Status indicator (L2+ mid zoom) */}
+          {isTerminal && nodeData.terminal && (
             <SessionStatusIndicator
-              state={nodeData.ccSession.terminalState}
-              accentColor={nodeData.ccSession.accentColor}
+              state={nodeData.terminal.terminalState}
+              accentColor={nodeData.terminal.accentColor}
             />
           )}
           {!!nodeData.properties?.url && (
@@ -499,16 +567,45 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
               />
             </span>
           )}
+          {/* Touch expand button — visible on touch devices when not expanded */}
+          {isTouch && !isExpanded && showInteractiveControls && (
+            <button
+              className="cognograph-node__expand-btn p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 node-chrome--hover"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleExpandChat()
+              }}
+              aria-label="Expand conversation"
+              title="Expand to chat"
+            >
+              <Maximize2 className="w-3.5 h-3.5" style={{ color: 'var(--node-text-secondary)' }} />
+            </button>
+          )}
+          {/* Collapse button — only when expanded in-node chat */}
+          {isExpanded && showInteractiveControls && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleCollapseChat()
+              }}
+              className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 node-chrome--hover"
+              title="Collapse chat (Esc)"
+            >
+              <Minimize2 className="w-3.5 h-3.5" style={{ color: 'var(--node-text-secondary)' }} />
+            </button>
+          )}
           {/* Mode dropdown — L3+ only (interactive control) */}
           {showInteractiveControls && (
-            <NodeModeDropdown
-              value={nodeData.mode || 'chat'}
-              options={modeOptions}
-              onChange={handleModeChange}
-              nodeColor={nodeColor}
-              aria-label="Conversation mode"
-              disabled={nodeData.agentStatus === 'running'}
-            />
+            <div className="node-chrome--hover">
+              <NodeModeDropdown
+                value={nodeData.mode || 'chat'}
+                options={modeOptions}
+                onChange={handleModeChange}
+                nodeColor={nodeColor}
+                aria-label="Conversation mode"
+                disabled={nodeData.agentStatus === 'running'}
+              />
+            </div>
           )}
           {/* At L1 (far): Show mode badge as simple text instead of dropdown */}
           {showBadges && !showInteractiveControls && (
@@ -545,7 +642,7 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
                     'var(--node-text-muted)',
                   boxShadow:
                     (nodeData.agentStatus ?? 'idle') === 'running'
-                      ? '0 0 6px #22c55e80'
+                      ? '0 0 3px #22c55e50'
                       : 'none',
                   animation:
                     (nodeData.agentStatus ?? 'idle') === 'running'
@@ -601,90 +698,190 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
           )}
           {/* Collapse toggle — L3+ only (interactive control) */}
           {showContent && messageCount > 0 && (
-            <button
-              onClick={toggleCollapsed}
-              className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
-              title={nodeData.collapsed ? 'Expand preview' : 'Collapse preview'}
-            >
-              {nodeData.collapsed ? (
-                <ChevronDown className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
-              ) : (
-                <ChevronUp className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
-              )}
-            </button>
+            <div className="node-chrome--hover">
+              <button
+                onClick={toggleCollapsed}
+                className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
+                title={nodeData.collapsed ? 'Expand preview' : 'Collapse preview'}
+              >
+                {nodeData.collapsed ? (
+                  <ChevronDown className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
+                ) : (
+                  <ChevronUp className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
+                )}
+              </button>
+            </div>
           )}
         </div>
       )}
 
       {/* ================================================================
           L1 (far): Skeleton density preview for last message content
+          Terminal: dark terminal strip with "$ _" prompt
           ================================================================ */}
-      {!isUltraFar && !showLede && !showContent && lastMessage && (
-        <div className="cognograph-node__body" style={{ pointerEvents: 'none' }}>
-          <StructuredContentPreview content={lastMessage.content} zoomLevel="far" />
-        </div>
+      {!isUltraFar && !showLede && !showContent && (
+        isTerminal ? (
+          <div className="cognograph-node__body" style={{ pointerEvents: 'none' }}>
+            <div
+              className="mx-1 rounded overflow-hidden"
+              style={{ backgroundColor: 'var(--terminal-bg)', padding: '4px 6px' }}
+            >
+              <pre className="text-[9px] leading-tight" style={{ fontFamily: 'var(--font-mono, "Space Mono", monospace)', color: 'var(--terminal-text-muted)', margin: 0 }}>
+                {'$ _'}
+              </pre>
+            </div>
+          </div>
+        ) : lastMessage ? (
+          <div className="cognograph-node__body" style={{ pointerEvents: 'none' }}>
+            <StructuredContentPreview content={lastMessage.content} zoomLevel="far" />
+          </div>
+        ) : null
       )}
 
       {/* ================================================================
           L2 (mid): Lede — last message preview + model badge
+          Terminal: dark inset with 5 lines of terminal output
           ================================================================ */}
       {showLede && (
-        <div className="cognograph-node__body" style={{ opacity: 0.8 }}>
-          {lastMessage ? (
-            <StructuredContentPreview content={lastMessage.content} zoomLevel="mid" />
-          ) : (
-            <p className="text-sm italic" style={{ color: 'var(--node-text-muted)' }}>
-              No messages yet
-            </p>
-          )}
-          {/* Model badge at L2 */}
-          {nodeData.provider && (
-            <span
-              className="text-[10px] mt-1 inline-block px-1.5 py-0.5 rounded"
-              style={{
-                backgroundColor: 'var(--node-bg-secondary)',
-                color: 'var(--node-text-muted)'
-              }}
-            >
-              {nodeData.provider}
-            </span>
-          )}
-        </div>
+        isTerminal ? (
+          // Only render L2 terminal preview if we're NOT also showing L3 content
+          !showContent ? (
+            <div className="cognograph-node__body" style={{ opacity: 0.9 }}>
+              <div
+                className="mx-1 rounded overflow-hidden"
+                style={{ backgroundColor: 'var(--terminal-bg)', padding: '6px 8px', minHeight: 48 }}
+              >
+                <pre
+                  className="text-[10px] leading-tight overflow-hidden whitespace-pre"
+                  style={{ fontFamily: 'var(--font-mono, "Space Mono", monospace)', color: 'var(--terminal-text)', margin: 0 }}
+                >
+                  {((nodeData as any).terminalPreviewLines || []).slice(-5).join('\n') || '$ _'}
+                </pre>
+              </div>
+            </div>
+          ) : null
+        ) : (
+          <div className="cognograph-node__body" style={{ opacity: 0.8 }}>
+            {lastMessage ? (
+              <StructuredContentPreview content={lastMessage.content} zoomLevel="mid" />
+            ) : (
+              <p className="text-sm italic" style={{ color: 'var(--node-text-muted)' }}>
+                No messages yet
+              </p>
+            )}
+            {/* Model badge at L2 */}
+            {nodeData.provider && (
+              <span
+                className="text-[10px] mt-1 inline-block px-1.5 py-0.5 rounded"
+                style={{
+                  backgroundColor: 'var(--node-bg-secondary)',
+                  color: 'var(--node-text-muted)'
+                }}
+              >
+                {nodeData.provider}
+              </span>
+            )}
+          </div>
+        )
       )}
 
       {/* ================================================================
           L3+ (close and above): Full body content — messages, preview, properties
+          Terminal: dark inset with 12 lines of terminal output
           ================================================================ */}
       {showContent && (
-        <div className="cognograph-node__body">
-          {lastMessage ? (
-            <div className={nodeData.collapsed ? '' : 'h-full overflow-hidden'}>
-              <p className={`text-sm overflow-hidden ${nodeData.collapsed ? 'line-clamp-1' : ''}`} style={!nodeData.collapsed ? { display: '-webkit-box', WebkitLineClamp: 'unset', WebkitBoxOrient: 'vertical' } : undefined}>
-                {getPreviewContent()}
-              </p>
+        isExpanded ? (
+          /* Expanded in-node chat (works for both chat and terminal nodes) */
+          <div
+            className="flex-1 overflow-hidden rounded-b-lg"
+            style={{ minHeight: 0 }}
+            onWheelCapture={isTouch ? undefined : (e) => e.stopPropagation()}
+            onPointerDownCapture={(e) => {
+              // Prevent React Flow panning when interacting with chat input — but allow pinch-zoom on touch
+              if (isTouch) return
+              const target = e.target as HTMLElement
+              if (target.closest('textarea') || target.closest('button') || target.closest('select') || target.closest('.overflow-y-auto')) {
+                e.stopPropagation()
+              }
+            }}
+          >
+            <ChatPanel nodeId={id} isFocused embedded />
+          </div>
+        ) : isTerminal ? (
+          <div className="cognograph-node__body" style={demoMode ? { overflow: 'visible', minHeight: 'unset', flex: 'none' } : undefined}>
+            <div
+              className={demoMode ? 'mx-1 rounded' : 'mx-1 rounded overflow-hidden'}
+              style={{ backgroundColor: 'var(--terminal-bg)', padding: '8px 10px', minHeight: demoMode ? undefined : 120 }}
+            >
+              <pre
+                className={demoMode ? 'text-[11px] leading-snug whitespace-pre' : 'text-[11px] leading-snug overflow-hidden whitespace-pre'}
+                style={{ fontFamily: 'var(--font-mono, "Space Mono", monospace)', color: 'var(--terminal-text)', margin: 0 }}
+              >
+                {(() => {
+                  const lines = (nodeData as any).terminalPreviewLines || []
+                  return (demoMode ? lines : lines.slice(-12)).join('\n') || '$ _'
+                })()}
+              </pre>
             </div>
-          ) : (
-            <p className="italic" style={{ color: 'var(--node-text-muted)' }}>Double-click to start chatting</p>
-          )}
+          </div>
+        ) : (
+          <div className="cognograph-node__body">
+            {lastMessage ? (
+              nodeData.collapsed ? (
+                <div>
+                  <p className="text-sm overflow-hidden line-clamp-1">
+                    {getPreviewContent()}
+                  </p>
+                </div>
+              ) : (
+                <div className="h-full overflow-hidden">
+                  {nodeData.messages
+                    .filter((m) => m.role === 'user' || m.role === 'assistant')
+                    .slice(-6)
+                    .map((msg, i) => (
+                      <div
+                        key={msg.id || i}
+                        className={`chat-bubble chat-bubble--${msg.role === 'user' ? 'user' : 'assistant'}`}
+                      >
+                        <span
+                          className={`chat-bubble__role chat-bubble__role--${msg.role === 'user' ? 'user' : 'assistant'}`}
+                        >
+                          {msg.role === 'user' ? 'You' : 'Assistant'}
+                        </span>
+                        <p className="text-sm overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as const }}>
+                          {msg.content}
+                        </p>
+                      </div>
+                    ))}
+                </div>
+              )
+            ) : (
+              <p className="italic" style={{ color: 'var(--node-text-muted)' }}>Double-click to start chatting</p>
+            )}
 
-          {/* Property Badges */}
-          {!nodeData.collapsed && (
-            <PropertyBadges
-              properties={nodeData.properties || {}}
-              definitions={propertyDefinitions}
-              hiddenProperties={nodeData.hiddenProperties}
-              compact
-            />
-          )}
-        </div>
+            {/* Inline property controls */}
+            {!nodeData.collapsed && (
+              <NodePropertyControls nodeId={id} nodeType="conversation" data={data as Record<string, unknown>} />
+            )}
+            {/* Property Badges */}
+            {!nodeData.collapsed && (
+              <PropertyBadges
+                properties={nodeData.properties || {}}
+                definitions={propertyDefinitions}
+                hiddenProperties={nodeData.hiddenProperties}
+                compact
+              />
+            )}
+          </div>
+        )
       )}
 
       {/* ================================================================
           L2+ (mid and above): Footer
           ================================================================ */}
-      {showFooter && showContent && (
+      {showFooter && showContent && !isExpanded && (
         <div className="cognograph-node__footer">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 node-chrome--hover">
             <button
               onClick={handleManualExtract}
               disabled={isExtracting === id}
@@ -708,8 +905,8 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
             </div>
           ) : (
             <span>
-              {messageCount} messages
-              {showTokenEstimates && totalCost > 0 && (
+              {!demoMode && <>{messageCount} messages</>}
+              {!demoMode && showTokenEstimates && totalCost > 0 && (
                 <span style={{ color: 'var(--node-text-muted)', marginLeft: '4px' }}>
                   · <CountUp to={totalCost} duration={0.8} format={formatCost} />
                 </span>
@@ -730,18 +927,18 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
               <span></span>
               <span></span>
             </div>
-          ) : (
+          ) : !demoMode ? (
             <span style={{ color: 'var(--node-text-muted)' }}>
               {messageCount} messages
             </span>
-          )}
+          ) : null}
         </div>
       )}
 
       {/* ================================================================
           L4 (ultra-close): Artboard expansion hint
           ================================================================ */}
-      {showEmbeddedContent && (
+      {showEmbeddedContent && !isExpanded && (
         <div
           className="flex items-center justify-center gap-1 py-1 text-[10px] cursor-pointer rounded-b-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
           style={{ color: 'var(--node-text-muted)' }}

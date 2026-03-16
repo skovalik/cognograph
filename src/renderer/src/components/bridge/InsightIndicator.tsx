@@ -83,7 +83,7 @@ function InsightIndicatorComponent({
 
   const primaryInsight = activeInsights[0]
   const InsightIcon = INSIGHT_ICONS[primaryInsight.type] || Lightbulb
-  const color = INSIGHT_COLORS[primaryInsight.type] || '#3b82f6'
+  const color = INSIGHT_COLORS[primaryInsight.type] || '#C8963E'
 
   const handleApply = useCallback(
     (insightId: string) => {
@@ -219,7 +219,7 @@ function renderInsightList(
     <div className="space-y-0">
       {insights.map((insight, i) => {
         const InsightIcon = INSIGHT_ICONS[insight.type] || Lightbulb
-        const color = INSIGHT_COLORS[insight.type] || '#3b82f6'
+        const color = INSIGHT_COLORS[insight.type] || '#C8963E'
 
         return (
           <div key={insight.id}>

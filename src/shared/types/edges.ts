@@ -43,6 +43,19 @@ export interface EdgeWaypoint {
  */
 export type EdgeStrength = 'light' | 'normal' | 'strong'
 
+/**
+ * Semantic edge relationship types — multi-channel visual encoding
+ * Dash pattern + color tint channels only. Width exclusively owned by `strength`.
+ */
+export type EdgeSemanticType =
+  | 'provides-context'  // baseline: solid, default color
+  | 'depends-on'        // double-dash (3 3 12 3)
+  | 'references'        // dotted (4 4)
+  | 'derives-from'      // dashed (8 4)
+  | 'extends'           // solid, teal tint
+  | 'implements'        // solid, indigo tint
+  | 'custom'            // user-defined
+
 export interface EdgeData {
   // Direction control
   direction: 'unidirectional' | 'bidirectional'
@@ -84,6 +97,10 @@ export interface EdgeData {
 
   // Arrow/marker style at endpoints
   arrowStyle?: EdgeArrowStyle
+
+  // Semantic relationship type — multi-channel visual encoding (dash + color)
+  // Width channel reserved exclusively for `strength`
+  semanticType?: EdgeSemanticType
 
   // DEPRECATED: Use waypoints instead. Kept for backwards compatibility.
   // Will be auto-migrated to waypoints[0] relative to midpoint on load.
@@ -151,14 +168,13 @@ export function getContextDepthFromStrength(strength: EdgeStrength | undefined):
   }
 }
 
+// Presets for custom user labels. Semantic names (provides context, depends on,
+// references) are now auto-populated from EdgeSemanticType — single naming system.
 export const EDGE_LABEL_PRESETS = [
-  'provides context',
   'related to',
   'child of',
-  'references',
   'continues from',
   'alternative to',
-  'depends on',
   'extracted',
   'spawned'
 ] as const

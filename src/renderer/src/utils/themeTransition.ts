@@ -67,8 +67,20 @@ function applyThemeToDom(themeSettings: ThemeSettings): void {
   root.style.setProperty('--gui-toolbar-icon-2', guiColors.toolbarIconAccent[1] || '#22d3ee')
   root.style.setProperty('--gui-toolbar-icon-3', guiColors.toolbarIconAccent[2] || '#34d399')
   root.style.setProperty('--gui-toolbar-icon-4', guiColors.toolbarIconAccent[3] || '#a855f7')
+
+  // 2b. Sync core design tokens so all UI (nav, toolbar, menus) responds to theme
+  root.style.setProperty('--surface-panel', guiColors.panelBackground)
+  root.style.setProperty('--surface-panel-secondary', guiColors.panelBackgroundSecondary)
+  root.style.setProperty('--text-primary', guiColors.textPrimary)
+  root.style.setProperty('--text-secondary', guiColors.textSecondary)
   root.style.setProperty('--node-text-primary', guiColors.textPrimary)
   root.style.setProperty('--node-text-secondary', guiColors.textSecondary)
+
+  // 2c. Sync accent color system from theme's guiColors
+  root.style.setProperty('--cg-accent', guiColors.accentPrimary)
+  root.style.setProperty('--accent-glow', guiColors.accentSecondary)
+  root.style.setProperty('--accent-glow-subtle', `${guiColors.accentSecondary}26`)
+  root.style.setProperty('--accent-glow-strong', `${guiColors.accentSecondary}59`)
 
   // 3. Canvas CSS variables (App.tsx lines 308-312)
   root.style.setProperty('--canvas-background', themeSettings.canvasBackground)
@@ -242,7 +254,7 @@ export function performThemeTransition(
 
   // No View Transition API or reduce-motion → instant swap
   if (!document.startViewTransition || shouldReduceMotion()) {
-    store.setThemeMode(newMode)
+    store.setThemeMode(newMode, 'manual')
     return
   }
 
@@ -265,7 +277,7 @@ export function performThemeTransition(
 
   const transition = document.startViewTransition(() => {
     flushSync(() => {
-      store.setThemeMode(newMode)
+      store.setThemeMode(newMode, 'manual')
       // Read committed state and apply DOM synchronously for the snapshot
       const newState = useWorkspaceStore.getState().themeSettings
       applyThemeToDom(newState)

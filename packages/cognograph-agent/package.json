@@ -1,0 +1,21 @@
+{
+  "name": "cognograph-agent",
+  "version": "0.1.0",
+  "description": "Local terminal agent for Cognograph canvas",
+  "bin": { "cognograph-agent": "./dist/index.js" },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "node-pty": "^1.0.0",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.4.0",
+    "tsx": "^4.7.0",
+    "vitest": "^1.6.0"
+  }
+}

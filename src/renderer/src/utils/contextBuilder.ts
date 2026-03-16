@@ -29,6 +29,7 @@ import type {
 import { buildEnhancedContext } from './enhancedContextBuilder'
 import { describeContext } from './contextDescriber'
 import { estimateTokens, getModelContextLimit } from './tokenEstimation'
+import { serializeArtifactForContext } from '../services/media/mediaPiping'
 
 // Token budget configuration
 const DEFAULT_MAX_CONTEXT_TOKENS = 50000
@@ -245,7 +246,7 @@ function buildNodeSummary(
     case 'artifact': {
       const artifactData = data as ArtifactNodeData
       summary.contentPreview = detailLevel !== 'minimal'
-        ? truncateText(artifactData.content, CONTENT_PREVIEW_LENGTH)
+        ? truncateText(serializeArtifactForContext(artifactData), CONTENT_PREVIEW_LENGTH)
         : undefined
       break
     }

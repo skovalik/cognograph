@@ -95,7 +95,8 @@ export function NotionSettingsTab({ plugin }: { plugin: TypedPluginBridge<Notion
       <div className="flex items-center justify-between mb-3 pb-2 border-b gui-border">
         <div className="flex items-center gap-2">
           <Database className="w-4 h-4" style={{ color: 'var(--gui-accent-tertiary)' }} />
-          <span className="text-sm font-medium gui-text">Notion Integration</span>
+          <span className="text-sm font-medium gui-text">Notion</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded gui-text-secondary" style={{ backgroundColor: 'var(--surface-secondary)' }}>Plugin</span>
         </div>
         {connectionStatus === 'connected' && (
           <div className="flex items-center gap-2">

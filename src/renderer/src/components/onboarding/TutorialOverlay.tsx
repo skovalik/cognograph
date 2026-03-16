@@ -55,14 +55,14 @@ const STEP_CONFIGS: Record<TutorialStep, StepConfig> = {
     title: 'Step 2: Create a Conversation',
     description: 'Press Shift+C to create a conversation node near your note.',
     hint: 'This is where you\'ll chat with AI. Place it next to your note.',
-    color: '#3b82f6'
+    color: '#C8963E'
   },
   'connect-them': {
     icon: Link2,
     title: 'Step 3: Connect Note → Conversation',
     description: 'Drag from the note\'s connection handle to the conversation node.',
     hint: 'Handles appear on hover at the edges of each node. This link tells the AI to use your note as context.',
-    color: '#a855f7'
+    color: '#F0EDE8'
   },
   'send-message': {
     icon: Send,

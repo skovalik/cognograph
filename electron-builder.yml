@@ -29,9 +29,8 @@ files:
   - "!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml}"
   - "!{.env,.env.*,.npmrc,pnpm-lock.yaml}"
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
-  - "!{CLAUDE.md,ARCHITECTURE.md,DECISIONS.md,TODO.md,CHANGELOG.md}"
+  - "!{ARCHITECTURE.md,DECISIONS.md,TODO.md,CHANGELOG.md}"
   - "!{vitest.config.ts,playwright.config.ts,.dependency-cruiser.cjs}"
-  - "!{shader*.png,patent-*.png,p1-fig*.png}"
 
 # Pack into ASAR archive for faster loading and path length mitigation on Windows
 asar: true

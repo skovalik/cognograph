@@ -58,6 +58,7 @@ export type {
   ArtifactVersion,
   ArtifactFile,
   ArtifactNodeData,
+  ArtifactMediaMetadata,
   PreviewViewport,
   WorkspaceLLMSettings,
   AgentSettings,
@@ -123,6 +124,7 @@ export type {
   EdgeStrokePreset,
   EdgeWaypoint,
   EdgeStrength,
+  EdgeSemanticType,
   EdgeData,
   EdgeLabelPreset,
   EdgeStyle,
@@ -167,6 +169,11 @@ export type {
   ThemeSettings,
   AmbientEffectType,
   AmbientEffectSettings,
+  AccentTheme,
+  AccentPreset,
+  PresetAccent,
+  GridStyle,
+  FontTheme,
 } from './theme'
 
 export {
@@ -178,6 +185,10 @@ export {
   DEFAULT_LINK_COLORS_LIGHT,
   DEFAULT_THEME_SETTINGS,
   LIGHT_THEME_DEFAULTS,
+  ACCENT_PRESETS,
+  PRESET_ACCENT_PALETTES,
+  FONT_THEMES,
+  FONT_LOAD_URLS,
 } from './theme'
 
 // --- templates.ts ---

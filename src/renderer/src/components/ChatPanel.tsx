@@ -20,14 +20,17 @@ import type { ConversationNodeData, Message, ConnectorProvider } from '@shared/t
 import { DEFAULT_EXTRACTION_SETTINGS, DEFAULT_AGENT_SETTINGS, CONNECTOR_PROVIDER_INFO } from '@shared/types'
 import { logger } from '../utils/logger'
 import { InlineErrorBoundary } from './ErrorBoundary'
+import { CreditExhaustedPrompt } from './CreditExhaustedPrompt'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 interface ChatPanelProps {
   nodeId: string
   isFocused?: boolean
   isModal?: boolean
+  embedded?: boolean
 }
 
-function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatPanelProps): JSX.Element | null {
+function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedded = false }: ChatPanelProps): JSX.Element | null {
   // All store subscriptions MUST come first
   const nodes = useWorkspaceStore((state) => state.nodes)
   const closeChat = useWorkspaceStore((state) => state.closeChat)
@@ -52,6 +55,9 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatP
   // Subscribe to store's streaming state (for agent mode)
   const storeIsStreaming = useStoreIsStreaming(nodeId)
 
+  // Mobile-responsive sizing
+  const isMobile = useIsMobile()
+
   // All useState hooks
   const [input, setInput] = useState('')
   const [isStreamingLocal, setIsStreamingLocal] = useState(false)
@@ -59,6 +65,8 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatP
   const [showContextSettings, setShowContextSettings] = useState(false)
   const [isInjecting, setIsInjecting] = useState(false) // For context injection flash
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null) // null = checking
+  const [remainingCredits, setRemainingCredits] = useState<number | null>(null)
+  const [creditExhausted, setCreditExhausted] = useState(false)
 
   // Modal drag state
   const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 })
@@ -113,6 +121,11 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatP
   // Agent mode uses store state because the agent service controls streaming
   // Chat mode uses local state because LLM event handlers control it
   const isStreaming = nodeData?.mode === 'agent' ? storeIsStreaming : isStreamingLocal
+
+  // Check if user has a BYOK key for the current provider
+  const byokKey = typeof window !== 'undefined'
+    ? localStorage.getItem(`cognograph:apikey:${nodeData?.provider || 'anthropic'}`)
+    : null
 
   const connectedNodes = useMemo(() => {
     if (!isValidConversation) return []
@@ -323,6 +336,13 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatP
             })
           }
 
+          // Track remaining credits from server response
+          if (typeof (data as any).remainingCredits === 'number') {
+            const remaining = (data as any).remainingCredits
+            setRemainingCredits(remaining)
+            if (remaining <= 0) setCreditExhausted(true)
+          }
+
           currentResponseRef.current = ''
 
           // Trigger per-message extraction if enabled (debounced to avoid excessive calls)
@@ -407,13 +427,23 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatP
       systemPrompt: undefined
     }
 
-    // Check for API key using the effective provider
+    // Check for API key or Supabase session (credit-backed)
     const apiKey = await window.api.settings.getApiKey(llmSettings.provider)
     if (!apiKey) {
-      toast.error(`Please set your ${llmSettings.provider} API key first`)
-      setShowApiKeyModal(true)
-      setInput(userMessage) // Restore input
-      return
+      let hasSession = false
+      try {
+        const mod = await import('../../../web/lib/supabase')
+        if (mod.supabase) {
+          const { data } = await mod.supabase.auth.getSession()
+          hasSession = !!data.session
+        }
+      } catch { /* Electron — no supabase */ }
+      if (!hasSession) {
+        toast.error(`Please set your ${llmSettings.provider} API key first`)
+        setShowApiKeyModal(true)
+        setInput(userMessage) // Restore input
+        return
+      }
     }
 
     // If in agent mode, use agent service
@@ -669,9 +699,172 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatP
   const inputBgClasses = 'bg-[var(--surface-panel-secondary)] border-[var(--border-subtle)]'
   const hoverBgClasses = 'hover:bg-[var(--surface-panel-secondary)]'
 
+  // Embedded mode — minimal chrome, fills parent container (used inside React Flow nodes)
+  if (embedded) {
+    return (
+      <div className="flex flex-col h-full bg-[var(--surface-panel)]">
+        {/* Compact provider + model indicator */}
+        <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--border-subtle)]">
+          <select
+            value={effectiveLLMSettings?.provider || nodeData.provider || 'anthropic'}
+            onChange={(e) => {
+              const newProvider = e.target.value as ConnectorProvider
+              const info = CONNECTOR_PROVIDER_INFO[newProvider]
+              updateNode(nodeId, { provider: newProvider, model: info?.defaultModel || '' })
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="capitalize px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 font-medium border-none outline-none cursor-pointer text-[11px]"
+            style={{ appearance: 'none', WebkitAppearance: 'none', paddingRight: '4px' }}
+            title="Switch AI provider"
+          >
+            {Object.entries(CONNECTOR_PROVIDER_INFO).map(([key, info]) => (
+              <option key={key} value={key}>{info.label}</option>
+            ))}
+          </select>
+          {effectiveLLMSettings?.model && (
+            <span className="text-[10px] text-[var(--text-muted)] font-mono truncate">{effectiveLLMSettings.model}</span>
+          )}
+          {nodeData.mode === 'agent' && (
+            <Bot className="w-3 h-3 text-[var(--accent-glow)] ml-auto flex-shrink-0" />
+          )}
+        </div>
+
+        {/* API key warning */}
+        {hasApiKey === false && (
+          <div
+            className="mx-2 mt-1.5 px-2 py-1.5 rounded text-[11px] flex items-center gap-1.5"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--gui-accent-warning, #f59e0b) 15%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--gui-accent-warning, #f59e0b) 40%, transparent)',
+            }}
+          >
+            <Key className="w-3 h-3 flex-shrink-0" style={{ color: 'var(--gui-accent-warning, #f59e0b)' }} />
+            <span>No API key for <strong>{currentProvider}</strong></span>
+            <button
+              onClick={() => setShowApiKeyModal(true)}
+              className="ml-auto px-1.5 py-0.5 rounded text-[10px] font-medium"
+              style={{ backgroundColor: 'var(--gui-accent-warning, #f59e0b)', color: '#000' }}
+            >
+              Set
+            </button>
+          </div>
+        )}
+
+        {/* Messages */}
+        <div
+          ref={messagesContainerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-3 min-h-0"
+        >
+          {nodeData.messages.length === 0 ? (
+            <div className="h-full flex items-center justify-center">
+              <p className="text-[var(--text-muted)] text-center text-xs">
+                Start a conversation.
+              </p>
+            </div>
+          ) : (
+            nodeData.messages.map((message, msgIndex) => (
+              message.role === 'tool_use' || message.role === 'tool_result' ? (
+                <ToolCallBubble key={message.id} message={message} isLightMode={isLightMode} />
+              ) : (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  conversationNodeId={nodeId}
+                  isLightMode={isLightMode}
+                  onDelete={() => deleteMessage(nodeId, msgIndex)}
+                  embedded
+                />
+              )
+            ))
+          )}
+
+          {/* Suggested Actions */}
+          {nodeData.messages.length > 0 &&
+           nodeData.messages[nodeData.messages.length - 1]?.role === 'assistant' &&
+           !isStreaming && (
+            <SuggestedActions
+              nodeId={nodeId}
+              onContinue={() => { setInput('continue'); requestAnimationFrame(() => inputRef.current?.focus()) }}
+              onExtract={() => debounceExtraction(nodeId, triggerPerMessageExtraction)}
+              isLightMode={isLightMode}
+            />
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Credit prompts */}
+        {creditExhausted && !byokKey && (
+          <div className="p-2">
+            <CreditExhaustedPrompt
+              onSignUp={() => window.open('https://cognograph.app/signup', '_blank')}
+              onByok={() => setShowApiKeyModal(true)}
+            />
+          </div>
+        )}
+        {!creditExhausted && remainingCredits !== null && remainingCredits > 0 && remainingCredits <= 5 && !byokKey && (
+          <p style={{ fontSize: '12px', color: 'var(--gold)', padding: '4px 12px', fontFamily: 'var(--font-mono)' }}>
+            {remainingCredits}&#162; remaining —{' '}
+            <a href="https://cognograph.app/signup" target="_blank" rel="noopener noreferrer"
+               style={{ color: 'var(--gold)', textDecoration: 'underline' }}>sign up for $1 more</a>
+          </p>
+        )}
+
+        {/* Input */}
+        <div className="p-2 border-t border-[var(--border-subtle)]">
+          <div className="flex gap-1.5">
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={nodeData.mode === 'agent' ? "Ask the agent..." : "Type a message..."}
+              rows={1}
+              disabled={isStreaming || (creditExhausted && !byokKey)}
+              spellCheck={true}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement
+                target.style.height = 'auto'
+                target.style.height = `${Math.min(target.scrollHeight, 80)}px`
+              }}
+              className={`flex-1 bg-[var(--surface-panel-secondary)] rounded px-2.5 py-1.5 ${isMobile ? 'text-base' : 'text-xs'} text-[var(--text-primary)] focus:outline-none focus:border-blue-500 resize-none disabled:opacity-50 border border-[var(--border-subtle)]`}
+              style={isMobile ? { minHeight: '44px' } : undefined}
+            />
+            {isStreaming ? (
+              <button
+                onClick={handleCancel}
+                className={`px-2.5 bg-red-600 hover:bg-red-700 rounded transition-colors flex items-center justify-center ${isMobile ? 'min-w-[44px] min-h-[44px]' : ''}`}
+              >
+                <Square className={`${isMobile ? 'w-5 h-5' : 'w-3.5 h-3.5'} text-white`} />
+              </button>
+            ) : (
+              <button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                className={`px-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors flex items-center justify-center ${isMobile ? 'min-w-[44px] min-h-[44px]' : ''}`}
+              >
+                <Send className={`${isMobile ? 'w-5 h-5' : 'w-3.5 h-3.5'} text-white`} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Modals */}
+        {showApiKeyModal && (
+          <ApiKeyModal
+            provider={effectiveLLMSettings?.provider || nodeData.provider}
+            onSuccess={() => { setShowApiKeyModal(false); setHasApiKey(true) }}
+            onClose={() => setShowApiKeyModal(false)}
+          />
+        )}
+        <ContextSettingsModal isOpen={showContextSettings} onClose={() => setShowContextSettings(false)} />
+      </div>
+    )
+  }
+
   // Different classes for modal vs column mode
   const containerClasses = isModal
-    ? `${bgClasses} glass-soft rounded-lg shadow-2xl flex flex-col border-2 ${focusBorderClasses} ${!isFocused ? 'opacity-90' : ''}`
+    ? `${bgClasses} rounded-lg shadow-2xl flex flex-col border-2 ${focusBorderClasses} ${!isFocused ? 'opacity-90' : ''}`
     : `h-full w-[380px] ${bgClasses} border-l shadow-xl z-50 flex flex-col ${isFocused ? 'border-blue-500 border-l-2' : borderClasses} ${!isFocused ? 'opacity-90' : ''}`
 
   return (
@@ -687,7 +880,7 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatP
     >
       {/* Header - draggable in modal mode */}
       <div
-        className={`flex items-center justify-between px-4 py-3 border-b ${headerBgClasses} ${isModal ? 'cursor-move select-none' : ''}`}
+        className={`gui-panel-header--minimal ${isModal ? 'cursor-move select-none' : ''}`}
         onMouseDown={handleDragStart}
       >
         {/* Drag handle indicator for modal */}
@@ -901,6 +1094,23 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatP
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Credit prompts */}
+      {creditExhausted && !byokKey && (
+        <div className="px-4 pt-3">
+          <CreditExhaustedPrompt
+            onSignUp={() => window.open('https://cognograph.app/signup', '_blank')}
+            onByok={() => setShowApiKeyModal(true)}
+          />
+        </div>
+      )}
+      {!creditExhausted && remainingCredits !== null && remainingCredits > 0 && remainingCredits <= 5 && !byokKey && (
+        <p style={{ fontSize: '12px', color: 'var(--gold)', padding: '4px 16px', fontFamily: 'var(--font-mono)' }}>
+          {remainingCredits}&#162; remaining —{' '}
+          <a href="https://cognograph.app/signup" target="_blank" rel="noopener noreferrer"
+             style={{ color: 'var(--gold)', textDecoration: 'underline' }}>sign up for $1 more</a>
+        </p>
+      )}
+
       {/* Input */}
       <div className={`p-4 border-t ${borderClasses}`}>
         <div className="flex gap-2">
@@ -911,19 +1121,20 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatP
             onKeyDown={handleKeyDown}
             placeholder={nodeData.mode === 'agent' ? "Ask me to modify your workspace..." : "Type a message..."}
             rows={1}
-            disabled={isStreaming}
+            disabled={isStreaming || (creditExhausted && !byokKey)}
             spellCheck={true}
             onInput={(e) => {
               const target = e.target as HTMLTextAreaElement
               target.style.height = 'auto'
               target.style.height = `${Math.min(target.scrollHeight, 120)}px`
             }}
-            className={`flex-1 ${inputBgClasses} rounded px-3 py-2 text-sm ${textClasses} focus:outline-none focus:border-blue-500 resize-none disabled:opacity-50`}
+            className={`flex-1 ${inputBgClasses} rounded px-3 py-2 ${isMobile ? 'text-base' : 'text-sm'} ${textClasses} focus:outline-none focus:border-blue-500 resize-none disabled:opacity-50`}
+            style={isMobile ? { minHeight: '44px' } : undefined}
           />
           {isStreaming ? (
             <button
               onClick={handleCancel}
-              className="px-4 bg-red-600 hover:bg-red-700 rounded transition-colors flex items-center justify-center"
+              className={`px-4 bg-red-600 hover:bg-red-700 rounded transition-colors flex items-center justify-center ${isMobile ? 'min-w-[44px] min-h-[44px]' : ''}`}
             >
               <Square className="w-5 h-5 text-white" />
             </button>
@@ -931,7 +1142,7 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false }: ChatP
             <button
               onClick={handleSend}
               disabled={!input.trim()}
-              className="px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors flex items-center justify-center"
+              className={`px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors flex items-center justify-center ${isMobile ? 'min-w-[44px] min-h-[44px]' : ''}`}
             >
               <Send className="w-5 h-5 text-white" />
             </button>
@@ -983,9 +1194,10 @@ interface MessageBubbleProps {
   conversationNodeId: string
   isLightMode?: boolean
   onDelete?: () => void
+  embedded?: boolean
 }
 
-const MessageBubble = memo(function MessageBubbleComponent({ message, conversationNodeId, isLightMode = false, onDelete }: MessageBubbleProps): JSX.Element {
+const MessageBubble = memo(function MessageBubbleComponent({ message, conversationNodeId, isLightMode = false, onDelete, embedded = false }: MessageBubbleProps): JSX.Element {
   const isUser = message.role === 'user'
   const [showArtifacts, setShowArtifacts] = useState(false)
   const spawnArtifactFromLLM = useWorkspaceStore((state) => state.spawnArtifactFromLLM)
@@ -1074,10 +1286,10 @@ const MessageBubble = memo(function MessageBubbleComponent({ message, conversati
           </button>
         )}
         <div
-          className={`max-w-[85%] min-w-0 rounded-lg px-4 py-2 overflow-hidden ${
+          className={`${embedded ? 'max-w-full' : 'max-w-[85%]'} min-w-0 rounded-lg px-4 py-2 overflow-hidden ${
             isUser
-              ? 'bg-blue-600 text-white'
-              : assistantBgClasses
+              ? 'chat-message-user text-white'
+              : `chat-message-ai ${assistantBgClasses}`
           }`}
         >
         {isUser ? (

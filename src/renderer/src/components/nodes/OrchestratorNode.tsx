@@ -10,10 +10,11 @@ import { EditableTitle } from '../EditableTitle'
 import { NodeModeDropdown } from './NodeModeDropdown'
 import { useNodeResize } from '../../hooks/useNodeResize'
 import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
-import { StarBorder, DecryptedText } from '../ui/react-bits'
+import { DecryptedText } from '../ui/react-bits'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
 import { OrchestratorBadge } from '../bridge/OrchestratorBadge'
 import { ExecutionStatusBadge } from '../ExecutionStatusBadge'
+import { NodePropertyControls } from './NodePropertyControls'
 import { useExecutionStatusStore } from '../../stores/executionStatusStore'
 
 // TypeScript interface for node styles with CSS custom properties
@@ -57,6 +58,31 @@ function getBudgetColor(percentage: number): string {
   return '#10b981'  // green
 }
 
+/**
+ * ProgressDots — L0 pipeline progress indicator.
+ * Shows filled/empty dots representing agent completion state.
+ */
+function ProgressDots({ completed, total, color }: { completed: number; total: number; color: string }): JSX.Element {
+  return (
+    <div className="progress-dots" style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+      {Array.from({ length: total }, (_, i) => (
+        <span
+          key={i}
+          className={`dot ${i < completed ? 'dot--filled' : 'dot--empty'}`}
+          style={{
+            display: 'inline-block',
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: i < completed ? color : 'var(--border-subtle, rgba(255,255,255,0.15))',
+            transition: 'background 200ms ease',
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
 function OrchestratorNodeComponent({ id, data, selected, width, height }: NodeProps): JSX.Element {
   const nodeData = data as OrchestratorNodeData
   const propsWidth = width as number | undefined
@@ -82,26 +108,15 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
   const effectiveHeight = Math.max(MIN_HEIGHT, nodeHeight)
 
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
-    const baseOpacity = 20
-    const tintOpacity = themeSettings.isDarkMode ? Math.round(baseOpacity * 0.5) : baseOpacity
-    const borderWidth = 2
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.orchestrator ?? '#6366f1'
 
     return {
-      borderWidth: `${borderWidth}px`,
-      borderStyle: 'solid', // FORCE solid borders
-      borderColor: safeNodeColor,
-      // ALWAYS add opaque background (CSS overrides when glass enabled)
-      background: `color-mix(in srgb, ${safeNodeColor} ${tintOpacity}%, var(--node-bg))`,
-      boxShadow: selected ? `0 0 0 2px ${safeNodeColor}40, 0 0 20px ${safeNodeColor}30` : 'none',
+      '--ring-color': safeNodeColor,
+      '--node-accent': safeNodeColor,
       width: nodeWidth,
       height: effectiveHeight,
-      transition: 'background 200ms ease-out, border-color 200ms ease-out, backdrop-filter 200ms ease-out, opacity 200ms ease-out',
-      // CSS custom properties for dynamic theming
-      '--ring-color': safeNodeColor,    // Edge handles color
-      '--node-accent': safeNodeColor     // Glass background tint
     }
-  }, [nodeColor, themeSettings.nodeColors.orchestrator, isGlassEnabled, selected, nodeWidth, effectiveHeight])
+  }, [nodeColor, themeSettings.nodeColors.orchestrator, nodeWidth, effectiveHeight])
 
   // Handle resize
   const handleResizeStart = useCallback(() => {
@@ -131,21 +146,45 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
   const isCut = useWorkspaceStore(s => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id))
 
   // LOD (Level of Detail) rendering based on zoom level
-  const { showContent, showTitle, showBadges, showLede, zoomLevel } = useNodeContentVisibility()
+  const {
+    showContent, showTitle, showBadges, showLede,
+    showHeader, showFooter, showInteractiveControls,
+    lodLevel, zoomLevel
+  } = useNodeContentVisibility()
+
+  const isUltraFar = zoomLevel === 'ultra-far'
 
   // Execution status badge — visible at ALL zoom levels for critical state
   const executionState = useExecutionStatusStore((s) => s.nodeExecutions[id])
 
   // Show members mode
   const { nonMemberClass, memberHighlightClass } = useShowMembersClass(id, nodeData.parentId)
-  const showInteractiveControls = showContent
-  const showFooter = showBadges
+
+  // Run state
+  const currentRun = nodeData.currentRun
+  const isRunning = currentRun?.status === 'running'
+  const isPaused = currentRun?.status === 'paused'
+  const isPlanning = currentRun?.status === 'planning'
+  const isActive = isRunning || isPaused || isPlanning
+
+  // Processing state for is-thinking className
+  const isProcessing = isRunning || isPlanning
+
+  // Progress dots: count completed agents
+  const completedAgents = useMemo(() =>
+    nodeData.connectedAgents.filter(a => a.status === 'completed').length,
+    [nodeData.connectedAgents]
+  )
+  const totalAgents = nodeData.connectedAgents.length
 
   // Build className
   const nodeClassName = [
     'cognograph-node cognograph-node--orchestrator',
     selected && 'selected',
     isSpawning && 'spawning',
+    isActive && 'cognograph-node--active-run',
+    // is-active reserved for functional state only (not selection)
+    isProcessing && 'is-thinking',
     nonMemberClass,
     memberHighlightClass,
     warmthLevel && `warmth-${warmthLevel}`,
@@ -155,13 +194,6 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
     (nodeData as Record<string, unknown>).nodeShape && `node-shape-${(nodeData as Record<string, unknown>).nodeShape}`,
     `orchestrator-node--lod-${zoomLevel}`
   ].filter(Boolean).join(' ')
-
-  // Run state
-  const currentRun = nodeData.currentRun
-  const isRunning = currentRun?.status === 'running'
-  const isPaused = currentRun?.status === 'paused'
-  const isPlanning = currentRun?.status === 'planning'
-  const isActive = isRunning || isPaused || isPlanning
 
   // Strategy label
   const strategy = STRATEGY_LABELS[nodeData.strategy] || STRATEGY_LABELS.sequential
@@ -260,12 +292,20 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
       ref={nodeRef}
       className={nodeClassName}
       style={nodeStyle}
-      data-lod={zoomLevel}
+      data-lod={lodLevel}
       data-transparent={transparent}
-      {...(zoomLevel === 'far' ? { role: 'img', 'aria-label': `Orchestrator: ${nodeData.title}` } : {})}
+      {...(isUltraFar ? { role: 'img', 'aria-label': `Orchestrator: ${nodeData.title}` } : {})}
     >
-      {/* Handles - hidden at far zoom for visual cleanliness */}
-      {zoomLevel !== 'far' && (
+      {/* Type label: floats above node */}
+      <div className="cognograph-node__type-label" style={{ color: nodeColor ?? '#6366f1' }}>
+        ORCHESTRATOR
+      </div>
+
+      {/* ================================================================
+          L1+ (far and above): Handles on all four sides
+          Suppressed at L0 — no connection affordance at navigation level
+          ================================================================ */}
+      {!isUltraFar && (
         <>
           <Handle type="target" position={Position.Top} id="top-target" className="cognograph-handle" />
           <Handle type="source" position={Position.Top} id="top-source" className="cognograph-handle" />
@@ -278,14 +318,14 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
         </>
       )}
 
-      {/* Numbered bookmark badge */}
-      {numberedBookmark && (
+      {/* Numbered bookmark badge — visible at L1+ (navigation aid) */}
+      {!isUltraFar && numberedBookmark && (
         <div className={`numbered-bookmark-badge numbered-bookmark-badge--${numberedBookmark}`}>
           {numberedBookmark}
         </div>
       )}
 
-      {/* Bridge: Orchestrator activity badge (Phase 1) */}
+      {/* Bridge: Orchestrator activity badge (Phase 1) — L1+ */}
       {showTitle && <OrchestratorBadge nodeId={id} />}
 
       {/* Execution status badge (Phase 5A) — visible at all zoom levels */}
@@ -296,10 +336,35 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
         />
       )}
 
-      {/* L0 far: Colored pill with Workflow icon + run status badge */}
+      {/* ================================================================
+          L0 (ultra-far, lodLevel 0): Pipeline icon + progress dots
+          Minimal DOM — icon, progress dots, optional pulse for active runs
+          ================================================================ */}
+      {isUltraFar && (
+        <div className="flex items-center justify-center gap-2 h-full" aria-hidden={false}>
+          <Workflow className="w-5 h-5 flex-shrink-0" style={{ color: nodeColor }} />
+          {totalAgents > 0 && (
+            <ProgressDots completed={completedAgents} total={totalAgents} color={nodeColor ?? '#6366f1'} />
+          )}
+          {/* Active run pulse indicator at L0 */}
+          {isProcessing && (
+            <div
+              className="absolute inset-0 rounded-lg pointer-events-none"
+              style={{
+                boxShadow: `0 0 8px 2px ${nodeColor ?? '#6366f1'}80`,
+                animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+              }}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ================================================================
+          L1 (far, lodLevel 1): Title + strategy label + step dots
+          ================================================================ */}
       {zoomLevel === 'far' && (
         <div className="flex items-center justify-center gap-1.5 h-full" aria-hidden={false}>
-          <Workflow className="w-5 h-5 flex-shrink-0" style={{ color: nodeColor }} />
+          <Workflow className="w-4 h-4 flex-shrink-0" style={{ color: nodeColor }} />
           <span
             className="text-[11px] font-medium truncate"
             style={{ color: 'var(--node-text-primary)', maxWidth: '120px' }}
@@ -312,6 +377,9 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
           }}>
             {strategy.label}
           </span>
+          {totalAgents > 0 && (
+            <ProgressDots completed={completedAgents} total={totalAgents} color={nodeColor ?? '#6366f1'} />
+          )}
           {isActive && (
             <span className={`text-[9px] px-1 py-0.5 rounded ${
               isRunning ? 'text-amber-400 animate-pulse' :
@@ -323,8 +391,10 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
         </div>
       )}
 
-      {/* Header - visible at mid + close */}
-      {showTitle && (
+      {/* ================================================================
+          L1+ (far and above): Header with title + controls
+          ================================================================ */}
+      {showHeader && zoomLevel !== 'far' && (
         <div className="cognograph-node__header" style={{ borderBottomColor: `${nodeColor}30` }}>
           <Workflow className="w-4 h-4 flex-shrink-0" style={{ color: nodeColor }} />
           <EditableTitle
@@ -332,7 +402,7 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
             onChange={(title) => updateNode(id, { title })}
             className="cognograph-node__title"
           />
-          {/* AI Property Assist - only at close */}
+          {/* AI Property Assist — L3+ only */}
           {showInteractiveControls && (
             <NodeAIErrorBoundary compact>
               <AIPropertyAssist
@@ -342,7 +412,7 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
               />
             </NodeAIErrorBoundary>
           )}
-          {/* Strategy dropdown - only at close */}
+          {/* Strategy dropdown — L3+ only (interactive control) */}
           {showInteractiveControls && (
             <NodeModeDropdown
               value={nodeData.strategy}
@@ -351,7 +421,7 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
               nodeColor={nodeColor}
             />
           )}
-          {/* Strategy label at mid zoom (read-only) */}
+          {/* Strategy label at L2 mid zoom (read-only badge) */}
           {showLede && !showContent && (
             <span className="text-[10px] px-1.5 py-0.5 rounded ml-auto" style={{
               background: `${nodeColor}20`,
@@ -360,7 +430,7 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
               {strategy.label}
             </span>
           )}
-          {/* Run controls - only at close */}
+          {/* Run controls — L3+ only */}
           {showInteractiveControls && (
             <div className="ml-auto flex items-center gap-0.5 flex-shrink-0">
               {!isActive && (
@@ -404,102 +474,129 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
         </div>
       )}
 
-      {/* Body - LOD-aware content */}
-      {(showContent || showLede) && (
-        <div className="cognograph-node__body text-xs flex flex-col gap-1.5 overflow-hidden" aria-hidden={!showContent && !showLede}>
-          {/* L2 mid: Summary line for budget + agent count + strategy + retries */}
-          {showLede && !showContent && (
-            <>
-              <div className="flex items-center gap-2 text-[var(--node-text-secondary)]">
-                <span className="text-[10px]">{nodeData.connectedAgents.length} agent{nodeData.connectedAgents.length !== 1 ? 's' : ''}</span>
-                <span className="text-[10px] opacity-60">|</span>
-                <span className="text-[10px]">{budgetSummaryLine}</span>
+      {/* ================================================================
+          L2 (mid, lodLevel 2): Agent list with status indicators +
+          token budget bar (horizontal progress)
+          ================================================================ */}
+      {showLede && !showContent && (
+        <div className="cognograph-node__body text-xs flex flex-col gap-1.5 overflow-hidden">
+          {/* Agent list with status indicators */}
+          {nodeData.connectedAgents.length > 0 ? (
+            <div className="flex flex-col gap-0.5">
+              {nodeData.connectedAgents.map((agent) => {
+                const statusInfo = STATUS_DISPLAY[agent.status]
+                return (
+                  <div key={agent.nodeId} className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
+                    <span className={`${statusInfo.colorClass} ${agent.status === 'running' ? 'animate-pulse' : ''}`}>
+                      {statusInfo.icon}
+                    </span>
+                    <span className="truncate text-[10px]">{agent.nodeId.slice(0, 8)}</span>
+                    <span className="ml-auto text-[9px] opacity-60">{agent.status}</span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <span className="text-[10px] text-[var(--node-text-muted)] italic">No agents</span>
+          )}
+
+          {/* Token budget bar (horizontal progress) */}
+          {budgetTokens !== null && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-[var(--node-text-secondary)] w-10 flex-shrink-0">Tokens</span>
+              <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${budgetTokens}%`,
+                    backgroundColor: getBudgetColor(budgetTokens),
+                  }}
+                />
               </div>
-              {nodeData.failurePolicy.maxRetries > 0 && (
-                <span className="text-[10px] text-[var(--node-text-muted)]">
-                  Retries: {nodeData.failurePolicy.maxRetries}
-                </span>
-              )}
-            </>
+              <span className="text-[9px] text-[var(--node-text-muted)] flex-shrink-0">{Math.round(budgetTokens)}%</span>
+            </div>
           )}
+          {budgetTokens === null && budgetCost === null && (
+            <span className="text-[10px] text-[var(--node-text-muted)]">{budgetSummaryLine}</span>
+          )}
+        </div>
+      )}
 
-          {/* L3 close: Full budget meters */}
-          {showContent && (
-            <>
-              {(budgetTokens !== null || budgetCost !== null) && (
-                <div className="flex flex-col gap-0.5">
-                  {budgetTokens !== null && (
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-[var(--node-text-secondary)] w-10 flex-shrink-0">Tokens</span>
-                      <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: `${budgetTokens}%`,
-                            backgroundColor: getBudgetColor(budgetTokens),
-                          }}
-                        />
-                      </div>
-                      <span className="text-[9px] text-[var(--node-text-muted)] flex-shrink-0">
-                        {((currentRun?.totalInputTokens ?? 0) + (currentRun?.totalOutputTokens ?? 0)).toLocaleString()} / {nodeData.budget.maxTotalTokens?.toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-                  {budgetCost !== null && (
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-[var(--node-text-secondary)] w-10 flex-shrink-0">Cost</span>
-                      <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: `${budgetCost}%`,
-                            backgroundColor: getBudgetColor(budgetCost),
-                          }}
-                        />
-                      </div>
-                      <span className="text-[9px] text-[var(--node-text-muted)] flex-shrink-0">
-                        ${(currentRun?.totalCostUSD ?? 0).toFixed(4)} / ${nodeData.budget.maxTotalCostUSD?.toFixed(2)}
-                      </span>
-                    </div>
-                  )}
+      {/* ================================================================
+          L3+ (close/ultra-close, lodLevel 3-4): Full pipeline view +
+          execution log + budget bars + run history
+          ================================================================ */}
+      {showContent && (
+        <div className="cognograph-node__body text-xs flex flex-col gap-1.5 overflow-hidden">
+          {/* Full budget meters */}
+          {(budgetTokens !== null || budgetCost !== null) && (
+            <div className="flex flex-col gap-0.5">
+              {budgetTokens !== null && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-[var(--node-text-secondary)] w-10 flex-shrink-0">Tokens</span>
+                  <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${budgetTokens}%`,
+                        backgroundColor: getBudgetColor(budgetTokens),
+                      }}
+                    />
+                  </div>
+                  <span className="text-[9px] text-[var(--node-text-muted)] flex-shrink-0">
+                    {((currentRun?.totalInputTokens ?? 0) + (currentRun?.totalOutputTokens ?? 0)).toLocaleString()} / {nodeData.budget.maxTotalTokens?.toLocaleString()}
+                  </span>
                 </div>
               )}
-              {budgetTokens === null && budgetCost === null && (
-                <span className="text-[10px] text-[var(--node-text-muted)]">Budget: Unlimited</span>
-              )}
-            </>
-          )}
-
-          {/* Agent list - only at close */}
-          {showContent && (
-            <>
-              {nodeData.connectedAgents.length > 0 ? (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[10px] font-medium text-[var(--node-text-secondary)] uppercase">Agents</span>
-                  {nodeData.connectedAgents.map((agent, idx) => {
-                    const statusInfo = STATUS_DISPLAY[agent.status]
-                    return (
-                      <div key={agent.nodeId} className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
-                        <span className="text-[10px] opacity-50 w-3 text-right">{idx + 1}.</span>
-                        <span className={`${statusInfo.colorClass} ${agent.status === 'running' ? 'animate-pulse' : ''}`}>
-                          {statusInfo.icon}
-                        </span>
-                        <span className="truncate text-[11px]">{agent.nodeId.slice(0, 8)}</span>
-                        <span className="ml-auto text-[9px] opacity-60">{agent.status}</span>
-                      </div>
-                    )
-                  })}
+              {budgetCost !== null && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-[var(--node-text-secondary)] w-10 flex-shrink-0">Cost</span>
+                  <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${budgetCost}%`,
+                        backgroundColor: getBudgetColor(budgetCost),
+                      }}
+                    />
+                  </div>
+                  <span className="text-[9px] text-[var(--node-text-muted)] flex-shrink-0">
+                    ${(currentRun?.totalCostUSD ?? 0).toFixed(4)} / ${nodeData.budget.maxTotalCostUSD?.toFixed(2)}
+                  </span>
                 </div>
-              ) : (
-                <span className="text-[10px] text-[var(--node-text-muted)] italic">
-                  No agents connected. Draw edges to agent nodes.
-                </span>
               )}
-            </>
+            </div>
+          )}
+          {budgetTokens === null && budgetCost === null && (
+            <span className="text-[10px] text-[var(--node-text-muted)]">Budget: Unlimited</span>
           )}
 
-          {/* Collapsible run history - only at close */}
-          {showContent && nodeData.runHistory.length > 0 && (
+          {/* Full agent list with status indicators */}
+          {nodeData.connectedAgents.length > 0 ? (
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] font-medium text-[var(--node-text-secondary)] uppercase">Agents</span>
+              {nodeData.connectedAgents.map((agent, idx) => {
+                const statusInfo = STATUS_DISPLAY[agent.status]
+                return (
+                  <div key={agent.nodeId} className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
+                    <span className="text-[10px] opacity-50 w-3 text-right">{idx + 1}.</span>
+                    <span className={`${statusInfo.colorClass} ${agent.status === 'running' ? 'animate-pulse' : ''}`}>
+                      {statusInfo.icon}
+                    </span>
+                    <span className="truncate text-[11px]">{agent.nodeId.slice(0, 8)}</span>
+                    <span className="ml-auto text-[9px] opacity-60">{agent.status}</span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <span className="text-[10px] text-[var(--node-text-muted)] italic">
+              No agents connected. Draw edges to agent nodes.
+            </span>
+          )}
+
+          {/* Collapsible run history — L3+ only */}
+          {nodeData.runHistory.length > 0 && (
             <div>
               <button
                 onClick={handleToggleCollapse}
@@ -531,11 +628,32 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
         </div>
       )}
 
-      {/* Footer - visible at mid + close */}
-      {showFooter && (
+      {/* ================================================================
+          L2+ (mid and above): Footer
+          ================================================================ */}
+      {showFooter && showContent && (
         <div className="cognograph-node__footer flex items-center gap-2 text-[10px] text-[var(--node-text-muted)]">
+          <NodePropertyControls nodeId={id} nodeType="orchestrator" data={data as Record<string, unknown>} />
           <span className="capitalize">{nodeData.failurePolicy.type}</span>
           <span>Retries: {nodeData.failurePolicy.maxRetries}</span>
+          {currentRun && (
+            <span className={
+              currentRun.status === 'running' ? 'text-amber-400 animate-pulse' :
+              currentRun.status === 'completed' ? 'text-emerald-400' :
+              currentRun.status === 'failed' ? 'text-red-400' :
+              ''
+            }>
+              {currentRun.status}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* L2 (mid): Simplified footer with agent count + status */}
+      {showFooter && !showContent && (
+        <div className="cognograph-node__footer flex items-center gap-2 text-[10px] text-[var(--node-text-muted)]" style={{ opacity: 0.7 }}>
+          <span>{totalAgents} agent{totalAgents !== 1 ? 's' : ''}</span>
+          <span className="capitalize">{nodeData.failurePolicy.type}</span>
           {currentRun && (
             <span className={
               currentRun.status === 'running' ? 'text-amber-400 animate-pulse' :
@@ -566,9 +684,7 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
           lineStyle={{ borderColor: nodeColor, opacity: 0.4 }}
         />
       )}
-      <StarBorder color={nodeColor} speed="4s" thickness={2} borderRadius={12} animate={isActive}>
-        {nodeContent}
-      </StarBorder>
+      {nodeContent}
     </>
   )
 }

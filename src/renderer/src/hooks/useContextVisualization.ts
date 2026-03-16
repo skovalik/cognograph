@@ -18,13 +18,16 @@ export function useContextVisualization() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const activeNodeRef = useRef<string | null>(null)
 
+  const isTerminalRef = useRef(false)
+
   const updateVisualization = useCallback((nodeId: string) => {
     const traversal = getContextTraversalForNode(nodeId)
-    activate(nodeId, traversal.nodes, traversal.edges)
+    activate(nodeId, traversal.nodes, traversal.edges, isTerminalRef.current)
   }, [getContextTraversalForNode, activate])
 
-  const showContextScope = useCallback((nodeId: string) => {
+  const showContextScope = useCallback((nodeId: string, isTerminal = false) => {
     activeNodeRef.current = nodeId
+    isTerminalRef.current = isTerminal
 
     // Debounce to 500ms to avoid BFS on every keystroke
     if (debounceRef.current) {

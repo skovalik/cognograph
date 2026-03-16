@@ -60,7 +60,7 @@ export const DEFAULT_GLASS_SETTINGS: GlassSettings = {
   shimmerSpeed: 1.0,
   opaqueContent: true, // Keep text opaque by default (better readability)
   applyTo: {
-    nodes: true, // Glass on nodes by default
+    nodes: false, // Content-first: no glass on nodes
     modals: true, // Glass on modals by default
     panels: true, // Glass on panels by default
     overlays: false, // Disabled (too busy)

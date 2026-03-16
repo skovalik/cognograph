@@ -29,7 +29,7 @@ export function ContextSettingsModal({ isOpen, onClose }: ContextSettingsModalPr
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-[480px] bg-[var(--surface-panel)] glass-fluid border border-[var(--border-subtle)] rounded-lg shadow-xl">
+      <div className="w-[480px] max-w-[calc(100vw-32px)] bg-[var(--surface-panel)] glass-fluid border border-[var(--border-subtle)] rounded-lg shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[var(--border-subtle)]">
           <div className="flex items-center gap-2">

@@ -21,6 +21,9 @@ export function useIsGlassEnabled(
   const glassSettings = useWorkspaceStore((state) => state.themeSettings.glassSettings)
 
   return useMemo(() => {
+    // Content-first: no glass on nodes
+    if (surface === 'nodes') return false
+
     // Defensive: handle undefined glassSettings gracefully
     const settings = glassSettings ?? DEFAULT_GLASS_SETTINGS
 

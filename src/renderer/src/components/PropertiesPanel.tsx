@@ -1,6 +1,5 @@
 import { memo, useCallback, useState, useMemo } from 'react'
-import { X, Trash2, MessageSquare, Folder, FileText, CheckSquare, ChevronDown, ChevronRight, Tag, Plus, Code, Sparkles, Files, GripVertical, Power, Zap, Link2, Boxes, Bot, Compass, Users, Eye, EyeOff, Link2Off, HelpCircle, ExternalLink, Paperclip, Square, Circle, Hexagon, RectangleHorizontal, Workflow, CheckCircle, XCircle, Search, BarChart3, AlertTriangle } from 'lucide-react'
-import { Slider } from './ui/slider'
+import { X, Trash2, MessageSquare, Folder, FileText, CheckSquare, ChevronDown, ChevronRight, Tag, Plus, Code, Sparkles, Files, GripVertical, Power, Zap, Link2, Boxes, Bot, Compass, Users, Eye, EyeOff, Link2Off, HelpCircle, ExternalLink, Square, Circle, Hexagon, RectangleHorizontal, Workflow, CheckCircle, XCircle, Search, BarChart3, AlertTriangle } from 'lucide-react'
 import { useReactFlow } from '@xyflow/react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { PropertyInput, AddPropertyPopover, CreatePropertyModal, AIPropertyAssist } from './properties'
@@ -8,7 +7,6 @@ import { VersionHistoryPanel } from './VersionHistoryPanel'
 import { getPropertiesForNodeType, BUILTIN_PROPERTIES } from '../constants/properties'
 import { IconPicker } from './IconPicker'
 import { MultiSelectProperties } from './MultiSelectProperties'
-import { useAttachments } from '../hooks/useAttachments'
 import { RichTextEditor } from './RichTextEditor'
 import type {
   NodeData,
@@ -25,21 +23,16 @@ import type {
   WorkspaceContextRules,
   ArtifactFile,
   ArtifactContentType,
-  Attachment,
   ContextMetadata,
   PropertyDefinition,
-  ExtractionSettings,
   NodeActivationCondition,
   ActivationTrigger,
   NodeShape
 } from '@shared/types'
 import { ActionPropertiesFields } from './action/ActionPropertiesFields'
-import { DEFAULT_EXTRACTION_SETTINGS } from '@shared/types'
-import { AGENT_PRESETS, getPresetById } from '../constants/agentPresets'
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from './ui'
-import { AgentMemoryViewer } from './agent/AgentMemoryViewer'
-import { AgentSettingsEditor } from './agent/AgentSettingsEditor'
-import { AgentRunHistoryViewer } from './agent/AgentRunHistoryViewer'
+import { AttachmentsSection as AttachmentsSectionExtracted } from './inspector/sections/AttachmentsSection'
+import { ExtractionsSection } from './inspector/sections/ExtractionsSection'
+import { AgentSection } from './inspector/sections/AgentSection'
 import {
   DndContext,
   closestCenter,
@@ -85,15 +78,13 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
   const changeNodeType = useWorkspaceStore((state) => state.changeNodeType)
   const deleteNodes = useWorkspaceStore((state) => state.deleteNodes)
   const closeProperties = useWorkspaceStore((state) => state.closeProperties)
-  const openChat = useWorkspaceStore((state) => state.openChat)
+
   const setNodeProperty = useWorkspaceStore((state) => state.setNodeProperty)
   const addPropertyOption = useWorkspaceStore((state) => state.addPropertyOption)
   const addCustomProperty = useWorkspaceStore((state) => state.addCustomProperty)
   const addPropertyToNodeType = useWorkspaceStore((state) => state.addPropertyToNodeType)
   const removePropertyFromNodeType = useWorkspaceStore((state) => state.removePropertyFromNodeType)
   const propertySchema = useWorkspaceStore((state) => state.propertySchema)
-  const updateExtractionSettings = useWorkspaceStore((state) => state.updateExtractionSettings)
-
   const [showCreatePropertyModal, setShowCreatePropertyModal] = useState(false)
 
   // Track multi-selection state
@@ -212,16 +203,6 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
     [targetNodeId, selectedNode, updateNode]
   )
 
-  // Handler for updating extraction settings on conversation nodes
-  const handleExtractionSettingsChange = useCallback(
-    (settings: Partial<ExtractionSettings>) => {
-      if (targetNodeId) {
-        updateExtractionSettings(targetNodeId, settings)
-      }
-    },
-    [targetNodeId, updateExtractionSettings]
-  )
-
   const themeSettings = useWorkspaceStore((state) => state.themeSettings)
 
   if (!selectedNode) return null
@@ -230,10 +211,10 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
   const currentPropertyIds = propertySchema.nodeTypeProperties[nodeData.type] || []
 
   return (
-    <div className={`h-full w-full gui-panel glass-soft ${hideHeader ? '' : 'border-l gui-border shadow-xl'} gui-z-panels flex flex-col`}>
+    <div className={`h-full w-full gui-panel ${hideHeader ? '' : 'border-l gui-border'} gui-z-panels flex flex-col`}>
       {/* Header - hidden when embedded in floating modal */}
       {!hideHeader && (
-        <div className="flex items-center justify-between px-4 py-3 border-b gui-border">
+        <div className="gui-panel-header--minimal">
           <div className="flex items-center gap-2">
             <NodeIcon type={nodeData.type} nodeColors={themeSettings.nodeColors} />
             <select
@@ -274,7 +255,7 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* Title - common to all */}
         <div>
-          <label className="block text-xs font-medium gui-text-secondary mb-1">Title</label>
+          <label className="panel-section-label">Title</label>
           <input
             type="text"
             value={nodeData.title as string}
@@ -325,8 +306,6 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
           <ConversationFields
             data={nodeData}
             onChange={handleChange}
-            onOpenChat={() => openChat(selectedNode.id)}
-            onExtractionSettingsChange={handleExtractionSettingsChange}
           />
         )}
         {nodeData.type === 'project' && <ProjectFields data={nodeData} onChange={handleChange} />}
@@ -387,7 +366,7 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
 
         {/* Attachments Section (collapsible) */}
         {!isMultiSelection && targetNodeId && (
-          <AttachmentsSection nodeId={targetNodeId} nodeData={nodeData} />
+          <AttachmentsSectionExtracted nodeId={targetNodeId} />
         )}
 
         {/* Node Metadata Section (collapsible) */}
@@ -397,7 +376,8 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
         <OutgoingEdgeColorSection nodeId={selectedNode.id} data={nodeData} />
 
         {/* Timestamps */}
-        <div className="pt-4 border-t gui-border">
+        <div className="panel-divider" />
+        <div className="pt-4">
           <p className="text-xs gui-text-secondary">
             Created: {new Date(nodeData.createdAt).toLocaleString()}
           </p>
@@ -408,7 +388,8 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t gui-border">
+      <div className="panel-divider" />
+      <div className="p-4">
         <button
           onClick={handleDelete}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-900/50 hover:bg-red-900 text-red-300 rounded transition-colors"
@@ -470,7 +451,7 @@ function NodeColorPicker({
 
   return (
     <div className="flex items-center gap-2">
-      <label className="text-xs font-medium gui-text-secondary shrink-0">
+      <label className="panel-section-label shrink-0">
         Color {isMultiSelection && <span className="text-blue-400">({selectedNodeIds.length})</span>}
       </label>
 
@@ -549,7 +530,7 @@ function NodeShapePicker({
 
   return (
     <div className="flex items-center gap-2">
-      <label className="text-xs font-medium gui-text-secondary shrink-0">Shape</label>
+      <label className="panel-section-label shrink-0">Shape</label>
       <div className="flex items-center gap-1">
         {shapes.map(({ value, label, icon }) => (
           <button
@@ -652,7 +633,7 @@ function NodeEnabledToggle({
   }
 
   return (
-    <div className="pt-3 border-t gui-border">
+    <div className="pt-3">
       {/* Main enabled toggle */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -810,31 +791,16 @@ function NodeEnabledToggle({
 // Conversation-specific fields
 function ConversationFields({
   data,
-  onChange,
-  onOpenChat,
-  onExtractionSettingsChange
+  onChange
 }: {
   data: ConversationNodeData
   onChange: (field: string, value: unknown) => void
-  onOpenChat: () => void
-  onExtractionSettingsChange: (settings: Partial<ExtractionSettings>) => void
 }): JSX.Element {
-  const extractionSettings = data.extractionSettings || DEFAULT_EXTRACTION_SETTINGS
-  const [isExtractionExpanded, setIsExtractionExpanded] = useState(false)
-
-  const handleToggleExtractionType = (type: 'notes' | 'tasks'): void => {
-    const current = extractionSettings.extractionTypes
-    const newTypes = current.includes(type)
-      ? current.filter((t) => t !== type)
-      : [...current, type]
-    onExtractionSettingsChange({ extractionTypes: newTypes as ('notes' | 'tasks')[] })
-  }
-
   return (
     <>
       {/* Mode selector */}
       <div>
-        <label className="block text-xs font-medium gui-text-secondary mb-1">
+        <label className="panel-section-label">
           Mode
           <HelpTooltip text="Chat mode is for interactive conversations. Agent mode allows the AI to autonomously create nodes, tasks, and connections that configure context." />
         </label>
@@ -857,7 +823,7 @@ function ConversationFields({
       </div>
 
       <div>
-        <label className="block text-xs font-medium gui-text-secondary mb-1">
+        <label className="panel-section-label">
           Provider
           <HelpTooltip text="Choose which AI service to use: Claude (Anthropic) for best reasoning, Gemini (Google) for speed, or GPT (OpenAI) for broad capabilities." />
         </label>
@@ -873,176 +839,14 @@ function ConversationFields({
       </div>
 
       <div>
-        <p className={`text-xs gui-text-secondary mb-2`}>{data.messages.length} messages</p>
-        <button
-          onClick={onOpenChat}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-900/50 hover:bg-blue-900 text-blue-300 rounded transition-colors"
-        >
-          <MessageSquare className="w-4 h-4" />
-          Open Chat
-        </button>
+        <p className={`text-xs gui-text-secondary mb-2`}>{data.messages?.length ?? 0} messages</p>
       </div>
 
-      {/* Agent Preset — shown when mode is 'agent' */}
-      {data.mode === 'agent' && (
-        <>
-          <div className="space-y-1">
-            <label className="block text-xs font-medium gui-text-secondary">
-              Agent Preset
-              <HelpTooltip text="Pre-configured agent behaviors: Research Assistant explores topics deeply, Task Manager organizes work, Code Helper writes and explains code, General Purpose handles any task." />
-            </label>
-            <Select
-              value={data.agentPreset || 'custom'}
-              onValueChange={(v) => {
-                const preset = getPresetById(v)
-                if (preset) onChange('agentPreset', v)
-              }}
-            >
-              <SelectTrigger className="w-full h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {AGENT_PRESETS.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Agent settings — extracted to reusable section */}
+      {data.mode === 'agent' && <AgentSection nodeId={data.id || ''} />}
 
-          {/* Agent Deep UI Components */}
-          <AgentMemoryViewer
-            nodeId={data.id || ''}
-            memory={data.agentMemory || { entries: [], maxEntries: 50, maxKeyLength: 100, maxValueLength: 10000 }}
-            onChange={(memory) => onChange('agentMemory', memory)}
-          />
-
-          <AgentSettingsEditor
-            nodeId={data.id || ''}
-            settings={data.agentSettings || {}}
-            preset={data.agentPreset || 'custom'}
-            onChange={(settings) => {
-              onChange('agentSettings', settings)
-              onChange('agentPreset', 'custom')
-            }}
-          />
-
-          <AgentRunHistoryViewer
-            nodeId={data.id || ''}
-            history={data.agentRunHistory || []}
-          />
-        </>
-      )}
-
-      {/* Extraction Settings */}
-      <div className="pt-3 border-t gui-border">
-        <button
-          onClick={() => setIsExtractionExpanded(!isExtractionExpanded)}
-          className="flex items-center gap-2 text-xs font-medium gui-text mb-2 w-full"
-        >
-          {isExtractionExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-          <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--gui-accent-primary)' }} />
-          Auto-Extraction
-          {extractionSettings.autoExtractEnabled && (
-            <span
-              className="ml-auto px-1.5 py-0.5 rounded text-[10px]"
-              style={{
-                backgroundColor: 'color-mix(in srgb, var(--gui-accent-primary) 30%, transparent)',
-                color: 'var(--gui-accent-primary)'
-              }}
-            >
-              ON
-            </span>
-          )}
-        </button>
-
-        {isExtractionExpanded && (
-          <div className="space-y-3 pl-5">
-            {/* Enable toggle */}
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="extraction-enabled"
-                checked={extractionSettings.autoExtractEnabled}
-                onChange={(e) => onExtractionSettingsChange({ autoExtractEnabled: e.target.checked })}
-                className="rounded gui-input"
-                style={{ accentColor: 'var(--gui-accent-primary)' }}
-              />
-              <label htmlFor="extraction-enabled" className="text-xs gui-text-secondary">
-                Enable auto-extraction
-              </label>
-            </div>
-
-            {/* Extraction types */}
-            <div>
-              <label className="block text-xs gui-text-secondary mb-1">Extract Types</label>
-              <div className="flex gap-3">
-                <label className="flex items-center gap-1.5 text-xs gui-text">
-                  <input
-                    type="checkbox"
-                    checked={extractionSettings.extractionTypes.includes('notes')}
-                    onChange={() => handleToggleExtractionType('notes')}
-                    className={`rounded gui-input text-amber-600 focus:ring-amber-500`}
-                  />
-                  <FileText className="w-3 h-3 text-amber-400" />
-                  Notes
-                </label>
-                <label className="flex items-center gap-1.5 text-xs gui-text">
-                  <input
-                    type="checkbox"
-                    checked={extractionSettings.extractionTypes.includes('tasks')}
-                    onChange={() => handleToggleExtractionType('tasks')}
-                    className={`rounded gui-input text-emerald-600 focus:ring-emerald-500`}
-                  />
-                  <CheckSquare className="w-3 h-3 text-emerald-400" />
-                  Tasks
-                </label>
-              </div>
-            </div>
-
-            {/* Trigger mode */}
-            <div>
-              <label className="block text-xs gui-text-secondary mb-1">Trigger Mode</label>
-              <select
-                value={extractionSettings.extractionTrigger}
-                onChange={(e) => onExtractionSettingsChange({ extractionTrigger: e.target.value as ExtractionSettings['extractionTrigger'] })}
-                className="w-full gui-input border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500"
-              >
-                <option value="on-demand">On-demand only</option>
-                <option value="per-message">After each message (30s debounce)</option>
-                <option value="on-close">When chat closes</option>
-              </select>
-            </div>
-
-            {/* Confidence threshold */}
-            <div>
-              <label className="block text-xs gui-text-secondary mb-1">
-                Confidence Threshold: {Math.round(extractionSettings.extractionConfidenceThreshold * 100)}%
-              </label>
-              <Slider
-                min={50}
-                max={100}
-                step={5}
-                value={[extractionSettings.extractionConfidenceThreshold * 100]}
-                onValueChange={(values) => onExtractionSettingsChange({ extractionConfidenceThreshold: (values[0] ?? 50) / 100 })}
-                className="w-full"
-              />
-              <div className="flex justify-between text-[10px] gui-text-secondary mt-0.5">
-                <span>50%</span>
-                <span>100%</span>
-              </div>
-            </div>
-
-            {/* Extracted count */}
-            {(data.extractedTitles?.length || 0) > 0 && (
-              <div className="text-xs gui-text-secondary">
-                {data.extractedTitles?.length} items extracted from this conversation
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Extraction Settings — extracted to reusable section */}
+      <ExtractionsSection nodeId={data.id || ''} />
     </>
   )
 }
@@ -1059,7 +863,7 @@ function ProjectFields({
   return (
     <>
       <div>
-        <label className="block text-xs font-medium gui-text-secondary mb-1">Description</label>
+        <label className="panel-section-label">Description</label>
         <textarea
           value={data.description}
           onChange={(e) => onChange('description', e.target.value)}
@@ -1069,11 +873,11 @@ function ProjectFields({
       </div>
 
       <div>
-        <p className="text-xs gui-text-secondary">{data.childNodeIds.length} child nodes</p>
+        <p className="text-xs gui-text-secondary">{data.childNodeIds?.length ?? 0} child nodes</p>
       </div>
 
       {/* Context Injection Settings */}
-      <div className="pt-3 border-t gui-border">
+      <div className="pt-3">
         <p className="text-xs font-medium gui-text mb-2">Context Injection</p>
 
         <div className="space-y-2">
@@ -1229,7 +1033,7 @@ function OrchestratorFields({
     <>
       {/* Strategy */}
       <div>
-        <label className="block text-xs font-medium gui-text-secondary mb-1">Strategy</label>
+        <label className="panel-section-label">Strategy</label>
         <select
           value={data.strategy}
           onChange={(e) => onChange('strategy', e.target.value)}
@@ -1243,7 +1047,7 @@ function OrchestratorFields({
 
       {/* Failure Policy */}
       <div>
-        <label className="block text-xs font-medium gui-text-secondary mb-1">Failure Policy</label>
+        <label className="panel-section-label">Failure Policy</label>
         <select
           value={data.failurePolicy}
           onChange={(e) => onChange('failurePolicy', e.target.value)}
@@ -1257,7 +1061,7 @@ function OrchestratorFields({
 
       {/* Max Retries */}
       <div>
-        <label className="block text-xs font-medium gui-text-secondary mb-1">Max Retries</label>
+        <label className="panel-section-label">Max Retries</label>
         <input
           type="number"
           min="0"
@@ -1280,7 +1084,7 @@ function OrchestratorFields({
         {isBudgetExpanded && (
           <div className="px-3 pb-3 space-y-3 border-t">
             <div>
-              <label className="block text-xs font-medium gui-text-secondary mb-1">Max Total Tokens</label>
+              <label className="panel-section-label">Max Total Tokens</label>
               <input
                 type="number"
                 min="0"
@@ -1291,7 +1095,7 @@ function OrchestratorFields({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium gui-text-secondary mb-1">Max Total Cost (USD)</label>
+              <label className="panel-section-label">Max Total Cost (USD)</label>
               <input
                 type="number"
                 min="0"
@@ -1558,7 +1362,7 @@ function NoteFields({
     <>
       <div className="group">
         <div className="flex items-center justify-between mb-1">
-          <label className="block text-xs font-medium gui-text-secondary">Content</label>
+          <label className="panel-section-label">Content</label>
           {onToggleHidden && (
             <button
               onClick={() => onToggleHidden('content')}
@@ -1585,7 +1389,7 @@ function NoteFields({
       </div>
 
       {/* Context Injection Settings */}
-      <div className="pt-3 border-t gui-border">
+      <div className="pt-3">
         <p className="text-xs font-medium gui-text mb-2">
           Context Injection
           <HelpTooltip text="Controls how this note's content is presented to AI when connected to a conversation" />
@@ -1660,7 +1464,7 @@ function TextFields({
   return (
     <div className="group">
       <div className="flex items-center justify-between mb-1">
-        <label className="block text-xs font-medium gui-text-secondary">Content</label>
+        <label className="panel-section-label">Content</label>
       </div>
       <div className="rounded border gui-border overflow-hidden">
         <RichTextEditor
@@ -1729,7 +1533,7 @@ function TaskFields({
     <>
       <div className="group">
         <div className="flex items-center justify-between mb-1">
-          <label className="block text-xs font-medium gui-text-secondary">Content</label>
+          <label className="panel-section-label">Content</label>
           {onToggleHidden && (
             <button
               onClick={() => onToggleHidden('description')}
@@ -1756,7 +1560,7 @@ function TaskFields({
 
       <div className="group">
         <div className="flex items-center justify-between mb-1">
-          <label className="block text-xs font-medium gui-text-secondary">Status</label>
+          <label className="panel-section-label">Status</label>
           {onToggleHidden && (
             <button
               onClick={() => onToggleHidden('status')}
@@ -1778,7 +1582,7 @@ function TaskFields({
 
       <div className="group">
         <div className="flex items-center justify-between mb-1">
-          <label className="block text-xs font-medium gui-text-secondary">Priority</label>
+          <label className="panel-section-label">Priority</label>
           {onToggleHidden && (
             <button
               onClick={() => onToggleHidden('priority')}
@@ -1800,7 +1604,7 @@ function TaskFields({
 
       <div className="group">
         <div className="flex items-center justify-between mb-1">
-          <label className="block text-xs font-medium gui-text-secondary">Complexity</label>
+          <label className="panel-section-label">Complexity</label>
           {onToggleHidden && (
             <button
               onClick={() => onToggleHidden('complexity')}
@@ -1957,7 +1761,7 @@ function ArtifactFields({
   return (
     <>
       {/* Multi-file Management Section */}
-      <div className="pt-3 border-t gui-border">
+      <div className="pt-3">
         <button
           onClick={() => setIsFilesExpanded(!isFilesExpanded)}
           className="flex items-center gap-2 text-xs font-medium gui-text mb-2 w-full"
@@ -2053,7 +1857,7 @@ function ArtifactFields({
 
       {/* Content Type */}
       <div>
-        <label className="block text-xs font-medium gui-text-secondary mb-1">
+        <label className="panel-section-label">
           Content Type {isMultiFile && activeFile && <span className="gui-text-secondary">({activeFile.filename})</span>}
         </label>
         <select
@@ -2077,7 +1881,7 @@ function ArtifactFields({
       {/* Custom Content Type Input */}
       {currentContentType === 'custom' && (
         <div>
-          <label className="block text-xs font-medium gui-text-secondary mb-1">Custom Type Name</label>
+          <label className="panel-section-label">Custom Type Name</label>
           <input
             type="text"
             value={isMultiFile && activeFile ? activeFile.customContentType || '' : data.customContentType || ''}
@@ -2097,7 +1901,7 @@ function ArtifactFields({
       {/* Language (for code) */}
       {currentContentType === 'code' && (
         <div>
-          <label className="block text-xs font-medium gui-text-secondary mb-1">Language</label>
+          <label className="panel-section-label">Language</label>
           <select
             value={currentLanguage || ''}
             onChange={(e) => handleLanguageChange(e.target.value)}
@@ -2144,7 +1948,7 @@ function ArtifactFields({
       </div>
 
       {/* Injection Format */}
-      <div className="pt-3 border-t gui-border">
+      <div className="pt-3">
         <p className="text-xs font-medium gui-text mb-2">Context Injection</p>
 
         <div className="space-y-2">
@@ -2213,7 +2017,7 @@ function ArtifactFields({
       </div>
 
       {/* Versioning */}
-      <div className="pt-3 border-t gui-border">
+      <div className="pt-3">
         <p className="text-xs font-medium gui-text mb-2">Versioning</p>
 
         <div className="space-y-2">
@@ -2234,7 +2038,7 @@ function ArtifactFields({
             </select>
           </div>
 
-          {data.versionHistory.length > 0 && (
+          {data.versionHistory?.length > 0 && (
             <div className="text-xs gui-text-secondary">
               {data.versionHistory.length} version{data.versionHistory.length !== 1 ? 's' : ''} in history
             </div>
@@ -2243,7 +2047,7 @@ function ArtifactFields({
       </div>
 
       {/* Display Settings */}
-      <div className="pt-3 border-t gui-border">
+      <div className="pt-3">
         <p className="text-xs font-medium gui-text mb-2">Display</p>
 
         <div className="space-y-2">
@@ -2361,7 +2165,7 @@ function WorkspaceFields({
     <>
       {/* Description */}
       <div>
-        <label className="block text-xs font-medium gui-text-secondary mb-1">Description</label>
+        <label className="panel-section-label">Description</label>
         <textarea
           value={data.description}
           onChange={(e) => onChange('description', e.target.value)}
@@ -2372,7 +2176,7 @@ function WorkspaceFields({
       </div>
 
       {/* Visibility Settings */}
-      <div className="pt-3 border-t gui-border">
+      <div className="pt-3">
         <p className="text-xs font-medium gui-text mb-2">Visibility</p>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -2453,7 +2257,7 @@ function WorkspaceFields({
       </div>
 
       {/* Members Section */}
-      <div className="pt-3 border-t gui-border">
+      <div className="pt-3">
         <button
           onClick={() => setIsMembersExpanded(!isMembersExpanded)}
           className="flex items-center gap-2 text-xs font-medium gui-text mb-2 w-full"
@@ -2544,7 +2348,7 @@ function WorkspaceFields({
       </div>
 
       {/* LLM Settings Section */}
-      <div className="pt-3 border-t gui-border">
+      <div className="pt-3">
         <button
           onClick={() => setIsLLMExpanded(!isLLMExpanded)}
           className="flex items-center gap-2 text-xs font-medium gui-text mb-2 w-full"
@@ -2635,7 +2439,7 @@ function WorkspaceFields({
       </div>
 
       {/* Context Rules Section */}
-      <div className="pt-3 border-t gui-border">
+      <div className="pt-3">
         <button
           onClick={() => setIsContextExpanded(!isContextExpanded)}
           className="flex items-center gap-2 text-xs font-medium gui-text mb-2 w-full"
@@ -2714,7 +2518,7 @@ function WorkspaceFields({
       </div>
 
       {/* Theme Defaults Section */}
-      <div className="pt-3 border-t gui-border">
+      <div className="pt-3">
         <button
           onClick={() => setIsThemeExpanded(!isThemeExpanded)}
           className="flex items-center gap-2 text-xs font-medium gui-text mb-2 w-full"
@@ -2771,101 +2575,6 @@ function WorkspaceFields({
   )
 }
 
-// File attachments section (collapsible)
-function AttachmentsSection({
-  nodeId,
-  nodeData
-}: {
-  nodeId: string
-  nodeData: NodeData
-}): JSX.Element {
-  const [isExpanded, setIsExpanded] = useState(false)
-  const { addAttachment, deleteAttachment, openAttachment, isLoading } = useAttachments()
-  const attachments: Attachment[] = (nodeData as ContextMetadata).attachments || []
-
-  const formatSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  }
-
-  return (
-    <div className="pt-3 border-t gui-border">
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-1 text-xs font-medium gui-text mb-2 w-full"
-      >
-        {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-        <Paperclip className="w-3 h-3" />
-        Attachments
-        {attachments.length > 0 && (
-          <span className="ml-auto px-1.5 py-0.5 bg-blue-600/30 text-blue-300 rounded text-[10px]">
-            {attachments.length}
-          </span>
-        )}
-      </button>
-
-      {isExpanded && (
-        <div className="space-y-2">
-          {/* Attachment list */}
-          {attachments.map((attachment) => (
-            <div
-              key={attachment.id}
-              className="flex items-center gap-2 p-1.5 rounded text-xs group gui-button"
-            >
-              {/* Thumbnail for images */}
-              {attachment.thumbnail ? (
-                <img
-                  src={attachment.thumbnail}
-                  alt={attachment.filename}
-                  className="w-8 h-8 rounded object-cover flex-shrink-0"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0 gui-panel-secondary">
-                  <FileText className="w-4 h-4 gui-text-secondary" />
-                </div>
-              )}
-
-              {/* File info */}
-              <div className="flex-1 min-w-0">
-                <button
-                  onClick={() => openAttachment(attachment.storedPath)}
-                  className="block text-left truncate w-full gui-text hover:text-blue-400"
-                  title={`Open ${attachment.filename}`}
-                >
-                  {attachment.filename}
-                </button>
-                <span className="text-[10px] gui-text-secondary">
-                  {formatSize(attachment.size)}
-                </span>
-              </div>
-
-              {/* Delete button */}
-              <button
-                onClick={() => deleteAttachment(nodeId, attachment.id)}
-                className="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-900/50 text-red-400"
-                title="Remove attachment"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
-
-          {/* Add button */}
-          <button
-            onClick={() => addAttachment(nodeId)}
-            disabled={isLoading}
-            className={`flex items-center gap-1.5 w-full px-2 py-1.5 rounded text-xs transition-colors gui-text-secondary gui-button ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <Plus className="w-3 h-3" />
-            {isLoading ? 'Adding...' : 'Add File'}
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
 // Common metadata section for all node types
 // Note: Tags are now managed through the Properties system (not here)
 function MetadataSection({
@@ -2878,7 +2587,7 @@ function MetadataSection({
   const [isExpanded, setIsExpanded] = useState(false)
 
   return (
-    <div className="pt-3 border-t gui-border">
+    <div className="pt-3">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex items-center gap-1 text-xs font-medium gui-text mb-2 w-full"
@@ -2991,7 +2700,7 @@ function OutgoingEdgeColorSection({
   const hasCustomColor = !!data.outgoingEdgeColor
 
   return (
-    <div className="pt-3 border-t gui-border">
+    <div className="pt-3">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex items-center gap-1 text-xs font-medium gui-text mb-2"
@@ -3112,7 +2821,7 @@ function DynamicPropertiesSection({
         return (
           <div key={definition.id} className="group">
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-medium gui-text-secondary">
+              <label className="panel-section-label">
                 {definition.name}
                 {isCustomProperty(definition.id) && (
                   <span className="ml-1 text-[10px] gui-text-secondary">(custom)</span>

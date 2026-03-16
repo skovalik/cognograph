@@ -54,9 +54,9 @@ const typeConfig: Record<FeedbackType, {
   },
   info: {
     icon: Info,
-    color: '#3b82f6',
-    borderColor: 'rgba(59, 130, 246, 0.3)',
-    progressColor: 'linear-gradient(90deg, #3b82f6, #60a5fa)'
+    color: 'var(--cg-accent, #F0EDE8)',
+    borderColor: 'var(--accent-glow-subtle, rgba(200, 150, 62, 0.15))',
+    progressColor: 'linear-gradient(90deg, var(--accent-glow, #C8963E), var(--cg-accent, #F0EDE8))'
   }
 }
 

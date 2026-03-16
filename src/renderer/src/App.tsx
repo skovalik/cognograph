@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo, Suspense, lazy } from 'react'
 import {
   ReactFlow,
   ReactFlowProvider,
   Background,
-  Controls,
   BackgroundVariant,
   useReactFlow,
   ConnectionLineType,
@@ -28,8 +27,9 @@ import { Toolbar } from './components/Toolbar'
 import { AlignmentToolbar } from './components/AlignmentToolbar'
 import { PropertiesPanel } from './components/PropertiesPanel'
 import { ConnectionPropertiesPanel } from './components/ConnectionPropertiesPanel'
-import { ChatPanel } from './components/ChatPanel'
+// ChatPanel import removed — chat is now rendered in-node (ConversationNode expanded mode)
 import { LeftSidebar } from './components/LeftSidebar'
+import { IconRail } from './components/IconRail'
 import { ExtractionPanel, ExtractionDragPreview } from './components/extractions'
 import { ErrorBoundary, InlineErrorBoundary } from './components/ErrorBoundary'
 import { SaveTemplateModal, PasteTemplateModal, TemplateBrowser } from './components/templates'
@@ -42,7 +42,9 @@ import { CollapsibleMinimap } from './components/CollapsibleMinimap'
 import { ZoomIndicator } from './components/ZoomIndicator'
 import { ClipboardIndicator } from './components/ClipboardIndicator'
 import { AIEditorModal, AIEditorPreview, InlinePrompt, SelectionActionBar, AISidebar } from './components/ai-editor'
-import { AmbientEffectLayer } from './components/ambient'
+const AmbientEffectLayer = lazy(() => import('./components/ambient/AmbientEffectLayer'))
+import { LivingGrid } from './effects/LivingGrid'
+const ParticleDrift = lazy(() => import('./effects/ParticleDrift'))
 import { ClickSpark } from './components/ui/react-bits'
 import WorkflowProgress from './components/ai-editor/WorkflowProgress'
 import { CommandPalette, useCommandPalette } from './components/CommandPalette'
@@ -50,6 +52,7 @@ import { UndoHistoryPanel } from './components/UndoHistoryPanel'
 import { TrashPanel } from './components/TrashPanel'
 import { ArchivePanel } from './components/ArchivePanel'
 import { WelcomeOverlay } from './components/onboarding/WelcomeOverlay'
+import { OnboardingOverlay } from './components/onboarding/OnboardingOverlay'
 import { OnboardingTooltip } from './components/onboarding/OnboardingTooltip'
 import { TutorialOverlay } from './components/onboarding/TutorialOverlay'
 import { ExportDialog } from './components/ExportDialog'
@@ -60,6 +63,8 @@ import { SavedViewsPanel } from './components/SavedViewsPanel'
 import { TimelineView } from './components/TimelineView'
 import { EmptyCanvasHint } from './components/EmptyCanvasHint'
 import { FocusModeIndicator } from './components/FocusModeIndicator'
+import { ArtboardOverlay, FocusModeHint } from './components/ArtboardOverlay'
+import { useArtboardMode } from './hooks/useArtboardMode'
 import { KeyboardShortcutsHelp, useShortcutHelpStore } from './components/KeyboardShortcutsHelp'
 import { useWorkspaceStore, getHistoryActionLabel } from './stores/workspaceStore'
 import { initCCBridgeListener } from './stores/ccBridgeStore'
@@ -97,14 +102,19 @@ import { ExecutionStatusOverlay } from './components/ExecutionStatusOverlay'
 import { useContextVisualizationStore } from './stores/contextVisualizationStore'
 import { useContextVisualization } from './hooks/useContextVisualization'
 import { SuggestedAutomations } from './components/action/SuggestedAutomations'
+import { WorkspaceManager } from '../../web/components/WorkspaceManager'
+import { StorageWarning } from '../../web/components/StorageWarning'
+import { DemoBanner } from '../../web/components/DemoBanner'
 import { MessageSquare, FileText, CheckSquare, Folder, Code, Boxes, Link2 } from 'lucide-react'
 import { calculateSnapGuides, type SnapGuide } from './utils/snapGuides'
 import { filterParentProjects } from './utils/selectionUtils'
 import type { NodeData, WorkspaceNodeData, GuiColors, EdgeData } from '@shared/types'
-import { DEFAULT_AMBIENT_EFFECT, DEFAULT_GLASS_SETTINGS } from '@shared/types'
+import { DEFAULT_AMBIENT_EFFECT, DEFAULT_GLASS_SETTINGS, FONT_THEMES, FONT_LOAD_URLS } from '@shared/types'
+import type { FontTheme } from '@shared/types'
 import { DEFAULT_GUI_DARK, DEFAULT_GUI_LIGHT } from './constants/themePresets'
 import { getGPUTier } from './utils/gpuDetection'
 import { resolveGlassStyle } from './utils/glassUtils'
+
 import type { Edge } from '@xyflow/react'
 import { UserCursors } from './components/Presence/UserCursors'
 import { ConnectionStatus, SessionExpiredModal } from './components/Multiplayer'
@@ -115,11 +125,15 @@ import { useNavigationHistory } from './hooks/useNavigationHistory'
 import { useSpacebarPan } from './hooks/useSpacebarPan'
 import { ZoomOverlay } from './components/canvas/ZoomOverlay'
 import { KeyboardModeIndicator } from './components/canvas/KeyboardModeIndicator'
+import { DirectionalGuides } from './components/DirectionalGuides'
+import { KeyboardLegend } from './components/KeyboardLegend'
 import { useContextSelectionStore } from './stores/contextSelectionStore'
 import { useSpatialRegionStore } from './stores/spatialRegionStore'
 import { tidyUpLayout } from './utils/tidyUpLayout'
 import type { LayoutNode, LayoutEdge } from './utils/tidyUpLayout'
+import { useIsMobile, useIsTouch } from './hooks/useIsMobile'
 import { useShiftDragEdgeCreation } from './hooks/useShiftDragEdgeCreation'
+import { useSpatialNavigation } from './hooks/useSpatialNavigation'
 import { usePhysicsSimulation, DEFAULT_PHYSICS_CONFIG, getPhysicsConfigForStrength } from './hooks/usePhysicsSimulation'
 import { playSound } from './services/audioService'
 import { performThemeTransition } from './utils/themeTransition'
@@ -128,9 +142,26 @@ import './styles/token-estimator.css'
 import './styles/presence.css'
 import './styles/bridgeAnimations.css'
 
+// Web build detection — set by vite.config.web.ts
+const isWeb = import.meta.env.VITE_BUILD_TARGET === 'web'
+
 // Initialize plugin renderer registry
 // Returns Promise<void> — no await needed at module level (fire-and-forget)
 initRendererPlugins()
+
+// Lazy font loading — module-level Set tracks which fonts have been loaded
+const loadedFonts = new Set<string>(['space-grotesk'])
+
+function ensureFontLoaded(fontTheme: FontTheme): void {
+  if (loadedFonts.has(fontTheme)) return
+  loadedFonts.add(fontTheme)
+  const href = FONT_LOAD_URLS[fontTheme]
+  if (!href) return
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'
+  link.href = href
+  document.head.appendChild(link)
+}
 
 // PFD Phase 5B: Rect overlap check for auto-grow (used in handleNodeDragStop)
 function rectsOverlap(
@@ -216,9 +247,15 @@ function Canvas(): JSX.Element {
   const { getViewport, screenToFlowPosition, getInternalNode, setCenter } = useReactFlow()
   const semanticZoomClass = useSemanticZoomClass()
   const { goBack, goForward, canGoBack, canGoForward } = useNavigationHistory()
+  const demoMode = useWorkspaceStore((s) => s.demoMode)
+  const isMobile = useIsMobile()
+  const isTouch = useIsTouch()
 
   // PFD Phase 5B: Spacebar + Arrow key panning
   useSpacebarPan()
+
+  // Task 26: Spatial keyboard navigation (Arrow keys, Tab, Shift+Arrow)
+  useSpatialNavigation()
 
   // PFD Phase 5B: Context selection store (transient Ctrl+Click context)
   const toggleContextSelection = useContextSelectionStore((s) => s.toggle)
@@ -229,7 +266,6 @@ function Canvas(): JSX.Element {
   const [isDraggingFile, setIsDraggingFile] = useState(false)
   const [isDraggingNode, setIsDraggingNode] = useState(false)
   const [showThemeModal, setShowThemeModal] = useState(false)
-  const [showThemeMenu, setShowThemeMenu] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showCanvasTOC, setShowCanvasTOC] = useState(false)
   const [showEdgeLegend, setShowEdgeLegend] = useState(false)
@@ -270,9 +306,9 @@ function Canvas(): JSX.Element {
   // Multiplayer presence
   const { broadcastCursor, clearCursor } = usePresence()
 
-  const nodes = useWorkspaceStore((state) => state.nodes)
+  const nodes = useWorkspaceStore((state) => state.nodes) ?? []
   const hiddenNodeTypes = useWorkspaceStore((state) => state.hiddenNodeTypes)
-  const edges = useWorkspaceStore((state) => state.edges)
+  const edges = useWorkspaceStore((state) => state.edges) ?? []
   const themeSettings = useWorkspaceStore((state) => state.themeSettings)
   const leftSidebarOpen = useWorkspaceStore((state) => state.leftSidebarOpen)
   const leftSidebarWidth = useWorkspaceStore((state) => state.leftSidebarWidth)
@@ -310,6 +346,8 @@ function Canvas(): JSX.Element {
   const [showExportDialog, setShowExportDialog] = useState(false)
   // Template picker visibility
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  // Workspace manager panel visibility (web only)
+  const [showWorkspaceManager, setShowWorkspaceManager] = useState(false)
   // InlinePrompt visibility and position (toggled with / key)
   const [inlinePromptOpen, setInlinePromptOpen] = useState(false)
   const [inlinePromptPosition, setInlinePromptPosition] = useState({ x: 0, y: 0 })
@@ -375,6 +413,13 @@ function Canvas(): JSX.Element {
     return () => window.removeEventListener('open-settings', handler)
   }, [])
 
+  // Listen for mobile toolbar panel toggles
+  useEffect(() => {
+    const tocHandler = () => setShowCanvasTOC(p => !p)
+    window.addEventListener('toggle-canvas-toc', tocHandler)
+    return () => window.removeEventListener('toggle-canvas-toc', tocHandler)
+  }, [])
+
   // Listen for open-template-picker events from Command Palette
   useEffect(() => {
     const handler = (): void => setShowTemplatePicker(true)
@@ -382,12 +427,50 @@ function Canvas(): JSX.Element {
     return () => window.removeEventListener('open-template-picker', handler)
   }, [])
 
-  // Initialize CC Bridge + Orchestrator + Spatial Bridge IPC listeners
+  // Initialize CC Bridge + Orchestrator + Spatial Bridge IPC listeners (Electron only)
   useEffect(() => {
+    if (!(window as any).__ELECTRON__) return
     const cleanupCCBridge = initCCBridgeListener()
     const cleanupOrch = initOrchestratorIPC()       // Must init BEFORE bridge
     const cleanupSpatialBridge = initBridgeIPC()     // Bridge subscribes to orchestrator events
     return () => { cleanupSpatialBridge(); cleanupCCBridge(); cleanupOrch() }
+  }, [])
+
+  // Global terminal output tee — persists across artboard open/close so node cards
+  // always show fresh terminal preview lines, even when TerminalPanel is unmounted
+  useEffect(() => {
+    if (!(window as any).__ELECTRON__) return
+    if (!window.api?.terminal?.onDataGlobal) return
+
+    const buffers = new Map<string, string>()
+    let flushTimer: ReturnType<typeof setTimeout> | null = null
+
+    const cleanup = window.api.terminal.onDataGlobal((nodeId: string, data: string) => {
+      const existing = buffers.get(nodeId) || ''
+      buffers.set(nodeId, existing + data)
+
+      if (flushTimer) return
+      flushTimer = setTimeout(() => {
+        flushTimer = null
+        const updateNode = useWorkspaceStore.getState().updateNode
+        for (const [nid, buf] of buffers.entries()) {
+          const clean = buf.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/\x1b\][^\x07]*\x07/g, '')
+          const lines = clean.split('\n').filter((l: string) => l.trim().length > 0)
+          const last12 = lines.slice(-12).map((l: string) => l.slice(0, 120))
+          if (last12.length > 0) {
+            updateNode(nid, { terminalPreviewLines: last12 })
+          }
+        }
+        for (const [nid, buf] of buffers.entries()) {
+          if (buf.length > 4096) buffers.set(nid, buf.slice(-4096))
+        }
+      }, 200)
+    })
+
+    return () => {
+      cleanup()
+      if (flushTimer) clearTimeout(flushTimer)
+    }
   }, [])
 
   // Reset bridge + proposal state when workspace changes
@@ -420,7 +503,11 @@ function Canvas(): JSX.Element {
     root.style.setProperty('--gui-toolbar-icon-3', guiColors.toolbarIconAccent[2] || '#34d399')
     root.style.setProperty('--gui-toolbar-icon-4', guiColors.toolbarIconAccent[3] || '#a855f7')
 
-    // Also apply GUI text colors to canvas nodes for consistent theming
+    // Sync core design tokens so all UI (nav, toolbar, menus) responds to theme
+    root.style.setProperty('--surface-panel', guiColors.panelBackground)
+    root.style.setProperty('--surface-panel-secondary', guiColors.panelBackgroundSecondary)
+    root.style.setProperty('--text-primary', guiColors.textPrimary)
+    root.style.setProperty('--text-secondary', guiColors.textSecondary)
     root.style.setProperty('--node-text-primary', guiColors.textPrimary)
     root.style.setProperty('--node-text-secondary', guiColors.textSecondary)
   }, [themeSettings.guiColors, themeSettings.mode])
@@ -451,12 +538,11 @@ function Canvas(): JSX.Element {
 
       const attrs = {
         'data-glass-style': effectiveStyle,
-        'data-glass-nodes': applyTo.nodes,
         'data-glass-modals': applyTo.modals,
         'data-glass-panels': applyTo.panels,
         'data-glass-overlays': applyTo.overlays,
         'data-glass-toolbar': applyTo.toolbar
-        // NOTE: Removed data-glass-opaque-content - text stays opaque by default
+        // NOTE: data-glass-nodes removed — content-first: no glass on nodes
       }
 
       Object.entries(attrs).forEach(([key, value]) => {
@@ -468,7 +554,6 @@ function Canvas(): JSX.Element {
     return () => {
       const root = document.documentElement
       root.removeAttribute('data-glass-style')
-      root.removeAttribute('data-glass-nodes')
       root.removeAttribute('data-glass-modals')
       root.removeAttribute('data-glass-panels')
       root.removeAttribute('data-glass-overlays')
@@ -482,6 +567,37 @@ function Canvas(): JSX.Element {
     root.style.setProperty('--canvas-background', themeSettings.canvasBackground)
     root.style.setProperty('--canvas-grid-color', themeSettings.canvasGridColor === '#transparent' ? 'transparent' : themeSettings.canvasGridColor)
   }, [themeSettings.canvasBackground, themeSettings.canvasGridColor])
+
+  // Apply accent colors from theme's guiColors (accent is theme-driven, not separate)
+  useEffect(() => {
+    const guiColors = themeSettings.guiColors ||
+      (themeSettings.mode === 'light' ? DEFAULT_GUI_LIGHT : DEFAULT_GUI_DARK)
+    const accent = guiColors.accentPrimary
+    const glow = guiColors.accentSecondary
+
+    document.documentElement.style.setProperty('--cg-accent', accent)
+    document.documentElement.style.setProperty('--accent-glow', glow)
+    document.documentElement.style.setProperty('--accent-glow-subtle', `${glow}26`)
+    document.documentElement.style.setProperty('--accent-glow-strong', `${glow}59`)
+  }, [themeSettings.guiColors, themeSettings.mode])
+
+  // Apply font theme CSS variables (lazy-loads non-default fonts)
+  useEffect(() => {
+    const fontTheme = themeSettings.fontTheme || 'space-grotesk'
+    ensureFontLoaded(fontTheme as FontTheme)
+    const fonts = FONT_THEMES[fontTheme as FontTheme]
+    if (fonts) {
+      document.documentElement.style.setProperty('--font-sans', fonts.sans)
+      document.documentElement.style.setProperty('--font-display', fonts.display)
+      document.documentElement.style.setProperty('--font-mono', fonts.mono)
+    }
+  }, [themeSettings.fontTheme])
+
+  // Apply base font size CSS variable
+  useEffect(() => {
+    const size = themeSettings.fontSize || 14
+    document.documentElement.style.setProperty('--font-base', `${size}px`)
+  }, [themeSettings.fontSize])
 
   // Template store actions
   const loadTemplateLibrary = useTemplateStore((state) => state.loadLibrary)
@@ -500,11 +616,12 @@ function Canvas(): JSX.Element {
   const clearSelection = useWorkspaceStore((state) => state.clearSelection)
   const setSelectedNodes = useWorkspaceStore((state) => state.setSelectedNodes)
   const activeChatNodeId = useWorkspaceStore((state) => state.activeChatNodeId)
-  const openChatNodeIds = useWorkspaceStore((state) => state.openChatNodeIds)
+  // openChatNodeIds removed — chat is now rendered in-node
 
   // PFD Phase 4: Context Visualization
   const contextVizActive = useContextVisualizationStore((state) => state.active)
   const contextVizTargetNodeId = useContextVisualizationStore((state) => state.targetNodeId)
+  const contextVizIsTerminal = useContextVisualizationStore((state) => state.isTerminalTarget)
   const contextVizNodeIds = useContextVisualizationStore((state) => state.includedNodeIds)
   const contextVizEdgeIds = useContextVisualizationStore((state) => state.includedEdgeIds)
   const { showContextScope, hideContextScope } = useContextVisualization()
@@ -534,6 +651,7 @@ function Canvas(): JSX.Element {
   const pasteNodes = useWorkspaceStore((state) => state.pasteNodes)
   const getWorkspaceData = useWorkspaceStore((state) => state.getWorkspaceData)
   const markClean = useWorkspaceStore((state) => state.markClean)
+  const isDirty = useWorkspaceStore((state) => state.isDirty)
   const newWorkspace = useWorkspaceStore((state) => state.newWorkspace)
   const loadWorkspace = useWorkspaceStore((state) => state.loadWorkspace)
   const setViewport = useWorkspaceStore((state) => state.setViewport)
@@ -594,6 +712,9 @@ function Canvas(): JSX.Element {
 
   // Schedule service - emits schedule-tick events for action nodes with cron triggers
   useScheduleService()
+
+  // Artboard mode - Cmd/Ctrl+Enter to expand selected node into editing panel
+  useArtboardMode()
 
   // Contextual onboarding tooltips - shows tips on first-time actions
   const { activeTooltip, dismiss: dismissTooltip } = useOnboardingTooltips()
@@ -666,10 +787,10 @@ function Canvas(): JSX.Element {
   // Compute combined edges including workspace member links
   const combinedEdges = useMemo(() => {
     // Start with the regular edges
-    const allEdges: Edge[] = [...edges]
+    const allEdges: Edge[] = [...(edges || [])]
 
     // Find workspace nodes with showLinks enabled
-    const workspaceNodesWithLinks = nodes.filter(
+    const workspaceNodesWithLinks = (nodes || []).filter(
       (n) => n.data.type === 'workspace' && (n.data as WorkspaceNodeData).showLinks
     )
 
@@ -773,7 +894,7 @@ function Canvas(): JSX.Element {
   const classNameCacheRef = useRef(new Map<string, typeof nodes[0]>())
   const filteredNodes = useMemo(() => {
     const cache = classNameCacheRef.current
-    const realNodes = nodes
+    const realNodes = (nodes || [])
       .filter(node => !node.data.isArchived && !hiddenNodeTypes.has(node.data.type))
       .map(node => {
         // Build className from multiple sources
@@ -823,15 +944,17 @@ function Canvas(): JSX.Element {
   }, [nodes, hiddenNodeTypes, contextProviderNodeIds, ghostNodes, contextVizActive, contextVizTargetNodeId, contextVizNodeIds])
 
   // PFD Phase 4: Apply context edge classes for visualization
+  // Terminal UX: Gold glow variant when target is a terminal node
   const vizEdges = useMemo(() => {
     if (!contextVizActive) return combinedEdges
+    const ccClass = contextVizIsTerminal ? ' context-edge-terminal' : ''
     return combinedEdges.map(edge => {
       if (contextVizEdgeIds.has(edge.id)) {
-        return { ...edge, className: `${edge.className || ''} context-edge-included`.trim() }
+        return { ...edge, className: `${edge.className || ''} context-edge-included${ccClass}`.trim() }
       }
       return edge
     })
-  }, [combinedEdges, contextVizActive, contextVizEdgeIds])
+  }, [combinedEdges, contextVizActive, contextVizEdgeIds, contextVizIsTerminal])
 
   // PFD Phase 4: Activate/deactivate context viz when chat focus changes
   useEffect(() => {
@@ -841,6 +964,10 @@ function Canvas(): JSX.Element {
       hideContextScope()
     }
   }, [activeChatNodeId, showContextScope, hideContextScope])
+
+  // Terminal UX: Gold glow context viz is available for terminal nodes
+  // but NOT auto-triggered on selection (it dims everything and blocks interaction).
+  // Trigger via activeChatNodeId like regular nodes instead.
 
   // Auto-focus newly created nodes (NoteNode, TaskNode editors)
   useEffect(() => {
@@ -926,8 +1053,12 @@ function Canvas(): JSX.Element {
     sciFiToast('New workspace created', 'success')
   }, [newWorkspace])
 
-  // Open workspace handler - shows file picker dialog
+  // Open workspace handler - web: opens workspace manager panel; desktop: shows file picker dialog
   const handleOpen = useCallback(async (): Promise<void> => {
+    if (isWeb) {
+      setShowWorkspaceManager(true)
+      return
+    }
     try {
       const dialogResult = await window.api.dialog.showOpenDialog({
         title: 'Open Workspace',
@@ -955,8 +1086,9 @@ function Canvas(): JSX.Element {
     }
   }, [loadWorkspace])
 
-  // Save As handler - shows file picker dialog for custom save location
+  // Save As handler - shows file picker dialog for custom save location (Electron only)
   const handleSaveAs = useCallback(async (): Promise<void> => {
+    if (!(window as any).__ELECTRON__) return
     try {
       const data = getWorkspaceData()
       const dialogResult = await window.api.dialog.showSaveDialog({
@@ -1605,7 +1737,7 @@ function Canvas(): JSX.Element {
       // React Flow doesn't have onPaneDoubleClick, so we detect it here
       if (event.detail === 2 && event.button === 0) {
         // Don't create if other UI is open
-        if (showSettingsModal) return
+        if (showSettingsModal || showThemeModal) return
 
         // Create conversation at click position
         const newId = addNode('conversation', flowPosition)
@@ -1723,6 +1855,9 @@ function Canvas(): JSX.Element {
   // Uses matchesShortcut() for customizable bindings from programStore
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
+      // Demo mode: suppress ALL keyboard shortcuts
+      if (demoMode) return
+
       // Helper: match shortcut ID against current event + user overrides
       const m = (id: string): boolean => matchesShortcut(e, id, keyboardOverrides)
 
@@ -1904,8 +2039,8 @@ function Canvas(): JSX.Element {
       }
       if (m('themeMenu') && !isInputFocused) {
         e.preventDefault()
-        // Toggle theme menu dropdown
-        setShowThemeMenu(prev => !prev)
+        // Toggle theme settings modal
+        setShowThemeModal(prev => !prev)
       }
 
       // --- AI shortcuts ---
@@ -2210,82 +2345,15 @@ function Canvas(): JSX.Element {
         setInlinePromptOpen(true)
       }
 
-      // Canvas keyboard navigation (Tab + Arrows) — not customizable
-      if (!isInputFocused && nodesRef.current.length > 0) {
-        if (e.key === 'Tab') {
-          e.preventDefault()
-          if (selectedNodeIds.length > 1 && !e.shiftKey) {
-            setSelectionActionBarPosition({
-              x: mousePositionRef.current.x,
-              y: mousePositionRef.current.y
-            })
-            setSelectionActionBarOpen(true)
-            return
-          }
-          const allNodes = nodesRef.current
-          if (allNodes.length === 0) return
-          const currentIndex = selectedNodeIds.length === 1
-            ? allNodes.findIndex(n => n.id === selectedNodeIds[0])
-            : -1
-          let nextIndex: number
-          if (e.shiftKey) {
-            nextIndex = currentIndex <= 0 ? allNodes.length - 1 : currentIndex - 1
-          } else {
-            nextIndex = currentIndex >= allNodes.length - 1 ? 0 : currentIndex + 1
-          }
-          const nextNode = allNodes[nextIndex]
-          if (nextNode) {
-            setSelectedNodes([nextNode.id])
-          }
-        }
-
-        // Arrow keys: spatial navigation to nearest node in direction
-        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !e.altKey) {
-          e.preventDefault()
-          const allNodes = nodesRef.current
-          if (allNodes.length === 0 || selectedNodeIds.length !== 1) return
-          const currentNode = allNodes.find(n => n.id === selectedNodeIds[0])
-          if (!currentNode) return
-          const currentCenterX = currentNode.position.x + ((currentNode.width as number) || 280) / 2
-          const currentCenterY = currentNode.position.y + ((currentNode.height as number) || 140) / 2
-          let bestNode: typeof currentNode | null = null
-          let bestScore = Infinity
-          for (const node of allNodes) {
-            if (node.id === currentNode.id) continue
-            const nodeCenterX = node.position.x + ((node.width as number) || 280) / 2
-            const nodeCenterY = node.position.y + ((node.height as number) || 140) / 2
-            const dx = nodeCenterX - currentCenterX
-            const dy = nodeCenterY - currentCenterY
-            const distance = Math.sqrt(dx * dx + dy * dy)
-            let isInDirection = false
-            let directionalScore = distance
-            switch (e.key) {
-              case 'ArrowUp':
-                isInDirection = dy < -20
-                directionalScore = distance + Math.abs(dx) * 2
-                break
-              case 'ArrowDown':
-                isInDirection = dy > 20
-                directionalScore = distance + Math.abs(dx) * 2
-                break
-              case 'ArrowLeft':
-                isInDirection = dx < -20
-                directionalScore = distance + Math.abs(dy) * 2
-                break
-              case 'ArrowRight':
-                isInDirection = dx > 20
-                directionalScore = distance + Math.abs(dy) * 2
-                break
-            }
-            if (isInDirection && directionalScore < bestScore) {
-              bestScore = directionalScore
-              bestNode = node
-            }
-          }
-          if (bestNode) {
-            setSelectedNodes([bestNode.id])
-          }
-        }
+      // Canvas keyboard navigation — Arrow keys + Tab handled by useSpatialNavigation hook.
+      // SelectionActionBar trigger (Tab with multi-select) stays here since it's UI chrome.
+      if (!isInputFocused && e.key === 'Tab' && !e.shiftKey && selectedNodeIds.length > 1) {
+        e.preventDefault()
+        setSelectionActionBarPosition({
+          x: mousePositionRef.current.x,
+          y: mousePositionRef.current.y
+        })
+        setSelectionActionBarOpen(true)
       }
     }
 
@@ -2341,13 +2409,17 @@ function Canvas(): JSX.Element {
   ])
 
   return (
-    <div
-      className="h-screen w-screen relative flex overflow-hidden"
-      onDrop={handleFileDrop}
-      onDragOver={handleDragOver}
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-    >
+    <div className="h-screen w-screen relative flex flex-col overflow-hidden">
+      {demoMode && <DemoBanner />}
+      {/* Storage warning disabled for now */}
+
+      <div
+        className="flex-1 relative flex overflow-hidden"
+        onDrop={handleFileDrop}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+      >
       {/* SPATIAL COMMAND BRIDGE UI - DISABLED FOR v0.2.0 RELEASE
           Backend infrastructure complete (stores, services, optimizations).
           Frontend integration has debugging issues (components not rendering).
@@ -2367,7 +2439,10 @@ function Canvas(): JSX.Element {
         />
       )} */}
 
-      {/* Left sidebar */}
+      {/* Icon rail + Left sidebar */}
+      <IconRail
+        onOpenSettings={() => setShowSettingsModal(true)}
+      />
       <LeftSidebar />
 
       {/* Main canvas area */}
@@ -2393,9 +2468,19 @@ function Canvas(): JSX.Element {
           </div>
         )}
 
+        {/* Living Grid — cursor-responsive dot glow with magnetic attraction */}
+        {(themeSettings.livingGridEnabled ?? true) && <LivingGrid />}
+
+        {/* Particle Drift — gold particles flowing along edge paths */}
+        {(themeSettings.particleDriftEnabled ?? true) && (
+          <Suspense fallback={null}>
+            <ParticleDrift />
+          </Suspense>
+        )}
+
         <ClickSpark>
         <ReactFlow
-          className={`${semanticZoomClass} ${shiftDragState.isShiftHeld && !shiftDragState.isActive ? 'shift-drag-ready' : ''} ${shiftDragState.isActive ? 'shift-drag-active' : ''} ${focusModeNodeId ? 'focus-mode-active' : ''} ${contextVizActive ? 'context-viz-active' : ''} ${inPlaceExpandedNodeId ? 'in-place-expansion-active' : ''} ${calmMode ? 'calm-mode-active' : ''}`}
+          className={`${semanticZoomClass} ${shiftDragState.isShiftHeld && !shiftDragState.isActive ? 'shift-drag-ready' : ''} ${shiftDragState.isActive ? 'shift-drag-active' : ''} ${focusModeNodeId ? 'focus-mode-active' : ''} ${contextVizActive ? 'context-viz-active' : ''} ${contextVizIsTerminal ? 'context-viz-terminal' : ''} ${inPlaceExpandedNodeId ? 'in-place-expansion-active' : ''} ${calmMode ? 'calm-mode-active' : ''}`}
           nodes={filteredNodes}
           edges={vizEdges}
           nodeTypes={nodeTypes}
@@ -2414,10 +2499,12 @@ function Canvas(): JSX.Element {
           edgesReconnectable={true}
           reconnectRadius={20}
           onPaneClick={handlePaneClick}
-          onContextMenu={handleContextMenu}
+          onContextMenu={demoMode || isTouch ? undefined : handleContextMenu}
           onSelectionChange={handleSelectionChange}
           onNodeClick={handleNodeClick}
-          fitView
+          nodesConnectable={!demoMode}
+          fitView={!demoMode}
+          defaultViewport={demoMode ? { x: 50, y: 50, zoom: 0.28 } : undefined}
           fitViewOptions={{
             padding: 0.2,
             maxZoom: 1.0  // Prevent over-zooming in tests (single nodes would zoom to 400%+)
@@ -2426,12 +2513,12 @@ function Canvas(): JSX.Element {
             type: 'custom',
             animated: false
           }}
-          connectionLineType={ConnectionLineType.SmoothStep}
+          connectionLineType={ConnectionLineType.Bezier}
           connectionMode={ConnectionMode.Loose}
           deleteKeyCode={null}
-          selectionOnDrag
-          selectionMode={SelectionMode.Partial}
-          panOnDrag={[1, 2]}
+          selectionOnDrag={!isTouch}
+          selectionMode={isTouch ? SelectionMode.Full : SelectionMode.Partial}
+          panOnDrag={isTouch ? [0] : [1, 2]}
           onViewportChange={(viewport) => {
             viewportRef.current = viewport
             const newZoom = viewport.zoom
@@ -2448,24 +2535,40 @@ function Canvas(): JSX.Element {
           proOptions={{ hideAttribution: true }}
           style={{ background: themeSettings.canvasBackground }}
         >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={20}
-          size={1.5}
-          color={themeSettings.canvasGridColor === '#transparent' ? 'transparent' : themeSettings.canvasGridColor}
-          className="!transition-none"
-        />
-        {/* Ambient canvas effects layer */}
-        <AmbientEffectLayer
-          settings={themeSettings.ambientEffect ?? DEFAULT_AMBIENT_EFFECT}
-          accentColor={themeSettings.guiColors?.accentPrimary}
-          accentSecondary={themeSettings.guiColors?.accentSecondary}
-          isDark={themeSettings.mode !== 'light'}
-        />
-        <Controls className="!rounded-lg" />
-        <EmptyCanvasHint />
-        {minimapVisible && <CollapsibleMinimap />}
-        <ZoomIndicator zoom={indicatorZoom} />
+        {/* Canvas grid — configurable via themeSettings.gridStyle */}
+        {(themeSettings.gridStyle ?? 'dots') === 'dots' && (
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={20}
+            size={1.5}
+            color="var(--grid-dot-color)"
+            className="!transition-none"
+          />
+        )}
+        {themeSettings.gridStyle === 'hash' && (
+          <Background
+            variant={BackgroundVariant.Cross}
+            gap={20}
+            size={4}
+            color="var(--grid-line-color)"
+            lineWidth={0.5}
+            className="!transition-none"
+          />
+        )}
+        {/* gridStyle === 'none' renders no Background component */}
+        {/* Ambient canvas effects layer — lazy-loaded, decorative so no fallback needed */}
+        <Suspense fallback={null}>
+          <AmbientEffectLayer
+            settings={themeSettings.ambientEffect ?? DEFAULT_AMBIENT_EFFECT}
+            accentColor={themeSettings.guiColors?.accentPrimary}
+            accentSecondary={themeSettings.guiColors?.accentSecondary}
+            isDark={themeSettings.mode !== 'light'}
+          />
+        </Suspense>
+        {/* Controls (zoom +/-) removed — DS v3 chrome cleanup */}
+        {!isMobile && <EmptyCanvasHint />}
+        {!isMobile && minimapVisible && <CollapsibleMinimap />}
+        {!isMobile && <ZoomIndicator zoom={indicatorZoom} />}
         <CanvasDistrictOverlay />
         <SpatialRegionOverlay />
         <ExecutionStatusOverlay />
@@ -2474,7 +2577,7 @@ function Canvas(): JSX.Element {
         <SessionReEntryPrompt />
         {showCanvasTOC && <CanvasTableOfContents onClose={() => setShowCanvasTOC(false)} />}
         <CognitiveLoadMeter />
-        {showEdgeLegend && <EdgeGrammarLegend onClose={() => setShowEdgeLegend(false)} />}
+        {!isMobile && showEdgeLegend && <EdgeGrammarLegend onClose={() => setShowEdgeLegend(false)} />}
 
         {/* Snap alignment guide lines */}
         {snapGuides.length > 0 && (
@@ -2571,6 +2674,12 @@ function Canvas(): JSX.Element {
         {/* PFD Phase 5B: Keyboard mode indicator HUD */}
         <KeyboardModeIndicator />
 
+        {/* Task 27: Directional guide lines for keyboard navigation targets */}
+        {!isMobile && <DirectionalGuides />}
+
+        {/* Task 28: Contextual keyboard shortcut legend */}
+        {!isMobile && <KeyboardLegend />}
+
         {/* FPS counter overlay (toggle with Ctrl+Shift+F) */}
         {showFps && (
           <div
@@ -2620,8 +2729,6 @@ function Canvas(): JSX.Element {
           onSaveAs={handleSaveAs}
           onNew={handleNew}
           onOpen={handleOpen}
-          onOpenThemeSettings={() => setShowThemeModal(prev => !prev)}
-          onOpenSettings={() => setShowSettingsModal(true)}
           onToggleAISidebar={() => setAiSidebarOpen(prev => !prev)}
           onOpenInlinePrompt={() => {
             setInlinePromptPosition({
@@ -2630,12 +2737,11 @@ function Canvas(): JSX.Element {
             })
             setInlinePromptOpen(true)
           }}
-          showThemeMenu={showThemeMenu}
-          onShowThemeMenuChange={setShowThemeMenu}
+          onOpenThemeSettings={() => setShowThemeModal(true)}
         />
 
         {/* Alignment toolbar - shows when multiple nodes selected */}
-        <AlignmentToolbar />
+        {!isMobile && <AlignmentToolbar />}
 
         {/* Clipboard indicator - shows when nodes are cut/copied */}
         <ClipboardIndicator />
@@ -2644,17 +2750,19 @@ function Canvas(): JSX.Element {
         <ExtractionPanel />
         <ExtractionDragPreview />
 
-        {/* Bottom-left controls - filter & automation suggestions (offset right of React Flow Controls) */}
-        <div
-          className="fixed bottom-4 gui-z-panels flex items-center gap-2 transition-all duration-200"
-          style={{ left: leftSidebarOpen ? `${leftSidebarWidth + 100}px` : '60px' }}
-        >
-          <FilterViewDropdown />
-          <SuggestedAutomations />
-        </div>
+        {/* Bottom-left controls - filter & automation suggestions (desktop only) */}
+        {!isMobile && (
+          <div
+            className="absolute bottom-4 gui-z-panels flex items-center gap-2 transition-all duration-200"
+            style={{ left: '16px' }}
+          >
+            <FilterViewDropdown />
+            {!demoMode && <SuggestedAutomations />}
+          </div>
+        )}
 
         {/* Focus mode indicator - shows when in focus mode */}
-        <FocusModeIndicator />
+        {!isMobile && <FocusModeIndicator />}
 
         {/* Undo history panel - shows action history, press Alt+H to toggle */}
         <UndoHistoryPanel isOpen={showUndoHistory} onClose={() => setShowUndoHistory(false)} />
@@ -2680,65 +2788,39 @@ function Canvas(): JSX.Element {
         {/* Workspace info display - DISABLED (causing dark bar bug) */}
         {/* <WorkspaceInfo
           hasPropertiesPanel={selectedNodeIds.length > 0 && selectedEdgeIds.length === 0 && workspacePreferences.propertiesDisplayMode === 'sidebar'}
-          propertiesPanelWidth={openChatNodeIds.length > 0 ? 280 : workspacePreferences.propertiesSidebarWidth}
+          propertiesPanelWidth={workspacePreferences.propertiesSidebarWidth}
         /> */}
 
-        {/* Side panels container - shows both when chat is open */}
-        <div className="absolute top-0 right-0 h-full flex pointer-events-none">
-          {/* Node Properties panel - show when nodes selected AND in sidebar mode */}
-          {selectedNodeIds.length > 0 && selectedEdgeIds.length === 0 && workspacePreferences.propertiesDisplayMode === 'sidebar' && (
-            <ResizablePropertiesPanel
-              width={openChatNodeIds.length > 0 ? 280 : workspacePreferences.propertiesSidebarWidth}
-              onWidthChange={openChatNodeIds.length > 0 ? undefined : setPropertiesSidebarWidth}
-              compact={openChatNodeIds.length > 0}
-            />
-          )}
-
-          {/* Connection Properties panel - show when edge selected (and no nodes) */}
-          {selectedEdgeIds.length > 0 && selectedNodeIds.length === 0 && selectedEdgeIds[0] && (
-            <div className="pointer-events-auto">
-              <ConnectionPropertiesPanel
-                edgeId={selectedEdgeIds[0]}
-                onClose={clearSelection}
+        {/* Side panels container — hidden on mobile (PFD R1) */}
+        {!isMobile && (
+          <div className="absolute top-0 right-0 h-full flex pointer-events-none">
+            {/* Node Properties panel - show when nodes selected AND in sidebar mode */}
+            {selectedNodeIds.length > 0 && selectedEdgeIds.length === 0 && workspacePreferences.propertiesDisplayMode === 'sidebar' && (
+              <ResizablePropertiesPanel
+                width={workspacePreferences.propertiesSidebarWidth}
+                onWidthChange={setPropertiesSidebarWidth}
               />
-            </div>
-          )}
+            )}
 
-          {/* Theme Settings Modal */}
-          <ThemeSettingsModal
-            open={showThemeModal}
-            onOpenChange={setShowThemeModal}
-          />
+            {/* Connection Properties panel - show when edge selected (and no nodes) */}
+            {selectedEdgeIds.length > 0 && selectedNodeIds.length === 0 && selectedEdgeIds[0] && (
+              <div className="pointer-events-auto">
+                <ConnectionPropertiesPanel
+                  edgeId={selectedEdgeIds[0]}
+                  onClose={clearSelection}
+                />
+              </div>
+            )}
 
-          {/* Multiple Chat panels - column mode */}
-          {workspacePreferences.chatDisplayMode === 'column' && openChatNodeIds.map((nodeId) => (
-            <div key={nodeId} className="pointer-events-auto">
-              <ErrorBoundary>
-                <ChatPanel nodeId={nodeId} isFocused={nodeId === activeChatNodeId} />
-              </ErrorBoundary>
-            </div>
-          ))}
-        </div>
+            {/* Theme Settings Modal */}
+            <ThemeSettingsModal
+              open={showThemeModal}
+              onOpenChange={setShowThemeModal}
+            />
 
-        {/* Multiple Chat panels - modal mode (floating centered modals) */}
-        {workspacePreferences.chatDisplayMode === 'modal' && openChatNodeIds.map((nodeId, index) => (
-          <div
-            key={nodeId}
-            className="fixed inset-0 flex items-center justify-center pointer-events-none"
-            style={{ zIndex: 100 + index }}
-          >
-            <div
-              className="pointer-events-auto"
-              style={{
-                transform: `translate(${index * 30}px, ${index * 30}px)`
-              }}
-            >
-              <ErrorBoundary>
-                <ChatPanel nodeId={nodeId} isFocused={nodeId === activeChatNodeId} isModal />
-              </ErrorBoundary>
-            </div>
+            {/* Chat is now rendered in-node — see ConversationNode expanded mode */}
           </div>
-        ))}
+        )}
 
         <Toaster
           position="bottom-right"
@@ -2756,7 +2838,7 @@ function Canvas(): JSX.Element {
         <TemplateBrowser />
 
         {/* Context Menu */}
-        <ContextMenu />
+        {!demoMode && <ContextMenu />}
 
         {/* Floating Properties Modals (supports multiple pinned modals) */}
         {floatingPropertiesNodeIds.map((nodeId, index) => (
@@ -2765,6 +2847,10 @@ function Canvas(): JSX.Element {
 
         {/* Pinned Windows (nodes popped out as floating windows) */}
         <PinnedWindowsContainer />
+
+        {/* Artboard Mode — full-viewport editing overlay (Cmd/Ctrl+Enter) */}
+        <ArtboardOverlay />
+        <FocusModeHint />
 
         <WorkflowProgress />
 
@@ -2777,7 +2863,7 @@ function Canvas(): JSX.Element {
         )}
 
         {/* AI Editor SelectionActionBar (Tab with multiple nodes selected) */}
-        {selectionActionBarOpen && selectedNodeIds.length > 1 && (
+        {!demoMode && selectionActionBarOpen && selectedNodeIds.length > 1 && (
           <SelectionActionBar
             selectedNodeIds={selectedNodeIds}
             position={selectionActionBarPosition}
@@ -2786,10 +2872,10 @@ function Canvas(): JSX.Element {
         )}
 
         {/* AI Sidebar (Ctrl+Shift+A) */}
-        <AISidebar
+        {!demoMode && <AISidebar
           isOpen={aiSidebarOpen}
           onClose={() => setAiSidebarOpen(false)}
-        />
+        />}
 
         {/* Command Palette */}
         <CommandPalette isOpen={isCommandPaletteOpen} onClose={closePalette} />
@@ -2797,22 +2883,24 @@ function Canvas(): JSX.Element {
         {/* Settings Modal */}
         <SettingsModal isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
 
-        {/* Export Dialog */}
-        <ExportDialog isOpen={showExportDialog} onClose={() => setShowExportDialog(false)} />
-
-        {/* Template Picker */}
-        <TemplatePicker isOpen={showTemplatePicker} onClose={() => setShowTemplatePicker(false)} />
-
-        {/* Welcome Overlay - shown on first launch only */}
-        <WelcomeOverlay onOpenSettings={() => setShowSettingsModal(true)} />
-
-        {/* Contextual onboarding tooltip */}
-        {activeTooltip && (
-          <OnboardingTooltip tooltip={activeTooltip} onDismiss={dismissTooltip} />
+        {/* Export Dialog (Electron only — uses native file dialog) */}
+        {(window as any).__ELECTRON__ && (
+          <ExportDialog isOpen={showExportDialog} onClose={() => setShowExportDialog(false)} />
         )}
 
-        {/* Interactive tutorial overlay */}
-        <TutorialOverlay />
+        {/* Template Picker */}
+        {!demoMode && <TemplatePicker isOpen={showTemplatePicker} onClose={() => setShowTemplatePicker(false)} />}
+
+        {/* Workspace Manager (web only) */}
+        {isWeb && (
+          <WorkspaceManager
+            isOpen={showWorkspaceManager}
+            onClose={() => setShowWorkspaceManager(false)}
+          />
+        )}
+
+        {/* Welcome Overlay - shown on first launch only (desktop only — web has WebWelcomeModal) */}
+        {!isWeb && <WelcomeOverlay onOpenSettings={() => setShowSettingsModal(true)} />}
 
         {/* Command Bar (Phase 4) - TEMPORARILY DISABLED FOR DEBUGGING */}
         {/* <CommandBar /> */}
@@ -2824,8 +2912,9 @@ function Canvas(): JSX.Element {
       </div>
 
       {/* AI Editor Modal and Preview - Outside flex container for guaranteed fixed positioning */}
-      <AIEditorModal />
+      {!demoMode && <AIEditorModal />}
       {isAIEditorOpen && <AIEditorPreview />}
+      </div>
     </div>
   )
 }
@@ -2837,10 +2926,12 @@ function App(): JSX.Element {
         <ReactFlowProvider>
           <Canvas />
         </ReactFlowProvider>
-        {/* Global orchestrator status indicator */}
-        <InlineErrorBoundary name="BridgeStatusBar">
-          <BridgeStatusBar />
-        </InlineErrorBoundary>
+        {/* Global orchestrator status indicator (Electron only) */}
+        {(window as any).__ELECTRON__ && (
+          <InlineErrorBoundary name="BridgeStatusBar">
+            <BridgeStatusBar />
+          </InlineErrorBoundary>
+        )}
       </SyncProviderWrapper>
     </TooltipProvider>
   )

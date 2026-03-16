@@ -475,13 +475,13 @@ export const useTemplateStore = create<TemplateStore>()(
 // -----------------------------------------------------------------------------
 
 export const useTemplates = (): NodeTemplate[] =>
-  useTemplateStore((s) => s.library.templates)
+  useTemplateStore((s) => s.library.templates ?? [])
 
 export const useFolders = (): TemplateFolder[] =>
-  useTemplateStore((s) => s.library.folders)
+  useTemplateStore((s) => s.library.folders ?? [])
 
 export const useFavoriteIds = (): string[] =>
-  useTemplateStore((s) => s.library.favoriteTemplateIds)
+  useTemplateStore((s) => s.library.favoriteTemplateIds ?? [])
 
 export const useIsBrowserOpen = (): boolean =>
   useTemplateStore((s) => s.browserOpen)

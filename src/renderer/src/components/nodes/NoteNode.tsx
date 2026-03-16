@@ -5,7 +5,7 @@ import type { NoteNodeData, NoteMode } from '@shared/types'
 import { DEFAULT_THEME_SETTINGS } from '@shared/types'
 import { PropertyBadges } from '../properties/PropertyBadge'
 import { getPropertiesForNodeType } from '../../constants/properties'
-import { useWorkspaceStore, useIsSpawning, useNodeWarmth, useIsNodePinned, useIsNodeBookmarked, useNodeNumberedBookmark, useIsNodeLayoutPinned } from '../../stores/workspaceStore'
+import { useWorkspaceStore, useIsSpawning, useNodeWarmth, useIsNodePinned, useIsNodeBookmarked, useNodeNumberedBookmark, useIsNodeLayoutPinned, useDemoMode } from '../../stores/workspaceStore'
 import { useShowMembersClass } from '../../hooks/useShowMembersClass'
 import { NodeSocketBars } from './SocketBar'
 import { AttachmentBadge } from './AttachmentBadge'
@@ -30,8 +30,10 @@ import { PageNoteBody } from './PageNoteBody'
 import { ComponentNoteBody } from './ComponentNoteBody'
 import { ContentModelBody } from './ContentModelBody'
 import { WPConfigBody } from './WPConfigBody'
-import { getNodeModeStyle, getTintOpacity, getBorderStyle, getBorderWidth } from '../../utils/nodeModeUtils'
+// nodeModeUtils: tinting functions kept for backward compat (no longer called from inline styles)
+// import { getNodeModeStyle, getTintOpacity, getBorderStyle, getBorderWidth } from '../../utils/nodeModeUtils'
 import { StructuredContentPreview } from './StructuredContentPreview'
+import { NodePropertyControls } from './NodePropertyControls'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -79,6 +81,7 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   const themeSettings = useWorkspaceStore((state) => state.themeSettings)
   const updateNodeDimensions = useWorkspaceStore((state) => state.updateNodeDimensions)
   const startNodeResize = useWorkspaceStore((state) => state.startNodeResize)
+  const demoMode = useDemoMode()
   const isInPlaceExpanded = useWorkspaceStore((state) => state.inPlaceExpandedNodeId === id)
   const collapseInPlaceExpansion = useWorkspaceStore((state) => state.collapseInPlaceExpansion)
   const expandNodeInPlace = useWorkspaceStore((state) => state.expandNodeInPlace)
@@ -140,30 +143,17 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   const isGlassEnabled = useIsGlassEnabled('nodes', transparent)
 
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
-    // Get tint opacity percentage (20-35% based on mode + intensity + theme)
-    const tintOpacity = getTintOpacity(currentMode, tintIntensity, themeSettings.isDarkMode ? 'dark' : 'light')
-    const borderStyle = getBorderStyle(currentMode)
-    const borderWidth = getBorderWidth(currentMode)
-
     // Fallback chain for undefined nodeColor
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.note ?? '#f59e0b' // amber-500
 
     return {
-      borderWidth: `${borderWidth}px`,
-      borderStyle: 'solid', // Use solid borders for all modes (accessibility handled via tint + border width)
-      borderColor: safeNodeColor,
-      // ALWAYS add opaque background (CSS overrides when glass enabled)
-      background: `color-mix(in srgb, ${safeNodeColor} ${tintOpacity}%, var(--node-bg))`,
-      boxShadow: selected ? `0 0 0 2px ${safeNodeColor}40, 0 0 20px ${safeNodeColor}30` : 'none',
+      '--ring-color': safeNodeColor,
+      '--node-accent': safeNodeColor,
+      '--density-accent': modeConfig.badgeColor || safeNodeColor,
       width: effectiveWidth,
       height: effectiveHeight,
-      transition: 'background 200ms ease-out, border-color 200ms ease-out, backdrop-filter 200ms ease-out, opacity 200ms ease-out',
-      // CSS custom properties for dynamic theming
-      '--ring-color': safeNodeColor,    // Edge handles color
-      '--node-accent': safeNodeColor,    // Glass background tint
-      '--density-accent': modeConfig.badgeColor || safeNodeColor  // PFD Phase 2: density bracket accent (mode color)
     }
-  }, [nodeColor, selected, effectiveWidth, effectiveHeight, currentMode, tintIntensity, themeSettings.nodeColors.note, themeSettings.isDarkMode, modeConfig.badgeColor])
+  }, [nodeColor, effectiveWidth, effectiveHeight, themeSettings.nodeColors.note, modeConfig.badgeColor])
 
   // Handle resize - also update node internals to trigger edge recalculation
   const handleResizeStart = useCallback(() => {
@@ -291,6 +281,8 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
     'cognograph-node',
     'cognograph-node--note',
     selected && 'selected',
+    // is-active reserved for functional state only (not selection)
+    isSpawning && 'is-thinking',
     isDisabled && 'cognograph-node--disabled',
     isSpawning && 'spawning',
     nonMemberClass,
@@ -316,6 +308,11 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
       onDoubleClick={handleDoubleClick}
       {...(zoomLevel === 'far' ? { role: 'img', 'aria-label': `Note: ${nodeData.title}` } : {})}
     >
+      {/* Type label: floats above node */}
+      <div className="cognograph-node__type-label" style={{ color: nodeColor ?? '#f59e0b' }}>
+        {currentMode !== 'general' ? modeConfig.label.toUpperCase() : 'NOTE'}
+      </div>
+
       {/* Auto-fit button - only at close */}
       {showInteractiveControls && (
         <AutoFitButton
@@ -390,15 +387,21 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
           </span>
         )}
         {showInteractiveControls && (
-          <NodeAIErrorBoundary compact>
-            <AIPropertyAssist
-              nodeId={id}
-              nodeData={nodeData}
-              compact={true}
-            />
-          </NodeAIErrorBoundary>
+          <div className="node-chrome--hover">
+            <NodeAIErrorBoundary compact>
+              <AIPropertyAssist
+                nodeId={id}
+                nodeData={nodeData}
+                compact={true}
+              />
+            </NodeAIErrorBoundary>
+          </div>
         )}
-        {showInteractiveControls && <ExtractionControls nodeId={id} />}
+        {showInteractiveControls && (
+          <div className="node-chrome--hover">
+            <ExtractionControls nodeId={id} />
+          </div>
+        )}
         {/* Focus mode button */}
         {showContent && (
           <button
@@ -412,13 +415,15 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
         )}
         {/* Note mode dropdown - only at close */}
         {showInteractiveControls && (
-          <NodeModeDropdown
-            value={currentMode}
-            options={modeOptions}
-            onChange={handleModeChange}
-            nodeColor={nodeColor}
-            aria-label="Note mode"
-          />
+          <div className="node-chrome--hover">
+            <NodeModeDropdown
+              value={currentMode}
+              options={modeOptions}
+              onChange={handleModeChange}
+              nodeColor={nodeColor}
+              aria-label="Note mode"
+            />
+          </div>
         )}
       </div>
 
@@ -504,7 +509,7 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
             className="cognograph-node__expand-trigger"
             aria-label={`Expand node: ${wordCount} words`}
           >
-            ↕ {wordCount} words
+            {demoMode ? '↕' : `↕ ${wordCount} words`}
           </button>
         )}
         {isInPlaceExpanded && (
@@ -517,6 +522,10 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
           </button>
         )}
 
+        {/* Inline property controls - only at close */}
+        {showContent && (
+          <NodePropertyControls nodeId={id} nodeType="note" data={data as Record<string, unknown>} />
+        )}
         {/* Property Badges - only at close */}
         {showContent && (
           <PropertyBadges
@@ -531,7 +540,7 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
       {/* Footer - visible at mid + close */}
       {showBadges && (
         <div className="cognograph-node__footer">
-          <span>{wordCount} words</span>
+          {!demoMode && <span>{wordCount} words</span>}
           <AttachmentBadge count={nodeData.attachments?.length} />
         </div>
       )}

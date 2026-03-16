@@ -46,10 +46,6 @@ interface UIActions {
   setNumberedBookmark: (number: number, nodeId: string | null) => void
   jumpToNumberedBookmark: (number: number) => string | null
 
-  // Floating Properties
-  openFloatingProperties: (nodeId: string) => void
-  closeFloatingProperties: (nodeId: string) => void
-
   // Pinned Windows
   pinWindow: (nodeId: string, position: { x: number; y: number }, size: { width: number; height: number }) => void
   unpinWindow: (nodeId: string) => void
@@ -58,6 +54,13 @@ interface UIActions {
   minimizePinnedWindow: (nodeId: string) => void
   restorePinnedWindow: (nodeId: string) => void
   bringPinnedWindowToFront: (nodeId: string) => void
+
+  // Artboard mode
+  enterArtboard: (nodeId: string) => void
+  exitArtboard: () => void
+
+  // Keyboard navigation
+  setKeyboardNavActive: (active: boolean) => void
 
   // Theme
   setThemeSettings: (settings: Partial<ThemeSettings>) => void
@@ -96,10 +99,15 @@ const initialUIState: UIState = {
   bookmarkedNodeId: null,
   numberedBookmarks: {},
 
-  // Floating modals and pinned windows
-  floatingPropertiesNodeIds: [],
+  // Pinned windows
   pinnedWindows: [],
   nextPinnedZIndex: 1000,
+
+  // Artboard mode
+  artboardNodeId: null,
+
+  // Keyboard navigation
+  keyboardNavActive: false,
 
   // Theme and preferences (initialized from DEFAULT_THEME_SETTINGS)
   themeSettings: DEFAULT_THEME_SETTINGS,
@@ -253,26 +261,6 @@ export const useUIStore = create<UIStore>()(
       },
 
       // -------------------------------------------------------------------------
-      // Floating Properties (can implement directly)
-      // -------------------------------------------------------------------------
-
-      openFloatingProperties: (nodeId) => {
-        set((state) => {
-          if (!state.floatingPropertiesNodeIds.includes(nodeId)) {
-            state.floatingPropertiesNodeIds.push(nodeId)
-          }
-        })
-      },
-
-      closeFloatingProperties: (nodeId) => {
-        set((state) => {
-          state.floatingPropertiesNodeIds = state.floatingPropertiesNodeIds.filter(
-            (id) => id !== nodeId
-          )
-        })
-      },
-
-      // -------------------------------------------------------------------------
       // Pinned Windows (can implement directly)
       // -------------------------------------------------------------------------
 
@@ -346,6 +334,32 @@ export const useUIStore = create<UIStore>()(
       },
 
       // -------------------------------------------------------------------------
+      // Artboard Mode (can implement directly)
+      // -------------------------------------------------------------------------
+
+      enterArtboard: (nodeId) => {
+        set((state) => {
+          state.artboardNodeId = nodeId
+        })
+      },
+
+      exitArtboard: () => {
+        set((state) => {
+          state.artboardNodeId = null
+        })
+      },
+
+      // -------------------------------------------------------------------------
+      // Keyboard Navigation
+      // -------------------------------------------------------------------------
+
+      setKeyboardNavActive: (active) => {
+        set((state) => {
+          state.keyboardNavActive = active
+        })
+      },
+
+      // -------------------------------------------------------------------------
       // Theme (can implement directly)
       // -------------------------------------------------------------------------
 
@@ -409,3 +423,18 @@ export const selectPinnedWindows = (state: UIStore) => state.pinnedWindows
  */
 export const selectIsNodePinned = (nodeId: string) => (state: UIStore) =>
   state.pinnedWindows.some((w) => w.nodeId === nodeId)
+
+/**
+ * Get artboard node ID (null when not in artboard mode)
+ */
+export const selectArtboardNodeId = (state: UIStore) => state.artboardNodeId
+
+/**
+ * Check if artboard mode is active
+ */
+export const selectIsArtboardActive = (state: UIStore) => state.artboardNodeId !== null
+
+/**
+ * Get keyboard navigation active state
+ */
+export const selectKeyboardNavActive = (state: UIStore) => state.keyboardNavActive

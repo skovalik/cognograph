@@ -1,4 +1,4 @@
-/** Represents a file touched by a CC session */
+/** Represents a file touched by a Terminal */
 export interface FileTouchRecord {
   filePath: string
   sessionId: string

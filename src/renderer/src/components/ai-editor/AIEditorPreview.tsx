@@ -170,9 +170,9 @@ function AIEditorPreviewComponent(): JSX.Element | null {
               top: screenY,
               width: screenWidth,
               height: screenHeight,
-              border: '2px dashed #3b82f6',
+              border: '2px dashed var(--cg-accent, #F0EDE8)',
               borderRadius: 8,
-              background: 'rgba(59, 130, 246, 0.1)',
+              background: 'var(--accent-glow-subtle, rgba(200, 150, 62, 0.15))',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -185,7 +185,7 @@ function AIEditorPreviewComponent(): JSX.Element | null {
                 position: 'absolute',
                 top: -10 * viewport.zoom,
                 right: -10 * viewport.zoom,
-                background: '#3b82f6',
+                background: 'var(--cg-accent, #F0EDE8)',
                 color: 'white',
                 fontSize: scaledFontSize,
                 fontWeight: 600,
@@ -197,7 +197,7 @@ function AIEditorPreviewComponent(): JSX.Element | null {
             </div>
             <span
               style={{
-                color: '#3b82f6',
+                color: 'var(--cg-accent, #F0EDE8)',
                 fontSize: scaledFontSize,
                 fontWeight: 500,
                 textAlign: 'center',
@@ -413,12 +413,12 @@ function AIEditorPreviewComponent(): JSX.Element | null {
       <style>{`
         @keyframes update-pulse {
           0%, 100% {
-            background: rgba(59, 130, 246, 0.05);
-            border-color: rgba(59, 130, 246, 0.5);
+            background: var(--accent-glow-subtle, rgba(200, 150, 62, 0.15));
+            border-color: var(--cg-accent, #F0EDE8);
           }
           50% {
-            background: rgba(59, 130, 246, 0.15);
-            border-color: rgba(59, 130, 246, 0.8);
+            background: var(--accent-glow-strong, rgba(200, 150, 62, 0.35));
+            border-color: var(--accent-glow, #C8963E);
           }
         }
 
@@ -430,8 +430,8 @@ function AIEditorPreviewComponent(): JSX.Element | null {
         @media (prefers-reduced-motion: reduce) {
           [style*="animation: update-pulse"] {
             animation: none !important;
-            background: rgba(59, 130, 246, 0.1) !important;
-            border-color: rgba(59, 130, 246, 0.7) !important;
+            background: var(--accent-glow-subtle, rgba(200, 150, 62, 0.15)) !important;
+            border-color: var(--cg-accent, #F0EDE8) !important;
           }
         }
       `}</style>

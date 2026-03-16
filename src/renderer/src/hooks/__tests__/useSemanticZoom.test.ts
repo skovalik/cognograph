@@ -4,7 +4,8 @@
  * Tests the extracted pure functions (computeZoomLevel, computeNodeContentVisibility)
  * which are the logic core of the useSemanticZoom/useNodeContentVisibility hooks.
  *
- * Phase 1A: Extend ZoomLevel to 5 levels with directional hysteresis.
+ * Thresholds: ultra-far/far=0.05, far/mid=0.08, mid/close=0.12, close/ultra-close=1.0
+ * Hysteresis: 0.02 standard, 0.03 wide (close/ultra-close boundary)
  */
 
 import { describe, it, expect } from 'vitest'
@@ -33,27 +34,27 @@ function sweepZoom(zoomValues: number[], startLevel: ZoomLevel = 'close'): ZoomL
 
 // --- 1. Basic zoom range -> correct ZoomLevel ------------------------------
 describe('computeZoomLevel -- basic ranges', () => {
-  it('returns ultra-far for zoom < 0.15', () => {
-    expect(computeZoomLevel(0.05, 'ultra-far')).toBe('ultra-far')
-    expect(computeZoomLevel(0.10, 'ultra-far')).toBe('ultra-far')
-    expect(computeZoomLevel(0.14, 'ultra-far')).toBe('ultra-far')
+  it('returns ultra-far for zoom < 0.05', () => {
+    expect(computeZoomLevel(0.01, 'ultra-far')).toBe('ultra-far')
+    expect(computeZoomLevel(0.03, 'ultra-far')).toBe('ultra-far')
+    expect(computeZoomLevel(0.04, 'ultra-far')).toBe('ultra-far')
   })
 
-  it('returns far for 0.15 <= zoom < 0.30', () => {
-    expect(computeZoomLevel(0.15, 'far')).toBe('far')
-    expect(computeZoomLevel(0.20, 'far')).toBe('far')
-    expect(computeZoomLevel(0.29, 'far')).toBe('far')
+  it('returns far for 0.05 <= zoom < 0.08 (when starting at far)', () => {
+    expect(computeZoomLevel(0.05, 'far')).toBe('far')
+    expect(computeZoomLevel(0.06, 'far')).toBe('far')
+    expect(computeZoomLevel(0.07, 'far')).toBe('far')
   })
 
-  it('returns mid for 0.30 <= zoom < 0.55', () => {
-    expect(computeZoomLevel(0.30, 'mid')).toBe('mid')
-    expect(computeZoomLevel(0.40, 'mid')).toBe('mid')
-    expect(computeZoomLevel(0.54, 'mid')).toBe('mid')
+  it('returns mid for 0.08 <= zoom < 0.12 (when starting at mid)', () => {
+    expect(computeZoomLevel(0.09, 'mid')).toBe('mid')
+    expect(computeZoomLevel(0.10, 'mid')).toBe('mid')
+    expect(computeZoomLevel(0.11, 'mid')).toBe('mid')
   })
 
-  it('returns close for 0.55 <= zoom < 1.0', () => {
+  it('returns close for 0.12 <= zoom < 1.0', () => {
+    expect(computeZoomLevel(0.15, 'close')).toBe('close')
     expect(computeZoomLevel(0.55, 'close')).toBe('close')
-    expect(computeZoomLevel(0.75, 'close')).toBe('close')
     expect(computeZoomLevel(0.99, 'close')).toBe('close')
   })
 
@@ -66,59 +67,63 @@ describe('computeZoomLevel -- basic ranges', () => {
 
 // --- 2. Hysteresis prevents jitter at each boundary -----------------------
 describe('computeZoomLevel -- hysteresis', () => {
-  describe('ultra-far / far boundary (0.15, hysteresis +/-0.02)', () => {
+  describe('ultra-far / far boundary (0.05, hysteresis +/-0.02)', () => {
     it('stays ultra-far when zoom is just above threshold', () => {
-      // At ultra-far, need to exceed 0.15 + 0.02 = 0.17 to transition
-      expect(computeZoomLevel(0.16, 'ultra-far')).toBe('ultra-far')
+      // At ultra-far, need to exceed 0.05 + 0.02 = 0.07 to transition
+      expect(computeZoomLevel(0.06, 'ultra-far')).toBe('ultra-far')
     })
 
     it('transitions to far when zoom exceeds threshold + hysteresis', () => {
-      expect(computeZoomLevel(0.18, 'ultra-far')).toBe('far')
+      expect(computeZoomLevel(0.08, 'ultra-far')).toBe('far')
     })
 
     it('stays far when zoom drops just below threshold', () => {
-      // At far, need to drop below 0.15 - 0.02 = 0.13 to transition back
-      expect(computeZoomLevel(0.14, 'far')).toBe('far')
+      // At far, need to drop below 0.05 - 0.02 = 0.03 to transition back
+      expect(computeZoomLevel(0.04, 'far')).toBe('far')
     })
 
     it('transitions to ultra-far when zoom drops below threshold - hysteresis', () => {
-      expect(computeZoomLevel(0.12, 'far')).toBe('ultra-far')
+      expect(computeZoomLevel(0.02, 'far')).toBe('ultra-far')
     })
   })
 
-  describe('far / mid boundary (0.30, hysteresis +/-0.02)', () => {
+  describe('far / mid boundary (0.08, hysteresis +/-0.02)', () => {
     it('stays far when zoom is just above threshold', () => {
-      expect(computeZoomLevel(0.31, 'far')).toBe('far')
+      // At far, need to exceed 0.08 + 0.02 = 0.10 to transition to mid
+      expect(computeZoomLevel(0.09, 'far')).toBe('far')
     })
 
     it('transitions to mid when zoom exceeds threshold + hysteresis', () => {
-      expect(computeZoomLevel(0.33, 'far')).toBe('mid')
+      expect(computeZoomLevel(0.11, 'far')).toBe('mid')
     })
 
     it('stays mid when zoom drops just below threshold', () => {
-      expect(computeZoomLevel(0.29, 'mid')).toBe('mid')
+      // At mid, need to drop below 0.08 - 0.02 = 0.06 to transition back
+      expect(computeZoomLevel(0.07, 'mid')).toBe('mid')
     })
 
     it('transitions to far when zoom drops below threshold - hysteresis', () => {
-      expect(computeZoomLevel(0.27, 'mid')).toBe('far')
+      expect(computeZoomLevel(0.05, 'mid')).toBe('far')
     })
   })
 
-  describe('mid / close boundary (0.55, hysteresis +/-0.02)', () => {
+  describe('mid / close boundary (0.12, hysteresis +/-0.02)', () => {
     it('stays mid when zoom is just above threshold', () => {
-      expect(computeZoomLevel(0.56, 'mid')).toBe('mid')
+      // At mid, need to exceed 0.12 + 0.02 = 0.14 to transition to close
+      expect(computeZoomLevel(0.13, 'mid')).toBe('mid')
     })
 
     it('transitions to close when zoom exceeds threshold + hysteresis', () => {
-      expect(computeZoomLevel(0.58, 'mid')).toBe('close')
+      expect(computeZoomLevel(0.15, 'mid')).toBe('close')
     })
 
     it('stays close when zoom drops just below threshold', () => {
-      expect(computeZoomLevel(0.54, 'close')).toBe('close')
+      // At close, need to drop below 0.12 - 0.02 = 0.10 to transition back
+      expect(computeZoomLevel(0.11, 'close')).toBe('close')
     })
 
     it('transitions to mid when zoom drops below threshold - hysteresis', () => {
-      expect(computeZoomLevel(0.52, 'close')).toBe('mid')
+      expect(computeZoomLevel(0.09, 'close')).toBe('mid')
     })
   })
 
@@ -146,19 +151,19 @@ describe('computeZoomLevel -- hysteresis', () => {
 // --- 3. Sweep tests: continuous zoom up and down --------------------------
 describe('computeZoomLevel -- sweep behavior', () => {
   it('sweeps up through all 5 levels', () => {
-    expect(sweepZoom([0.05], 'ultra-far')).toBe('ultra-far')
-    expect(sweepZoom([0.05, 0.18], 'ultra-far')).toBe('far')
-    expect(sweepZoom([0.05, 0.18, 0.33], 'ultra-far')).toBe('mid')
-    expect(sweepZoom([0.05, 0.18, 0.33, 0.58], 'ultra-far')).toBe('close')
-    expect(sweepZoom([0.05, 0.18, 0.33, 0.58, 1.04], 'ultra-far')).toBe('ultra-close')
+    expect(sweepZoom([0.02], 'ultra-far')).toBe('ultra-far')
+    expect(sweepZoom([0.02, 0.08], 'ultra-far')).toBe('far')
+    expect(sweepZoom([0.02, 0.08, 0.11], 'ultra-far')).toBe('mid')
+    expect(sweepZoom([0.02, 0.08, 0.11, 0.15], 'ultra-far')).toBe('close')
+    expect(sweepZoom([0.02, 0.08, 0.11, 0.15, 1.04], 'ultra-far')).toBe('ultra-close')
   })
 
   it('sweeps down through all 5 levels', () => {
     expect(sweepZoom([2.0], 'ultra-close')).toBe('ultra-close')
     expect(sweepZoom([2.0, 0.96], 'ultra-close')).toBe('close')
-    expect(sweepZoom([2.0, 0.96, 0.52], 'ultra-close')).toBe('mid')
-    expect(sweepZoom([2.0, 0.96, 0.52, 0.27], 'ultra-close')).toBe('far')
-    expect(sweepZoom([2.0, 0.96, 0.52, 0.27, 0.12], 'ultra-close')).toBe('ultra-far')
+    expect(sweepZoom([2.0, 0.96, 0.09], 'ultra-close')).toBe('mid')
+    expect(sweepZoom([2.0, 0.96, 0.09, 0.05], 'ultra-close')).toBe('far')
+    expect(sweepZoom([2.0, 0.96, 0.09, 0.05, 0.02], 'ultra-close')).toBe('ultra-far')
   })
 
   it('handles large jumps correctly', () => {
@@ -175,9 +180,9 @@ describe('computeZoomLevel -- sweep behavior', () => {
 // --- 4. Threshold constants are correctly defined -------------------------
 describe('threshold constants', () => {
   it('defines 4 thresholds for 5 levels', () => {
-    expect(THRESHOLDS.ULTRA_FAR_FAR).toBe(0.15)
-    expect(THRESHOLDS.FAR_MID).toBe(0.30)
-    expect(THRESHOLDS.MID_CLOSE).toBe(0.55)
+    expect(THRESHOLDS.ULTRA_FAR_FAR).toBe(0.05)
+    expect(THRESHOLDS.FAR_MID).toBe(0.08)
+    expect(THRESHOLDS.MID_CLOSE).toBe(0.12)
     expect(THRESHOLDS.CLOSE_ULTRA_CLOSE).toBe(1.0)
   })
 
@@ -390,7 +395,7 @@ describe('exhaustiveness', () => {
   })
 
   it('computeZoomLevel returns a valid ZoomLevel for any positive zoom', () => {
-    const testZooms = [0.001, 0.1, 0.15, 0.25, 0.3, 0.5, 0.55, 0.75, 1.0, 1.5, 3.0]
+    const testZooms = [0.001, 0.04, 0.05, 0.07, 0.08, 0.11, 0.12, 0.5, 1.0, 1.5, 3.0]
     for (const z of testZooms) {
       for (const prev of ALL_LEVELS) {
         const result = computeZoomLevel(z, prev)
@@ -403,8 +408,8 @@ describe('exhaustiveness', () => {
 // --- 9. Multi-step hysteresis: rapid oscillation doesn't cause jitter -----
 describe('jitter resistance', () => {
   it('oscillating around the far/mid boundary stays stable', () => {
-    // Start at mid, oscillate around 0.30
-    const values = [0.31, 0.29, 0.31, 0.29, 0.31, 0.29]
+    // Start at mid, oscillate around 0.08
+    const values = [0.09, 0.07, 0.09, 0.07, 0.09, 0.07]
     // All within hysteresis band, should stay mid
     expect(sweepZoom(values, 'mid')).toBe('mid')
   })
@@ -417,15 +422,15 @@ describe('jitter resistance', () => {
   })
 
   it('oscillating around the ultra-far/far boundary stays stable', () => {
-    // Start at ultra-far, oscillate around 0.15
-    const values = [0.16, 0.14, 0.16, 0.14, 0.16]
+    // Start at ultra-far, oscillate around 0.05
+    const values = [0.06, 0.04, 0.06, 0.04, 0.06]
     // All within hysteresis band, should stay ultra-far
     expect(sweepZoom(values, 'ultra-far')).toBe('ultra-far')
   })
 
   it('oscillating around the mid/close boundary stays stable', () => {
-    // Start at mid, oscillate around 0.55
-    const values = [0.56, 0.54, 0.56, 0.54, 0.56]
+    // Start at mid, oscillate around 0.12
+    const values = [0.13, 0.11, 0.13, 0.11, 0.13]
     // All within hysteresis band, should stay mid
     expect(sweepZoom(values, 'mid')).toBe('mid')
   })

@@ -52,6 +52,19 @@ export default {
           foreground: 'var(--card-foreground)',
         },
       },
+      fontSize: {
+        'xs': ['var(--text-micro)', { lineHeight: '1.4' }],
+        'sm': ['var(--text-label)', { lineHeight: '1.4' }],
+        'base': ['var(--text-body)', { lineHeight: '1.5' }],
+        'lg': ['var(--text-node-title)', { lineHeight: '1.5' }],
+        'xl': ['var(--text-title)', { lineHeight: '1.4' }],
+        '2xl': ['var(--text-display)', { lineHeight: '1.3' }],
+      },
+      fontFamily: {
+        sans: ['var(--font-sans)'],
+        mono: ['var(--font-mono)'],
+        display: ['var(--font-display)'],
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',

@@ -9,7 +9,10 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { logger } from '../utils/logger'
 
-export type Plan = 'free' | 'pro' | 'power' | 'team'
+const API_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ORCHESTRATOR_URL)
+  || 'https://api.cognograph.app'
+
+export type Plan = 'free' | 'pro'
 
 export interface Entitlement {
   enabled: boolean
@@ -24,6 +27,12 @@ export interface EntitlementsState {
   currentPeriodEnd: string | null
   cancelAtPeriodEnd: boolean
   lastFetched: number | null
+  gracePeriodStatus: 'none' | 'early' | 'urgent' | 'expired'
+  usage: {
+    workspaces: { current: number; limit: number }
+    storage: { current: number; limit: number }
+    apiCalls: { current: number; limit: number }
+  } | null
 
   // Actions
   fetchEntitlements: () => Promise<void>
@@ -32,18 +41,19 @@ export interface EntitlementsState {
   clearEntitlements: () => void
 }
 
-// Feature to required plan mapping (for upgrade prompts)
+// Feature to required plan mapping (for upgrade prompts).
+// Only gate features that require server-side resources.
+// Client-side features (spatial_triggers, unlimited_workspaces, plan_preview_apply,
+// env_templates) are free — the product is open source and self-hostable.
 export const FEATURE_REQUIREMENTS: Record<string, Plan[]> = {
-  cloud_sync: ['pro', 'power', 'team'],
-  version_history: ['pro', 'power', 'team'],
-  branching: ['power', 'team'],
-  mcp_integrations: ['power', 'team'],
-  api_access: ['power', 'team'],
-  max_workspaces: ['pro', 'power', 'team'] // Free has limit of 3
+  cloud_sync: ['pro'],
+  cloud_terminal_unlimited: ['pro'],
+  orchestrator_node: ['pro'],
+  full_context_injection: ['pro'],
 }
 
 // Plan upgrade order
-const PLAN_ORDER: Plan[] = ['free', 'pro', 'power', 'team']
+const PLAN_ORDER: Plan[] = ['free', 'pro']
 
 export const useEntitlementsStore = create<EntitlementsState>()(
   persist(
@@ -52,44 +62,62 @@ export const useEntitlementsStore = create<EntitlementsState>()(
       plan: 'free',
       status: 'active',
       entitlements: {
-        multiplayer: { enabled: true },
         cloud_sync: { enabled: false },
-        version_history: { enabled: false },
-        branching: { enabled: false },
-        mcp_integrations: { enabled: false },
-        api_access: { enabled: false },
-        max_workspaces: { enabled: true, limit: 3 }
+        cloud_terminal_unlimited: { enabled: false },
+        unlimited_workspaces: { enabled: true },
+        spatial_triggers: { enabled: true },
+        orchestrator_node: { enabled: false },
+        plan_preview_apply: { enabled: true },
+        env_templates: { enabled: true },
+        full_context_injection: { enabled: false },
       },
       currentPeriodEnd: null,
       cancelAtPeriodEnd: false,
       lastFetched: null,
+      gracePeriodStatus: 'none' as const,
+      usage: null,
 
       /**
-       * Fetch entitlements from server.
+       * Fetch entitlements from orchestrator API via Supabase JWT.
        */
       fetchEntitlements: async () => {
         try {
-          // Get current workspace ID for auth
-          const workspaceId = localStorage.getItem('lastWorkspaceId')
-          if (!workspaceId) {
-            logger.log('[Entitlements] No workspace ID, using defaults')
-            return
-          }
-
-          // Get token
-          const tokenResult = await window.api.multiplayer.getToken(workspaceId)
-          if (!tokenResult.success || !tokenResult.token) {
-            logger.log('[Entitlements] No token, using defaults')
-            return
-          }
-
-          // Fetch from server
-          // Note: This would need proper user auth in production
-          // For now, we'll use the workspace token approach
-          const response = await fetch('http://localhost:3002/api/billing/status', {
-            headers: {
-              'Authorization': `Bearer ${tokenResult.token}`
+          // Try Supabase auth first (web/cloud mode)
+          let authHeader: string | null = null
+          try {
+            const { supabase } = await import('../../../web/lib/supabase')
+            if (supabase) {
+              const { data: { session } } = await supabase.auth.getSession()
+              if (session?.access_token) {
+                authHeader = `Bearer ${session.access_token}`
+              }
             }
+          } catch {
+            // Supabase not available (Electron mode) — try workspace token
+          }
+
+          // Fallback: Electron workspace token
+          if (!authHeader && (window as any).__ELECTRON__) {
+            const workspaceId = localStorage.getItem('lastWorkspaceId')
+            if (workspaceId) {
+              try {
+                const tokenResult = await window.api.multiplayer.getToken(workspaceId)
+                if (tokenResult?.success && tokenResult.token) {
+                  authHeader = `Bearer ${tokenResult.token}`
+                }
+              } catch {
+                // multiplayer not available
+              }
+            }
+          }
+
+          if (!authHeader) {
+            logger.log('[Entitlements] No auth available, using defaults')
+            return
+          }
+
+          const response = await fetch(`${API_URL}/api/billing/status`, {
+            headers: { 'Authorization': authHeader }
           })
 
           if (!response.ok) {
@@ -100,15 +128,17 @@ export const useEntitlementsStore = create<EntitlementsState>()(
           const data = await response.json()
 
           set({
-            plan: data.plan || 'free',
+            plan: data.tier || data.plan || 'free',
             status: data.status || 'active',
             entitlements: data.entitlements || get().entitlements,
             currentPeriodEnd: data.currentPeriodEnd || null,
             cancelAtPeriodEnd: data.cancelAtPeriodEnd || false,
-            lastFetched: Date.now()
+            lastFetched: Date.now(),
+            gracePeriodStatus: data.gracePeriodStatus || 'none',
+            usage: data.usage || null,
           })
 
-          logger.log('[Entitlements] Updated:', data.plan)
+          logger.log('[Entitlements] Updated:', data.tier || data.plan)
 
         } catch (err) {
           console.error('[Entitlements] Fetch error:', err)
@@ -141,17 +171,20 @@ export const useEntitlementsStore = create<EntitlementsState>()(
           plan: 'free',
           status: 'active',
           entitlements: {
-            multiplayer: { enabled: true },
             cloud_sync: { enabled: false },
-            version_history: { enabled: false },
-            branching: { enabled: false },
-            mcp_integrations: { enabled: false },
-            api_access: { enabled: false },
-            max_workspaces: { enabled: true, limit: 3 }
+            cloud_terminal_unlimited: { enabled: false },
+            unlimited_workspaces: { enabled: true },
+            spatial_triggers: { enabled: true },
+            orchestrator_node: { enabled: false },
+            plan_preview_apply: { enabled: true },
+            env_templates: { enabled: true },
+            full_context_injection: { enabled: false },
           },
           currentPeriodEnd: null,
           cancelAtPeriodEnd: false,
-          lastFetched: null
+          lastFetched: null,
+          gracePeriodStatus: 'none' as const,
+          usage: null,
         })
       }
     }),
@@ -163,7 +196,9 @@ export const useEntitlementsStore = create<EntitlementsState>()(
         entitlements: state.entitlements,
         currentPeriodEnd: state.currentPeriodEnd,
         cancelAtPeriodEnd: state.cancelAtPeriodEnd,
-        lastFetched: state.lastFetched
+        lastFetched: state.lastFetched,
+        gracePeriodStatus: state.gracePeriodStatus,
+        usage: state.usage,
       })
     }
   )
@@ -211,6 +246,20 @@ export function getUpgradePlan(currentPlan: Plan): Plan | null {
   const currentIndex = PLAN_ORDER.indexOf(currentPlan)
   if (currentIndex >= PLAN_ORDER.length - 1) return null
   return PLAN_ORDER[currentIndex + 1] as Plan
+}
+
+/**
+ * Hook to get the grace period status.
+ */
+export function useGracePeriodStatus(): 'none' | 'early' | 'urgent' | 'expired' {
+  return useEntitlementsStore((state) => state.gracePeriodStatus)
+}
+
+/**
+ * Hook to get usage data.
+ */
+export function useUsage(): EntitlementsState['usage'] {
+  return useEntitlementsStore((state) => state.usage)
 }
 
 // -----------------------------------------------------------------------------

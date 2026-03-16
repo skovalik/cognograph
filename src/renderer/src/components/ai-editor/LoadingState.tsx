@@ -163,15 +163,15 @@ function LoadingStateComponent({ mode, message, streamingPhase, streamingText, o
 
         .loading-ring-outer {
           inset: 0;
-          border-top-color: #7c3aed;
-          border-right-color: #7c3aed;
+          border-top-color: var(--cg-accent, #F0EDE8);
+          border-right-color: var(--cg-accent, #F0EDE8);
           animation: spin 1.5s linear infinite;
         }
 
         .loading-ring-inner {
           inset: 8px;
-          border-bottom-color: #3b82f6;
-          border-left-color: #3b82f6;
+          border-bottom-color: var(--accent-glow, #C8963E);
+          border-left-color: var(--accent-glow, #C8963E);
           animation: spin 1s linear infinite reverse;
         }
 
@@ -213,7 +213,7 @@ function LoadingStateComponent({ mode, message, streamingPhase, streamingText, o
         .dot {
           width: 6px;
           height: 6px;
-          background: #7c3aed;
+          background: var(--cg-accent, #F0EDE8);
           border-radius: 50%;
           animation: dot-bounce 1.4s ease-in-out infinite;
         }

@@ -2,9 +2,9 @@ import { memo, useState, useCallback, useRef } from 'react'
 import { X, Palette, RotateCcw, MessageSquare, Folder, FileText, CheckSquare, Code, Boxes, Layout, Sun, Moon, Layers, Sparkles, Plus, Save, Download, Upload, Wand2, ChevronDown, ChevronRight, RefreshCw, Check, Monitor, Link, Type, Pencil, Workflow } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import { DEFAULT_THEME_SETTINGS, LIGHT_MODE_PRESETS, DEFAULT_LINK_COLORS_DARK, DEFAULT_LINK_COLORS_LIGHT, DEFAULT_AMBIENT_EFFECT } from '@shared/types'
+import { DEFAULT_THEME_SETTINGS, LIGHT_MODE_PRESETS, DEFAULT_LINK_COLORS_DARK, DEFAULT_LINK_COLORS_LIGHT, DEFAULT_AMBIENT_EFFECT, FONT_THEMES } from '@shared/types'
 import { DEFAULT_GUI_DARK, DEFAULT_GUI_LIGHT } from '../constants/themePresets'
-import type { NodeData, ThemeMode, CustomThemePreset, ThemeSettings, EdgeStyle, GuiColors, AmbientEffectType, AmbientEffectSettings as AmbientEffectSettingsType } from '@shared/types'
+import type { NodeData, ThemeMode, CustomThemePreset, ThemeSettings, EdgeStyle, GuiColors, AmbientEffectType, AmbientEffectSettings as AmbientEffectSettingsType, FontTheme } from '@shared/types'
 import { EFFECTS_BY_CATEGORY, EFFECT_REGISTRY } from './ambient/effectRegistry'
 import { EffectControlsPanel } from './ambient/EffectControlsPanel'
 import { hexToRgbFloat, generatePaletteFromAccents, deriveColor } from './ambient/utils/colorConvert'
@@ -231,7 +231,7 @@ function AmbientEffectSettingsComponent({
       {/* Off Button */}
       <button
         onClick={() => onChange({ ...settings, effect: 'none', enabled: false })}
-        className={`px-3 py-1 rounded text-[10px] transition-all ${
+        className={`px-3 py-1 rounded text-xs transition-all ${
           !isEffectSelected
             ? 'gui-bg-accent text-white'
             : `${buttonBg} ${textSecondary}`
@@ -245,7 +245,7 @@ function AmbientEffectSettingsComponent({
       <div className="space-y-2">
         {EFFECTS_BY_CATEGORY.map(({ category, effects }) => (
           <div key={category}>
-            <h4 className={`text-[9px] ${textMuted} uppercase tracking-wider mb-1`}>
+            <h4 className={`text-[10px] ${textMuted} uppercase tracking-wider mb-1`}>
               {category}
             </h4>
             <div className="grid grid-cols-3 gap-1">
@@ -263,8 +263,8 @@ function AmbientEffectSettingsComponent({
                     aria-pressed={isSelected}
                     title={`Enable ${entry.name} effect`}
                   >
-                    <span className="text-[11px] font-mono leading-none opacity-70">{entry.icon}</span>
-                    <span className="text-[9px] leading-none">{entry.name}</span>
+                    <span className="text-xs font-mono leading-none opacity-70">{entry.icon}</span>
+                    <span className="text-[10px] leading-none">{entry.name}</span>
                   </button>
                 )
               })}
@@ -278,7 +278,7 @@ function AmbientEffectSettingsComponent({
         <div className="space-y-2 pl-1">
           {/* Bloom Slider */}
           <div className="flex items-center gap-2">
-            <span className={`text-[10px] ${textMuted} w-14`}>Bloom</span>
+            <span className={`text-xs ${textMuted} w-14`}>Bloom</span>
             <input
               type="range"
               min={0}
@@ -287,7 +287,7 @@ function AmbientEffectSettingsComponent({
               onChange={(e) => updateSetting('bloomIntensity', parseInt(e.target.value))}
               className="flex-1 h-1 accent-[var(--gui-accent-primary)]"
             />
-            <span className={`text-[10px] ${textMuted} w-8 text-right`}>{settings.bloomIntensity ?? 30}%</span>
+            <span className={`text-xs ${textMuted} w-8 text-right`}>{settings.bloomIntensity ?? 30}%</span>
           </div>
 
           {/* Per-Effect Controls — driven by registry propSchema */}
@@ -917,7 +917,13 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[600px] overflow-y-auto" noOverlay>
+      <SheetContent
+        side="right"
+        className="w-[600px] max-w-[calc(100vw-32px)] overflow-y-auto text-sm"
+        noOverlay
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Palette className="w-5 h-5" style={{ color: 'var(--gui-accent-primary)' }} />
@@ -966,6 +972,85 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
               <Sun className="w-4 h-4" />
               <span className="text-xs">Light</span>
             </button>
+          </div>
+        </div>
+
+        <div className={`border-t ${dividerColor}`} />
+
+        {/* Accent Color — driven by theme preset */}
+        <div className="space-y-2">
+          <div className={`flex items-center gap-1.5 text-xs font-medium ${textSecondary} uppercase`}>
+            Accent Color
+          </div>
+          <div className="flex items-center gap-3">
+            <div
+              className="w-8 h-8 rounded-full border-2 border-[var(--gui-accent-primary)] ring-2 ring-[var(--gui-accent-secondary)]/30"
+              style={{ backgroundColor: currentGuiColors.accentPrimary }}
+              title="Primary accent"
+            />
+            <div
+              className="w-8 h-8 rounded-full border-2 border-transparent"
+              style={{ backgroundColor: currentGuiColors.accentSecondary }}
+              title="Secondary accent"
+            />
+            <span className={`text-xs ${textMuted} ml-1`}>Set by theme preset</span>
+          </div>
+        </div>
+
+        <div className={`border-t ${dividerColor}`} />
+
+        {/* Font Picker */}
+        <div className="space-y-2">
+          <div className={`flex items-center gap-1.5 text-xs font-medium ${textSecondary} uppercase`}>
+            <Type className="w-3 h-3" />
+            Font
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {(Object.keys(FONT_THEMES) as FontTheme[]).map((key) => {
+              const font = FONT_THEMES[key]
+              const isActive = (themeSettings.fontTheme || 'space-grotesk') === key
+              return (
+                <button
+                  key={key}
+                  onClick={() => updateThemeSettings({ fontTheme: key })}
+                  className={`text-left px-2.5 py-2 rounded border transition-all ${
+                    isActive
+                      ? 'border-[var(--gui-accent-primary)] gui-panel-secondary'
+                      : 'border-transparent gui-card hover:border-[var(--gui-text-secondary)]/30'
+                  }`}
+                >
+                  <span className="text-xs gui-text block" style={{ fontFamily: font.sans }}>
+                    {font.label}
+                  </span>
+                  <span className="text-xs gui-text-secondary block mt-0.5" style={{ fontFamily: font.sans }}>
+                    Aa Bb Cc 123
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className={`border-t ${dividerColor}`} />
+
+        {/* Font Size */}
+        <div className="space-y-2">
+          <div className={`flex items-center justify-between text-xs font-medium ${textSecondary} uppercase`}>
+            <span>Font Size</span>
+            <span className="text-xs font-mono normal-case">{themeSettings.fontSize || 14}px</span>
+          </div>
+          <input
+            type="range"
+            min={10}
+            max={16}
+            step={1}
+            value={themeSettings.fontSize || 14}
+            onChange={(e) => updateThemeSettings({ fontSize: parseInt(e.target.value) })}
+            className="w-full accent-[var(--accent-glow)]"
+          />
+          <div className={`flex justify-between text-xs ${textMuted}`}>
+            <span>10px</span>
+            <span>16px</span>
           </div>
         </div>
 
@@ -1044,7 +1129,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                         ))}
                       </div>
                       {/* Preset name */}
-                      <div className={`text-[7px] mt-0.5 text-center truncate text-[var(--text-muted)]`}>
+                      <div className={`text-[10px] mt-0.5 text-center truncate text-[var(--text-muted)]`}>
                         {preset.name}
                       </div>
                     </button>
@@ -1096,7 +1181,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                       <Plus className={`w-4 h-4 ${textMuted}`} />
                     </div>
                     <div className="h-2.5" /> {/* Spacer for alignment */}
-                    <div className={`text-[7px] text-center ${textMuted}`}>
+                    <div className={`text-[10px] text-center ${textMuted}`}>
                       Empty
                     </div>
                   </button>
@@ -1157,7 +1242,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                           ))}
                         </div>
                         {/* Preset name */}
-                        <div className={`text-[7px] mt-0.5 text-center truncate text-[var(--text-muted)]`}>
+                        <div className={`text-[10px] mt-0.5 text-center truncate text-[var(--text-muted)]`}>
                           {preset.name}
                         </div>
                       </button>
@@ -1207,7 +1292,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                         <Plus className={`w-4 h-4 ${textMuted}`} />
                       </div>
                       <div className="h-2.5" /> {/* Spacer for alignment */}
-                      <div className={`text-[7px] text-center ${textMuted}`}>
+                      <div className={`text-[10px] text-center ${textMuted}`}>
                         Empty
                       </div>
                     </button>
@@ -1222,7 +1307,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
             <button
               onClick={handleOpenAiGenerateModal}
               disabled={!themeSettings.aiPaletteEnabled || !hasEmptyPresetSlot || aiPreview.isGenerating}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-[10px] transition-colors border-2 ${
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-xs transition-colors border-2 ${
                 themeSettings.aiPaletteEnabled && hasEmptyPresetSlot && !aiPreview.isGenerating
                   ? ''
                   : 'opacity-50 cursor-not-allowed'
@@ -1279,7 +1364,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
             <button
               onClick={handleExportPresets}
               disabled={(themeSettings.customPresets?.length || 0) === 0}
-              className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 ${buttonBg} ${textSecondary} disabled:opacity-50 disabled:cursor-not-allowed rounded text-[10px] transition-colors`}
+              className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 ${buttonBg} ${textSecondary} disabled:opacity-50 disabled:cursor-not-allowed rounded text-xs transition-colors`}
               title="Export presets to file"
             >
               <Download className="w-3 h-3" />
@@ -1288,7 +1373,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={(themeSettings.customPresets?.length || 0) >= 8}
-              className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 ${buttonBg} ${textSecondary} disabled:opacity-50 disabled:cursor-not-allowed rounded text-[10px] transition-colors`}
+              className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 ${buttonBg} ${textSecondary} disabled:opacity-50 disabled:cursor-not-allowed rounded text-xs transition-colors`}
               title="Import presets from file"
             >
               <Upload className="w-3 h-3" />
@@ -1306,13 +1391,13 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
           {/* Edit preset name modal */}
           {editingPresetId && (
             <div className="p-2 rounded bg-[var(--surface-panel-secondary)]">
-              <div className={`text-[10px] ${textMuted} mb-1`}>Rename preset:</div>
+              <div className={`text-xs ${textMuted} mb-1`}>Rename preset:</div>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={editingPresetName}
                   onChange={(e) => setEditingPresetName(e.target.value)}
-                  className={`flex-1 ${inputBg} border rounded px-2 py-1 text-[10px] ${textPrimary} focus:outline-none focus:gui-border-active`}
+                  className={`flex-1 ${inputBg} border rounded px-2 py-1 text-xs ${textPrimary} focus:outline-none focus:gui-border-active`}
                   autoFocus
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleSavePresetEdit()
@@ -1324,7 +1409,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                 />
                 <button
                   onClick={handleSavePresetEdit}
-                  className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] transition-colors"
+                  className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs transition-colors"
                 >
                   Save
                 </button>
@@ -1333,7 +1418,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                     setEditingPresetId(null)
                     setEditingPresetName('')
                   }}
-                  className={`px-2 py-1 ${buttonBg} ${textSecondary} rounded text-[10px] transition-colors`}
+                  className={`px-2 py-1 ${buttonBg} ${textSecondary} rounded text-xs transition-colors`}
                 >
                   Cancel
                 </button>
@@ -1375,7 +1460,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
           <div className="flex items-center gap-2 pl-12">
             <button
               onClick={() => handleOpenGenericColorPicker('canvasBg')}
-              className={`flex items-center gap-1.5 px-2 py-1 ${buttonBg} ${textSecondary} rounded text-[10px] transition-colors`}
+              className={`flex items-center gap-1.5 px-2 py-1 ${buttonBg} ${textSecondary} rounded text-xs transition-colors`}
             >
               <Palette className="w-3 h-3" />
               Pick Color
@@ -1387,7 +1472,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
             />
             <button
               onClick={() => setCanvasBackground(isLightMode ? '#ffffff' : '#1a1a2e')}
-              className={`flex items-center gap-1 px-1.5 py-0.5 ${buttonBg} ${textMuted} rounded text-[10px] transition-colors hover:${textSecondary}`}
+              className={`flex items-center gap-1 px-1.5 py-0.5 ${buttonBg} ${textMuted} rounded text-xs transition-colors hover:${textSecondary}`}
               title="Reset to default"
             >
               <RotateCcw className="w-2.5 h-2.5" />
@@ -1420,7 +1505,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
           <div className="flex items-center gap-2 pl-12">
             <button
               onClick={() => handleOpenGenericColorPicker('canvasGrid')}
-              className={`flex items-center gap-1.5 px-2 py-1 ${buttonBg} ${textSecondary} rounded text-[10px] transition-colors`}
+              className={`flex items-center gap-1.5 px-2 py-1 ${buttonBg} ${textSecondary} rounded text-xs transition-colors`}
             >
               <Palette className="w-3 h-3" />
               Pick Color
@@ -1434,7 +1519,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
             )}
             <button
               onClick={() => setCanvasGridColor(isLightMode ? '#e2e8f0' : '#2e2e52')}
-              className={`flex items-center gap-1 px-1.5 py-0.5 ${buttonBg} ${textMuted} rounded text-[10px] transition-colors hover:${textSecondary}`}
+              className={`flex items-center gap-1 px-1.5 py-0.5 ${buttonBg} ${textMuted} rounded text-xs transition-colors hover:${textSecondary}`}
               title="Reset to default"
             >
               <RotateCcw className="w-2.5 h-2.5" />
@@ -1449,8 +1534,8 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                 <button
                   key={value}
                   onClick={() => setEdgeStyle(value)}
-                  className={`px-2 py-1 rounded text-[10px] transition-all ${
-                    (themeSettings.edgeStyle || 'rounded') === value
+                  className={`px-2 py-1 rounded text-xs transition-all ${
+                    (themeSettings.edgeStyle || 'smooth') === value
                       ? 'gui-bg-accent text-white'
                       : `${buttonBg} ${textSecondary}`
                   }`}
@@ -1529,7 +1614,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                     {/* Saved custom colors (if any) - shown first for easy access */}
                     {customColors.length > 0 && (
                       <div className="space-y-1">
-                        <div className={`text-[9px] ${textMuted} uppercase`}>Saved</div>
+                        <div className={`text-[10px] ${textMuted} uppercase`}>Saved</div>
                         <div className="flex flex-wrap gap-0.5">
                           {customColors.map((color) => (
                             <button
@@ -1587,13 +1672,13 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                         value={customInput}
                         onChange={(e) => setCustomInput(e.target.value)}
                         placeholder="#hex"
-                        className={`w-16 ${inputBg} border rounded px-1.5 py-0.5 text-[10px] ${textPrimary} focus:outline-none focus:gui-border-active font-mono`}
+                        className={`w-16 ${inputBg} border rounded px-1.5 py-0.5 text-xs ${textPrimary} focus:outline-none focus:gui-border-active font-mono`}
                         maxLength={7}
                       />
                       <button
                         onClick={() => handleCustomColor(type)}
                         disabled={!/^#[0-9A-Fa-f]{6}$/.test(customInput)}
-                        className="px-1.5 py-0.5 gui-bg-accent disabled:bg-[var(--surface-panel-secondary)] disabled:text-[var(--text-muted)] text-white rounded text-[10px] transition-colors"
+                        className="px-1.5 py-0.5 gui-bg-accent disabled:bg-[var(--surface-panel-secondary)] disabled:text-[var(--text-muted)] text-white rounded text-xs transition-colors"
                       >
                         Set
                       </button>
@@ -1602,7 +1687,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                           onClick={() => {
                             addCustomColor(customInput)
                           }}
-                          className="px-1.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] transition-colors"
+                          className="px-1.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs transition-colors"
                           title="Save this color for quick access"
                         >
                           + Save
@@ -1619,7 +1704,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                     {/* Advanced Color Picker button */}
                     <button
                       onClick={() => handleOpenColorPicker(type)}
-                      className={`w-full flex items-center justify-center gap-1.5 px-2 py-1.5 ${buttonBg} ${textSecondary} rounded text-[10px] transition-colors mt-1`}
+                      className={`w-full flex items-center justify-center gap-1.5 px-2 py-1.5 ${buttonBg} ${textSecondary} rounded text-xs transition-colors mt-1`}
                     >
                       <Palette className="w-3 h-3" />
                       Advanced Color Picker
@@ -1711,7 +1796,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
           {/* Gradient Toggle */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className={`text-[10px] ${textSecondary}`}>Use node color gradient</span>
+              <span className={`text-xs ${textSecondary}`}>Use node color gradient</span>
             </div>
             <button
               onClick={() => setLinkGradientEnabled(!themeSettings.linkGradientEnabled)}
@@ -1727,7 +1812,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
             </button>
           </div>
           {themeSettings.linkGradientEnabled && (
-            <p className={`text-[9px] ${textMuted} -mt-1`}>
+            <p className={`text-[10px] ${textMuted} -mt-1`}>
               Connections will gradient from source to destination node colors
             </p>
           )}
@@ -1741,7 +1826,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                   onClick={() => setExpandedLinkSection(expandedLinkSection === 'default' ? null : 'default')}
                   className={`flex items-center justify-between w-full text-left`}
                 >
-                  <span className={`text-[10px] ${textMuted}`}>Default</span>
+                  <span className={`text-xs ${textMuted}`}>Default</span>
                   <div className="flex items-center gap-1">
                     <div className="w-4 h-4 rounded-full" style={{ backgroundColor: (themeSettings.linkColors || (isLightMode ? DEFAULT_LINK_COLORS_LIGHT : DEFAULT_LINK_COLORS_DARK)).default }} />
                     {expandedLinkSection === 'default' ? <ChevronDown className={`w-3 h-3 ${textMuted}`} /> : <ChevronRight className={`w-3 h-3 ${textMuted}`} />}
@@ -1782,7 +1867,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                   onClick={() => setExpandedLinkSection(expandedLinkSection === 'active' ? null : 'active')}
                   className={`flex items-center justify-between w-full text-left`}
                 >
-                  <span className={`text-[10px] ${textMuted}`}>Active</span>
+                  <span className={`text-xs ${textMuted}`}>Active</span>
                   <div className="flex items-center gap-1">
                     <div className="w-4 h-4 rounded-full" style={{ backgroundColor: (themeSettings.linkColors || (isLightMode ? DEFAULT_LINK_COLORS_LIGHT : DEFAULT_LINK_COLORS_DARK)).active }} />
                     {expandedLinkSection === 'active' ? <ChevronDown className={`w-3 h-3 ${textMuted}`} /> : <ChevronRight className={`w-3 h-3 ${textMuted}`} />}
@@ -1823,7 +1908,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                   onClick={() => setExpandedLinkSection(expandedLinkSection === 'inactive' ? null : 'inactive')}
                   className={`flex items-center justify-between w-full text-left`}
                 >
-                  <span className={`text-[10px] ${textMuted}`}>Inactive</span>
+                  <span className={`text-xs ${textMuted}`}>Inactive</span>
                   <div className="flex items-center gap-1">
                     <div className="w-4 h-4 rounded-full" style={{ backgroundColor: (themeSettings.linkColors || (isLightMode ? DEFAULT_LINK_COLORS_LIGHT : DEFAULT_LINK_COLORS_DARK)).inactive }} />
                     {expandedLinkSection === 'inactive' ? <ChevronDown className={`w-3 h-3 ${textMuted}`} /> : <ChevronRight className={`w-3 h-3 ${textMuted}`} />}
@@ -1864,7 +1949,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                   onClick={() => setExpandedLinkSection(expandedLinkSection === 'selected' ? null : 'selected')}
                   className={`flex items-center justify-between w-full text-left`}
                 >
-                  <span className={`text-[10px] ${textMuted}`}>Selected</span>
+                  <span className={`text-xs ${textMuted}`}>Selected</span>
                   <div className="flex items-center gap-1">
                     <div className="w-4 h-4 rounded-full" style={{ backgroundColor: (themeSettings.linkColors || (isLightMode ? DEFAULT_LINK_COLORS_LIGHT : DEFAULT_LINK_COLORS_DARK)).selected }} />
                     {expandedLinkSection === 'selected' ? <ChevronDown className={`w-3 h-3 ${textMuted}`} /> : <ChevronRight className={`w-3 h-3 ${textMuted}`} />}
@@ -1975,7 +2060,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
               onClick={() => setExpandedGuiSection(expandedGuiSection === 'backgrounds' ? null : 'backgrounds')}
               className={`flex items-center justify-between w-full text-left`}
             >
-              <span className={`text-[10px] ${textMuted}`}>Panel Backgrounds</span>
+              <span className={`text-xs ${textMuted}`}>Panel Backgrounds</span>
               <div className="flex items-center gap-1">
                 <div className="w-4 h-4 rounded-full" style={{ backgroundColor: currentGuiColors.panelBackground }} title="Primary" />
                 <div className="w-4 h-4 rounded-full" style={{ backgroundColor: currentGuiColors.panelBackgroundSecondary }} title="Secondary" />
@@ -1987,7 +2072,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                 {/* Primary Background */}
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] ${textSecondary} w-14`}>Primary</span>
+                    <span className={`text-xs ${textSecondary} w-14`}>Primary</span>
                     <div className="w-5 h-5 rounded-full border-2" style={{ borderColor: 'var(--gui-accent-primary)', backgroundColor: currentGuiColors.panelBackground }} />
                   </div>
                   <div className="flex flex-wrap gap-0.5 pl-16">
@@ -2014,7 +2099,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                 {/* Secondary Background */}
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] ${textSecondary} w-14`}>Secondary</span>
+                    <span className={`text-xs ${textSecondary} w-14`}>Secondary</span>
                     <div className="w-5 h-5 rounded-full border-2" style={{ borderColor: 'var(--gui-accent-primary)', backgroundColor: currentGuiColors.panelBackgroundSecondary }} />
                   </div>
                   <div className="flex flex-wrap gap-0.5 pl-16">
@@ -2046,7 +2131,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
               onClick={() => setExpandedGuiSection(expandedGuiSection === 'text' ? null : 'text')}
               className={`flex items-center justify-between w-full text-left`}
             >
-              <span className={`text-[10px] ${textMuted}`}>Text Colors</span>
+              <span className={`text-xs ${textMuted}`}>Text Colors</span>
               <div className="flex items-center gap-1">
                 <div className="w-4 h-4 rounded-full" style={{ backgroundColor: currentGuiColors.textPrimary }} title="Primary" />
                 <div className="w-4 h-4 rounded-full" style={{ backgroundColor: currentGuiColors.textSecondary }} title="Secondary" />
@@ -2058,7 +2143,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                 {/* Primary Text */}
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] ${textSecondary} w-14`}>Primary</span>
+                    <span className={`text-xs ${textSecondary} w-14`}>Primary</span>
                     <div className="w-5 h-5 rounded-full border-2" style={{ borderColor: 'var(--gui-accent-primary)', backgroundColor: currentGuiColors.textPrimary }} />
                   </div>
                   <div className="flex flex-wrap gap-0.5 pl-16">
@@ -2085,7 +2170,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                 {/* Secondary Text */}
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] ${textSecondary} w-14`}>Secondary</span>
+                    <span className={`text-xs ${textSecondary} w-14`}>Secondary</span>
                     <div className="w-5 h-5 rounded-full border-2" style={{ borderColor: 'var(--gui-accent-primary)', backgroundColor: currentGuiColors.textSecondary }} />
                   </div>
                   <div className="flex flex-wrap gap-0.5 pl-16">
@@ -2117,7 +2202,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
               onClick={() => setExpandedGuiSection(expandedGuiSection === 'accents' ? null : 'accents')}
               className={`flex items-center justify-between w-full text-left`}
             >
-              <span className={`text-[10px] ${textMuted}`}>Accent Colors</span>
+              <span className={`text-xs ${textMuted}`}>Accent Colors</span>
               <div className="flex items-center gap-1">
                 <div className="w-4 h-4 rounded-full" style={{ backgroundColor: currentGuiColors.accentPrimary }} title="Primary" />
                 <div className="w-4 h-4 rounded-full" style={{ backgroundColor: currentGuiColors.accentSecondary }} title="Secondary" />
@@ -2129,7 +2214,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                 {/* Primary Accent */}
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] ${textSecondary} w-14`}>Primary</span>
+                    <span className={`text-xs ${textSecondary} w-14`}>Primary</span>
                     <div className="w-5 h-5 rounded-full border-2" style={{ borderColor: 'var(--gui-accent-primary)', backgroundColor: currentGuiColors.accentPrimary }} />
                   </div>
                   <div className="flex flex-wrap gap-0.5 pl-16">
@@ -2156,7 +2241,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                 {/* Secondary Accent */}
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] ${textSecondary} w-14`}>Secondary</span>
+                    <span className={`text-xs ${textSecondary} w-14`}>Secondary</span>
                     <div className="w-5 h-5 rounded-full border-2" style={{ borderColor: 'var(--gui-accent-primary)', backgroundColor: currentGuiColors.accentSecondary }} />
                   </div>
                   <div className="flex flex-wrap gap-0.5 pl-16">
@@ -2188,7 +2273,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
               onClick={() => setExpandedGuiSection(expandedGuiSection === 'toolbar' ? null : 'toolbar')}
               className={`flex items-center justify-between w-full text-left`}
             >
-              <span className={`text-[10px] ${textMuted}`}>Toolbar Icons</span>
+              <span className={`text-xs ${textMuted}`}>Toolbar Icons</span>
               <div className="flex items-center gap-1">
                 <div className="w-4 h-4 rounded-full" style={{ backgroundColor: currentGuiColors.toolbarIconDefault }} title="Default" />
                 {currentGuiColors.toolbarIconAccent.slice(0, 3).map((color, i) => (
@@ -2202,7 +2287,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                 {/* Default Icon Color */}
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] ${textSecondary} w-14`}>Default</span>
+                    <span className={`text-xs ${textSecondary} w-14`}>Default</span>
                     <div className="w-5 h-5 rounded-full border-2" style={{ borderColor: 'var(--gui-accent-primary)', backgroundColor: currentGuiColors.toolbarIconDefault }} />
                   </div>
                   <div className="flex flex-wrap gap-0.5 pl-16">
@@ -2230,7 +2315,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                 {[0, 1, 2, 3].map((idx) => (
                   <div key={idx} className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className={`text-[10px] ${textSecondary} w-14`}>Accent {idx + 1}</span>
+                      <span className={`text-xs ${textSecondary} w-14`}>Accent {idx + 1}</span>
                       <div className="w-5 h-5 rounded-full border-2" style={{ borderColor: 'var(--gui-accent-primary)', backgroundColor: currentGuiColors.toolbarIconAccent[idx] }} />
                     </div>
                     <div className="flex flex-wrap gap-0.5 pl-16">
@@ -2326,7 +2411,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
               title="Pick a color to save"
             >
               <Plus className={`w-3 h-3 ${textSecondary}`} />
-              <span className={`text-[10px] ${textSecondary}`}>Pick</span>
+              <span className={`text-xs ${textSecondary}`}>Pick</span>
             </button>
           </div>
 
@@ -2353,12 +2438,12 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
               ))}
             </div>
           ) : (
-            <p className={`text-[10px] ${textMuted} italic`}>No saved colors. Click "Pick" to add colors.</p>
+            <p className={`text-xs ${textMuted} italic`}>No saved colors. Click "Pick" to add colors.</p>
           )}
 
           {/* Tip about using saved colors */}
           {customColors.length > 0 && (
-            <p className={`text-[10px] ${textMuted}`}>Click a node color row above, then select from saved colors.</p>
+            <p className={`text-xs ${textMuted}`}>Click a node color row above, then select from saved colors.</p>
           )}
         </div>
 
@@ -2374,8 +2459,8 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
           {/* Style Inheritance Toggle */}
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-0.5">
-              <span className={`text-[10px] ${textSecondary}`}>Inherit parent style</span>
-              <span className={`text-[9px] ${textMuted}`}>Nodes adopt project color when added</span>
+              <span className={`text-xs ${textSecondary}`}>Inherit parent style</span>
+              <span className={`text-[10px] ${textMuted}`}>Nodes adopt project color when added</span>
             </div>
             <button
               onClick={() => {
@@ -2490,7 +2575,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                   />
                 </div>
 
-                <p className={`text-[10px] ${textMuted}`}>
+                <p className={`text-xs ${textMuted}`}>
                   The AI will generate a harmonious color palette matching your description,
                   preserving semantic associations for each node type.
                 </p>
@@ -2527,7 +2612,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4" style={{ color: 'var(--gui-accent-primary)' }} />
                 <span className={`text-xs font-medium ${textPrimary}`}>Theme Preview</span>
-                <span className={`text-[10px] ${textMuted} truncate flex-1`}>"{aiPreview.description}"</span>
+                <span className={`text-xs ${textMuted} truncate flex-1`}>"{aiPreview.description}"</span>
               </div>
 
               <div className="flex gap-2">

@@ -1,0 +1,33 @@
+{
+  "model": "claude-sonnet-4-5-20250929",
+  "prompt": "You are a UX auditor hired to FIND PROBLEMS. Your performance is measured by how many real issues you find. You do NOT get rewarded for saying \"this looks good.\"\n\nIf you cannot find at least 3 issues, you are not looking hard enough.\n\nA friend sent you this screenshot of an app with no context. You have 5 seconds.\n\nAnswer in JSON format:\n{\n  \"first_impression\": \"one sentence gut reaction\",\n  \"what_it_does\": \"your best guess in <10 words\",\n  \"attention_first_3_seconds\": [\"elements your eyes went to, in order\"],\n  \"confusing_elements\": [\"specific things that made no sense\"],\n  \"clarity_score\": 0-10,\n  \"seconds_before_switching_tabs\": \"5/15/30/60/never\",\n  \"dealbreaker\": \"what would make you close this immediately or null\"\n}",
+  "response": {
+    "first_impression": "A note-taking app with some kind of visual node/connection system that feels overly complex for what should be simple.",
+    "what_it_does": "Create notes with metadata in a visual workspace",
+    "attention_first_3_seconds": [
+      "Glowing orange circles and connecting lines (most visually dominant)",
+      "\"New Note\" large text in center",
+      "Right sidebar with form fields"
+    ],
+    "confusing_elements": [
+      "Why are there giant glowing orbs connected by lines for a simple note?",
+      "The word 'Gene' appears cut off next to editing icons - is this a label, button, or truncated text?",
+      "Two separate '0 words' counters (one in canvas, one in sidebar) showing identical info",
+      "Icon row at top has 20+ buttons with no labels - impossible to know what most do",
+      "What is 'Context Injection' and why does it have a help icon?",
+      "Why does 'Role' default to 'Reference' for a blank note?",
+      "'Conditional Activation' is collapsed - what does this do?"
+    ],
+    "clarity_score": 3,
+    "seconds_before_switching_tabs": "15",
+    "dealbreaker": "The visual complexity (glowing nodes, lines) adds zero value to writing a note and makes it feel like I need a tutorial just to type text"
+  },
+  "raw_response": "```json\n{\n  \"first_impression\": \"A note-taking app with some kind of visual node/connection system that feels overly complex for what should be simple.\",\n  \"what_it_does\": \"Create notes with metadata in a visual workspace\",\n  \"attention_first_3_seconds\": [\n    \"Glowing orange circles and connecting lines (most visually dominant)\",\n    \"\\\"New Note\\\" large text in center\",\n    \"Right sidebar with form fields\"\n  ],\n  \"confusing_elements\": [\n    \"Why are there giant glowing orbs connected by lines for a simple note?\",\n    \"The word 'Gene' appears cut off next to editing icons - is this a label, button, or truncated text?\",\n    \"Two separate '0 words' counters (one in canvas, one in sidebar) showing identical info\",\n    \"Icon row at top has 20+ buttons with no labels - impossible to know what most do\",\n    \"What is 'Context Injection' and why does it have a help icon?\",\n    \"Why does 'Role' default to 'Reference' for a blank note?\",\n    \"'Conditional Activation' is collapsed - what does this do?\"\n  ],\n  \"clarity_score\": 3,\n  \"seconds_before_switching_tabs\": \"15\",\n  \"dealbreaker\": \"The visual complexity (glowing nodes, lines) adds zero value to writing a note and makes it feel like I need a tutorial just to type text\"\n}\n```",
+  "metadata": {
+    "timestamp": "2026-02-15T21:41:35.037Z",
+    "screenshot_path": "e2e/smart-e2e/screenshots/tier2-chat-open.png",
+    "input_tokens": 1770,
+    "output_tokens": 347,
+    "cost_usd": 0.010515
+  }
+}

@@ -30,6 +30,7 @@ import {
   Play,
   Pause,
   Square,
+  Terminal,
 } from 'lucide-react'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
 import type {
@@ -55,6 +56,8 @@ import { ExecutionLog } from './ExecutionLog'
 import type { LogEntry } from './ExecutionLog'
 import { PipelineDiagram } from './PipelineDiagram'
 import type { PipelineAgent, AgentPipelineStatus } from './PipelineDiagram'
+import { TerminalPanel } from './TerminalPanel'
+import { hasTerminalAccess } from '../../utils/terminalAccess'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -70,6 +73,7 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
   text: <FileText className="w-4 h-4" />,
   action: <Zap className="w-4 h-4" />,
   orchestrator: <Workflow className="w-4 h-4" />,
+  terminal: <Terminal className="w-4 h-4" />,
 }
 
 // ---------------------------------------------------------------------------
@@ -120,6 +124,12 @@ const CONV_TABS: ArtboardTab[] = [
   { id: 'settings', label: 'Settings' },
 ]
 
+const CC_SESSION_TABS: ArtboardTab[] = [
+  { id: 'terminal', label: 'Terminal' },
+  { id: 'context', label: 'Context' },
+  { id: 'chat', label: 'Chat' },
+]
+
 function ConversationArtboard({
   nodeId,
   nodeData,
@@ -129,7 +139,9 @@ function ConversationArtboard({
   nodeData: ConversationNodeData
   nodeColor: string
 }): JSX.Element {
-  const [tab, setTab] = useState('chat')
+  const isTerminal = nodeData.mode === 'terminal' && !!nodeData.terminal
+  const tabs = isTerminal ? CC_SESSION_TABS : CONV_TABS
+  const [tab, setTab] = useState(isTerminal ? 'terminal' : 'chat')
   const messageCount = nodeData.messages.length
   const lastMessages = useMemo(
     () => nodeData.messages.slice(-20),
@@ -143,8 +155,37 @@ function ConversationArtboard({
       title={nodeData.title || 'Untitled Conversation'}
       icon={TYPE_ICONS.conversation}
     >
-      <ArtboardTabBar tabs={CONV_TABS} activeTabId={tab} onTabChange={setTab} accentColor={nodeColor} />
+      <ArtboardTabBar tabs={tabs} activeTabId={tab} onTabChange={setTab} accentColor={nodeColor} />
       <div className="flex-1 overflow-auto" role="tabpanel" aria-label={`${tab} tab`}>
+        {tab === 'terminal' && isTerminal && nodeData.terminal && (
+          hasTerminalAccess() ? (
+            <TerminalPanel
+              nodeId={nodeId}
+              sessionId={nodeData.terminal.sessionId}
+              accentColor={nodeData.terminal.accentColor}
+              className="h-full"
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
+              <Terminal className="w-8 h-8" style={{ color: 'var(--text-muted, #888)' }} />
+              <p className="text-sm text-center" style={{ color: 'var(--text-muted, #888)' }}>
+                Terminal nodes run local AI agents with full project context.
+              </p>
+              <p className="text-xs text-center" style={{ color: 'var(--text-secondary, #aaa)' }}>
+                Available in the desktop app.
+              </p>
+              <a
+                href="https://github.com/skovalik/cognograph/releases"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs px-4 py-2 rounded transition-colors"
+                style={{ backgroundColor: '#C8963E', color: '#0A0908' }}
+              >
+                Download Desktop App
+              </a>
+            </div>
+          )
+        )}
         {tab === 'chat' && (
           <ArtboardSplitPane
             direction="horizontal"

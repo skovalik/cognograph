@@ -23,6 +23,7 @@ interface FloatingPropertiesModalProps {
 
 // Store positions per nodeId to persist between renders
 const modalPositions = new Map<string, Position>()
+const modalSizes = new Map<string, { width: number; height: number }>()
 
 function FloatingPropertiesModalComponent({ nodeId, index }: FloatingPropertiesModalProps): JSX.Element | null {
   const closeFloatingProperties = useWorkspaceStore((state) => state.closeFloatingProperties)
@@ -49,7 +50,9 @@ function FloatingPropertiesModalComponent({ nodeId, index }: FloatingPropertiesM
   const [isDragging, setIsDragging] = useState(false)
   const [isResizing, setIsResizing] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
-  const [size, setSize] = useState({ width: 320, height: 600 })
+  const [size, setSize] = useState(() => {
+    return modalSizes.get(nodeId) || { width: 320, height: 600 }
+  })
 
   const dragStartPos = useRef<Position>({ x: 0, y: 0 })
   const modalRef = useRef<HTMLDivElement>(null)
@@ -61,6 +64,11 @@ function FloatingPropertiesModalComponent({ nodeId, index }: FloatingPropertiesM
   useEffect(() => {
     modalPositions.set(nodeId, position)
   }, [position, nodeId])
+
+  // Update stored size when size changes
+  useEffect(() => {
+    modalSizes.set(nodeId, size)
+  }, [size, nodeId])
 
   // Focus trap for accessibility
   useEffect(() => {
@@ -74,16 +82,24 @@ function FloatingPropertiesModalComponent({ nodeId, index }: FloatingPropertiesM
     }
   }, [])
 
+  // Track if WE initiated the selection to avoid the close effect racing
+  const didWeSelect = useRef(false)
+
   // Ensure the displayed node is selected when modal opens (only if not pinned)
   useEffect(() => {
     if (nodeId && !isPinned) {
+      didWeSelect.current = true
       setSelectedNodes([nodeId])
+      // Reset after a frame to allow the selection to propagate
+      requestAnimationFrame(() => {
+        didWeSelect.current = false
+      })
     }
   }, [nodeId, setSelectedNodes, isPinned])
 
-  // Close modal when no nodes are selected (unless pinned)
+  // Close modal when no nodes are selected (unless pinned or we just selected)
   useEffect(() => {
-    if (nodeId && selectedNodeIds.length === 0 && !isPinned) {
+    if (nodeId && selectedNodeIds.length === 0 && !isPinned && !didWeSelect.current) {
       closeFloatingProperties(nodeId)
     }
   }, [selectedNodeIds, nodeId, closeFloatingProperties, isPinned])
@@ -147,10 +163,8 @@ function FloatingPropertiesModalComponent({ nodeId, index }: FloatingPropertiesM
   return (
     <div
       ref={modalRef}
-      className="fixed z-[100] bg-[var(--surface-panel)] glass-fluid border border-[var(--border-subtle)] rounded-lg shadow-2xl"
+      className="fixed z-[100] bg-[var(--surface-panel)]/95 backdrop-blur-xl border border-[var(--border-subtle)] rounded-lg shadow-2xl"
       style={{
-        position: 'fixed', // Override glass-fluid's position: relative
-        overflow: 'visible', // Prevent glass-fluid from clipping dropdowns
         left: position.x,
         top: position.y,
         width: size.width,
@@ -448,7 +462,7 @@ function FloatingPropertiesModalComponent({ nodeId, index }: FloatingPropertiesM
 
           {/* Bottom-right corner (visible indicator) */}
           <div
-            className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
+            className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize z-[101]"
             onMouseDown={(e) => {
               e.preventDefault()
               e.stopPropagation()
@@ -474,7 +488,7 @@ function FloatingPropertiesModalComponent({ nodeId, index }: FloatingPropertiesM
               document.addEventListener('mouseup', handleResizeEnd)
             }}
           >
-            <div className="absolute bottom-1 right-1 w-2 h-2 border-r-2 border-b-2 border-[var(--border-subtle)]" />
+            <div className="absolute bottom-1 right-1 w-3 h-3 border-r-2 border-b-2 border-[var(--text-muted)] opacity-40" />
           </div>
         </>
       )}
