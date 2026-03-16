@@ -17,6 +17,7 @@ import { ToolCallBubble } from './ToolCallBubble'
 import { detectArtifacts } from '../utils/artifactDetection'
 import { runExtraction, debounceExtraction } from '../utils/extraction'
 import { sendAgentMessage, interruptAgent, initAgentService } from '../services/agentService'
+import { sendChatWithTools, cancelChatToolLoop, isChatToolLoopActive } from '../services/chatToolService'
 import { estimateCost } from '../utils/tokenEstimator'
 import { useSessionStatsStore } from '../stores/sessionStatsStore'
 import type { ConversationNodeData, Message, ConnectorProvider } from '@shared/types'
@@ -120,10 +121,10 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
     }
   }, [isValidConversation, node])
 
-  // Derive isStreaming from store (agent mode) or local state (chat mode)
-  // Agent mode uses store state because the agent service controls streaming
-  // Chat mode uses local state because LLM event handlers control it
-  const isStreaming = nodeData?.mode === 'agent' ? storeIsStreaming : isStreamingLocal
+  // Derive isStreaming from store (agent/chat-tools mode) or local state (plain chat mode)
+  // Agent mode and chat-with-tools use store state because their services control streaming
+  // Plain chat mode uses local state because LLM event handlers control it
+  const isStreaming = (nodeData?.mode === 'agent' || storeIsStreaming) ? storeIsStreaming : isStreamingLocal
 
   // Check if user has a BYOK key for the current provider
   const byokKey = typeof window !== 'undefined'
@@ -472,13 +473,6 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
       return
     }
 
-    // Regular chat mode (non-agent)
-    // Add user message
-    addMessage(nodeId, 'user', userMessage)
-
-    // Add placeholder for assistant message
-    addMessage(nodeId, 'assistant', '')
-
     // Get context from connected nodes
     const context = getContextForNode(nodeId)
 
@@ -488,41 +482,76 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
       setTimeout(() => setIsInjecting(false), 600)
     }
 
-    // Diagnostic logging for context injection
-    // console.log('[ChatPanel] Connected nodes:', connectedNodes.length)
-    // console.log('[ChatPanel] Context length:', context?.length || 0)
-    // console.log('[ChatPanel] Workspace nodes:', workspaceNodes.length)
-    // console.log('[ChatPanel] Effective LLM settings:', llmSettings)
-    if (context) {
-      // console.log('[ChatPanel] Context preview:', context.substring(0, 200) + '...')
+    // Anthropic chat: always-on canvas tools — AI uses them when the user's request warrants it
+    if (llmSettings.provider === 'anthropic') {
+      const toolSystemPrompt = (llmSettings.systemPrompt || '') +
+        `\nYou are inside Cognograph — a spatial canvas where AI conversations, notes, tasks, and projects live as connected nodes. You have access to canvas tools that can query and modify the user's workspace.
+
+TOOL USE RULES:
+- Only use tools when the user explicitly asks to create, find, move, update, or connect nodes.
+- EXPLICIT requests (use tools): "Create a note about dogs", "Connect my notes to the project", "Find all my tasks"
+- NOT requests (respond in text): "I should probably...", "What about...", "Show me what you can do"
+- For filesystem access, code execution, or persistent memory, suggest switching to agent mode.
+- Be conversational and helpful. Explain what you did after using tools.` +
+        (context ? `\n\nCONTEXT FROM CONNECTED NODES:\n\n${context}` : '')
+
+      try {
+        await sendChatWithTools(nodeId, userMessage, {
+          model: llmSettings.model,
+          maxTokens: llmSettings.maxTokens,
+          systemPromptPrefix: toolSystemPrompt,
+          context: context || ''
+        })
+      } catch (error) {
+        toast.error('Failed to send message')
+      }
+      return
     }
 
-    // Build messages array for API
-    const messages = nodeData.messages.map((m) => ({
-      role: m.role,
-      content: m.content
-    }))
+    // Regular chat mode (non-agent, no tools)
+    // Add user message
+    addMessage(nodeId, 'user', userMessage)
+
+    // Add placeholder for assistant message
+    addMessage(nodeId, 'assistant', '')
+
+    // Build messages array for API — filter out tool_use/tool_result from history (Critical Fix C3)
+    const messages = nodeData.messages
+      .filter((m) => m.role === 'user' || m.role === 'assistant')
+      .map((m) => ({
+        role: m.role,
+        content: m.content
+      }))
     messages.push({ role: 'user', content: userMessage })
 
     // Build system prompt with context
-    // Start with workspace system prompt if available, otherwise default
-    let systemPrompt = llmSettings.systemPrompt || 'You are a helpful AI assistant.'
-    if (context) {
-      systemPrompt += `\n\nYou have access to the following context from connected nodes:\n\n${context}`
-    }
+    let systemPrompt = llmSettings.systemPrompt || `You are a helpful AI assistant inside Cognograph — a spatial canvas where AI conversations, notes, tasks, and projects live as connected nodes.
 
-    // console.log('[ChatPanel] System prompt length:', systemPrompt.length)
-    // console.log('[ChatPanel] Messages count:', messages.length)
+HOW THIS SYSTEM WORKS:
+- Each conversation node (like this one) can be connected to other nodes via edges
+- Connected "note" nodes inject their content as background knowledge into this conversation
+- Connected "artifact" nodes provide code, documents, or structured data
+- Connected "project" nodes scope the conversation to a specific domain
+- Connected "task" nodes inform you about what work needs to be done
+- Edge direction and weight control context priority; the graph topology defines what you know
+
+WHAT YOU SHOULD DO:
+- Answer questions using any context injected from connected nodes below
+- If the user asks about the canvas, nodes, or connections — you understand the system
+- If no context is connected, say so and suggest the user connect relevant nodes
+- Be conversational and helpful, not robotic`
+    if (context) {
+      systemPrompt += `\n\nCONTEXT FROM CONNECTED NODES:\n\n${context}`
+    }
 
     setIsStreamingLocal(true)
 
     try {
       await window.api.llm.send({
-        conversationId: nodeId, // Route responses back to this specific chat panel
+        conversationId: nodeId,
         provider: llmSettings.provider,
         messages: messages.filter((m) => m.role !== 'system'),
         systemPrompt,
-        // Pass additional settings if supported by the API
         temperature: llmSettings.temperature,
         maxTokens: llmSettings.maxTokens
       })
@@ -533,9 +562,10 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
   }, [input, isStreamingLocal, storeIsStreaming, nodeData, nodeId, addMessage, getContextForNode, effectiveLLMSettings, connectedNodes.length, workspaceNodes.length])
 
   const handleCancel = useCallback(async () => {
-    // Use agent interrupt if in agent mode
     if (nodeData?.mode === 'agent') {
       interruptAgent()
+    } else if (isChatToolLoopActive(nodeId)) {
+      cancelChatToolLoop(nodeId)
     } else {
       await window.api.llm.cancel(nodeId)
     }

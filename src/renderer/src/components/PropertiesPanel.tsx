@@ -810,7 +810,7 @@ function ConversationFields({
         <select
           value={data.mode || 'chat'}
           onChange={(e) => {
-            const newMode = e.target.value as 'chat' | 'agent'
+            const newMode = e.target.value as 'chat' | 'agent' | 'terminal'
             onChange('mode', newMode)
             if (newMode === 'agent') {
               // Initialize agent defaults if switching to agent mode
@@ -820,8 +820,9 @@ function ConversationFields({
           }}
           className="w-full gui-input border rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
         >
-          <option value="chat">💬 Chat — Standard conversation</option>
-          <option value="agent">🤖 Agent — Autonomous tool-using AI</option>
+          <option value="chat">Chat — Standard conversation</option>
+          <option value="agent">Agent — Autonomous tool-using AI</option>
+          <option value="terminal">Terminal — Embedded CLI</option>
         </select>
       </div>
 

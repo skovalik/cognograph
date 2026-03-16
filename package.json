@@ -55,7 +55,8 @@
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux",
     "build:all": "npm run build && electron-builder --win --mac --linux",
-    "build:dir": "npm run build && electron-builder --dir"
+    "build:dir": "npm run build && electron-builder --dir",
+    "prerender:web": "tsx --tsconfig tsconfig.web.json scripts/prerender-web.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",
@@ -93,6 +94,7 @@
     "@react-three/fiber": "^8.18.0",
     "@react-three/postprocessing": "^2.19.1",
     "@sentry/electron": "^7.7.1",
+    "@sentry/react": "^10.43.0",
     "@supabase/supabase-js": "^2.98.0",
     "@tiptap/core": "^3.16.0",
     "@tiptap/extension-bullet-list": "^3.16.0",
@@ -122,6 +124,7 @@
     "express-rate-limit": "^8.2.1",
     "framer-motion": "^12.29.0",
     "immer": "^10.1.1",
+    "localforage": "^1.10.0",
     "lucide-react": "^0.460.0",
     "nanoid": "^5.1.7",
     "ogl": "^1.0.11",
@@ -175,6 +178,7 @@
     "lint-staged": "^16.2.7",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
+    "tsx": "^4.21.0",
     "typescript": "^5.6.3",
     "vite": "^5.4.10",
     "vitest": "^4.0.18"

@@ -52,6 +52,20 @@ const agentStates = new Map<string, AgentState>()
 let streamUnsubscribe: (() => void) | null = null
 let isServiceInitialized = false
 
+// External stream handlers for non-agent consumers (e.g., chatToolService)
+const externalStreamHandlers = new Map<string, { onChunk: (chunk: AgentStreamChunk) => void }>()
+
+export function registerExternalStreamHandler(
+  requestId: string,
+  handler: { onChunk: (chunk: AgentStreamChunk) => void }
+): void {
+  externalStreamHandlers.set(requestId, handler)
+}
+
+export function unregisterExternalStreamHandler(requestId: string): void {
+  externalStreamHandlers.delete(requestId)
+}
+
 // Iteration timeout duration: 5 minutes
 const ITERATION_TIMEOUT_MS = 5 * 60 * 1000
 
@@ -515,7 +529,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
   const systemPromptPrefix = preset?.systemPromptPrefix
 
   try {
-    while (agentState.isRunning && toolCallCount <= maxToolCalls) {
+    while (agentState.isRunning && toolCallCount < maxToolCalls) {
       // Check pause before starting iteration
       if (agentState.pauseRequested) {
         agentState.pauseRequested = false
@@ -663,7 +677,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
         store.addMessage(conversationId, 'assistant', '')
 
         // Continue loop to let Claude see the result
-        if (toolCallCount <= maxToolCalls && agentState.isRunning) {
+        if (toolCallCount < maxToolCalls && agentState.isRunning) {
           continue
         }
         break
@@ -690,7 +704,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
       break
     }
 
-    if (toolCallCount > maxToolCalls) {
+    if (toolCallCount >= maxToolCalls) {
       store.addMessage(
         conversationId,
         'assistant',
@@ -742,7 +756,13 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
   // Find which agent this chunk belongs to by requestId
   const agentState = findStateByRequestId(chunk.requestId)
   if (!agentState) {
-    console.warn('[AgentService] Ignoring chunk - no agent found for requestId:', chunk.requestId)
+    // Check external handlers (e.g., chatToolService)
+    const externalHandler = externalStreamHandlers.get(chunk.requestId)
+    if (externalHandler) {
+      externalHandler.onChunk(chunk)
+      return
+    }
+    console.warn('[AgentService] Ignoring chunk - no agent or external handler found for requestId:', chunk.requestId)
     return
   }
 
@@ -809,7 +829,7 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
 // Helpers
 // -----------------------------------------------------------------------------
 
-function buildMessagesForAPI(conversationId: string): Array<{ role: string; content: unknown }> {
+export function buildMessagesForAPI(conversationId: string): Array<{ role: string; content: unknown }> {
   const store = useWorkspaceStore.getState()
   const node = store.nodes.find((n) => n.id === conversationId)
   if (!node) return []

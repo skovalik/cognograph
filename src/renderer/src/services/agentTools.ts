@@ -387,6 +387,25 @@ const MEMORY_TOOLS: AgentToolDefinition[] = [
 ]
 
 // -----------------------------------------------------------------------------
+// Chat Tool Definitions (safe subset for chat-mode conversations)
+// -----------------------------------------------------------------------------
+
+/**
+ * Returns the tool definitions available to chat-mode conversations.
+ * This is a curated safe subset: query tools + canvas mutation tools.
+ * Excludes: delete tools, filesystem tools, command tools, memory tools, media tools.
+ */
+export function getChatToolDefinitions(): AgentToolDefinition[] {
+  return [
+    ...QUERY_TOOLS,
+    CREATE_NODE_TOOL,
+    CREATE_EDGE_TOOL,
+    UPDATE_NODE_TOOL,
+    MOVE_NODE_TOOL
+  ]
+}
+
+// -----------------------------------------------------------------------------
 // Context-Chain Path Derivation (Patent P2 Claim 5)
 // -----------------------------------------------------------------------------
 
@@ -746,6 +765,12 @@ export async function executeTool(
 
       case 'update_node': {
         const { nodeId, ...updates } = input
+
+        // Safety guard: prevent type changes (node type is immutable)
+        if ('type' in updates) {
+          return { success: false, error: 'Cannot change a node\'s type. Create a new node instead.' }
+        }
+
         const node = store.nodes.find((n) => n.id === nodeId)
         if (!node) {
           return { success: false, error: `Node not found: ${nodeId}` }
@@ -762,13 +787,26 @@ export async function executeTool(
           return { success: false, error: `Node not found: ${nodeId}` }
         }
 
-        // Move node to new position
-        store.moveNode(nodeId as string, position as { x: number; y: number })
-        return { success: true, result: { nodeId, position } }
+        // Safety guard: clamp position to reasonable bounds and reject NaN/Infinity
+        const clampCoord = (v: number): number => {
+          if (!Number.isFinite(v)) return 0
+          return Math.max(-50000, Math.min(50000, v))
+        }
+        const pos = position as { x: number; y: number }
+        const clampedPosition = { x: clampCoord(pos.x), y: clampCoord(pos.y) }
+
+        store.moveNode(nodeId as string, clampedPosition)
+        return { success: true, result: { nodeId, position: clampedPosition } }
       }
 
       case 'delete_node': {
         const { nodeId } = input
+
+        // Safety guard: prevent agent from deleting its own conversation node
+        if (nodeId === agentConversationId) {
+          return { success: false, error: 'Cannot delete the active conversation node.' }
+        }
+
         const node = store.nodes.find((n) => n.id === nodeId)
         if (!node) {
           return { success: false, error: `Node not found: ${nodeId}` }
