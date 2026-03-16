@@ -1,0 +1,10 @@
+{
+  "scenario": "critical-path-1",
+  "state": "app-launched",
+  "timestamp": "2026-02-16T06:20:04.968Z",
+  "viewport": {
+    "width": 0,
+    "height": 0
+  },
+  "nodeCount": 1
+}

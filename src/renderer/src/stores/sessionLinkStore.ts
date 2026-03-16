@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-/** Represents a link between an external CC session and a ConversationNode */
+/** Represents a link between an external Terminal and a ConversationNode */
 export interface SessionLink {
   sessionId: string
   nodeId: string // ConversationNode ID

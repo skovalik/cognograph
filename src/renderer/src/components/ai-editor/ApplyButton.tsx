@@ -202,7 +202,8 @@ function ApplyButtonComponent({
         }
 
         .apply-button.executing {
-          background: #3b82f6;
+          background: var(--cg-accent, #F0EDE8);
+          color: var(--surface-canvas, #1A1816);
         }
 
         .apply-button.success {

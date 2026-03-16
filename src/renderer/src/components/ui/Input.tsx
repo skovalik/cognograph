@@ -20,7 +20,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           id={inputId}
-          className={`gui-input rounded px-2 py-1.5 text-sm ${error ? 'border-red-500' : ''} ${className}`}
+          className={`gui-input px-2 py-1.5 text-sm ${error ? 'border-red-500' : ''} ${className}`}
           {...props}
         />
         {hint && !error && (

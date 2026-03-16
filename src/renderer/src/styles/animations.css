@@ -28,27 +28,14 @@
    1. STREAMING & ACTIVITY ANIMATIONS
    ============================================================================= */
 
-/* Conversation node streaming state */
+/* Streaming: static border indicator only, dots handle the animation */
 .cognograph-node--conversation.streaming {
-  animation: stream-glow 2s ease-in-out infinite;
-  overflow: hidden; /* Prevent animation from going out of bounds */
-  position: relative; /* Ensure pseudo-element is contained */
+  border-color: var(--ring-color, rgba(59, 130, 246, 0.3));
 }
 
+/* Removed: shimmer sweep pseudo-element */
 .cognograph-node--conversation.streaming::before {
-  content: '';
-  position: absolute;
-  inset: 0; /* Changed from -2px to 0 to stay within bounds */
-  border-radius: inherit;
-  background: linear-gradient(
-    45deg,
-    transparent 30%,
-    rgba(59, 130, 246, 0.15) 50%,
-    transparent 70%
-  );
-  animation: shimmer-sweep 2s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 1; /* Above background but below text */
+  content: none;
 }
 
 @keyframes stream-glow {
@@ -103,7 +90,7 @@
 /* Edge animation when target node is streaming */
 .react-flow__edge-path.context-flowing {
   stroke-dasharray: 8 4;
-  animation: context-flow 0.8s linear infinite;
+  animation: context-flow 1.2s linear infinite;
 }
 
 @keyframes context-flow {
@@ -130,6 +117,13 @@
   to { stroke-dashoffset: -20; }
 }
 
+/* CSS containment for animated edges — prevent layout thrashing */
+.react-flow__edge-path[class*="context-flowing"],
+.react-flow__edge-path[class*="edge-flow-animated"] {
+  contain: layout style;
+  will-change: stroke-dashoffset;
+}
+
 /* Context provider glow - applied to edges feeding a selected conversation */
 .react-flow__edge-path.context-provider-glow {
   filter: drop-shadow(0 0 4px var(--context-glow-color, rgba(139, 92, 246, 0.5)));
@@ -140,6 +134,12 @@
   box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.4),
               0 0 12px rgba(139, 92, 246, 0.25);
   transition: box-shadow 0.3s ease;
+}
+
+/* CC Session gold variant — provider nodes glow gold when terminal context is shown */
+.context-viz-terminal .react-flow__node.context-provider-node {
+  box-shadow: 0 0 0 2px rgba(200, 150, 62, 0.4),
+              0 0 12px rgba(200, 150, 62, 0.25);
 }
 
 /* Workspace link flow (distinct from regular context flow) */
@@ -219,25 +219,13 @@
    3. EXTRACTION ANIMATIONS
    ============================================================================= */
 
-/* Extraction in progress shimmer */
+/* Extraction in progress — no node-level shimmer */
 .cognograph-node--conversation.extracting {
   position: relative;
-  overflow: hidden;
 }
 
 .cognograph-node--conversation.extracting::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(168, 85, 247, 0.08) 50%,
-    transparent 100%
-  );
-  animation: extract-shimmer 1.5s ease-in-out infinite;
-  pointer-events: none;
-  border-radius: inherit;
+  content: none;
 }
 
 @keyframes extract-shimmer {
@@ -280,8 +268,8 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #a855f7, #6366f1);
-  box-shadow: 0 0 6px rgba(168, 85, 247, 0.6);
+  background: linear-gradient(135deg, var(--accent-glow, #C8963E), var(--cg-accent, #F0EDE8));
+  box-shadow: 0 0 6px var(--accent-glow-strong, rgba(200, 150, 62, 0.35));
   animation: particle-float 1.5s ease-out forwards;
 }
 
@@ -703,28 +691,11 @@
    6. NODE WARMTH INDICATOR (RECENT ACTIVITY)
    ============================================================================= */
 
-/* Warmth levels based on recency of activity */
-/* Level 1: Active within last 30 seconds - strong glow */
-.cognograph-node.warmth-hot {
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.3),
-    0 0 20px rgba(251, 146, 60, 0.3),
-    inset 0 0 0 1px rgba(251, 146, 60, 0.2);
-}
-
-/* Level 2: Active within last 2 minutes - medium glow */
-.cognograph-node.warmth-warm {
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.3),
-    0 0 12px rgba(251, 146, 60, 0.2),
-    inset 0 0 0 1px rgba(251, 146, 60, 0.1);
-}
-
-/* Level 3: Active within last 5 minutes - subtle glow */
+/* Warmth indicated ONLY by header dot — no node-level glow */
+.cognograph-node.warmth-hot,
+.cognograph-node.warmth-warm,
 .cognograph-node.warmth-cool {
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.3),
-    0 0 6px rgba(251, 146, 60, 0.1);
+  /* Removed: outer box-shadow glows at all three levels */
 }
 
 /* Warmth indicator dot in header */
@@ -737,7 +708,7 @@
 
 .warmth-indicator.hot {
   background: #fb923c;
-  box-shadow: 0 0 8px rgba(251, 146, 60, 0.6);
+  box-shadow: 0 0 4px rgba(251, 146, 60, 0.3);
   animation: warmth-pulse 2s ease-in-out infinite;
 }
 
@@ -781,7 +752,7 @@
 }
 
 @keyframes context-flash {
-  0% { background: rgba(59, 130, 246, 0.2); }
+  0% { background: var(--accent-glow-subtle, rgba(200, 150, 62, 0.15)); }
   100% { background: transparent; }
 }
 
@@ -792,7 +763,7 @@
 
 @keyframes source-highlight {
   0% {
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 0 3px var(--accent-glow-strong, rgba(200, 150, 62, 0.35));
   }
   100% {
     box-shadow: none;
@@ -836,9 +807,9 @@
    10. PROJECT NODE DROP FEEDBACK
    ============================================================================= */
 
-/* Enhanced drop zone feedback (extends existing .drag-over) */
+/* Drop zone feedback — clean, no pulsing */
 .cognograph-node--project.drag-over {
-  animation: drop-ready 0.8s ease-in-out infinite;
+  /* Animation removed — border-only feedback via nodes.css */
 }
 
 .cognograph-node--project.drag-over::before {
@@ -849,22 +820,10 @@
   transform: translate(-50%, -50%);
   font-size: 12px;
   font-weight: 500;
-  color: #a855f7;
-  opacity: 0.9;
+  color: var(--accent-glow, #C8963E);
+  opacity: 0.7;
   pointer-events: none;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   z-index: 10;
-}
-
-@keyframes drop-ready {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(168, 85, 247, 0.3),
-                inset 0 0 20px rgba(168, 85, 247, 0.05);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(168, 85, 247, 0.5),
-                inset 0 0 30px rgba(168, 85, 247, 0.1);
-  }
 }
 
 /* =============================================================================
@@ -874,7 +833,7 @@
 /* Enhanced handle hover state - extends existing styles in nodes.css */
 .cognograph-node:hover .react-flow__handle:hover {
   transform: var(--handle-translate) scale(1.3);
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 12px var(--accent-glow-strong, rgba(200, 150, 62, 0.35));
   transition: all 0.15s ease-out;
 }
 
@@ -886,11 +845,11 @@
 @keyframes handle-pulse {
   0%, 100% {
     transform: var(--handle-translate) scale(1);
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+    box-shadow: 0 0 0 0 var(--accent-glow-strong, rgba(200, 150, 62, 0.35));
   }
   50% {
     transform: var(--handle-translate) scale(1.15);
-    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+    box-shadow: 0 0 0 6px rgba(200, 150, 62, 0);
   }
 }
 
@@ -1030,12 +989,12 @@
   position: absolute;
   width: 8px;
   height: 8px;
-  background: #3b82f6;
+  background: var(--cg-accent, #F0EDE8);
   border-radius: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
   transition: left 0.15s ease-out;
-  box-shadow: 0 0 6px rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 6px var(--accent-glow-subtle, rgba(200, 150, 62, 0.15));
 }
 
 /* 100% zoom marker line */
@@ -1199,14 +1158,12 @@
 
   /* Ensure streaming node still has visual indicator */
   .cognograph-node--conversation.streaming {
-    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.25),
-                0 0 0 2px var(--ring-color, rgba(59, 130, 246, 0.4));
+    border-color: var(--ring-color, rgba(59, 130, 246, 0.4));
   }
 
   /* Ensure extraction has visual indicator */
   .cognograph-node--conversation.extracting {
-    box-shadow: 0 4px 20px rgba(168, 85, 247, 0.25),
-                0 0 0 2px rgba(168, 85, 247, 0.4);
+    border-color: var(--accent-glow-strong, rgba(200, 150, 62, 0.35));
   }
 }
 
@@ -1228,12 +1185,12 @@
   0% {
     transform: scale(0.85);
     opacity: 0.3;
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 0 0 var(--accent-glow-strong, rgba(200, 150, 62, 0.35));
   }
   40% {
     transform: scale(1.03);
     opacity: 1;
-    box-shadow: 0 0 0 12px rgba(59, 130, 246, 0);
+    box-shadow: 0 0 0 12px rgba(200, 150, 62, 0);
   }
   100% {
     transform: scale(1);

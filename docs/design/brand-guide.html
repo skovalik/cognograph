@@ -1,0 +1,1659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cognograph Brand Guide</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Primary Colors */
+            --primary: #9333ea;
+            --primary-dark: #7c3aed;
+            --secondary: #2563eb;
+
+            /* Background Colors */
+            --canvas-bg: #1a1a2e;
+            --surface: #242438;
+            --surface-elevated: #2d2d44;
+
+            /* Text Colors */
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+
+            /* Status Colors */
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+
+            /* Node Colors */
+            --node-conversation: #3b82f6;
+            --node-project: #a855f7;
+            --node-note: #f59e0b;
+            --node-task: #22c55e;
+            --node-artifact: #06b6d4;
+            --node-custom: #f97316;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--canvas-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 240px;
+            height: 100vh;
+            background: var(--surface);
+            padding: 24px;
+            overflow-y: auto;
+            border-right: 1px solid var(--surface-elevated);
+            z-index: 100;
+        }
+
+        .nav-logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .nav-subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+        }
+
+        .nav-section {
+            margin-bottom: 24px;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .nav-link {
+            display: block;
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.15s ease;
+        }
+
+        .nav-link:hover {
+            background: var(--surface-elevated);
+            color: var(--text-primary);
+        }
+
+        /* Main Content */
+        .main {
+            margin-left: 240px;
+            padding: 48px;
+            max-width: 1200px;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 80px 0;
+            border-bottom: 1px solid var(--surface-elevated);
+            margin-bottom: 64px;
+        }
+
+        .hero-logo {
+            font-size: 64px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+        }
+
+        .hero-tagline {
+            font-size: 24px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .hero-domain {
+            display: inline-block;
+            background: var(--surface);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--success);
+            font-size: 18px;
+        }
+
+        .hero-domain::before {
+            content: "✓ ";
+        }
+
+        /* Sections */
+        .section {
+            margin-bottom: 80px;
+        }
+
+        .section-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .section-subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            max-width: 600px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .card-content {
+            color: var(--text-secondary);
+        }
+
+        /* Grid */
+        .grid {
+            display: grid;
+            gap: 24px;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .grid-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        /* Color Swatches */
+        .color-swatch {
+            background: var(--surface);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .color-preview {
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .color-info {
+            padding: 16px;
+        }
+
+        .color-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .color-hex {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .color-usage {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        /* Typography Samples */
+        .type-sample {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+
+        .type-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .type-display {
+            font-size: 48px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .type-h1 {
+            font-size: 32px;
+            font-weight: 600;
+        }
+
+        .type-h2 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .type-h3 {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .type-body {
+            font-size: 16px;
+        }
+
+        .type-caption {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .type-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            background: var(--canvas-bg);
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        /* Values */
+        .value-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 24px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .value-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .value-description {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Quote */
+        .quote {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 32px;
+            border-left: 4px solid var(--primary);
+            font-size: 20px;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+
+        .quote-attribution {
+            margin-top: 16px;
+            font-size: 14px;
+            font-style: normal;
+            color: var(--text-muted);
+        }
+
+        /* Table */
+        .table-container {
+            background: var(--surface);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--surface-elevated);
+        }
+
+        th {
+            background: var(--surface-elevated);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        td {
+            font-size: 14px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-do {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+
+        .badge-dont {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+        }
+
+        /* Do/Don't */
+        .do-dont-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .do-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 24px;
+            border-top: 4px solid var(--success);
+        }
+
+        .dont-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 24px;
+            border-top: 4px solid var(--error);
+        }
+
+        .do-dont-title {
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .do-dont-list {
+            list-style: none;
+        }
+
+        .do-dont-list li {
+            padding: 8px 0;
+            font-size: 14px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--surface-elevated);
+        }
+
+        .do-dont-list li:last-child {
+            border-bottom: none;
+        }
+
+        /* Node Types */
+        .node-type {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: var(--surface);
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .node-color {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+        }
+
+        .node-name {
+            font-weight: 500;
+        }
+
+        .node-hex {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Tagline */
+        .tagline-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+
+        .tagline-primary {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .tagline-label {
+            font-size: 12px;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Boilerplate */
+        .boilerplate {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+
+        .boilerplate-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .boilerplate-label {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .boilerplate-count {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .boilerplate-text {
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* Voice Table */
+        .voice-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px;
+            margin-bottom: 2px;
+        }
+
+        .voice-we-are {
+            background: rgba(34, 197, 94, 0.1);
+            padding: 16px;
+            border-radius: 8px 0 0 8px;
+        }
+
+        .voice-we-are-not {
+            background: rgba(239, 68, 68, 0.1);
+            padding: 16px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .voice-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .voice-we-are .voice-label {
+            color: var(--success);
+        }
+
+        .voice-we-are-not .voice-label {
+            color: var(--error);
+        }
+
+        /* Competitor */
+        .competitor-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .competitor-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .competitor-position {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .competitor-counter {
+            background: var(--canvas-bg);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Logo Specs */
+        .logo-demo {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 48px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .logo-text {
+            font-size: 48px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-variants {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .logo-variant {
+            padding: 32px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .logo-variant-dark {
+            background: var(--canvas-bg);
+        }
+
+        .logo-variant-light {
+            background: #f8fafc;
+        }
+
+        .logo-variant-purple {
+            background: var(--primary);
+        }
+
+        .logo-variant-text {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .logo-variant-dark .logo-variant-text {
+            color: var(--text-primary);
+        }
+
+        .logo-variant-light .logo-variant-text {
+            color: var(--canvas-bg);
+        }
+
+        .logo-variant-purple .logo-variant-text {
+            color: white;
+        }
+
+        .logo-variant-label {
+            font-size: 11px;
+            margin-top: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .logo-variant-dark .logo-variant-label {
+            color: var(--text-muted);
+        }
+
+        .logo-variant-light .logo-variant-label {
+            color: #64748b;
+        }
+
+        .logo-variant-purple .logo-variant-label {
+            color: rgba(255,255,255,0.7);
+        }
+
+        /* Quick Reference */
+        .quick-ref {
+            background: linear-gradient(135deg, var(--surface), var(--surface-elevated));
+            border-radius: 16px;
+            padding: 32px;
+            border: 1px solid var(--primary);
+        }
+
+        .quick-ref-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: var(--primary);
+        }
+
+        .quick-ref-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .quick-ref-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--surface-elevated);
+        }
+
+        .quick-ref-label {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .quick-ref-value {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .nav {
+                display: none;
+            }
+            .main {
+                margin-left: 0;
+            }
+            .grid-2, .grid-3, .grid-4 {
+                grid-template-columns: 1fr;
+            }
+            .do-dont-grid {
+                grid-template-columns: 1fr;
+            }
+            .logo-variants {
+                grid-template-columns: 1fr;
+            }
+            .quick-ref-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-logo">Cognograph</div>
+        <div class="nav-subtitle">Brand Guide v1.0</div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Foundation</div>
+            <a href="#quick-reference" class="nav-link">Quick Reference</a>
+            <a href="#mission" class="nav-link">Mission & Vision</a>
+            <a href="#values" class="nav-link">Core Values</a>
+            <a href="#positioning" class="nav-link">Positioning</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Visual Identity</div>
+            <a href="#logo" class="nav-link">Logo</a>
+            <a href="#colors" class="nav-link">Color Palette</a>
+            <a href="#typography" class="nav-link">Typography</a>
+            <a href="#node-colors" class="nav-link">Node Types</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Verbal Identity</div>
+            <a href="#taglines" class="nav-link">Taglines</a>
+            <a href="#voice" class="nav-link">Tone of Voice</a>
+            <a href="#boilerplates" class="nav-link">Boilerplates</a>
+            <a href="#messaging" class="nav-link">Messaging Pillars</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Guidelines</div>
+            <a href="#dos-donts" class="nav-link">Do's & Don'ts</a>
+            <a href="#competitors" class="nav-link">Competitive Position</a>
+            <a href="#glossary" class="nav-link">Glossary</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Hero -->
+        <section class="hero">
+            <div class="hero-logo">Cognograph</div>
+            <div class="hero-tagline">Spatial canvas for AI workflow orchestration</div>
+            <div class="hero-domain">cognograph.app</div>
+        </section>
+
+        <!-- Quick Reference -->
+        <section id="quick-reference" class="section">
+            <h2 class="section-title">Quick Reference</h2>
+            <p class="section-subtitle">Everything you need at a glance for fast brand decisions.</p>
+
+            <div class="quick-ref">
+                <div class="quick-ref-title">Brand Essentials</div>
+                <div class="quick-ref-grid">
+                    <div class="quick-ref-item">
+                        <span class="quick-ref-label">Name</span>
+                        <span class="quick-ref-value">Cognograph</span>
+                    </div>
+                    <div class="quick-ref-item">
+                        <span class="quick-ref-label">Pronunciation</span>
+                        <span class="quick-ref-value">COG-no-graf</span>
+                    </div>
+                    <div class="quick-ref-item">
+                        <span class="quick-ref-label">Domain</span>
+                        <span class="quick-ref-value">cognograph.app</span>
+                    </div>
+                    <div class="quick-ref-item">
+                        <span class="quick-ref-label">Category</span>
+                        <span class="quick-ref-value">Spatial AI Orchestration</span>
+                    </div>
+                    <div class="quick-ref-item">
+                        <span class="quick-ref-label">Primary Color</span>
+                        <span class="quick-ref-value" style="color: var(--primary)">#9333ea</span>
+                    </div>
+                    <div class="quick-ref-item">
+                        <span class="quick-ref-label">Secondary Color</span>
+                        <span class="quick-ref-value" style="color: var(--secondary)">#2563eb</span>
+                    </div>
+                    <div class="quick-ref-item">
+                        <span class="quick-ref-label">Background</span>
+                        <span class="quick-ref-value">#1a1a2e</span>
+                    </div>
+                    <div class="quick-ref-item">
+                        <span class="quick-ref-label">UI Font</span>
+                        <span class="quick-ref-value">Inter</span>
+                    </div>
+                    <div class="quick-ref-item">
+                        <span class="quick-ref-label">Code Font</span>
+                        <span class="quick-ref-value">JetBrains Mono</span>
+                    </div>
+                    <div class="quick-ref-item">
+                        <span class="quick-ref-label">Mode</span>
+                        <span class="quick-ref-value">Dark Primary</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--surface-elevated);">
+                    <div class="quick-ref-label" style="margin-bottom: 8px;">Tagline</div>
+                    <div style="font-size: 20px; font-weight: 500;">"Connect ideas. The AI sees the connections."</div>
+                </div>
+
+                <div style="margin-top: 16px;">
+                    <div class="quick-ref-label" style="margin-bottom: 8px;">In 25 Words</div>
+                    <div style="color: var(--text-secondary);">Cognograph puts AI conversations on an infinite canvas. Connect nodes and those connections become context—the AI sees what you see.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mission & Vision -->
+        <section id="mission" class="section">
+            <h2 class="section-title">Mission & Vision</h2>
+            <p class="section-subtitle">Why we exist and where we're going.</p>
+
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-title">Mission</div>
+                    <div class="quote" style="border: none; padding: 0; font-size: 18px;">
+                        To give spatial thinkers a workspace where visual arrangement becomes functional context — where the way you organize ideas directly shapes how AI understands them.
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Vision</div>
+                    <div class="quote" style="border: none; padding: 0; font-size: 18px;">
+                        A future where complex knowledge work happens on spatial canvases, where AI sees what you see, and where the interface itself is a thinking tool — not just a container for thought.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Core Values -->
+        <section id="values" class="section">
+            <h2 class="section-title">Core Values</h2>
+            <p class="section-subtitle">The principles that guide everything we build and say.</p>
+
+            <div class="grid grid-2">
+                <div class="value-card">
+                    <div class="value-title">1. Spatial Thinking First</div>
+                    <div class="value-description">We believe arrangement conveys meaning. Visual organization isn't decoration — it's data. The canvas is a workspace, not just a display.</div>
+                </div>
+
+                <div class="value-card">
+                    <div class="value-title">2. Connections Have Consequences</div>
+                    <div class="value-description">Links between nodes aren't just visual — they're functional. Context flows through connections. Structure shapes understanding.</div>
+                </div>
+
+                <div class="value-card">
+                    <div class="value-title">3. Local-First, User-Owned</div>
+                    <div class="value-description">Your data stays on your machine by default. You control what syncs and where. No forced cloud, no lock-in.</div>
+                </div>
+
+                <div class="value-card">
+                    <div class="value-title">4. Craft Over Features</div>
+                    <div class="value-description">Every interaction should feel designed. Ship fewer things, done well. Polish matters.</div>
+                </div>
+
+                <div class="value-card" style="grid-column: span 2;">
+                    <div class="value-title">5. Power Without Complexity</div>
+                    <div class="value-description">Advanced capability, accessible interface. Progressive disclosure of complexity. Defaults that work, options that scale.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Positioning -->
+        <section id="positioning" class="section">
+            <h2 class="section-title">Positioning Statement</h2>
+            <p class="section-subtitle">How we describe what we are and who we're for.</p>
+
+            <div class="quote">
+                For <strong>spatial thinkers and AI power users</strong> who need to orchestrate complex AI workflows, <strong>Cognograph</strong> is a canvas-based workspace where visual arrangement becomes functional AI context. Unlike linear chat interfaces that lose context and require constant re-explanation, Cognograph lets you see relationships, fork conversations, and have AI understand your spatial organization as meaningful structure.
+            </div>
+
+            <h3 style="margin-top: 48px; margin-bottom: 24px; font-size: 20px;">Target Audience</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Segment</th>
+                            <th>Description</th>
+                            <th>Pain Point</th>
+                            <th>Job to Be Done</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Primary:</strong> Spatial Thinkers</td>
+                            <td>Visual organizers, mind-mappers, systems thinkers</td>
+                            <td>Linear chat loses context</td>
+                            <td>Maintain complex context across AI conversations</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Secondary:</strong> AI Power Users</td>
+                            <td>Heavy ChatGPT/Claude users hitting limits</td>
+                            <td>Can't maintain persistent context</td>
+                            <td>Build on previous AI work without re-explaining</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tertiary:</strong> Researchers/Writers</td>
+                            <td>Deep work requiring multiple threads</td>
+                            <td>Information scattered</td>
+                            <td>Connect related research with AI assistance</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Emerging:</strong> Knowledge Workers</td>
+                            <td>Anyone drowning in AI conversations</td>
+                            <td>Can't find past conversations</td>
+                            <td>Organize and retrieve AI-generated knowledge</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Logo -->
+        <section id="logo" class="section">
+            <h2 class="section-title">Logo</h2>
+            <p class="section-subtitle">Our primary brand mark and usage guidelines.</p>
+
+            <div class="logo-demo">
+                <div class="logo-text">Cognograph</div>
+                <div style="margin-top: 16px; color: var(--text-muted); font-size: 14px;">Primary Wordmark • Inter Bold • Purple Gradient</div>
+            </div>
+
+            <h3 style="margin-bottom: 16px; font-size: 18px;">Logo Variants</h3>
+
+            <div class="logo-variants">
+                <div class="logo-variant logo-variant-dark">
+                    <div class="logo-variant-text">Cognograph</div>
+                    <div class="logo-variant-label">On Dark</div>
+                </div>
+                <div class="logo-variant logo-variant-light">
+                    <div class="logo-variant-text">Cognograph</div>
+                    <div class="logo-variant-label">On Light</div>
+                </div>
+                <div class="logo-variant logo-variant-purple">
+                    <div class="logo-variant-text">Cognograph</div>
+                    <div class="logo-variant-label">Monochrome</div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 32px; margin-bottom: 16px; font-size: 18px;">Logo Specifications</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Variant</th>
+                            <th>Usage</th>
+                            <th>Minimum Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Full Logo (icon + wordmark)</td>
+                            <td>Primary use, marketing, website header</td>
+                            <td>120px width</td>
+                        </tr>
+                        <tr>
+                            <td>Wordmark Only</td>
+                            <td>Text-heavy contexts, narrow spaces</td>
+                            <td>80px width</td>
+                        </tr>
+                        <tr>
+                            <td>Icon Only</td>
+                            <td>Favicon, app icon, social avatar</td>
+                            <td>24px × 24px</td>
+                        </tr>
+                        <tr>
+                            <td>Monochrome White</td>
+                            <td>Dark backgrounds, single-color contexts</td>
+                            <td>Same as above</td>
+                        </tr>
+                        <tr>
+                            <td>Monochrome Black</td>
+                            <td>Light backgrounds, print</td>
+                            <td>Same as above</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Colors -->
+        <section id="colors" class="section">
+            <h2 class="section-title">Color Palette</h2>
+            <p class="section-subtitle">Our carefully crafted color system optimized for dark mode.</p>
+
+            <h3 style="margin-bottom: 16px; font-size: 18px;">Primary Colors</h3>
+            <div class="grid grid-4">
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: #9333ea;">
+                        <span style="color: white; font-weight: 600;">Aa</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Primary</div>
+                        <div class="color-hex">#9333ea</div>
+                        <div class="color-usage">Brand accent, CTAs, active states</div>
+                    </div>
+                </div>
+
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: #7c3aed;">
+                        <span style="color: white; font-weight: 600;">Aa</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Primary Dark</div>
+                        <div class="color-hex">#7c3aed</div>
+                        <div class="color-usage">Hover states, gradients</div>
+                    </div>
+                </div>
+
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: #2563eb;">
+                        <span style="color: white; font-weight: 600;">Aa</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Secondary</div>
+                        <div class="color-hex">#2563eb</div>
+                        <div class="color-usage">Links, secondary actions</div>
+                    </div>
+                </div>
+
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: #1a1a2e;">
+                        <span style="color: white; font-weight: 600;">Aa</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Canvas</div>
+                        <div class="color-hex">#1a1a2e</div>
+                        <div class="color-usage">Main workspace background</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 32px; margin-bottom: 16px; font-size: 18px;">Surface Colors</h3>
+            <div class="grid grid-3">
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: #242438;">
+                        <span style="color: white; font-weight: 600;">Aa</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Surface</div>
+                        <div class="color-hex">#242438</div>
+                        <div class="color-usage">Panels, cards</div>
+                    </div>
+                </div>
+
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: #f8fafc;">
+                        <span style="color: #1a1a2e; font-weight: 600;">Aa</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Text Primary</div>
+                        <div class="color-hex">#f8fafc</div>
+                        <div class="color-usage">Headings, primary text</div>
+                    </div>
+                </div>
+
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: #94a3b8;">
+                        <span style="color: #1a1a2e; font-weight: 600;">Aa</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Text Secondary</div>
+                        <div class="color-hex">#94a3b8</div>
+                        <div class="color-usage">Secondary text, labels</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 32px; margin-bottom: 16px; font-size: 18px;">Status Colors</h3>
+            <div class="grid grid-3">
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: #22c55e;">
+                        <span style="color: white; font-weight: 600;">Aa</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Success</div>
+                        <div class="color-hex">#22c55e</div>
+                        <div class="color-usage">Confirmations, complete</div>
+                    </div>
+                </div>
+
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: #f59e0b;">
+                        <span style="color: white; font-weight: 600;">Aa</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Warning</div>
+                        <div class="color-hex">#f59e0b</div>
+                        <div class="color-usage">Alerts, pending</div>
+                    </div>
+                </div>
+
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: #ef4444;">
+                        <span style="color: white; font-weight: 600;">Aa</span>
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Error</div>
+                        <div class="color-hex">#ef4444</div>
+                        <div class="color-usage">Errors, destructive</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Node Colors -->
+        <section id="node-colors" class="section">
+            <h2 class="section-title">Node Type Colors</h2>
+            <p class="section-subtitle">Each node type has a distinctive color for quick visual identification.</p>
+
+            <div class="grid grid-2">
+                <div class="node-type">
+                    <div class="node-color" style="background: #3b82f6;"></div>
+                    <div>
+                        <div class="node-name">Conversation</div>
+                        <div class="node-hex">#3b82f6</div>
+                    </div>
+                </div>
+
+                <div class="node-type">
+                    <div class="node-color" style="background: #a855f7;"></div>
+                    <div>
+                        <div class="node-name">Project</div>
+                        <div class="node-hex">#a855f7</div>
+                    </div>
+                </div>
+
+                <div class="node-type">
+                    <div class="node-color" style="background: #f59e0b;"></div>
+                    <div>
+                        <div class="node-name">Note</div>
+                        <div class="node-hex">#f59e0b</div>
+                    </div>
+                </div>
+
+                <div class="node-type">
+                    <div class="node-color" style="background: #22c55e;"></div>
+                    <div>
+                        <div class="node-name">Task</div>
+                        <div class="node-hex">#22c55e</div>
+                    </div>
+                </div>
+
+                <div class="node-type">
+                    <div class="node-color" style="background: #06b6d4;"></div>
+                    <div>
+                        <div class="node-name">Artifact</div>
+                        <div class="node-hex">#06b6d4</div>
+                    </div>
+                </div>
+
+                <div class="node-type">
+                    <div class="node-color" style="background: #f97316;"></div>
+                    <div>
+                        <div class="node-name">Custom</div>
+                        <div class="node-hex">#f97316</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Typography -->
+        <section id="typography" class="section">
+            <h2 class="section-title">Typography</h2>
+            <p class="section-subtitle">Our type system built on Inter and JetBrains Mono.</p>
+
+            <div class="type-sample">
+                <div class="type-label">Display • Inter Bold • 48px</div>
+                <div class="type-display">Connect ideas. The AI sees the connections.</div>
+            </div>
+
+            <div class="type-sample">
+                <div class="type-label">Heading 1 • Inter Semibold • 32px</div>
+                <div class="type-h1">Spatial canvas for AI workflows</div>
+            </div>
+
+            <div class="type-sample">
+                <div class="type-label">Heading 2 • Inter Semibold • 24px</div>
+                <div class="type-h2">Context injection makes connections meaningful</div>
+            </div>
+
+            <div class="type-sample">
+                <div class="type-label">Heading 3 • Inter Medium • 18px</div>
+                <div class="type-h3">Every connection feeds into AI prompts</div>
+            </div>
+
+            <div class="type-sample">
+                <div class="type-label">Body • Inter Regular • 16px</div>
+                <div class="type-body">Cognograph puts AI conversations on an infinite canvas. Connect nodes and those connections become context. The AI sees the same relationships you see. Your spatial arrangement becomes the AI's understanding.</div>
+            </div>
+
+            <div class="type-sample">
+                <div class="type-label">Caption • Inter Regular • 12px</div>
+                <div class="type-caption">Last modified 2 hours ago • 12 nodes • 8 connections</div>
+            </div>
+
+            <div class="type-sample">
+                <div class="type-label">Code • JetBrains Mono • 14px</div>
+                <div class="type-code">const context = connectedNodes.map(node => node.content).join('\n');</div>
+            </div>
+        </section>
+
+        <!-- Taglines -->
+        <section id="taglines" class="section">
+            <h2 class="section-title">Taglines</h2>
+            <p class="section-subtitle">Our primary and alternate taglines for different contexts.</p>
+
+            <div class="tagline-card" style="border-left: 4px solid var(--primary);">
+                <div class="tagline-label">Primary Tagline</div>
+                <div class="tagline-primary">"Connect ideas. The AI sees the connections."</div>
+            </div>
+
+            <div class="tagline-card">
+                <div class="tagline-label">Alternate</div>
+                <div class="tagline-primary" style="font-size: 20px;">"Where arrangement becomes understanding"</div>
+            </div>
+
+            <div class="tagline-card">
+                <div class="tagline-label">Heritage</div>
+                <div class="tagline-primary" style="font-size: 20px;">"The interface Google Wave was waiting for"</div>
+            </div>
+
+            <div class="tagline-card">
+                <div class="tagline-label">Descriptive</div>
+                <div class="tagline-primary" style="font-size: 20px;">"Spatial thinking for AI workflows"</div>
+            </div>
+
+            <div class="tagline-card">
+                <div class="tagline-label">User-focused</div>
+                <div class="tagline-primary" style="font-size: 20px;">"Your ideas. Your arrangement. AI's context."</div>
+            </div>
+        </section>
+
+        <!-- Voice -->
+        <section id="voice" class="section">
+            <h2 class="section-title">Tone of Voice</h2>
+            <p class="section-subtitle">How we sound across all communications.</p>
+
+            <div style="margin-bottom: 32px;">
+                <div class="voice-row">
+                    <div class="voice-we-are">
+                        <div class="voice-label">We Are</div>
+                        <div><strong>Confident</strong> — Sure of our approach</div>
+                    </div>
+                    <div class="voice-we-are-not">
+                        <div class="voice-label">We Are Not</div>
+                        <div>Arrogant or dismissive</div>
+                    </div>
+                </div>
+                <div class="voice-row">
+                    <div class="voice-we-are">
+                        <div class="voice-label">We Are</div>
+                        <div><strong>Craft-focused</strong> — Deliberate, polished</div>
+                    </div>
+                    <div class="voice-we-are-not">
+                        <div class="voice-label">We Are Not</div>
+                        <div>Feature-stuffed or sloppy</div>
+                    </div>
+                </div>
+                <div class="voice-row">
+                    <div class="voice-we-are">
+                        <div class="voice-label">We Are</div>
+                        <div><strong>Visionary</strong> — Forward-looking</div>
+                    </div>
+                    <div class="voice-we-are-not">
+                        <div class="voice-label">We Are Not</div>
+                        <div>Vaporware or buzzword-heavy</div>
+                    </div>
+                </div>
+                <div class="voice-row">
+                    <div class="voice-we-are">
+                        <div class="voice-label">We Are</div>
+                        <div><strong>Technical</strong> — Precise, specific</div>
+                    </div>
+                    <div class="voice-we-are-not">
+                        <div class="voice-label">We Are Not</div>
+                        <div>Jargon-filled or gatekeeping</div>
+                    </div>
+                </div>
+                <div class="voice-row">
+                    <div class="voice-we-are">
+                        <div class="voice-label">We Are</div>
+                        <div><strong>Grounded</strong> — Practical, useful</div>
+                    </div>
+                    <div class="voice-we-are-not">
+                        <div class="voice-label">We Are Not</div>
+                        <div>Abstract or theoretical</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-bottom: 16px; font-size: 18px;">Words to Use vs. Avoid</h3>
+
+            <div class="do-dont-grid">
+                <div class="do-card">
+                    <div class="do-dont-title">
+                        <span class="badge badge-do">USE</span>
+                    </div>
+                    <ul class="do-dont-list">
+                        <li>Spatial</li>
+                        <li>Canvas</li>
+                        <li>Context</li>
+                        <li>Connections</li>
+                        <li>Orchestration</li>
+                        <li>Workflow</li>
+                        <li>Arrangement</li>
+                        <li>Native, first-class, built-in</li>
+                    </ul>
+                </div>
+
+                <div class="dont-card">
+                    <div class="do-dont-title">
+                        <span class="badge badge-dont">AVOID</span>
+                    </div>
+                    <ul class="do-dont-list">
+                        <li>Revolutionary</li>
+                        <li>Game-changing</li>
+                        <li>Next-gen</li>
+                        <li>Platform</li>
+                        <li>AI-powered</li>
+                        <li>Synergy, leverage, optimize</li>
+                        <li>"Like X but with AI"</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Boilerplates -->
+        <section id="boilerplates" class="section">
+            <h2 class="section-title">Boilerplate Descriptions</h2>
+            <p class="section-subtitle">Ready-to-use descriptions for different contexts.</p>
+
+            <div class="boilerplate">
+                <div class="boilerplate-header">
+                    <div class="boilerplate-label">50 Words</div>
+                    <div class="boilerplate-count">50 words</div>
+                </div>
+                <div class="boilerplate-text">
+                    Cognograph is a spatial canvas for AI workflows. Put conversations, notes, and tasks on an infinite canvas. Connect them. The connections become context — when you chat with AI, it sees what you've connected. It's the interface that makes visual arrangement functional.
+                </div>
+            </div>
+
+            <div class="boilerplate">
+                <div class="boilerplate-header">
+                    <div class="boilerplate-label">100 Words</div>
+                    <div class="boilerplate-count">~100 words</div>
+                </div>
+                <div class="boilerplate-text">
+                    Cognograph is a spatial canvas where visual arrangement becomes functional AI context. Instead of linear chat threads that lose context, you work on an infinite canvas. Create nodes for conversations, projects, notes, and tasks. Connect them. Those connections aren't just visual organization — they feed directly into AI prompts. When you ask AI a question, it sees the nodes you've connected as relevant context. Fork conversations to explore alternatives. See your entire knowledge structure at once. Your spatial arrangement becomes the AI's understanding. Local-first by default, cloud sync optional. Think of it as the interface Google Wave was waiting for.
+                </div>
+            </div>
+
+            <div class="boilerplate">
+                <div class="boilerplate-header">
+                    <div class="boilerplate-label">250 Words</div>
+                    <div class="boilerplate-count">~250 words</div>
+                </div>
+                <div class="boilerplate-text">
+                    <p style="margin-bottom: 16px;">Cognograph reimagines how you work with AI by making spatial arrangement functional.</p>
+
+                    <p style="margin-bottom: 16px;">Today's AI tools are linear. You start a chat, explain your context, get an answer, and start over. Complex projects require constant re-explanation. Context lives in your head, not the tool.</p>
+
+                    <p style="margin-bottom: 16px;">Cognograph puts AI conversations on a spatial canvas. Create nodes for conversations, projects, notes, tasks, and artifacts. Arrange them visually. Connect them meaningfully. Those connections aren't decoration — they're data.</p>
+
+                    <p style="margin-bottom: 16px;">When you start a conversation with AI, Cognograph automatically includes context from connected nodes. The AI sees the same relationships you see. Your spatial arrangement becomes the AI's understanding.</p>
+
+                    <p style="margin-bottom: 16px;"><strong>Key capabilities:</strong></p>
+                    <ul style="margin-left: 24px; margin-bottom: 16px;">
+                        <li><strong>Infinite canvas</strong> — Arrange ideas spatially, zoom in and out, see the big picture</li>
+                        <li><strong>Typed nodes</strong> — Conversations, Projects, Notes, Tasks, Artifacts with purpose-built behaviors</li>
+                        <li><strong>Context injection</strong> — Connections feed automatically into AI prompts</li>
+                        <li><strong>Conversation forking</strong> — Branch from any point to explore alternatives</li>
+                        <li><strong>Local-first</strong> — Your data stays on your machine by default</li>
+                    </ul>
+
+                    <p>Cognograph is built for spatial thinkers and AI power users who've hit the limits of linear chat. It's for researchers managing complex literature reviews, writers building narrative structures, developers orchestrating AI-assisted coding projects, and anyone who thinks visually.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Messaging Pillars -->
+        <section id="messaging" class="section">
+            <h2 class="section-title">Messaging Pillars</h2>
+            <p class="section-subtitle">The four key messages that define our product story.</p>
+
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-title">1. Spatial = Functional</div>
+                    <div class="quote" style="padding: 16px; font-size: 16px;">
+                        "The way you arrange ideas changes how AI understands them."
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">2. Connections Have Meaning</div>
+                    <div class="quote" style="padding: 16px; font-size: 16px;">
+                        "Links aren't just visual — they're context that flows into every AI conversation."
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">3. Local-First Control</div>
+                    <div class="quote" style="padding: 16px; font-size: 16px;">
+                        "Your workspace, your machine, your data. Cloud is optional."
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">4. Beyond Linear Chat</div>
+                    <div class="quote" style="padding: 16px; font-size: 16px;">
+                        "AI conversations don't have to be one-off threads that lose context."
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Do's and Don'ts -->
+        <section id="dos-donts" class="section">
+            <h2 class="section-title">Do's & Don'ts</h2>
+            <p class="section-subtitle">Guidelines for maintaining brand consistency.</p>
+
+            <h3 style="margin-bottom: 16px; font-size: 18px;">Logo Usage</h3>
+            <div class="do-dont-grid" style="margin-bottom: 32px;">
+                <div class="do-card">
+                    <div class="do-dont-title"><span class="badge badge-do">DO</span></div>
+                    <ul class="do-dont-list">
+                        <li>Use approved logo files</li>
+                        <li>Maintain clear space around logo</li>
+                        <li>Use on appropriate backgrounds</li>
+                        <li>Keep proportions consistent</li>
+                    </ul>
+                </div>
+                <div class="dont-card">
+                    <div class="do-dont-title"><span class="badge badge-dont">DON'T</span></div>
+                    <ul class="do-dont-list">
+                        <li>Stretch or distort the logo</li>
+                        <li>Change logo colors outside palette</li>
+                        <li>Add effects (shadows, glows)</li>
+                        <li>Place on busy backgrounds</li>
+                        <li>Use smaller than 24px height</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3 style="margin-bottom: 16px; font-size: 18px;">Tone & Messaging</h3>
+            <div class="do-dont-grid" style="margin-bottom: 32px;">
+                <div class="do-card">
+                    <div class="do-dont-title"><span class="badge badge-do">DO</span></div>
+                    <ul class="do-dont-list">
+                        <li>Be confident but humble</li>
+                        <li>Lead with benefits, not features</li>
+                        <li>Use specific examples</li>
+                        <li>Sound like a human who cares</li>
+                        <li>Acknowledge limitations honestly</li>
+                    </ul>
+                </div>
+                <div class="dont-card">
+                    <div class="do-dont-title"><span class="badge badge-dont">DON'T</span></div>
+                    <ul class="do-dont-list">
+                        <li>Use superlatives (best, revolutionary)</li>
+                        <li>Use corporate speak (leverage, synergize)</li>
+                        <li>Claim "AI-powered" (everything is now)</li>
+                        <li>Be dismissive of alternatives</li>
+                        <li>Overpromise features or timeline</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3 style="margin-bottom: 16px; font-size: 18px;">Visual Style</h3>
+            <div class="do-dont-grid">
+                <div class="do-card">
+                    <div class="do-dont-title"><span class="badge badge-do">DO</span></div>
+                    <ul class="do-dont-list">
+                        <li>Use dark mode as primary</li>
+                        <li>Use real screenshots</li>
+                        <li>Keep animations subtle</li>
+                        <li>Maintain visual hierarchy</li>
+                        <li>Use purple as accent sparingly</li>
+                    </ul>
+                </div>
+                <div class="dont-card">
+                    <div class="do-dont-title"><span class="badge badge-dont">DON'T</span></div>
+                    <ul class="do-dont-list">
+                        <li>Use neon or high-contrast "AI aesthetic"</li>
+                        <li>Use gradients that look like ChatGPT</li>
+                        <li>Use rounded "chat bubble" styling</li>
+                        <li>Use stock photography</li>
+                        <li>Add excessive animations</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Competitors -->
+        <section id="competitors" class="section">
+            <h2 class="section-title">Competitive Positioning</h2>
+            <p class="section-subtitle">How we differentiate from alternatives.</p>
+
+            <div class="grid grid-2">
+                <div class="competitor-card">
+                    <div class="competitor-name">vs. ChatGPT / Claude Chat</div>
+                    <div class="competitor-position">Linear conversation interface</div>
+                    <div class="competitor-counter">
+                        "ChatGPT is great for quick questions. Cognograph is for complex work where context matters across conversations."
+                    </div>
+                </div>
+
+                <div class="competitor-card">
+                    <div class="competitor-name">vs. MindCanvas</div>
+                    <div class="competitor-position">AI-powered spatial thinking tool</div>
+                    <div class="competitor-counter">
+                        "MindCanvas compares AI models. Cognograph makes visual arrangement functional context."
+                    </div>
+                </div>
+
+                <div class="competitor-card">
+                    <div class="competitor-name">vs. Notion AI</div>
+                    <div class="competitor-position">AI-powered workspace</div>
+                    <div class="competitor-counter">
+                        "Notion added AI to docs. Cognograph is AI-native with spatial context from the ground up."
+                    </div>
+                </div>
+
+                <div class="competitor-card">
+                    <div class="competitor-name">vs. Miro / FigJam</div>
+                    <div class="competitor-position">Collaborative whiteboard</div>
+                    <div class="competitor-counter">
+                        "Miro is for visual collaboration. Cognograph is for spatial AI work where arrangement means something."
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 48px; margin-bottom: 24px; font-size: 20px;">Key Differentiators</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>Cognograph</th>
+                            <th>Others</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Context Injection</strong></td>
+                            <td style="color: var(--success);">Connections feed into AI prompts</td>
+                            <td>Connections are visual only</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Node Types</strong></td>
+                            <td style="color: var(--success);">Purpose-built (Conversation, Project, Task, etc.)</td>
+                            <td>Generic cards or boxes</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Conversation Forking</strong></td>
+                            <td style="color: var(--success);">Branch from any message</td>
+                            <td>Linear only</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Data Storage</strong></td>
+                            <td style="color: var(--success);">Local-first, cloud optional</td>
+                            <td>Cloud-first or cloud-only</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Innovation</strong></td>
+                            <td style="color: var(--success);">Patent-pending spatial triggers</td>
+                            <td>Standard approaches</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Glossary -->
+        <section id="glossary" class="section">
+            <h2 class="section-title">Glossary</h2>
+            <p class="section-subtitle">Key terms and their definitions.</p>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Term</th>
+                            <th>Definition</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Cognograph</strong></td>
+                            <td>The product name. Pronounced COG-no-graf.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Context Injection</strong></td>
+                            <td>Our core innovation: connections between nodes automatically feed into AI prompts.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Spatial Canvas</strong></td>
+                            <td>The infinite canvas where users arrange nodes.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Node</strong></td>
+                            <td>A container for content (conversation, project, note, task, artifact).</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Connection</strong></td>
+                            <td>A link between nodes that conveys context.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Forking</strong></td>
+                            <td>Creating a branch from a conversation to explore alternatives.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Local-First</strong></td>
+                            <td>Data stored on user's machine by default, cloud optional.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Spatial Triggers</strong></td>
+                            <td>Patent-pending: actions triggered by node position/proximity.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Focus Mode</strong></td>
+                            <td>UI mode that dims unrelated nodes.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Quick Capture</strong></td>
+                            <td>Global hotkey to create notes from anywhere.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer style="text-align: center; padding: 48px 0; border-top: 1px solid var(--surface-elevated); margin-top: 80px;">
+            <div style="color: var(--primary); font-weight: 700; font-size: 24px; margin-bottom: 8px;">Cognograph</div>
+            <div style="color: var(--text-secondary); margin-bottom: 16px;">Brand Guide v1.0 • Generated from brand-exploration-plan.md</div>
+            <div style="color: var(--text-muted); font-size: 14px;">cognograph.app</div>
+        </footer>
+    </main>
+</body>
+</html>

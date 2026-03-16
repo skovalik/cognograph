@@ -4,7 +4,7 @@
 // Phase 6E: Rich Node Depth System - Dispatch Workflow Integration
 //
 // Right-click a TaskNode → system creates an adjacent ConversationNode in
-// cc-session mode, links them with a dispatch edge, and prepares context.
+// terminal mode, links them with a dispatch edge, and prepares context.
 //
 // These are standalone pure functions — no store mutations, no side effects.
 // Integration with ContextMenu and workspaceStore happens during merge.
@@ -35,7 +35,7 @@ const DISPATCH_EDGE_COLOR = 'var(--accent)'
  * Builds the data payload for a new ConversationNode spawned from a task dispatch.
  *
  * The node is positioned offset right+down from the source task, set to
- * cc-session mode, and carries a `dispatchedFrom` back-reference.
+ * terminal mode, and carries a `dispatchedFrom` back-reference.
  *
  * @param taskNode  - The source task node's data
  * @param taskPosition - The source task node's canvas position {x, y}
@@ -60,7 +60,7 @@ export function createDispatchNodeData(
       title: `CLI: ${taskNode.title}`,
       messages: [],
       provider: 'anthropic',
-      mode: 'cc-session',
+      mode: 'terminal',
       createdAt: now,
       updatedAt: now,
       dispatchedFrom: (taskNode as TaskNodeData & { [key: string]: unknown }).title

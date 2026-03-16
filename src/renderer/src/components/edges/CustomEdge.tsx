@@ -22,9 +22,9 @@ const SNAP_GRID_SIZE = 20
 
 /** Fallback node type colors — used when themeSettings.nodeColors is empty/corrupted */
 const NODE_TYPE_COLORS: Record<string, string> = {
-  conversation: '#3b82f6', project: '#8b5cf6', note: '#f59e0b', task: '#10b981',
-  artifact: '#06b6d4', workspace: '#ef4444', text: '#94a3b8', action: '#f97316',
-  orchestrator: '#8b5cf6'
+  conversation: '#3b82f6', project: '#7C7CAB', note: '#f59e0b', task: '#6B9E84',
+  artifact: '#5A8EAB', workspace: '#AB6A6A', text: '#94a3b8', action: '#C4845A',
+  orchestrator: '#a855f7'
 }
 
 /** Minimum distance from cursor to path for ghost point to show */
@@ -470,6 +470,25 @@ function getStrokeDasharray(lineStyle: EdgeLineStyle | undefined, isInactive: bo
 }
 
 // =============================================================================
+// SEMANTIC TYPE VISUAL DEFAULTS
+// =============================================================================
+
+/**
+ * Get default visual properties for semantic edge types.
+ * Only dash pattern and color tint — width exclusively owned by `strength`.
+ */
+function getSemanticDefaults(type?: string): { dashArray?: string; colorTint?: string } {
+  switch (type) {
+    case 'depends-on': return { dashArray: '3 3 12 3' }      // double-dash
+    case 'references': return { dashArray: '4 4' }            // dotted
+    case 'derives-from': return { dashArray: '8 4' }          // dashed
+    case 'extends': return { colorTint: 'rgba(20, 184, 166, 0.4)' }    // teal
+    case 'implements': return { colorTint: 'rgba(99, 102, 241, 0.4)' }  // indigo
+    default: return {} // provides-context = baseline, custom = user-defined
+  }
+}
+
+// =============================================================================
 // STROKE WIDTH HELPERS
 // =============================================================================
 
@@ -495,22 +514,22 @@ function getStrengthVisuals(strength: EdgeStrength | undefined): {
   switch (strength) {
     case 'light':
       return {
-        strokeWidth: 1.5,
+        strokeWidth: 1.0,
         dashArray: '6,4',
-        opacity: 0.7
+        opacity: 0.6
       }
     case 'strong':
       return {
-        strokeWidth: 4,
+        strokeWidth: 2.5,
         dashArray: undefined,
         opacity: 1
       }
     case 'normal':
     default:
       return {
-        strokeWidth: 2.5,
+        strokeWidth: 1.5,
         dashArray: undefined,
-        opacity: 0.9
+        opacity: 0.8
       }
   }
 }
@@ -581,7 +600,7 @@ function CustomEdgeComponent({
 
   // Store subscriptions
   const zoom = useStore((s) => s.transform[2])
-  const globalEdgeStyle = useWorkspaceStore((state) => state.themeSettings.edgeStyle) || 'rounded'
+  const globalEdgeStyle = useWorkspaceStore((state) => state.themeSettings.edgeStyle) || 'smooth'
   const linkGradientEnabled = useWorkspaceStore((state) => state.themeSettings.linkGradientEnabled) ?? true
   const themeMode = useWorkspaceStore((state) => state.themeSettings.mode)
   const linkColors = useWorkspaceStore((state) => state.themeSettings.linkColors)
@@ -719,18 +738,18 @@ function CustomEdgeComponent({
   const weightedStroke = isWorkspaceLink
     ? Math.max(1, baseStrokeWidth * 0.75)
     : isContextProviderHighlighted
-      ? baseStrokeWidth + 0.75
+      ? baseStrokeWidth + 0.5
       : selected
-        ? baseStrokeWidth + 0.5
+        ? baseStrokeWidth + 0.25
         : isHovering
-          ? baseStrokeWidth + 0.25
+          ? baseStrokeWidth + 0.15
           : baseStrokeWidth
 
-  const zoomFactor = 1 / Math.max(zoom, 0.3)
-  const strokeWidth = weightedStroke * Math.min(zoomFactor, 3)
+  const zoomFactor = 1 / Math.max(zoom, 0.5)
+  const strokeWidth = weightedStroke * Math.min(zoomFactor, 2)
   // Arrow size proportional to stroke width (not independent zoom scaling)
   // This keeps arrows visually balanced with the edge thickness
-  const markerSize = Math.max(4, Math.min(12, strokeWidth * 2.5))
+  const markerSize = Math.max(3, Math.min(6, strokeWidth * 2))
 
   // Line style
   const lineStyle = edgeData.lineStyle || 'solid'
@@ -1292,17 +1311,44 @@ function CustomEdgeComponent({
     filter: 'drop-shadow(0 0 2px rgba(168, 85, 247, 0.3))'
   } : {}
 
-  // Determine stroke dasharray - strength takes precedence over lineStyle
-  const strokeDasharray = showContextFlow ? undefined : (
+  // Semantic type defaults (dash + color tint only, never width)
+  const semanticDefaults = getSemanticDefaults(edgeData.semanticType)
+
+  // Determine stroke dasharray — 4-level precedence cascade:
+  // 1. User-explicit lineStyle (lineStyle !== 'solid')  — highest, user chose this
+  // 2. Semantic type dash (semanticType default)         — semantic meaning
+  // 3. Strength dash (getStrengthVisuals().dashArray)    — visual weight hint
+  // 4. Default solid                                     — lowest
+  const userExplicitlySetLineStyle = edgeData.lineStyle && edgeData.lineStyle !== 'solid'
+  const computedDashArray = showContextFlow ? undefined : (
     isWorkspaceLink ? '5,5' : (
-      hasStrength && strengthVisuals.dashArray
-        ? strengthVisuals.dashArray
-        : getStrokeDasharray(lineStyle, isInactive)
+      isInactive ? '5,5' : (
+        userExplicitlySetLineStyle
+          ? getStrokeDasharray(lineStyle, false)           // Level 1: user wins
+          : semanticDefaults.dashArray                     // Level 2: semantic type
+            ?? (hasStrength ? strengthVisuals.dashArray : undefined)  // Level 3: strength hint
+            ?? undefined                                   // Level 4: solid
+      )
     )
   )
 
+  // Zoom-level edge collapsing — at far zoom, strip semantic visuals
+  const isFarZoom = zoom < 0.3
+  const strokeDasharray = isFarZoom ? (isWorkspaceLink ? '5,5' : undefined) : computedDashArray
+
+  // Apply semantic color tint via CSS color-mix
+  const computedTintedColor = semanticDefaults.colorTint
+    ? `color-mix(in srgb, ${edgeColor}, ${semanticDefaults.colorTint})`
+    : edgeColor
+  const effectiveEdgeColor = isFarZoom ? edgeColor : computedTintedColor
+
   // Determine opacity - strength provides base opacity, can be modified by inactive state
   const edgeOpacity = isInactive ? 0.4 : (hasStrength ? strengthVisuals.opacity : 1)
+
+  // Auto-populate label from semanticType when no custom label is set
+  const displayLabel = edgeData.label || (edgeData.semanticType && edgeData.semanticType !== 'custom' && edgeData.semanticType !== 'provides-context'
+    ? edgeData.semanticType.replace(/-/g, ' ')
+    : undefined)
 
   // Animation class for animated line style
   const animationClass = lineStyle === 'animated' && !isInactive ? 'edge-animated-flow' : ''
@@ -1326,7 +1372,8 @@ function CustomEdgeComponent({
           'react-flow__edge-path',
           showContextFlow && !isWorkspaceLink && 'context-flowing',
           showContextFlow && isWorkspaceLink && 'workspace-link-flowing',
-          !showContextFlow && isContextEdge && 'context-idle',
+          // context-idle removed — at-rest animation was visual noise (context edges
+          // already distinguishable via gradient colors, animate only when streaming)
           isContextProviderHighlighted && 'context-provider-glow',
           isBidirectional && 'bidirectional',
           animationClass,
@@ -1334,18 +1381,18 @@ function CustomEdgeComponent({
           isDragging && 'edge-dragging'
         ].filter(Boolean).join(' ')}
         style={{
-          stroke: useGradient ? `url(#${gradientId})` : edgeColor,
+          stroke: useGradient ? `url(#${gradientId})` : effectiveEdgeColor,
           strokeWidth: strokeWidth + bridgeStrokeBoost,
           strokeDasharray,
           strokeLinecap: 'round',
           strokeLinejoin: 'round',
           opacity: isWorkspaceLink ? 0.6 : edgeOpacity,
           filter: isContextProviderHighlighted
-            ? 'drop-shadow(0 0 6px var(--context-glow-color, rgba(139, 92, 246, 0.6)))'
+            ? 'drop-shadow(0 0 3px var(--context-glow-color, rgba(139, 92, 246, 0.3)))'
             : selected
-              ? 'drop-shadow(0 0 4px rgba(59, 130, 246, 0.4))'
+              ? 'drop-shadow(0 0 2px rgba(59, 130, 246, 0.2))'
               : isHovering && !isWorkspaceLink
-                ? 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.2))'
+                ? 'drop-shadow(0 0 1px rgba(255, 255, 255, 0.1))'
                 : undefined,
           transition: 'stroke-width 0.15s ease, filter 0.15s ease, opacity 0.15s ease'
         }}
@@ -1382,7 +1429,7 @@ function CustomEdgeComponent({
           if (!isDragging) setIsHovering(false)
           setGhostPointVisible(false)
         }}
-        aria-label={`Connection from ${source} to ${target}${edgeData.label ? `: ${edgeData.label}` : ''}`}
+        aria-label={`Connection from ${source} to ${target}${displayLabel ? `: ${displayLabel}` : ''}`}
         role="graphics-symbol"
       >
         <title>{isWorkspaceLink ? 'Click to select' : 'Click to select, double-click to add waypoint'}</title>
@@ -1401,13 +1448,13 @@ function CustomEdgeComponent({
             x2={targetX}
             y2={targetY}
           >
-            <stop offset="0%" stopColor={sourceColor} />
+            <stop offset="0%" stopColor={sourceColor} stopOpacity={0.7} />
             {isBidirectional ? (
-              <stop offset="100%" stopColor={targetColor} />
+              <stop offset="100%" stopColor={targetColor} stopOpacity={0.7} />
             ) : (
               <>
-                <stop offset="65%" stopColor={sourceColor} />
-                <stop offset="100%" stopColor={targetColor} />
+                <stop offset="65%" stopColor={sourceColor} stopOpacity={0.7} />
+                <stop offset="100%" stopColor={targetColor} stopOpacity={0.7} />
               </>
             )}
           </linearGradient>
@@ -1458,8 +1505,8 @@ function CustomEdgeComponent({
         )}
       </defs>
 
-      {/* Edge label */}
-      {edgeData.label && (
+      {/* Edge label — auto-populated from semanticType when no custom label */}
+      {displayLabel && (
         <EdgeLabelRenderer>
           <div
             style={{
@@ -1478,7 +1525,7 @@ function CustomEdgeComponent({
               isInactive ? 'opacity-60' : 'opacity-100'
             }`}
           >
-            <FormattedText text={edgeData.label} />
+            <FormattedText text={displayLabel} />
           </div>
         </EdgeLabelRenderer>
       )}
@@ -1509,7 +1556,7 @@ function CustomEdgeComponent({
                 </span>
               </div>
             ) : (
-              !edgeData.label && 'Click to edit'
+              !displayLabel && 'Click to edit'
             )}
           </div>
         </EdgeLabelRenderer>

@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unified Content Editing — Implementation Spec</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            surface: {
+              DEFAULT: '#1e2328',
+              raised: '#252a30',
+              input: '#2d343c',
+              hover: '#353d47'
+            },
+            border: {
+              subtle: '#3a424d',
+              default: '#4a545f'
+            },
+            text: {
+              primary: '#e8eaed',
+              secondary: '#9aa0a9',
+              tertiary: '#6b7280'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    code { font-family: 'SF Mono', 'Fira Code', monospace; }
+    .spec-section { @apply bg-surface rounded-lg border border-border-subtle p-6 mb-6; }
+  </style>
+</head>
+<body class="bg-[#0d1117] text-text-primary p-8 min-h-screen">
+  
+  <div class="max-w-4xl mx-auto">
+    
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold mb-2">Unified Content Editing</h1>
+      <p class="text-text-secondary">Implementation Spec for Claude Code</p>
+      <div class="flex gap-4 mt-4 text-xs">
+        <span class="bg-purple-500/20 text-purple-300 px-2 py-1 rounded">Feature</span>
+        <span class="bg-green-500/20 text-green-300 px-2 py-1 rounded">Simpler Than Expected!</span>
+        <span class="text-text-tertiary">Last updated: Jan 2025</span>
+      </div>
+    </div>
+
+    <!-- Codebase Analysis -->
+    <div class="spec-section">
+      <h2 class="text-xl font-semibold mb-4 text-cyan-400">Codebase Analysis</h2>
+      
+      <div class="space-y-4 text-sm">
+        <p>After reviewing the actual codebase, the fix is <strong class="text-green-400">much simpler</strong> than originally thought:</p>
+        
+        <div class="bg-surface-input rounded p-4">
+          <div class="font-medium mb-3">What Already Exists ✓</div>
+          <div class="grid grid-cols-2 gap-4 text-text-secondary">
+            <div class="space-y-2">
+              <div class="flex items-center gap-2"><span class="text-green-400">✓</span> <code>RichTextEditor.tsx</code> — TipTap WYSIWYG</div>
+              <div class="flex items-center gap-2"><span class="text-green-400">✓</span> <code>RichTextDisplay.tsx</code> — HTML/MD renderer</div>
+              <div class="flex items-center gap-2"><span class="text-green-400">✓</span> <code>contentFormat</code> in data model</div>
+            </div>
+            <div class="space-y-2">
+              <div class="flex items-center gap-2"><span class="text-green-400">✓</span> Conversion functions in PropertiesPanel</div>
+              <div class="flex items-center gap-2"><span class="text-green-400">✓</span> TipTap with StarterKit (markdown rules)</div>
+              <div class="flex items-center gap-2"><span class="text-green-400">✓</span> @tailwindcss/typography installed</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-red-900/20 border border-red-500/30 rounded p-4">
+          <div class="font-medium text-red-400 mb-2">The Actual Bug</div>
+          <div class="text-text-secondary">
+            <p><strong>NoteNode.tsx</strong> and <strong>TaskNode.tsx</strong> use <code>EditableText</code> for content display.</p>
+            <p class="mt-2"><code>EditableText</code> just renders raw text — it doesn't use <code>RichTextDisplay</code>!</p>
+            <div class="font-mono text-xs bg-surface p-2 rounded mt-3">
+              <span class="text-gray-500">// NoteNode.tsx line ~85</span><br>
+              &lt;EditableText<br>
+              &nbsp;&nbsp;value={nodeData.content || ''}<br>
+              &nbsp;&nbsp;onChange={(newContent) => updateNode(id, { content: newContent })}<br>
+              /&gt;
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Problem Statement -->
+    <div class="spec-section">
+      <h2 class="text-xl font-semibold mb-4 text-red-400">Problem Statement</h2>
+      
+      <div class="space-y-4 text-sm">
+        <p>The current "Rich Text / Plain Text" toggle creates a broken user experience:</p>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-red-900/20 border border-red-500/30 rounded p-4">
+            <div class="font-medium text-red-400 mb-2">Rich Text Mode</div>
+            <div class="text-text-secondary space-y-1">
+              <div>• Sidebar: WYSIWYG editor works ✓</div>
+              <div>• Card: Shows raw HTML tags ❌</div>
+              <div class="font-mono text-xs bg-surface p-2 rounded mt-2">&lt;p&gt;&lt;strong&gt;Company:&lt;/strong&gt; [Name]&lt;/p&gt;</div>
+            </div>
+          </div>
+          <div class="bg-yellow-900/20 border border-yellow-500/30 rounded p-4">
+            <div class="font-medium text-yellow-400 mb-2">Plain Text Mode</div>
+            <div class="text-text-secondary space-y-1">
+              <div>• Sidebar: Raw markdown visible</div>
+              <div>• Card: Raw markdown visible ❌</div>
+              <div class="font-mono text-xs bg-surface p-2 rounded mt-2">**Company:** [Name]</div>
+            </div>
+          </div>
+        </div>
+        
+        <p class="text-text-secondary">Neither mode gives users what they expect: <strong class="text-text-primary">formatted content displayed correctly in both the sidebar editor AND the canvas card.</strong></p>
+        
+        <div class="bg-surface-input rounded p-4 mt-4">
+          <div class="font-medium mb-2">Root Cause (Simplified)</div>
+          <p class="text-text-secondary">Node cards use <code>EditableText</code> which just renders raw text. They should use <code>RichTextDisplay</code> which already exists and handles HTML/markdown rendering.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Solution Options -->
+    <div class="spec-section">
+      <h2 class="text-xl font-semibold mb-4 text-green-400">Solution: Quick Fix with Double-Click Edit</h2>
+      
+      <div class="space-y-4 text-sm">
+        <div class="bg-green-900/20 border border-green-500/30 rounded p-4">
+          <div class="font-medium text-green-400 mb-2">The Fix</div>
+          <p class="text-text-secondary mb-3">Replace <code>EditableText</code> with <code>RichTextDisplay</code> + wire double-click to open Properties Panel.</p>
+          <ul class="space-y-1 text-text-secondary">
+            <li>• Cards render HTML content properly (formatted)</li>
+            <li>• Double-click opens floating Properties Panel for editing</li>
+            <li>• Single-click still selects the node</li>
+            <li>• Toggle remains functional for users who want to see/edit source</li>
+          </ul>
+          <div class="mt-3 px-3 py-2 bg-green-900/30 rounded text-green-300 text-xs">
+            ~45 minutes to implement. Low risk. Preserves edit-on-double-click UX.
+          </div>
+        </div>
+        
+        <div class="bg-surface-input rounded p-4">
+          <div class="font-medium mb-2">Double-Click Behavior</div>
+          <table class="w-full text-sm">
+            <tr class="border-b border-border-subtle">
+              <td class="py-2 text-text-secondary">Before</td>
+              <td class="py-2">Opens inline textarea (raw text editing)</td>
+            </tr>
+            <tr>
+              <td class="py-2 text-text-secondary">After</td>
+              <td class="py-2"><strong class="text-green-400">Opens floating Properties Panel</strong> with full WYSIWYG editor</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Desired State -->
+    <div class="spec-section">
+      <h2 class="text-xl font-semibold mb-4 text-green-400">Desired State (After Fix)</h2>
+      
+      <div class="bg-green-900/20 border border-green-500/30 rounded p-4 mb-4">
+        <div class="font-medium text-green-400 mb-2">Unified Display + Edit Experience</div>
+        <div class="grid grid-cols-3 gap-4 text-sm">
+          <div>
+            <div class="text-text-secondary mb-1">Canvas Card</div>
+            <div>Formatted content ✓</div>
+          </div>
+          <div>
+            <div class="text-text-secondary mb-1">Double-Click</div>
+            <div>Opens Properties Panel ✓</div>
+          </div>
+          <div>
+            <div class="text-text-secondary mb-1">Properties Panel</div>
+            <div>WYSIWYG editor ✓</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="text-sm space-y-3">
+        <p><strong>Key Change:</strong> Cards always render formatted content. Double-click opens the Properties Panel for editing.</p>
+        
+        <div class="bg-surface-input rounded p-4">
+          <div class="font-medium mb-2">Content Flow</div>
+          <table class="w-full text-sm">
+            <tr class="border-b border-border-subtle">
+              <td class="py-2 text-text-secondary">Storage</td>
+              <td class="py-2">HTML (rich text) or plain text with markdown (plain text)</td>
+            </tr>
+            <tr class="border-b border-border-subtle">
+              <td class="py-2 text-text-secondary">Card Display</td>
+              <td class="py-2"><strong class="text-green-400">RichTextDisplay</strong> — renders both HTML and markdown</td>
+            </tr>
+            <tr class="border-b border-border-subtle">
+              <td class="py-2 text-text-secondary">Double-Click</td>
+              <td class="py-2"><strong class="text-blue-400">openFloatingProperties(nodeId)</strong> — opens editor modal</td>
+            </tr>
+            <tr>
+              <td class="py-2 text-text-secondary">Edit</td>
+              <td class="py-2">RichTextEditor or textarea based on toggle</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Technical Specification -->
+    <div class="spec-section">
+      <h2 class="text-xl font-semibold mb-4 text-blue-400">Technical Specification (Option A)</h2>
+      
+      <!-- File Changes -->
+      <div class="mb-6">
+        <h3 class="font-medium text-blue-300 mb-3">1. Files to Modify</h3>
+        <div class="bg-surface-input rounded p-4 text-sm space-y-2">
+          <div class="flex items-center gap-2">
+            <span class="text-yellow-400">●</span>
+            <code>src/renderer/src/components/nodes/NoteNode.tsx</code>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-yellow-400">●</span>
+            <code>src/renderer/src/components/nodes/TaskNode.tsx</code>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-green-400">○</span>
+            <code>src/renderer/src/components/RichTextDisplay.tsx</code> — may need minor tweaks
+          </div>
+        </div>
+      </div>
+      
+      <!-- NoteNode Changes -->
+      <div class="mb-6">
+        <h3 class="font-medium text-blue-300 mb-3">2. NoteNode.tsx Changes</h3>
+        <div class="bg-surface-input rounded p-4 font-mono text-xs overflow-x-auto">
+<pre class="text-text-secondary">
+<span class="text-green-400">// BEFORE (line ~11)</span>
+import { EditableText } from '../EditableText'
+
+<span class="text-green-400">// AFTER</span>
+import { RichTextDisplay } from '../RichTextDisplay'
+
+<span class="text-green-400">// Add to imports from store (line ~8)</span>
+import { useWorkspaceStore, useIsSpawning, useNodeWarmth } from '../../stores/workspaceStore'
+
+<span class="text-green-400">// Add store action (after other store hooks, ~line 25)</span>
+const openFloatingProperties = useWorkspaceStore((state) => state.openFloatingProperties)
+
+<span class="text-green-400">// Add double-click handler</span>
+const handleContentDoubleClick = useCallback((e: React.MouseEvent) => {
+  e.stopPropagation()
+  openFloatingProperties(id)
+}, [id, openFloatingProperties])
+
+<span class="text-green-400">// BEFORE (line ~85 in cognograph-node__body)</span>
+&lt;EditableText
+  value={nodeData.content || ''}
+  onChange={(newContent) => updateNode(id, { content: newContent })}
+  placeholder="Empty note"
+/&gt;
+
+<span class="text-green-400">// AFTER</span>
+&lt;RichTextDisplay
+  content={nodeData.content || ''}
+  placeholder="Empty note"
+  <span class="text-yellow-400">onDoubleClick={handleContentDoubleClick}</span>
+/&gt;
+</pre>
+        </div>
+        <div class="text-xs text-text-secondary mt-2">
+          <strong>Note:</strong> <code>openFloatingProperties(nodeId)</code> opens a floating modal with the full Properties Panel, 
+          including the RichTextEditor. This works regardless of the user's <code>propertiesDisplayMode</code> setting.
+        </div>
+      </div>
+      
+      <!-- TaskNode Changes -->
+      <div class="mb-6">
+        <h3 class="font-medium text-blue-300 mb-3">3. TaskNode.tsx Changes</h3>
+        <div class="bg-surface-input rounded p-4 font-mono text-xs overflow-x-auto">
+<pre class="text-text-secondary">
+<span class="text-green-400">// Same pattern as NoteNode</span>
+
+<span class="text-green-400">// BEFORE (line ~13)</span>
+import { EditableText } from '../EditableText'
+
+<span class="text-green-400">// AFTER</span>
+import { RichTextDisplay } from '../RichTextDisplay'
+
+<span class="text-green-400">// Add store action (openFloatingProperties is likely already imported)</span>
+const openFloatingProperties = useWorkspaceStore((state) => state.openFloatingProperties)
+
+<span class="text-green-400">// Add double-click handler</span>
+const handleDescriptionDoubleClick = useCallback((e: React.MouseEvent) => {
+  e.stopPropagation()
+  openFloatingProperties(id)
+}, [id, openFloatingProperties])
+
+<span class="text-green-400">// BEFORE (line ~130 in cognograph-node__body)</span>
+&lt;EditableText
+  value={nodeData.description || ''}
+  onChange={(newDescription) => updateNode(id, { description: newDescription })}
+  placeholder="No description"
+/&gt;
+
+<span class="text-green-400">// AFTER</span>
+&lt;RichTextDisplay
+  content={nodeData.description || ''}
+  placeholder="No description"
+  <span class="text-yellow-400">onDoubleClick={handleDescriptionDoubleClick}</span>
+/&gt;
+</pre>
+        </div>
+      </div>
+      
+      <!-- RichTextDisplay Review -->
+      <div class="mb-6">
+        <h3 class="font-medium text-blue-300 mb-3">4. RichTextDisplay.tsx Review</h3>
+        <div class="bg-surface-input rounded p-4 text-sm">
+          <p class="text-text-secondary mb-3">The existing <code>RichTextDisplay</code> already handles:</p>
+          <ul class="space-y-1 text-text-secondary">
+            <li class="flex items-center gap-2"><span class="text-green-400">✓</span> HTML content detection and rendering</li>
+            <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Markdown to HTML conversion</li>
+            <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Plain text with line break handling</li>
+            <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Empty state placeholder</li>
+            <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Overflow hidden with flex: 1</li>
+          </ul>
+          <div class="mt-3 p-2 bg-yellow-900/20 rounded text-yellow-300 text-xs">
+            <strong>Check:</strong> Verify the <code>onClick</code> and <code>onDoubleClick</code> props are being passed through 
+            if you need to handle node selection or open properties panel on interaction.
+          </div>
+        </div>
+      </div>
+      
+      <!-- Double-Click Implementation -->
+      <div class="mb-6">
+        <h3 class="font-medium text-blue-300 mb-3">5. Double-Click Implementation Details</h3>
+        <div class="bg-surface-input rounded p-4 text-sm space-y-3">
+          <p class="text-text-secondary">The double-click handler opens the floating Properties Panel:</p>
+          
+          <div class="font-mono text-xs bg-surface p-3 rounded">
+<pre class="text-text-secondary">
+<span class="text-green-400">// Store action</span>
+openFloatingProperties: (nodeId: string) => void
+
+<span class="text-green-400">// Usage in component</span>
+const handleContentDoubleClick = useCallback((e: React.MouseEvent) => {
+  e.stopPropagation()  <span class="text-yellow-400">// Prevent node selection change</span>
+  openFloatingProperties(id)
+}, [id, openFloatingProperties])
+</pre>
+          </div>
+          
+          <div class="bg-green-900/20 border border-green-500/30 rounded p-3">
+            <div class="font-medium text-green-400 mb-1">Why Floating Properties?</div>
+            <ul class="text-xs text-text-secondary space-y-1">
+              <li>• Works regardless of user's <code>propertiesDisplayMode</code> setting</li>
+              <li>• Opens directly on the content, feels like "editing in place"</li>
+              <li>• Contains full RichTextEditor with toolbar</li>
+              <li>• Can be pinned for multi-node editing</li>
+            </ul>
+          </div>
+          
+          <div class="text-xs text-text-tertiary">
+            Alternative: Could check <code>workspacePreferences.propertiesDisplayMode</code> and call 
+            <code>openProperties()</code> for sidebar mode. But floating modal provides more consistent UX.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edge Case Analysis -->
+    <div class="spec-section">
+      <h2 class="text-xl font-semibold mb-4 text-yellow-400">Edge Case Analysis</h2>
+      
+      <p class="text-sm text-text-secondary mb-4">Swapping <code>EditableText</code> for <code>RichTextDisplay</code> with double-click handler:</p>
+      
+      <div class="overflow-x-auto mb-6">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-border-subtle text-text-secondary">
+              <th class="text-left py-2 pr-4">Feature</th>
+              <th class="text-left py-2 pr-4">EditableText (before)</th>
+              <th class="text-left py-2">RichTextDisplay (after)</th>
+            </tr>
+          </thead>
+          <tbody class="text-text-secondary">
+            <tr class="border-b border-border-subtle">
+              <td class="py-2 pr-4">Double-click</td>
+              <td class="py-2 pr-4">Opens inline textarea</td>
+              <td class="py-2 text-green-400">Opens floating Properties Panel ✓</td>
+            </tr>
+            <tr class="border-b border-border-subtle">
+              <td class="py-2 pr-4">Single-click</td>
+              <td class="py-2 pr-4">Node selected</td>
+              <td class="py-2 text-green-400">Node selected ✓</td>
+            </tr>
+            <tr class="border-b border-border-subtle">
+              <td class="py-2 pr-4">Cursor style</td>
+              <td class="py-2 pr-4"><code>cursor: text</code></td>
+              <td class="py-2"><span class="text-yellow-400">No cursor hint (can add)</span></td>
+            </tr>
+            <tr class="border-b border-border-subtle">
+              <td class="py-2 pr-4">Editing location</td>
+              <td class="py-2 pr-4">Inline textarea</td>
+              <td class="py-2 text-green-400">Properties Panel (WYSIWYG) ✓</td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-4">Formatted display</td>
+              <td class="py-2 pr-4 text-red-400">Raw text only ✗</td>
+              <td class="py-2 text-green-400">HTML/markdown/plain ✓</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="space-y-4">
+        <div class="bg-green-900/20 border border-green-500/30 rounded p-4">
+          <div class="font-medium text-green-400 mb-2">✓ UX Preserved: Double-Click to Edit</div>
+          <p class="text-sm text-text-secondary">
+            Users can still double-click to edit — it just opens the Properties Panel (with full WYSIWYG editor)
+            instead of an inline textarea. This is actually an <strong>upgrade</strong> since they get formatting tools.
+          </p>
+        </div>
+        
+        <div class="bg-surface-input rounded p-4">
+          <div class="font-medium mb-2">Remaining Edge Cases to Watch</div>
+          <ul class="text-sm text-text-secondary space-y-2">
+            <li><strong>Link clicks:</strong> <code>&lt;a href&gt;</code> in HTML content may navigate. Consider adding <code>target="_blank"</code> or event interception.</li>
+            <li><strong>Text selection:</strong> Users may try to select text in rendered HTML. Could conflict with node drag behavior.</li>
+            <li><strong>Cursor hint:</strong> Consider adding <code>cursor: pointer</code> or <code>cursor: text</code> to hint at editability.</li>
+          </ul>
+        </div>
+        
+        <div class="bg-blue-900/20 border border-blue-500/30 rounded p-4">
+          <div class="font-medium text-blue-400 mb-2">Optional: Add Cursor Hint</div>
+          <p class="text-sm text-text-secondary">
+            To indicate content is editable, add cursor style to <code>RichTextDisplay</code>:
+          </p>
+          <div class="font-mono text-xs bg-surface p-2 rounded mt-2">
+style={{ ..., <span class="text-yellow-400">cursor: 'text'</span> }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RichTextDisplay Code Reference -->
+    <div class="spec-section">
+      <h2 class="text-xl font-semibold mb-4 text-purple-400">6. Existing RichTextDisplay Code</h2>
+      
+      <p class="text-sm text-text-secondary mb-4">For reference, here's what <code>RichTextDisplay.tsx</code> already does:</p>
+      
+      <div class="bg-surface-input rounded p-4 font-mono text-xs overflow-x-auto">
+<pre class="text-text-secondary">
+<span class="text-green-400">// RichTextDisplay already handles all these cases:</span>
+
+function isHtmlContent(content: string): boolean {
+  return /&lt;[a-z][\s\S]*&gt;/i.test(content);
+}
+
+function markdownToHtml(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '&lt;strong&gt;$1&lt;/strong&gt;')
+    .replace(/__(.+?)__/g, '&lt;strong&gt;$1&lt;/strong&gt;')
+    .replace(/~~(.+?)~~/g, '&lt;s&gt;$1&lt;/s&gt;')
+    .replace(/`([^`]+)`/g, '&lt;code&gt;$1&lt;/code&gt;')
+    .replace(/\*([^*]+)\*/g, '&lt;em&gt;$1&lt;/em&gt;')
+    .replace(/_([^_]+)_/g, '&lt;em&gt;$1&lt;/em&gt;')
+    .replace(/\n/g, '&lt;br&gt;');
+}
+
+<span class="text-green-400">// Content processing logic:</span>
+const { htmlContent, isEmpty } = useMemo(() => {
+  if (!content || content.trim() === '' || content === '&lt;p&gt;&lt;/p&gt;') {
+    return { htmlContent: '', isEmpty: true };
+  }
+
+  <span class="text-yellow-400">// If content is HTML, use it directly</span>
+  if (isHtmlContent(content)) {
+    return { htmlContent: content, isEmpty: stripHtml(content).trim() === '' };
+  }
+
+  <span class="text-yellow-400">// Plain text - check for markdown and convert</span>
+  if (hasMarkdownFormatting(content)) {
+    return { htmlContent: markdownToHtml(content), isEmpty: false };
+  }
+
+  <span class="text-yellow-400">// Plain text - just convert line breaks</span>
+  return { htmlContent: content.replace(/\n/g, '&lt;br&gt;'), isEmpty: false };
+}, [content]);
+
+<span class="text-green-400">// Render with dangerouslySetInnerHTML</span>
+return (
+  &lt;div
+    className={`${className} rich-text-display`}
+    style={{ overflow: 'hidden', flex: 1, minHeight: 0, lineHeight: '1.5' }}
+    onClick={onClick}
+    onDoubleClick={onDoubleClick}
+    dangerouslySetInnerHTML={{ __html: htmlContent }}
+  /&gt;
+);
+</pre>
+      </div>
+      
+      <div class="mt-4 bg-green-900/20 border border-green-500/30 rounded p-3 text-sm text-green-300">
+        <strong>Key Point:</strong> This component already handles HTML, markdown, and plain text. 
+        It's just not being used in the node cards!
+      </div>
+      
+      <div class="mt-4 bg-blue-900/20 border border-blue-500/30 rounded p-3 text-sm">
+        <div class="font-medium text-blue-400 mb-2">Optional: Add Prose Styling</div>
+        <p class="text-text-secondary mb-2">
+          For better HTML rendering (headings, lists, etc.), consider adding Tailwind Typography prose classes.
+          The project already has <code>@tailwindcss/typography</code> installed.
+        </p>
+        <div class="font-mono text-xs bg-surface p-2 rounded">
+<span class="text-green-400">// In RichTextDisplay.tsx, add prose classes:</span><br>
+className={`${className} rich-text-display <span class="text-yellow-400">prose prose-sm prose-invert</span>`}
+        </div>
+        <p class="text-text-secondary mt-2 text-xs">
+          Or add custom CSS to <code>nodes.css</code> for the <code>.rich-text-display</code> class.
+        </p>
+      </div>
+    </div>
+
+    <!-- Implementation Checklist -->
+    <div class="spec-section">
+      <h2 class="text-xl font-semibold mb-4 text-green-400">7. Implementation Checklist</h2>
+      
+      <div class="space-y-4 text-sm">
+        <div>
+          <h3 class="font-medium mb-2">Phase 1: Card Display Fix + Double-Click</h3>
+          <div class="space-y-1 ml-4">
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> In <code>NoteNode.tsx</code>: Import <code>RichTextDisplay</code></label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> In <code>NoteNode.tsx</code>: Add <code>openFloatingProperties</code> from store</label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> In <code>NoteNode.tsx</code>: Add <code>handleContentDoubleClick</code> callback</label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> In <code>NoteNode.tsx</code>: Replace <code>EditableText</code> with <code>RichTextDisplay</code></label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> In <code>TaskNode.tsx</code>: Same changes for description field</label>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="font-medium mb-2">Phase 2: Test Content Display</h3>
+          <div class="space-y-1 ml-4">
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Test: Note with HTML content displays formatted</label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Test: Note with markdown displays formatted</label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Test: Task with HTML description displays formatted</label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Test: Empty note shows placeholder text correctly</label>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="font-medium mb-2">Phase 3: Test Interactions</h3>
+          <div class="space-y-1 ml-4">
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Test: Double-click on content opens floating Properties Panel</label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Test: Properties Panel shows with RichTextEditor focused</label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Test: Editing in Properties Panel updates card display</label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Test: Single-click on content still selects the node</label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Test: Node dragging still works when starting from content area</label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Test: Sidebar toggle still works (Rich Text / Plain Text)</label>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="font-medium mb-2">Phase 4: Edge Case Testing</h3>
+          <div class="space-y-1 ml-4">
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Test: Links in content (<code>&lt;a href&gt;</code>) — verify behavior</label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Test: Very long content truncates properly (overflow: hidden)</label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Test: Content with headings/lists displays styled</label>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="font-medium mb-2 text-text-tertiary">Phase 5: Optional Enhancements (Future)</h3>
+          <div class="space-y-1 ml-4 text-text-tertiary">
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Add <code>cursor: text</code> to hint at editability</label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Add prose CSS classes for better HTML styling</label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Remove toggle, always use WYSIWYG</label>
+            <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Remove <code>contentFormat</code> from data model</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Testing Scenarios -->
+    <div class="spec-section">
+      <h2 class="text-xl font-semibold mb-4 text-orange-400">8. Testing Scenarios</h2>
+      
+      <div class="overflow-x-auto mb-6">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-border-subtle text-text-secondary">
+              <th class="text-left py-2 pr-4">Scenario</th>
+              <th class="text-left py-2 pr-4">Content</th>
+              <th class="text-left py-2">Expected Card Display</th>
+            </tr>
+          </thead>
+          <tbody class="text-text-secondary">
+            <tr class="border-b border-border-subtle">
+              <td class="py-2 pr-4">HTML content (Rich Text mode)</td>
+              <td class="py-2 pr-4 font-mono text-xs">&lt;p&gt;&lt;strong&gt;Bold&lt;/strong&gt; text&lt;/p&gt;</td>
+              <td class="py-2"><strong>Bold</strong> text (formatted)</td>
+            </tr>
+            <tr class="border-b border-border-subtle">
+              <td class="py-2 pr-4">Markdown content (Plain Text mode)</td>
+              <td class="py-2 pr-4 font-mono text-xs">**Bold** and *italic*</td>
+              <td class="py-2"><strong>Bold</strong> and <em>italic</em> (converted)</td>
+            </tr>
+            <tr class="border-b border-border-subtle">
+              <td class="py-2 pr-4">Plain text with line breaks</td>
+              <td class="py-2 pr-4 font-mono text-xs">Line 1\nLine 2</td>
+              <td class="py-2">Line 1<br>Line 2</td>
+            </tr>
+            <tr class="border-b border-border-subtle">
+              <td class="py-2 pr-4">Empty content</td>
+              <td class="py-2 pr-4 font-mono text-xs">""</td>
+              <td class="py-2"><em class="text-text-tertiary">Empty note</em> (placeholder)</td>
+            </tr>
+            <tr class="border-b border-border-subtle">
+              <td class="py-2 pr-4">Mixed HTML (from TipTap)</td>
+              <td class="py-2 pr-4 font-mono text-xs">&lt;h2&gt;Title&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Item&lt;/li&gt;&lt;/ul&gt;</td>
+              <td class="py-2">Heading + bullet list (formatted)</td>
+            </tr>
+            <tr class="border-b border-border-subtle">
+              <td class="py-2 pr-4">Link in content</td>
+              <td class="py-2 pr-4 font-mono text-xs">&lt;a href="https://example.com"&gt;link&lt;/a&gt;</td>
+              <td class="py-2">Clickable link (verify behavior)</td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-4">Empty &lt;p&gt; tag</td>
+              <td class="py-2 pr-4 font-mono text-xs">&lt;p&gt;&lt;/p&gt;</td>
+              <td class="py-2"><em class="text-text-tertiary">Empty note</em> (placeholder)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="bg-surface-input rounded p-4">
+        <div class="font-medium mb-2">Interaction Tests</div>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <div class="text-green-400 mb-1">✅ Should Work</div>
+            <ul class="text-xs space-y-1">
+              <li>• Single-click selects node</li>
+              <li>• <strong>Double-click opens Properties Panel</strong></li>
+              <li>• Drag from content area moves node</li>
+              <li>• Multi-select with Shift+click</li>
+              <li>• Edit in panel updates card display</li>
+            </ul>
+          </div>
+          <div>
+            <div class="text-yellow-400 mb-1">⚠️ Watch For</div>
+            <ul class="text-xs space-y-1">
+              <li>• Link clicks might navigate browser</li>
+              <li>• Text selection in HTML content</li>
+              <li>• No cursor hint (optional: add cursor: text)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Summary -->
+    <div class="spec-section bg-green-900/10 border-green-500/30">
+      <h2 class="text-xl font-semibold mb-4 text-green-400">Summary</h2>
+      
+      <div class="text-sm space-y-3">
+        <p>The fix preserves the "double-click to edit" UX while adding formatted display:</p>
+        
+        <div class="bg-surface-input rounded p-4 font-mono text-xs">
+          <span class="text-red-400">- import { EditableText } from '../EditableText'</span><br>
+          <span class="text-green-400">+ import { RichTextDisplay } from '../RichTextDisplay'</span><br>
+          <br>
+          <span class="text-green-400">+ const openFloatingProperties = useWorkspaceStore((s) => s.openFloatingProperties)</span><br>
+          <span class="text-green-400">+ const handleDoubleClick = useCallback((e) => {</span><br>
+          <span class="text-green-400">+   e.stopPropagation()</span><br>
+          <span class="text-green-400">+   openFloatingProperties(id)</span><br>
+          <span class="text-green-400">+ }, [id, openFloatingProperties])</span><br>
+          <br>
+          <span class="text-red-400">- &lt;EditableText value={content} onChange={...} /&gt;</span><br>
+          <span class="text-green-400">+ &lt;RichTextDisplay content={content} onDoubleClick={handleDoubleClick} /&gt;</span>
+        </div>
+        
+        <div class="bg-surface-input rounded p-4 mt-4">
+          <div class="font-medium mb-2">What Users Get</div>
+          <div class="grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <div class="text-green-400 mb-1">Card Display</div>
+              <div class="text-text-secondary">Formatted HTML/markdown (no raw tags)</div>
+            </div>
+            <div>
+              <div class="text-green-400 mb-1">Double-Click</div>
+              <div class="text-text-secondary">Opens Properties Panel with WYSIWYG editor</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex gap-4 mt-4">
+          <div class="flex items-center gap-2 text-green-400">
+            <span>✓</span> Low risk
+          </div>
+          <div class="flex items-center gap-2 text-green-400">
+            <span>✓</span> ~45 min implementation
+          </div>
+          <div class="flex items-center gap-2 text-green-400">
+            <span>✓</span> No data model changes
+          </div>
+          <div class="flex items-center gap-2 text-green-400">
+            <span>✓</span> Preserves edit UX
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="text-center text-text-tertiary text-xs py-8">
+      End of Spec — Ready for Claude Code Implementation
+    </div>
+    
+  </div>
+</body>
+</html>

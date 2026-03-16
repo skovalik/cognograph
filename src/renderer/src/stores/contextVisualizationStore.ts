@@ -100,6 +100,9 @@ interface ContextVisualizationState {
   // The node whose context scope is being visualized
   targetNodeId: string | null
 
+  // Is the target a terminal (terminal) node? Controls gold glow.
+  isTerminalTarget: boolean
+
   // BFS traversal results for rendering
   includedNodeIds: Map<string, { depth: number; role: string; priority: string }>
   includedEdgeIds: Set<string>
@@ -112,7 +115,7 @@ interface ContextVisualizationState {
   dofRings: Map<string, number>
 
   // Actions
-  activate: (nodeId: string, nodes: ContextTraversalNode[], edges: ContextTraversalEdge[]) => void
+  activate: (nodeId: string, nodes: ContextTraversalNode[], edges: ContextTraversalEdge[], isTerminal?: boolean) => void
   deactivate: () => void
 
   // DoF actions (Phase 6A)
@@ -124,6 +127,7 @@ interface ContextVisualizationState {
 export const useContextVisualizationStore = create<ContextVisualizationState>()((set) => ({
   active: false,
   targetNodeId: null,
+  isTerminalTarget: false,
   includedNodeIds: new Map(),
   includedEdgeIds: new Set(),
   nodeCount: 0,
@@ -133,7 +137,7 @@ export const useContextVisualizationStore = create<ContextVisualizationState>()(
   dofFocusNodeId: null,
   dofRings: new Map(),
 
-  activate: (nodeId, nodes, edges) => {
+  activate: (nodeId, nodes, edges, isTerminal = false) => {
     const nodeMap = new Map<string, { depth: number; role: string; priority: string }>()
     for (const n of nodes) {
       nodeMap.set(n.id, { depth: n.depth, role: n.role, priority: n.priority })
@@ -147,6 +151,7 @@ export const useContextVisualizationStore = create<ContextVisualizationState>()(
     set({
       active: true,
       targetNodeId: nodeId,
+      isTerminalTarget: isTerminal,
       includedNodeIds: nodeMap,
       includedEdgeIds: edgeSet,
       nodeCount: nodes.length
@@ -157,6 +162,7 @@ export const useContextVisualizationStore = create<ContextVisualizationState>()(
     set({
       active: false,
       targetNodeId: null,
+      isTerminalTarget: false,
       includedNodeIds: new Map(),
       includedEdgeIds: new Set(),
       nodeCount: 0
@@ -189,3 +195,6 @@ export function selectNodeDepthRing(nodeId: string): number {
   if (!state.dofEnabled || !state.dofFocusNodeId) return DOF_DISCONNECTED
   return state.dofRings.get(nodeId) ?? DOF_DISCONNECTED
 }
+
+/** Context flow type — determines edge badge and serialization strategy */
+export type ContextFlowType = 'text' | 'code' | 'media' | 'reference'

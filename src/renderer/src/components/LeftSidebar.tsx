@@ -1,34 +1,23 @@
 import { memo, useCallback, useRef, useState } from 'react'
-import { Layers, ChevronLeft, GripVertical, Activity, Send, ScrollText } from 'lucide-react'
+import { GripVertical } from 'lucide-react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useUIStore, selectLeftSidebarTab } from '../stores/uiStore'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { AnimatedContent } from './ui/react-bits'
 import { LayersPanel } from './LayersPanel'
 import { ActivityFeedPanel } from './ActivityFeedPanel'
 import { DispatchPanel } from './DispatchPanel'
 import { BridgeLogPanel } from './bridge/BridgeLogPanel'
-
-type SidebarTab = 'layers' | 'extractions' | 'activity' | 'dispatch' | 'bridge-log'
-
-const TAB_CONFIG: Array<{ id: SidebarTab; label: string; icon: typeof Layers }> = [
-  { id: 'layers', label: 'Outline', icon: Layers },
-  { id: 'activity', label: 'Activity', icon: Activity },
-  { id: 'dispatch', label: 'Dispatch', icon: Send },
-  { id: 'bridge-log', label: 'Bridge Log', icon: ScrollText },
-]
+import { hasTerminalAccess } from '../utils/terminalAccess'
 
 function LeftSidebarComponent(): JSX.Element | null {
+  const isMobile = useIsMobile()
   const leftSidebarOpen = useWorkspaceStore((state) => state.leftSidebarOpen)
   const leftSidebarWidth = useWorkspaceStore((state) => state.leftSidebarWidth)
-  const toggleLeftSidebar = useWorkspaceStore((state) => state.toggleLeftSidebar)
   const setLeftSidebarWidth = useWorkspaceStore((state) => state.setLeftSidebarWidth)
   const activeTab = useUIStore(selectLeftSidebarTab)
-  const setActiveTab = useUIStore((s) => s.setLeftSidebarTab)
   const [isResizing, setIsResizing] = useState(false)
   const resizeRef = useRef<HTMLDivElement>(null)
-
-  // Responsive thresholds based on sidebar width
-  const isCompact = leftSidebarWidth < 200
 
   // Handle resize
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -53,39 +42,45 @@ function LeftSidebarComponent(): JSX.Element | null {
     document.addEventListener('mouseup', handleMouseUp)
   }, [leftSidebarWidth, setLeftSidebarWidth])
 
-  // Collapsed state - return null (toggle is now in Toolbar)
+  // Hidden on mobile — PFD R1: canvas-only default
+  if (isMobile) return null
+
+  // Collapsed state
   if (!leftSidebarOpen) {
     return null
   }
 
+  // Section header label
+  const tabLabels: Record<string, string> = {
+    'layers': 'Outline',
+    'extractions': 'Outline',
+    'activity': 'Activity',
+    'dispatch': 'Dispatch',
+    'bridge-log': 'Bridge Log',
+  }
+
   return (
     <div
-      className="relative h-full border-r flex flex-col gui-panel glass-soft gui-border"
-      style={{ width: leftSidebarWidth }}
+      className="relative h-full flex flex-col gui-panel gui-border gui-sidebar"
+      style={{
+        width: leftSidebarWidth,
+        borderRight: '1px solid var(--glass-border)',
+        transition: 'width 150ms var(--ease-default)',
+      }}
     >
-      {/* Header with tab buttons */}
-      <div className="flex items-center justify-between px-2 py-2 border-b gui-border">
-        <div className="flex gap-1">
-          {TAB_CONFIG.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              className={`gui-tab ${activeTab === id ? 'gui-tab-active' : ''} ${isCompact ? 'px-2' : ''}`}
-              title={label}
-              onClick={() => setActiveTab(id)}
-              style={{ color: activeTab === id ? 'var(--gui-toolbar-icon-2)' : 'var(--text-muted)' }}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {!isCompact && label}
-            </button>
-          ))}
-        </div>
-        <button
-          onClick={toggleLeftSidebar}
-          className="p-1 gui-button rounded transition-colors"
-          title="Close sidebar"
-        >
-          <ChevronLeft className="w-4 h-4 gui-text-secondary" />
-        </button>
+      {/* Panel header — display font, italic, accent-glow */}
+      <div style={{
+        padding: '16px 20px 12px',
+        borderBottom: '1px solid var(--border-subtle)',
+      }}>
+        <span style={{
+          fontFamily: 'var(--font-display)',
+          fontStyle: 'italic',
+          fontSize: '20px',
+          color: 'var(--accent-glow)',
+        }}>
+          {tabLabels[activeTab] || 'Outline'}
+        </span>
       </div>
 
       {/* Content area - shows active tab panel */}
@@ -100,19 +95,19 @@ function LeftSidebarComponent(): JSX.Element | null {
             <ActivityFeedPanel sidebarWidth={leftSidebarWidth} />
           </AnimatedContent>
         )}
-        {activeTab === 'dispatch' && (
+        {hasTerminalAccess() && activeTab === 'dispatch' && (
           <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
             <DispatchPanel sidebarWidth={leftSidebarWidth} />
           </AnimatedContent>
         )}
-        {activeTab === 'bridge-log' && (
+        {hasTerminalAccess() && activeTab === 'bridge-log' && (
           <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
             <BridgeLogPanel sidebarWidth={leftSidebarWidth} />
           </AnimatedContent>
         )}
       </div>
 
-      {/* Resize handle - wider hit area for easier grabbing */}
+      {/* Resize handle */}
       <div
         ref={resizeRef}
         onMouseDown={handleMouseDown}

@@ -139,10 +139,15 @@ export interface UIState {
   bookmarkedNodeId: string | null
   numberedBookmarks: Record<number, string | null>
 
-  // Floating modals and pinned windows
-  floatingPropertiesNodeIds: string[]
+  // Pinned windows
   pinnedWindows: PinnedWindow[]
   nextPinnedZIndex: number
+
+  // Artboard mode
+  artboardNodeId: string | null
+
+  // Keyboard navigation
+  keyboardNavActive: boolean
 
   // Theme and preferences
   themeSettings: ThemeSettings

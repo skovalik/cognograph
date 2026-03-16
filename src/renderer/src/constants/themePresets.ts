@@ -1,30 +1,28 @@
 import type { ThemePreset, GuiColors } from '@shared/types'
 import { DEFAULT_GLASS_SETTINGS } from '@shared/types'
 
-// Default GUI colors for dark mode - cool blue-focused with rainbow accents
+// Default GUI colors for dark mode — Gold accent (matches DS v3)
 export const DEFAULT_GUI_DARK: GuiColors = {
-  panelBackground: '#0d0d14', // Deep space black
-  panelBackgroundSecondary: '#14161e', // Dark charcoal with blue hint
-  textPrimary: '#f0f4f8', // Crisp white
-  textSecondary: '#94a3b8', // Slate-400
-  accentPrimary: '#3b82f6', // Blue-500 (cool, professional)
-  accentSecondary: '#06b6d4', // Cyan
-  toolbarIconDefault: '#94a3b8',
-  // Rainbow progression: blue -> purple -> amber -> emerald
-  toolbarIconAccent: ['#3b82f6', '#a855f7', '#f59e0b', '#10b981']
+  panelBackground: '#0A0908',
+  panelBackgroundSecondary: '#12110F',
+  textPrimary: '#EDE8E0',
+  textSecondary: '#9E978D',
+  accentPrimary: '#E5B95C',      // Warm Gold — primary interactive
+  accentSecondary: '#C8963E',    // Gold glow — secondary accent
+  toolbarIconDefault: '#5A554E',
+  toolbarIconAccent: ['#E5B95C', '#E5B95C', '#E5B95C', '#E5B95C'],
 }
 
-// Default GUI colors for light mode - cool blue-focused with rainbow accents
+// Default GUI colors for light mode — Gold accent (matches DS v3)
 export const DEFAULT_GUI_LIGHT: GuiColors = {
-  panelBackground: '#ffffff',
-  panelBackgroundSecondary: '#f8fafc', // Slight blue tint
-  textPrimary: '#1e293b', // Slate-800
-  textSecondary: '#64748b', // Slate-500
-  accentPrimary: '#2563eb', // Blue-600 (cool, professional)
-  accentSecondary: '#0891b2', // Cyan-600
-  toolbarIconDefault: '#64748b',
-  // Rainbow progression: blue -> purple -> amber -> emerald
-  toolbarIconAccent: ['#2563eb', '#9333ea', '#d97706', '#059669']
+  panelBackground: '#FAFAF8',
+  panelBackgroundSecondary: '#FFFFFF',
+  textPrimary: '#1A1816',
+  textSecondary: '#6B6560',
+  accentPrimary: '#A67B30',      // Dark Gold — primary interactive
+  accentSecondary: '#A67B30',    // Gold glow — secondary accent
+  toolbarIconDefault: '#9E978D',
+  toolbarIconAccent: ['#A67B30', '#A67B30', '#A67B30', '#A67B30'],
 }
 
 /**
@@ -59,15 +57,15 @@ export const THEME_PRESETS: ThemePreset[] = [
       canvasBackground: 'linear-gradient(135deg, #0d0d14 0%, #0f0f1a 50%, #0d0d14 100%)',
       canvasGridColor: '#1e1e2e',
       nodeColors: {
-        conversation: '#3b82f6', // blue-500 (primary communication)
-        project: '#a855f7', // purple-500 (organization)
-        note: '#f59e0b', // amber-500 (ideas/notes)
-        task: '#10b981', // emerald-500 (action)
-        artifact: '#06b6d4', // cyan-500 (artifacts)
-        workspace: '#ef4444', // red-500 (workspaces)
-        text: '#94a3b8',
-        action: '#f97316', // orange-500 (automation)
-        orchestrator: '#8b5cf6' // violet-500
+        conversation: '#3b82f6', // blue — primary, keep vivid
+        project: '#7C7CAB', // muted violet
+        note: '#f59e0b', // amber — primary, keep vivid
+        task: '#6B9E84', // muted sage-green (warm)
+        artifact: '#5A8EAB', // muted steel-blue (cool)
+        workspace: '#AB6A6A', // muted rose
+        text: '#94a3b8', // already muted
+        action: '#C4845A', // muted copper
+        orchestrator: '#a855f7' // purple — primary, keep vivid
       },
       guiColors: DEFAULT_GUI_DARK
     },

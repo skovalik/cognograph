@@ -4,10 +4,29 @@
 
 ---
 
+## 2026-02-25: License Restored to AGPL-3.0 + Defensive Patent Pledge
+
+### Context
+The very first public commit (`3a9740d`) had the correct license: a compact AGPL-3.0 header with Defensive Patent Pledge and copyright. Commit `9f70920` overwrote it with MIT. This was never caught and propagated through all subsequent work. VISION.md always said "Open Core (AGPL-3.0)" but LICENSE/package.json/README contradicted it.
+
+### Decision Made
+**Restored the original LICENSE from commit `3a9740d`.** The licensing model is AGPL-3.0 Open Core: free for personal use, commercial use requires a commercial license. The Defensive Patent Pledge (referencing 4 provisional patent applications) is part of the LICENSE file. PATENTS file synced to public repo.
+
+**What Changed:**
+- `LICENSE` — Restored to original 8-line AGPL-3.0 + Defensive Patent Pledge (both repos)
+- `PATENTS` — Copied to public repo (was missing)
+- `package.json` — `"license": "MIT"` → `"AGPL-3.0-only"` (both repos)
+- `package-lock.json` — Root package license corrected (public repo)
+- `package.json` — Repository/homepage/bugs URLs → `skovalik/cognograph` (dev repo)
+- `README.md` — License section: AGPL-3.0 + Defensive Patent Pledge, free for personal, commercial license available (both repos)
+- `README.md` — Clone URL fixed, CLAUDE.md removed from docs table (dev repo)
+
+---
+
 ## 2026-02-14: Cognitive Science Supports Spatial Orchestration Approach
 
 ### Context
-The core thesis is that Cognograph provides significant efficiency gains through spatial orchestration with AI co-pilot. An AI-generated literature review was conducted to assess this claim against published research.
+Stefan's core thesis is that Cognograph provides significant efficiency gains through spatial orchestration with AI co-pilot. An AI-generated literature review was conducted to assess this claim against published research.
 
 ### Decision Made
 
@@ -67,7 +86,7 @@ AI analysis of peer-reviewed cognitive science literature across 7 domains found
 - Positioning: Efficiency claims need real user data before marketing use
 
 **Documentation:**
-- Analysis: cognitive science research with 40+ peer-reviewed citations
+- Analysis: `docs/research/cognitive-science-foundations.md` (AI-generated, real citations)
 - 40+ real peer-reviewed citations
 - All claims traceable to published research
 
@@ -78,7 +97,7 @@ AI analysis of peer-reviewed cognitive science literature across 7 domains found
 ## 2026-02-12: ElectricBorder Removal + Node Mode UX Pattern
 
 ### Context
-ElectricBorder visual effects were added to all 9 node types for selection feedback. Shortly after, crash reports emerged during rapid node selection. Node mode dropdowns were planned to expose hidden functionality (agent mode, note modes, orchestrator strategies).
+BEAD 34 added ElectricBorder visual effects to all 9 node types for selection feedback. Shortly after, crash reports emerged during rapid node selection. BEAD 38 planned node mode dropdowns to expose hidden functionality (agent mode, note modes, orchestrator strategies).
 
 ### Decisions Made
 
@@ -90,7 +109,7 @@ ElectricBorder visual effects were added to all 9 node types for selection feedb
 
 **2. Unified NodeModeDropdown Component**
 - **Decision:** Create shared `NodeModeDropdown.tsx` for all node types with mode variants
-- **Rationale:** Three node types (Conversation, Note, Orchestrator) have mode toggles, but previously they were inconsistent: ConversationNode had no UI for agent mode, NoteNode hid mode picker in footer select, OrchestratorNode badges were read-only. A shared component ensures consistency and reduces code duplication.
+- **Rationale:** Three node types (Conversation, Note, Orchestrator) have mode toggles, but pre-mega-plan they were inconsistent: ConversationNode had no UI for agent mode, NoteNode hid mode picker in footer select, OrchestratorNode badges were read-only. A shared component ensures consistency and reduces code duplication.
 - **Pattern:** Clickable badge in node header → shadcn DropdownMenu with RadioGroup semantics
 - **What Changed:** New shared component (280 lines), integrated into 3 node types
 
@@ -124,10 +143,10 @@ ElectricBorder visual effects were added to all 9 node types for selection feedb
 
 ---
 
-## 2026-02-11: Wiring Fix Strategy — Post-Feature Integration
+## 2026-02-11: Wiring Fix Strategy — Post-Mega-Plan Integration
 
 ### Context
-A large feature build-out produced 14 specs worth of features but left them disconnected from the UI. OrchestratorNode existed but had no creation UI. Agent mode existed but had no toggle. GPU detection existed but wasn't gating effects. Needed comprehensive wiring pass.
+Mega-plan execution (BEAD 28) built 14 specs worth of features but left them disconnected from the UI. OrchestratorNode existed but had no creation UI. Agent mode existed but had no toggle. GPU detection existed but wasn't gating effects. Needed comprehensive wiring pass.
 
 ### Decisions Made
 
@@ -166,7 +185,7 @@ A large feature build-out produced 14 specs worth of features but left them disc
 - IPC initialization order matters: stores must init before components that depend on main process state
 - Keyboard shortcut registration uses Electron's `globalShortcut` (main process), not DOM listeners (renderer)
 - GPU detection runs synchronously on app start (5ms overhead, acceptable)
-- ElectricBorder integration in Phase B was later reverted due to animation frame crashes
+- ElectricBorder integration in Phase B was later reverted in BEAD 39 due to animation frame crashes
 
 ### What Changed
 - 23+ files modified across 4 phases
@@ -179,14 +198,14 @@ A large feature build-out produced 14 specs worth of features but left them disc
 ## 2026-02-10: Launch Preparation — Key Decisions
 
 ### Context
-Pre-launch session focused on positioning, patent strategy, security, and community planning.
+Pre-launch session focused on positioning, patent strategy, security, and community planning via parallel Ralph Loop iterations.
 
 ### Decisions Made
 
 **1. Patent Filing: 4 Separate Provisionals (Not 1 Comprehensive)**
-- **Decision:** File P1-P4 as separate provisional applications
-- **Rationale:** Independent prosecution paths firewall claims from each other. Separate filings enable granular licensing and prevent cross-contamination if any single application faces challenges.
-- **Status:** All 4 filed (February 2026)
+- **Decision:** File P1-P4 as separate provisional applications ($65 each = $260 total)
+- **Rationale:** Independent prosecution paths firewall claims from each other. If one application gets rejected, it doesn't contaminate the others. Also enables granular licensing.
+- **Status:** ALL 4 FILED — Application numbers in MEMORY.md
 
 **2. P1 Prior Art Risk Downgraded from HIGH to MEDIUM-LOW**
 - **Decision:** Obsidian Augmented Canvas is NOT strong prior art for P1
@@ -194,7 +213,7 @@ Pre-launch session focused on positioning, patent strategy, security, and commun
 
 **3. Git History Rewrite Required Before Going Public**
 - **Decision:** Must run `git filter-repo` to scrub `workplace saves/` from history
-- **Rationale:** Security audit found sensitive data in committed workspace save files. Gitignore prevents future commits but doesn't remove historical data.
+- **Rationale:** Security audit found client names, revenue targets, and business strategy in committed workspace save files. Gitignore prevents future commits but doesn't remove historical data.
 
 **4. HN Title Selected**
 - **Decision:** "Show HN: I built a spatial canvas for AI -- connections between nodes become context"
@@ -202,14 +221,14 @@ Pre-launch session focused on positioning, patent strategy, security, and commun
 
 **5. Community Platform: GitHub Discussions First, Discord Later**
 - **Decision:** Start with GitHub Discussions, add Discord only if traction warrants it
-- **Rationale:** Async-friendly, Google-indexed, lower maintenance overhead. Discord requires real-time attention that's unsustainable at launch.
+- **Rationale:** Async-friendly, Google-indexed, lower burnout risk for solo dev with ADHD. Discord requires real-time attention that's unsustainable at launch.
 
 ---
 
 ## 2026-02-04: UI Polish Sprint — Key Decisions
 
 ### Context
-Planning the UI polish sprint to elevate Cognograph from 6.2/10 to 9.0/10. Multiple design decisions needed during the planning phase.
+Planning the UI polish sprint to elevate Cognograph from 6.2/10 to 9.0/10. Multiple design decisions needed during 22 Ralph Loop planning iterations.
 
 ### Decisions Made
 
@@ -243,6 +262,7 @@ Planning the UI polish sprint to elevate Cognograph from 6.2/10 to 9.0/10. Multi
 
 ### What Changed
 - Plan document: `docs/specs/ui-polish-implementation-plan.md`
+- Tracking: `.claude/ralph-loop.local.md`
 
 ---
 
@@ -337,7 +357,7 @@ function migrateEdgeWeight(weight: number): EdgeStrength {
 - Rationale: Simpler for users, reduces cognitive load, maintains semantic meaning
 
 ### What Changed
-- Created consolidated QA verification report
+- Created `docs/specs/mega-plan-qa-verification.md` - consolidated QA report
 - Created `docs/specs/ai-editor-handoff.md` - context recovery document
 - Updated `docs/specs/steve-implementation-progress.md` - current state tracking
 - Updated `docs/specs/platform-evolution-exploration.md` - 2500 → 4000 iterations
@@ -441,18 +461,18 @@ Implement three connected features in this order:
 Previous build (cognograph) had issues accumulating. Features were partially implemented, some dead code, state got messy. User decided to start fresh.
 
 ### Decision
-Create new project with clean implementation following the existing specs (VISION.md, NORTH_STAR.md).
+Create new project (cognograph_02) with clean implementation following the existing specs (VISION.md, NORTH_STAR.md).
 
 ### Rationale
 - Cleaner codebase from start
 - Lessons learned from first build
 - Specs are solid, implementation was the issue
-- Fresh context for development
+- Fresh context for Claude Code
 
 ### What Changed
-- Fresh project directory
+- New directory: cognograph_02
 - All spec documents copied over
-- Project docs reorganized
+- CLAUDE.md rewritten as build instructions
 - TODO.md reorganized as implementation phases
 
 ---

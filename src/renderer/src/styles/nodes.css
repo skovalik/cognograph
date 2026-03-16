@@ -12,6 +12,12 @@
   --node-text-muted: var(--text-muted);
   --node-header-bg: var(--surface-node-header);
 
+  /* === Terminal inset colors === */
+  --terminal-bg: #1a1a2e;
+  --terminal-text: #e0e0e0;
+  --terminal-text-muted: #e0e0e080;
+  --terminal-prompt: #22d3ee;
+
   /* === RGB-only variables for glass system (no alpha channel) === */
   /* Used in color-mix() to prevent alpha compounding */
   --node-bg-rgb: 13 13 20; /* Default dark mode RGB */
@@ -39,22 +45,28 @@
   /* RGB-only variable for glass system - light mode uses white base */
   --node-bg-rgb: 255 255 255;
 
+  /* ═══ TERMINAL LIGHT MODE ═══ */
+  --terminal-bg: #f1f5f9;           /* slate-100 */
+  --terminal-text: #334155;          /* slate-700 */
+  --terminal-text-muted: #64748b80;  /* slate-500 at 50% */
+  --terminal-prompt: #16a34a;        /* green-600 */
+
   /* Light mode waypoint handles - darker border for contrast */
   --edge-waypoint-border: rgba(0, 0, 0, 0.8);
 }
 
 /* Dark mode: explicit overrides for light text on dark backgrounds */
 [data-theme="dark"] {
-  --node-bg: rgba(13, 13, 20, 0.95);
-  --node-bg-secondary: rgba(30, 30, 40, 0.8);
-  --node-header-bg: rgba(20, 20, 30, 0.5);
+  --node-bg: rgba(26, 24, 22, 0.95);
+  --node-bg-secondary: rgba(34, 31, 28, 0.8);
+  --node-header-bg: rgba(26, 24, 22, 0.5);
   --node-border-secondary: rgb(55, 65, 81);
   --node-text-primary: #ffffff;      /* pure white for maximum contrast */
   --node-text-secondary: #e5e7eb;    /* gray-200 - lighter than before (was gray-300) */
   --node-text-muted: #d1d5db;        /* gray-300 - lighter than before (was gray-400) */
 
-  /* RGB-only variable for glass system - dark mode uses dark base */
-  --node-bg-rgb: 13 13 20;
+  /* RGB-only variable for glass system - dark mode uses warm-charcoal base */
+  --node-bg-rgb: 26 24 22;
 
   /* Dark mode waypoint handles - lighter border for contrast */
   --edge-waypoint-border: rgba(255, 255, 255, 0.8);
@@ -65,174 +77,172 @@
    ============================================================================= */
 
 .cognograph-node {
-  @apply rounded-lg border-2;
-  background-color: var(--node-bg);
-  min-width: 150px;
-  min-height: 80px;
-  /* Enable flex layout for responsive resizing */
+  /* Content-first: minimal container */
+  background: var(--surface-node);
+  border: 1px solid transparent; /* transparent at rest, visible on hover */
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  /* PRESERVED layout properties — nodes depend on these */
+  min-width: var(--node-min-width, 150px);
+  min-height: var(--node-min-height, 80px);
   display: flex;
   flex-direction: column;
-  /* Allow handles to overflow outside node bounds */
-  overflow: visible;
-  /* Use design token shadows */
-  box-shadow: var(--shadow-node);
-  /* CSS state machine transitions */
+  overflow: visible; /* handles must overflow */
+  /* Transitions */
   transition:
-    box-shadow var(--duration-normal, 150ms) var(--ease-out, ease-out),
-    border-color var(--duration-normal, 150ms) var(--ease-out, ease-out),
-    transform var(--duration-normal, 150ms) var(--ease-out, ease-out),
-    filter var(--duration-normal, 150ms) var(--ease-out, ease-out);
-}
-
-/* Glass system integration - apply glass effects when enabled globally */
-/* Neutral glass - no color tint, pure transparency */
-html[data-glass-nodes="true"][data-glass-style="soft-blur"] .cognograph-node {
-  backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2) !important;
-  -webkit-backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2) !important;
-  /* Use --glass-opacity variable with node accent color tint from --node-accent custom property */
-  /* Tint percentage scales with opacity: 0% opacity → 0% tint, 85% opacity → 8%/12% tint */
-  /* Strip alpha from --node-bg by using rgb() to get pure transparency */
-  /* IMPORTANT: Must override base .cognograph-node background-color */
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--node-accent, var(--node-conversation, rgb(59 130 246))) calc(var(--glass-opacity, 85) * 0.094%), color-mix(in srgb, rgb(var(--node-bg-rgb)) calc(var(--glass-opacity, 85) * 1%), transparent)) 0%,
-    color-mix(in srgb, var(--node-accent, var(--node-conversation, rgb(59 130 246))) calc(var(--glass-opacity, 85) * 0.141%), color-mix(in srgb, rgb(var(--node-bg-rgb)) calc((var(--glass-opacity, 85) - 6) * 1%), transparent)) 100%
-  ) !important;
-  /* --node-accent is set per-node to border-color (theme token) → blue/purple/amber tint */
-  /* Fallback chain: --node-accent → --node-conversation → blue rgb(59 130 246) */
-  /* Tint coefficients: 0.094 = 8/85, 0.141 = 12/85 */
-  contain: layout; /* Performance: isolate layout, preserve z-index */
-  -webkit-transform: translateZ(0); /* Safari: force GPU layer */
-  transform: translateZ(0);
-}
-
-html[data-glass-nodes="true"][data-glass-style="fluid-glass"] .cognograph-node {
-  backdrop-filter: blur(calc(var(--glass-blur, 12px) * 2)) saturate(1.5) brightness(1.05) !important;
-  -webkit-backdrop-filter: blur(calc(var(--glass-blur, 12px) * 2)) saturate(1.5) brightness(1.05) !important;
-  /* Use --glass-opacity variable with node accent color tint for premium look */
-  /* Tint percentage scales with opacity: 0% opacity → 0% tint, 85% opacity → 15%/20% tint */
-  /* Strip alpha from --node-bg, add more color tint for fluid-glass */
-  /* IMPORTANT: Must override base .cognograph-node background-color */
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--node-accent, var(--node-conversation, rgb(59 130 246))) calc(var(--glass-opacity, 85) * 0.176%), color-mix(in srgb, rgb(var(--node-bg-rgb)) calc((var(--glass-opacity, 85) - 12) * 1%), transparent)) 0%,
-    color-mix(in srgb, var(--node-accent, var(--node-conversation, rgb(59 130 246))) calc(var(--glass-opacity, 85) * 0.235%), color-mix(in srgb, rgb(var(--node-bg-rgb)) calc((var(--glass-opacity, 85) - 18) * 1%), transparent)) 100%
-  ) !important;
-  /* --node-accent is set per-node to border-color (theme token) → blue/purple/amber tint */
-  /* Fallback chain: --node-accent → --node-conversation → blue rgb(59 130 246) */
-  /* Tint coefficients: 0.176 = 15/85, 0.235 = 20/85 */
-  box-shadow:
-    var(--shadow-node),
-    inset 0 1px 1px color-mix(in srgb, var(--gui-text-primary) 10%, transparent);
+    border-color var(--duration-fast) var(--ease-default),
+    box-shadow var(--duration-fast) var(--ease-default),
+    transform var(--duration-fast) var(--ease-default),
+    background var(--duration-fast) var(--ease-default);
   contain: layout;
-  -webkit-transform: translateZ(0);
   transform: translateZ(0);
+  position: relative;
 }
 
-/* Per-node override: force glass (even if global disabled) */
-html[data-glass-style="soft-blur"] .cognograph-node[data-transparent="true"] {
-  backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2) !important;
-  -webkit-backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2) !important;
-  /* Use --glass-opacity variable with node accent color tint */
-  /* Tint percentage scales with opacity: 0% opacity → 0% tint, 85% opacity → 8%/12% tint */
+/* Hover: subtle frame appears */
+.cognograph-node:hover {
+  border-color: var(--border-subtle);
+}
+
+/* =============================================================================
+   PROGRESSIVE DISCLOSURE
+   Chrome hidden at rest, fades in on hover (Level 1) or select (Level 2).
+   ============================================================================= */
+
+/* Level 1: Visible on hover OR selected */
+.cognograph-node .node-chrome--hover {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast, 150ms) var(--ease-default, ease);
+}
+
+.cognograph-node:hover .node-chrome--hover,
+.cognograph-node.selected .node-chrome--hover,
+.cognograph-node:focus-within .node-chrome--hover {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Level 2: Visible only when selected */
+.cognograph-node .node-chrome--selected {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast, 150ms) var(--ease-default, ease);
+}
+
+.cognograph-node.selected .node-chrome--selected {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Selected: thin accent border, no glow */
+.cognograph-node.selected {
+  border-color: var(--ring-color, var(--cg-accent));
+}
+
+/* ═══ ACTIVITY INDICATOR ═══ */
+/* Vertical gradient progress bar on left edge — appears only when node is active/thinking.
+   Left border is RESERVED for this system — no other feature should use border-left on nodes.
+   Uses ::after to avoid conflict with bookmarked ::before (dot indicator).
+   Positioned OUTSIDE the node border (-4px left) so it never collides with
+   the selection highlight border. */
+
+@keyframes thinking-sweep {
+  0% { background-position: 0 100%; }
+  100% { background-position: 0 -100%; }
+}
+
+/* Shared base for activity indicators */
+.cognograph-node.is-active::after,
+.cognograph-node.is-thinking::after {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -1px;
+  width: 3px;
+  height: calc(100% + 2px);
+  opacity: 0.9;
+  border-radius: 2px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.cognograph-node.is-active::after {
+  background: linear-gradient(to top, transparent, var(--ring-color, var(--accent-glow)), transparent);
+}
+
+.cognograph-node.is-thinking::after {
   background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--node-accent, var(--node-conversation, rgb(59 130 246))) calc(var(--glass-opacity, 85) * 0.094%), color-mix(in srgb, rgb(var(--node-bg-rgb)) calc(var(--glass-opacity, 85) * 1%), transparent)) 0%,
-    color-mix(in srgb, var(--node-accent, var(--node-conversation, rgb(59 130 246))) calc(var(--glass-opacity, 85) * 0.141%), color-mix(in srgb, rgb(var(--node-bg-rgb)) calc((var(--glass-opacity, 85) - 6) * 1%), transparent)) 100%
-  ) !important;
-  contain: layout;
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
+    to top,
+    transparent 0%,
+    var(--ring-color, var(--accent-glow)) 30%,
+    var(--ring-color, var(--accent-glow)) 50%,
+    transparent 100%
+  );
+  background-size: 100% 200%;
+  background-position: 0 100%;
+  animation: thinking-sweep 3.5s ease-in-out infinite;
 }
 
-html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
-  backdrop-filter: blur(calc(var(--glass-blur, 12px) * 2)) saturate(1.5) brightness(1.05) !important;
-  -webkit-backdrop-filter: blur(calc(var(--glass-blur, 12px) * 2)) saturate(1.5) brightness(1.05) !important;
-  /* Use --glass-opacity variable with more color tint */
-  /* Tint percentage scales with opacity: 0% opacity → 0% tint, 85% opacity → 15%/20% tint */
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--node-accent, var(--node-conversation, rgb(59 130 246))) calc(var(--glass-opacity, 85) * 0.176%), color-mix(in srgb, rgb(var(--node-bg-rgb)) calc((var(--glass-opacity, 85) - 12) * 1%), transparent)) 0%,
-    color-mix(in srgb, var(--node-accent, var(--node-conversation, rgb(59 130 246))) calc(var(--glass-opacity, 85) * 0.235%), color-mix(in srgb, rgb(var(--node-bg-rgb)) calc((var(--glass-opacity, 85) - 18) * 1%), transparent)) 100%
-  ) !important;
-  box-shadow:
-    var(--shadow-node),
-    inset 0 1px 1px color-mix(in srgb, var(--gui-text-primary) 10%, transparent);
-  contain: layout;
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-}
-
-/* Fallback for browsers without color-mix() support (IE11, old Android) */
-@supports not (background: color-mix(in srgb, red, blue)) {
-  .cognograph-node[data-transparent="true"],
-  html[data-glass-nodes="true"] .cognograph-node {
-    background: var(--node-bg) !important; /* Solid fallback */
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .cognograph-node.is-thinking::after {
+    animation: none;
+    background-size: 100% 100%;
+    background-position: 0 0;
+    background: linear-gradient(to top, transparent, var(--ring-color, var(--accent-glow)), transparent);
   }
 }
 
-/* Per-node override: force solid (even if global enabled) */
-.cognograph-node[data-transparent="false"] {
-  /* Don't override background - let inline styles handle node colors */
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  opacity: 1 !important;
-}
-
-/* Hover state: lift and enhanced shadow (only when not dragging or selected) */
-.react-flow__node:not(.dragging) .cognograph-node:hover:not(.selected) {
-  box-shadow: var(--shadow-node-hover);
-  transform: translateY(-2px);
-  filter: brightness(1.05);
-}
-
-/* Selected state: visible outline with enhanced shadow */
-.cognograph-node.selected {
-  @apply ring-2 ring-offset-2 ring-offset-gray-900;
-  /* Ring color uses the --ring-color CSS variable set by each node's inline styles */
-  --tw-ring-color: var(--ring-color, #6366f1);
-  box-shadow: var(--shadow-node-selected);
-  filter: brightness(1.08);
-}
-
-[data-theme="light"] .cognograph-node.selected {
-  @apply ring-offset-white;
-}
-
-/* Dragging state: scale up with drop shadow */
-/* Note: React Flow applies .dragging to .react-flow__node wrapper */
+/* Dragging: lift off canvas */
 .react-flow__node.dragging .cognograph-node {
   transform: scale(1.02);
-  box-shadow: var(--shadow-node-drag);
-  filter: brightness(1.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
-/* Node type colors - using CSS variables from tokens */
+/* Type label: floats above node */
+.cognograph-node__type-label {
+  position: absolute;
+  top: calc(-1 * var(--text-label) - 6px);
+  left: 0;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  opacity: 0.35;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.cognograph-node:hover .cognograph-node__type-label {
+  opacity: 0.7;
+}
+
+/* Metadata: appears on hover */
+.cognograph-node__metadata {
+  font-size: var(--text-micro);
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-default);
+  padding-top: 4px;
+}
+
+.cognograph-node:hover .cognograph-node__metadata {
+  opacity: 1;
+}
+
+/* Node type colors — content-first: border colors removed (transparent at rest) */
 .cognograph-node--conversation {
-  border-color: var(--node-conversation);
+  /* border-color managed via CSS state machine (hover/selected) */
 }
 /* z-index managed per-node via zIndex property for proper layering */
-/* Ring color now uses --ring-color CSS variable from base .cognograph-node.selected */
 
-/* Agent mode differentiation - glass effects only (border/bg set via inline styles) */
+/* Agent mode differentiation — content-first (no glass) */
 .conversation-node--agent {
-  /* Glass effects: backdrop-filter for depth */
-  backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2);
-  -webkit-backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2);
-
-  /* Subtle white inset highlight - reduced for agent mode (8% light, 5% dark) */
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 color-mix(in srgb, white 8%, transparent);
-}
-
-/* Dark mode: even more subtle white inset (5%) */
-[data-theme="dark"] .conversation-node--agent {
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 color-mix(in srgb, white 5%, transparent);
+  /* Agent nodes use same content-first style, differentiation via type label */
 }
 
 .cognograph-node--project {
@@ -241,6 +251,13 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
   min-width: 250px;
   min-height: 200px;
   transition: box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+.cognograph-node--project .cognograph-node__title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: var(--text-title);  /* 16px, slightly larger than default 13px */
 }
 
 /* Disable hover effect for project nodes - prevents strobing when mousing over child nodes */
@@ -256,33 +273,25 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
 
 /* Visual feedback when project can receive drop */
 .cognograph-node--project.drag-over {
-  border-width: 4px;
-  transform: scale(1.02);
-  /* Use node's ring-color variable for consistent theming */
-  box-shadow: 0 0 20px color-mix(in srgb, var(--ring-color) 40%, transparent);
+  border-width: 2px;
+  border-color: var(--ring-color);
 }
 /* Ring color now uses --ring-color CSS variable from base .cognograph-node.selected */
 
 .cognograph-node--note {
-  @apply border-amber-500;
+  /* Content-first: no default border color */
 }
-/* z-index managed per-node via zIndex property */
-/* Ring color now uses --ring-color CSS variable from base .cognograph-node.selected */
 
 .cognograph-node--task {
-  @apply border-emerald-500;
+  /* Content-first: no default border color */
 }
-/* z-index managed per-node via zIndex property */
-/* Ring color now uses --ring-color CSS variable from base .cognograph-node.selected */
 
 .cognograph-node--artifact {
-  @apply border-cyan-500;
+  /* Content-first: no default border color */
 }
-/* z-index managed per-node via zIndex property */
-/* Ring color now uses --ring-color CSS variable from base .cognograph-node.selected */
 
 .cognograph-node--workspace {
-  @apply border-red-500;
+  /* Content-first: no default border color */
   min-width: 280px;
 }
 .react-flow__node-workspace {
@@ -299,27 +308,15 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
   filter: grayscale(0.3);
 }
 
-/* Node header */
+/* Node header — flat surface (no border, no distinct background) */
 .cognograph-node__header {
-  @apply flex items-center gap-2.5 px-3 py-2.5 border-b;
-  background-color: var(--node-header-bg);
-  /* Match parent's inner corner radius (rounded-lg 8px minus border-2 2px) */
-  border-top-left-radius: calc(var(--radius-lg, 8px) - 2px);
-  border-top-right-radius: calc(var(--radius-lg, 8px) - 2px);
+  @apply flex items-center gap-2.5 px-3 py-2.5;
+  background-color: transparent;
   flex-shrink: 0;
   overflow: hidden;
 }
 
 /* Dark mode: darker border (mix node bg with black) */
-[data-theme="dark"] .cognograph-node__header {
-  border-color: color-mix(in srgb, var(--node-bg) 60%, black);
-}
-
-/* Light mode: lighter border (mix node bg with gray) */
-[data-theme="light"] .cognograph-node__header {
-  border-color: color-mix(in srgb, var(--node-bg) 70%, rgb(209, 213, 219));
-}
-
 .cognograph-node__icon {
   @apply w-5 h-5 flex-shrink-0;
   display: flex;
@@ -378,22 +375,40 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
   margin-top: auto;
 }
 
+/* ═══ DISPLAY FONT IN NODE HEADINGS ═══ */
+/* User-set headings render in --font-display for visual hierarchy */
+
+.cognograph-node__body h1,
+.cognograph-node__body h2,
+.cognograph-node__body h3 {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--node-text-primary);
+  margin: 0 0 4px 0;
+  line-height: var(--leading-tight);
+}
+
+.cognograph-node__body h1 {
+  font-size: var(--text-display);  /* 24px */
+  font-weight: 400;
+}
+
+.cognograph-node__body h2 {
+  font-size: var(--text-title);    /* 16px */
+  font-weight: 400;
+}
+
+.cognograph-node__body h3 {
+  font-size: var(--text-node-title);  /* 13px */
+  font-weight: 500;
+}
+
 /* Node footer */
 .cognograph-node__footer {
-  @apply flex items-center justify-between px-3 py-2 border-t text-xs;
+  @apply flex items-center justify-between px-3 py-2 text-xs;
   color: var(--node-text-muted);
   flex-shrink: 0;
   gap: 8px;
-}
-
-/* Dark mode: darker border (mix node bg with black) */
-[data-theme="dark"] .cognograph-node__footer {
-  border-color: color-mix(in srgb, var(--node-bg) 60%, black);
-}
-
-/* Light mode: lighter border (mix node bg with gray) */
-[data-theme="light"] .cognograph-node__footer {
-  border-color: color-mix(in srgb, var(--node-bg) 70%, rgb(209, 213, 219));
 }
 
 /* Resize handle */
@@ -415,13 +430,12 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
    ============================================================================= */
 
 .react-flow__handle {
-  @apply border-2;
-  background-color: var(--ring-color, #64748b);
-  border-color: color-mix(in srgb, var(--ring-color, #64748b) 70%, white);
+  background-color: var(--ring-color, var(--cg-accent));
+  border: 1.5px solid color-mix(in srgb, var(--ring-color, var(--cg-accent)) 70%, white);
   @apply transition-[opacity,transform] duration-200 ease-out;
   /* Fixed sizing — avoids per-frame recalc during zoom */
-  --handle-size: 16px;
-  --handle-offset: -8px;
+  --handle-size: 8px;
+  --handle-offset: -4px;
   width: var(--handle-size) !important;
   height: var(--handle-size) !important;
   /* Centering transform per-position (set by position rules below) */
@@ -468,9 +482,8 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
 
 /* Show handles when node is hovered */
 .cognograph-node:hover .react-flow__handle {
-  background-color: var(--ring-color, #3b82f6);
-  border-color: color-mix(in srgb, var(--ring-color, #3b82f6) 60%, white);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--ring-color, #3b82f6) 50%, transparent);
+  background-color: var(--ring-color, var(--cg-accent));
+  border-color: color-mix(in srgb, var(--ring-color, var(--cg-accent)) 60%, white);
   opacity: 1;
   pointer-events: auto;
   transform: var(--handle-translate) scale(1);
@@ -486,10 +499,9 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
 }
 
 .react-flow__handle:hover {
-  background-color: color-mix(in srgb, var(--ring-color, #3b82f6) 90%, white);
+  background-color: color-mix(in srgb, var(--ring-color, var(--cg-accent)) 90%, white);
   border-color: white;
   transform: var(--handle-translate) scale(1.2);
-  box-shadow: 0 0 6px var(--ring-color, #3b82f6);
 }
 
 /* Pulsing animation when connecting */
@@ -503,41 +515,21 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
   50% { transform: var(--handle-translate) scale(1.2); opacity: 0.8; }
 }
 
-/* Connection target highlight - shows which handle will receive the connection */
+/* Connection target highlight — clean, no pulse */
 .react-flow__handle.connection-target-highlight {
   opacity: 1 !important;
   pointer-events: auto !important;
-  transform: var(--handle-translate) scale(1.6) !important;
+  transform: var(--handle-translate) scale(1.4) !important;
   background-color: var(--target-highlight-color, #22c55e) !important;
   border-color: white !important;
-  box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--target-highlight-color, #22c55e) 30%, transparent),
-    0 0 20px var(--target-highlight-color, #22c55e),
-    0 0 40px color-mix(in srgb, var(--target-highlight-color, #22c55e) 50%, transparent) !important;
-  animation: connection-target-pulse 0.6s ease-in-out infinite !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--target-highlight-color, #22c55e) 40%, transparent) !important;
+  animation: none !important;
   z-index: 1000 !important;
 }
 
-@keyframes connection-target-pulse {
-  0%, 100% {
-    transform: var(--handle-translate) scale(1.6);
-    box-shadow:
-      0 0 0 3px color-mix(in srgb, var(--target-highlight-color, #22c55e) 30%, transparent),
-      0 0 20px var(--target-highlight-color, #22c55e),
-      0 0 40px color-mix(in srgb, var(--target-highlight-color, #22c55e) 50%, transparent);
-  }
-  50% {
-    transform: var(--handle-translate) scale(1.8);
-    box-shadow:
-      0 0 0 5px color-mix(in srgb, var(--target-highlight-color, #22c55e) 40%, transparent),
-      0 0 30px var(--target-highlight-color, #22c55e),
-      0 0 60px color-mix(in srgb, var(--target-highlight-color, #22c55e) 60%, transparent);
-  }
-}
-
-/* Node glow when it's the connection target */
+/* Node glow when it's the connection target — neutralized */
 .react-flow__node:has(.connection-target-highlight) {
-  box-shadow: 0 0 25px color-mix(in srgb, var(--target-highlight-color, #22c55e) 40%, transparent) !important;
+  /* Removed: 25px glow */
 }
 
 /* =============================================================================
@@ -586,8 +578,8 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
 }
 
 .react-flow__edgeupdater circle {
-  fill: #3b82f6;
-  stroke: #1e40af;
+  fill: var(--cg-accent, #F0EDE8);
+  stroke: var(--accent-glow, #C8963E);
   stroke-width: 1.5;
   r: 6;
   opacity: 0;
@@ -603,10 +595,10 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
 .react-flow__edgeupdater:hover circle {
   opacity: 1;
   r: 10;
-  fill: #60a5fa;
-  stroke: #3b82f6;
+  fill: var(--cg-accent, #F0EDE8);
+  stroke: var(--accent-glow, #C8963E);
   stroke-width: 2;
-  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.7));
+  filter: drop-shadow(0 0 6px var(--accent-glow-strong, rgba(200, 150, 62, 0.35)));
 }
 
 /* Pulsing animation when hovering reconnect handle */
@@ -617,11 +609,11 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
 @keyframes reconnect-pulse {
   0%, 100% {
     r: 10;
-    filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.7));
+    filter: drop-shadow(0 0 6px var(--accent-glow-strong, rgba(200, 150, 62, 0.35)));
   }
   50% {
     r: 12;
-    filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.9));
+    filter: drop-shadow(0 0 10px var(--accent-glow-strong, rgba(200, 150, 62, 0.35)));
   }
 }
 
@@ -728,8 +720,7 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
 }
 
 .react-flow__resize-control.handle.top.right {
-  /* Hidden to avoid overlap with AutoFitButton */
-  display: none !important;
+  cursor: nesw-resize !important;
 }
 
 .react-flow__resize-control.handle.bottom.left {
@@ -916,8 +907,8 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
 
 .auto-fit-button {
   position: absolute;
-  top: -8px;
-  right: -8px;
+  top: 4px;
+  right: 4px;
   width: 20px;
   height: 20px;
   border-radius: 4px;
@@ -1056,6 +1047,7 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
   flex-direction: column;
   overflow: visible;
   background: transparent;
+  position: relative; /* for type label positioning */
 }
 
 .text-node.selected {
@@ -1106,8 +1098,8 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
 
 /* Handles: smaller, more subtle on text nodes */
 .text-node .react-flow__handle {
-  --handle-size: 10px;
-  --handle-offset: -5px;
+  --handle-size: 6px;
+  --handle-offset: -3px;
 }
 
 /* Placeholder text for empty text nodes */
@@ -1275,22 +1267,12 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
    ============================================================================= */
 
 @keyframes celebrate-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 0 15px rgba(34, 197, 94, 0);
-    transform: scale(1.02);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
-    transform: scale(1);
-  }
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  100% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
 }
 
 .cognograph-node.cognograph-node--celebrating {
-  animation: celebrate-pulse 0.6s ease-out;
+  animation: celebrate-pulse 0.4s ease-out;
   border-color: rgb(34, 197, 94) !important;
 }
 
@@ -1299,38 +1281,24 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
    ============================================================================= */
 
 .cognograph-node.cognograph-node--bookmarked {
-  box-shadow:
-    0 0 0 2px rgba(251, 191, 36, 0.5),
-    0 0 20px rgba(251, 191, 36, 0.3),
-    var(--tw-shadow, 0 0 #0000);
+  border-color: rgba(251, 191, 36, 0.4);
 }
 
 .cognograph-node.cognograph-node--bookmarked::before {
   content: '';
   position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 16px;
-  height: 16px;
+  top: -4px;
+  right: -4px;
+  width: 8px;
+  height: 8px;
   background: rgb(251, 191, 36);
   border-radius: 50%;
   z-index: 10;
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
 }
 
-/* Star icon inside the bookmark indicator */
-.cognograph-node.cognograph-node--bookmarked::after {
-  content: '★';
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 16px;
-  height: 16px;
-  font-size: 10px;
-  line-height: 16px;
-  text-align: center;
-  color: rgb(55, 48, 23);
-  z-index: 11;
+/* Clear ::after for bookmarked nodes — but NOT when activity indicator is active */
+.cognograph-node.cognograph-node--bookmarked:not(.is-active):not(.is-thinking)::after {
+  content: none;
 }
 
 /* =============================================================================
@@ -1342,23 +1310,7 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
    PFD PHASE 6C: SESSION RE-ENTRY — RECENCY INDICATORS
    ============================================================================= */
 
-/* Nodes modified within 24 hours get a subtle fresh indicator */
-.react-flow__node.recency-fresh .cognograph-node {
-  box-shadow: 0 0 6px 1px rgba(34, 197, 94, 0.15);
-}
-
-/* Nodes modified 24-48 hours ago get a fainter warm indicator */
-.react-flow__node.recency-warm .cognograph-node {
-  box-shadow: 0 0 4px 1px rgba(34, 197, 94, 0.06);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .react-flow__node.recency-fresh .cognograph-node,
-  .react-flow__node.recency-warm .cognograph-node {
-    box-shadow: none;
-    border-left: 3px solid rgba(34, 197, 94, 0.25);
-  }
-}
+/* Recency indicators disabled — reserved for future use case */
 
 /* Session re-entry prompt */
 .session-reentry-prompt {
@@ -1495,6 +1447,31 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
    SEMANTIC ZOOM - Content scales with zoom, never hidden
    Philosophy: Fade don't hide. Preserve visual context at all zoom levels.
    ============================================================================= */
+
+/* ═══ PLACEHOLDER BARS ═══ */
+/* Abstract content indicator at far zoom — perception bias signal.
+   At L0/L1, nodes show thin horizontal bars instead of text to communicate
+   "there's content here" without rendering actual text. Reduces cognitive load. */
+
+.placeholder-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.placeholder-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-elevated);
+}
+
+.placeholder-bar--short { width: 60%; }
+.placeholder-bar--medium { width: 80%; }
+.placeholder-bar--long { width: 95%; }
+.placeholder-bar--accent {
+  background: color-mix(in srgb, var(--ring-color) 20%, var(--surface-elevated));
+}
 
 /* =============================================================================
    Shared LOD Rules (Phase 1B) — CSS-driven LOD via data-lod attribute.
@@ -1716,6 +1693,8 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
   opacity: 1;
 }
 
+/* Orchestrator active run — border disabled, reserved for future use */
+
 /* =============================================================================
    LOD for OrchestratorNode — orchestrator-node--lod-{far|mid|close}
    ============================================================================= */
@@ -1834,28 +1813,39 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
 }
 
 /* =============================================================================
-   LOD for TextNode — text-node--lod-{far|mid|close}
+   LOD for TextNode — text-node--lod-{0|1|2|3|4}
+   0=ultra-far (hidden), 1=far (placeholders), 2+=content
    ============================================================================= */
 
-.text-node--lod-far .text-node-body,
-.text-node--lod-mid .text-node-body,
-.text-node--lod-close .text-node-body {
+.text-node--lod-0 .text-node-body,
+.text-node--lod-1 .text-node-body,
+.text-node--lod-2 .text-node-body,
+.text-node--lod-3 .text-node-body,
+.text-node--lod-4 .text-node-body {
   transition: opacity 200ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .text-node--lod-far .text-node-body,
-  .text-node--lod-mid .text-node-body,
-  .text-node--lod-close .text-node-body {
+  .text-node--lod-0 .text-node-body,
+  .text-node--lod-1 .text-node-body,
+  .text-node--lod-2 .text-node-body,
+  .text-node--lod-3 .text-node-body,
+  .text-node--lod-4 .text-node-body {
     transition: none;
   }
 }
 
-.text-node--lod-far {
+/* L0 (ultra-far): Hidden — no interaction */
+.text-node--lod-0 {
   pointer-events: none;
 }
 
-.text-node--lod-far .text-node-body {
+/* L1 (far): Placeholder bars — no interaction */
+.text-node--lod-1 {
+  pointer-events: none;
+}
+
+.text-node--lod-1 .text-node-body {
   pointer-events: none;
 }
 
@@ -1902,7 +1892,8 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
 }
 
 /* =============================================================================
-   Content Density Brackets
+   PFD PHASE 2: Content Density Brackets (Aurochs Bracket Primitives)
+   Spec: COGNOGRAPH-PFD-IMPLEMENTATION-PLAN.md Section 2A
 
    Color = NoteMode type (via --density-accent CSS variable).
    Geometry = content density (progressive border treatment).
@@ -1911,130 +1902,36 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
    Mid/Close zoom: 5 tiers (empty, sparse, medium, substantial, dense)
    ============================================================================= */
 
-/* --- Tier 1: Empty (0-30 words) — Standard frame only --- */
-.density--empty {
-  /* No additional treatment — standard 1px border from node mode */
+/* ═══ DENSITY BRACKETS ═══ */
+/* Visual density indicators — communicate content volume without reading */
+/* NOTE: border-left is RESERVED for activity indicators (is-active/is-thinking). */
+/* Density uses background tint ramps and opacity only. */
+
+.cognograph-node--note.density--empty .cognograph-node__body {
+  opacity: 0.5;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 8px,
+    var(--border-subtle) 8px,
+    var(--border-subtle) 9px
+  );
 }
 
-/* --- Tier 2 (far): Has Content (31-299 words) — Left accent bar --- */
-.density--has-content {
-  border-left: 3px solid var(--density-accent, var(--node-accent)) !important;
+.cognograph-node--note.density--sparse .cognograph-node__body {
+  opacity: 0.7;
 }
 
-/* --- Tier 2 (mid/close): Sparse (31-99 words) — Left bracket --- */
-.density--sparse {
-  border-left: 3px solid var(--density-accent, var(--node-accent)) !important;
+/* medium is the default — no special treatment */
+
+.cognograph-node--note.density--substantial .cognograph-node__body {
+  background: color-mix(in srgb, var(--ring-color) 3%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ring-color) 8%, transparent);
 }
 
-/* --- Tier 3 (mid/close): Medium (100-299 words) — Left bracket + top bar --- */
-.density--medium {
-  border-left: 3px solid var(--density-accent, var(--node-accent)) !important;
-  border-top: 3px solid var(--density-accent, var(--node-accent)) !important;
-}
-
-/* --- Tier 4 (mid/close): Substantial (300-599 words) — Corner notch (L-shaped) --- */
-.density--substantial {
-  position: relative;
-}
-
-.density--substantial::before {
-  content: '';
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  width: 32px;
-  height: 3px;
-  background: var(--density-accent, var(--node-accent));
-  z-index: 1;
-  pointer-events: none;
-  border-radius: 2px 0 0 0;
-}
-
-.density--substantial::after {
-  content: '';
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  width: 3px;
-  height: 32px;
-  background: var(--density-accent, var(--node-accent));
-  z-index: 1;
-  pointer-events: none;
-  border-radius: 2px 0 0 0;
-}
-
-/* --- Tier 5: Dense (600+ words) — Extended corner notch --- */
-.density--dense {
-  position: relative;
-}
-
-.density--dense::before {
-  content: '';
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  width: 48px;
-  height: 3px;
-  background: var(--density-accent, var(--node-accent));
-  z-index: 1;
-  pointer-events: none;
-  border-radius: 2px 0 0 0;
-}
-
-.density--dense::after {
-  content: '';
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  width: 3px;
-  height: 48px;
-  background: var(--density-accent, var(--node-accent));
-  z-index: 1;
-  pointer-events: none;
-  border-radius: 2px 0 0 0;
-}
-
-/* Dense tier at far/ultra-far zoom: slightly increased node opacity for visual weight */
-.note-node--lod-ultra-far.density--dense,
-.note-node--lod-far.density--dense {
-  opacity: 1;
-}
-
-/* Selection state: density pseudo-elements render behind selection highlight */
-.cognograph-node.selected.density--substantial::before,
-.cognograph-node.selected.density--substantial::after,
-.cognograph-node.selected.density--dense::before,
-.cognograph-node.selected.density--dense::after {
-  z-index: 0;
-}
-
-/* Density transitions (respects reduced motion) */
-.density--sparse,
-.density--has-content,
-.density--medium {
-  transition: border-color 200ms ease-out, border-width 200ms ease-out;
-}
-
-.density--substantial::before,
-.density--substantial::after,
-.density--dense::before,
-.density--dense::after {
-  transition: width 200ms ease-out, height 200ms ease-out, background 200ms ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .density--sparse,
-  .density--has-content,
-  .density--medium {
-    transition: none;
-  }
-
-  .density--substantial::before,
-  .density--substantial::after,
-  .density--dense::before,
-  .density--dense::after {
-    transition: none;
-  }
+.cognograph-node--note.density--dense .cognograph-node__body {
+  background: color-mix(in srgb, var(--ring-color) 6%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ring-color) 15%, transparent);
 }
 
 /* =============================================================================
@@ -2091,6 +1988,14 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
 .context-viz-active .react-flow__edge.context-edge-included path.react-flow__edge-path {
   stroke-width: 3;
   filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
+}
+
+/* CC Session gold glow variant — overrides white glow with gold */
+.context-viz-active .react-flow__edge.context-edge-terminal path.react-flow__edge-path {
+  stroke: var(--accent-glow, #C8963E);
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 4px rgba(200, 150, 62, 0.5));
+  transition: stroke 0.3s ease, filter 0.3s ease;
 }
 
 /* Selected edges always visible */
@@ -2177,6 +2082,8 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
   background: rgba(40, 40, 40, 0.9);
   color: rgba(255, 255, 255, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  /* PFD Phase 4B: transition for progressive disclosure */
+  transition: opacity var(--duration-fast, 150ms) var(--ease-default, ease);
 }
 
 /* Show only when context viz is active AND node is included */
@@ -2209,6 +2116,25 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
 .context-role-badge[data-role="scope"] {
   border-left: 2px solid #10b981;
   color: #6ee7b7;
+}
+
+/* PFD Phase 4B: Zoom-aware badge visibility via LOD */
+/* Hide at ultra-far and far zoom — spatial reasoning mode, badges are noise */
+[data-lod="ultra-far"] .context-role-badge,
+[data-lod="far"] .context-role-badge {
+  display: none;
+}
+
+/* Compact at medium zoom */
+[data-lod="mid"] .context-role-badge {
+  font-size: 7px;
+  padding: 0 4px;
+}
+
+/* Full at close and ultra-close — semantic reading mode */
+[data-lod="close"] .context-role-badge,
+[data-lod="ultra-close"] .context-role-badge {
+  opacity: 0.85;
 }
 
 /* =============================================================================
@@ -3072,11 +2998,42 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
    Terminal session nodes with accent colors and status indicators
    ============================================================================= */
 
-.conversation-node--cc-session {
-  background: color-mix(in srgb, var(--surface-panel, #1a1a2e) 95%, #000 5%);
+.conversation-node--terminal {
+  background: color-mix(in srgb, var(--surface-panel, var(--terminal-bg)) 95%, #000 5%);
 }
 
-.cc-session-badge {
+/* Light mode: softer terminal node shell */
+[data-theme="light"] .conversation-node--terminal {
+  background: color-mix(in srgb, var(--surface-panel, var(--terminal-bg)) 95%, #fff 5%);
+}
+
+/* Terminal activity pulse — visible at L0-L1 as ambient status signal */
+@keyframes terminal-pulse {
+  0%, 100% { box-shadow: 0 0 4px 1px var(--pulse-color, #22d3ee); }
+  50% { box-shadow: 0 0 12px 3px var(--pulse-color, #22d3ee); }
+}
+
+.terminal-node-pulse {
+  animation: terminal-pulse 2s ease-in-out infinite;
+}
+
+.terminal-node-idle {
+  box-shadow: 0 0 2px 0 var(--pulse-color, #22d3ee);
+  opacity: 0.6;
+}
+
+.terminal-node-exited {
+  opacity: 0.3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .terminal-node-pulse {
+    animation: none;
+    box-shadow: 0 0 6px 2px var(--pulse-color, #22d3ee);
+  }
+}
+
+.terminal-badge {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 9px;
   font-weight: 700;
@@ -3290,6 +3247,63 @@ html[data-glass-style="fluid-glass"] .cognograph-node[data-transparent="true"] {
   .cluster-bubble {
     transition: none;
   }
+}
+
+/* =============================================================================
+   NODE PROPERTY CONTROLS (Inline compact widgets)
+   Ultra-compact (20px height) property controls shown in node footer/body.
+   Different from PropertyBadges — these are always-visible, cycleable controls.
+   ============================================================================= */
+
+.node-property-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  max-height: 20px;
+  overflow: hidden;
+}
+
+/* ═══ CHAT BUBBLES ═══ */
+
+.chat-bubble {
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-body);
+  line-height: var(--leading-normal);
+  margin-bottom: 6px;
+}
+
+.chat-bubble:last-child {
+  margin-bottom: 0;
+}
+
+.chat-bubble--user {
+  background: var(--surface-panel-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.chat-bubble--assistant {
+  background: color-mix(in srgb, var(--ring-color, var(--node-conversation)) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ring-color, var(--node-conversation)) 15%, transparent);
+}
+
+.chat-bubble__role {
+  font-size: var(--text-micro);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.chat-bubble__role--user {
+  color: var(--text-secondary);
+}
+
+.chat-bubble__role--assistant {
+  color: var(--ring-color, var(--node-conversation));
 }
 
 /* =============================================================================

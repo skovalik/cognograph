@@ -3,53 +3,79 @@
    Single source of truth for all visual properties.
    Consumed by index.css (GUI) and nodes.css (nodes) via aliases.
 
-   SYNCED WITH: styleguide-master_02.html (2026-02-01)
+   SYNCED WITH: design-system-v2.html (2026-03-09)
    ============================================================================= */
+
+/* @property registrations for smooth CSS variable transitions */
+@property --surface-canvas { syntax: '<color>'; inherits: true; initial-value: #0A0908; }
+@property --surface-panel { syntax: '<color>'; inherits: true; initial-value: #0A0908; }
+@property --surface-panel-secondary { syntax: '<color>'; inherits: true; initial-value: #12110F; }
+@property --surface-node { syntax: '<color>'; inherits: true; initial-value: #1A1816; }
+@property --surface-elevated { syntax: '<color>'; inherits: true; initial-value: #221F1C; }
+@property --text-primary { syntax: '<color>'; inherits: true; initial-value: #EDE8E0; }
+@property --text-secondary { syntax: '<color>'; inherits: true; initial-value: #9E978D; }
+@property --text-muted { syntax: '<color>'; inherits: true; initial-value: #5A554E; }
+@property --cg-accent { syntax: '<color>'; inherits: true; initial-value: #C8963E; }
+@property --accent-glow { syntax: '<color>'; inherits: true; initial-value: #E5B95C; }
+@property --border-subtle { syntax: '<color>'; inherits: true; initial-value: rgba(240,237,232,0.06); }
+@property --border-default { syntax: '<color>'; inherits: true; initial-value: rgba(240,237,232,0.08); }
+@property --border-node { syntax: '<color>'; inherits: true; initial-value: rgb(55,65,81); }
 
 :root {
   /* =========================================================================
      SURFACE COLORS
      Background colors for canvas, panels, nodes, and inputs
      ========================================================================= */
-  --surface-canvas: #0d0d14;
-  --surface-grid: #1a1a24;
-  --surface-panel: #0d0d14;
-  --surface-panel-secondary: #14161e;
-  --surface-node: rgba(13, 13, 20, 0.95);
-  --surface-node-secondary: rgba(20, 22, 30, 0.5);
+  --surface-canvas: #0A0908;
+  --surface-grid: #1A1816;
+  --surface-panel: #0A0908;
+  --surface-panel-secondary: #12110F;
+  --surface-node: #1A1816;
+  --surface-node-bg: rgba(26, 24, 22, 0.95);
+  --surface-node-secondary: rgba(18, 17, 15, 0.5);
   --surface-node-header: transparent;
-  --surface-input: #14161e;
+  --surface-input: #12110F;
+  --surface-elevated: #221F1C;
 
   /* =========================================================================
      TEXT COLORS
      Primary, secondary, and muted text
      ========================================================================= */
-  --text-primary: #f3f4f6;
-  --text-secondary: #9ca3af;
-  --text-muted: #9ca3af;
+  --text-primary: #EDE8E0;
+  --text-secondary: #9E978D;
+  --text-muted: #5A554E;
 
   /* =========================================================================
      ACCENT COLORS
      Interactive elements, buttons, focus rings
      ========================================================================= */
-  --accent-primary: #9333ea;
-  --accent-secondary: #2563eb;
-  --accent-primary-hover: color-mix(in srgb, var(--accent-primary) 85%, white);
-  --accent-secondary-hover: color-mix(in srgb, var(--accent-secondary) 85%, white);
+
+  /* === COGNOGRAPH ACCENT (Single Accent System) === */
+  --cg-accent: #C8963E;
+  --accent-glow: #E5B95C;
+  --accent-glow-subtle: rgba(229, 185, 92, 0.15);
+  --accent-glow-strong: rgba(229, 185, 92, 0.35);
+  --cg-accent-hover: color-mix(in srgb, var(--cg-accent) 85%, var(--accent-glow));
+
+  /* Legacy aliases — map interactive accent to Warm Gold */
+  --accent-primary: var(--cg-accent);
+  --accent-secondary: var(--accent-glow);
+  --accent-primary-hover: color-mix(in srgb, var(--accent-glow) 85%, white);
+  --accent-secondary-hover: color-mix(in srgb, var(--accent-glow) 85%, white);
 
   /* =========================================================================
      NODE TYPE COLORS
      Each node type has a distinct brand color
      ========================================================================= */
-  --node-conversation: #3b82f6;
-  --node-project: #8b5cf6;
-  --node-note: #f59e0b;
-  --node-task: #10b981;
-  --node-artifact: #06b6d4;
-  --node-workspace: #ef4444;
-  --node-text: #94a3b8;
-  --node-action: #f97316;
-  --node-orchestrator: #a855f7;  /* purple-500 - agent mode differentiation */
+  --node-conversation: #3b82f6;  /* blue — primary, keep vivid */
+  --node-project: #7C7CAB;      /* muted violet */
+  --node-note: #f59e0b;         /* amber — primary, keep vivid */
+  --node-task: #6B9E84;         /* muted sage-green (warm) */
+  --node-artifact: #5A8EAB;     /* muted steel-blue (cool) */
+  --node-workspace: #AB6A6A;    /* muted rose */
+  --node-text: #94a3b8;         /* already muted */
+  --node-action: #C4845A;       /* muted copper */
+  --node-orchestrator: #a855f7; /* purple — primary, keep vivid */
 
   /* =========================================================================
      NODE MODE TINTS
@@ -91,12 +117,34 @@
   --overlay-backdrop: rgba(0, 0, 0, 0.6);
 
   /* =========================================================================
+     GLASS TOKENS
+     Static glass properties for design system alignment.
+     NOTE: Runtime glass classes in glass.css may override these dynamically.
+     ========================================================================= */
+  --glass-bg: rgba(26, 24, 22, 0.65);
+  --glass-border: rgba(240, 237, 232, 0.06);
+  --glass-sidebar-bg: rgba(10, 9, 8, 0.88);
+  --glass-toolbar-bg: rgba(26, 24, 22, 0.75);
+  --glass-blur: 12px;
+
+  /* =========================================================================
      BORDER COLORS
      Subtle and default borders for containers and dividers
      ========================================================================= */
-  --border-subtle: color-mix(in srgb, var(--text-secondary) 30%, transparent);
-  --border-default: color-mix(in srgb, var(--text-secondary) 6%, transparent);
+  --border-subtle: rgba(240, 237, 232, 0.06);
+  --border-default: rgba(240, 237, 232, 0.08);
+  --border-selection: rgba(240, 237, 232, 0.15);
   --border-node: rgb(55, 65, 81);
+
+  /* =========================================================================
+     CANVAS GRID
+     Dot grid and hash grid overlay tokens
+     ========================================================================= */
+  --grid-dot-color: rgba(240, 237, 232, 0.04);
+  --grid-dot-size: 1.5px;
+  --grid-spacing: 20px;
+  --grid-line-color: rgba(240, 237, 232, 0.03);
+  --grid-line-width: 0.5px;
 
   /* =========================================================================
      SPACING SCALE
@@ -153,19 +201,42 @@
      TYPOGRAPHY
      Font families and size scale
      ========================================================================= */
-  --font-sans: 'Inter', 'Roboto', 'Open Sans', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Source Code Pro', monospace;
-  --text-xs: 12px;
-  --text-sm: 13px;
-  --text-base: 14px;
-  --text-lg: 16px;
+
+  /* Base font size (user-adjustable via theme panel) */
+  --font-base: 14px;
+
+  /* Font families — default is Space Grotesk, user can switch */
+  --font-sans: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'Space Mono', 'JetBrains Mono', monospace;
+
+  /* Display font (same as sans by default, Instrument Serif for "Instrument" theme) */
+  --font-display: var(--font-sans);
+
+  /* Proportional type scale (all relative to --font-base) */
+  --text-display: calc(var(--font-base) * 2);      /* 24px */
+  --text-title: calc(var(--font-base) * 1.33);      /* 16px */
+  --text-node-title: calc(var(--font-base) * 1.08);  /* 13px */
+  --text-body: var(--font-base);                     /* 12px */
+  --text-label: calc(var(--font-base) * 0.92);       /* 11px */
+  --text-micro: calc(var(--font-base) * 0.83);       /* 10px */
+  --text-mono: calc(var(--font-base) * 0.92);        /* 11px */
+
+  /* Legacy aliases (backward compat for existing components) */
+  --text-xs: var(--text-body);      /* was 12px */
+  --text-sm: var(--text-node-title); /* was 13px */
+  --text-base: var(--font-base);    /* was 14px, now 12px */
+  --text-lg: var(--text-title);     /* was 16px */
   --text-xl: 18px;
-  --text-2xl: 24px;
+  --text-2xl: var(--text-display);  /* was 24px */
   --text-3xl: 30px;
+
+  /* Weights */
   --weight-normal: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
   --weight-bold: 700;
+
+  /* Line heights */
   --leading-tight: 1.25;
   --leading-normal: 1.5;
   --leading-relaxed: 1.625;
@@ -205,11 +276,11 @@
      TOOLBAR ICON COLORS
      Default + 4 accent slots for toolbar buttons
      ========================================================================= */
-  --toolbar-icon-default: #9ca3af;
-  --toolbar-icon-1: #a855f7;
-  --toolbar-icon-2: #22d3ee;
-  --toolbar-icon-3: #34d399;
-  --toolbar-icon-4: #a855f7;
+  --toolbar-icon-default: #5A554E;
+  --toolbar-icon-1: #F0EDE8;
+  --toolbar-icon-2: #F0EDE8;
+  --toolbar-icon-3: #F0EDE8;
+  --toolbar-icon-4: #F0EDE8;
 
   /* =========================================================================
      Z-INDEX SCALE
@@ -228,23 +299,41 @@
    Applied when data-theme="light" on body or ancestor
    ============================================================================= */
 [data-theme="light"] {
-  --surface-canvas: #ffffff;
-  --surface-grid: #e5e7eb;
-  --surface-panel: #ffffff;
-  --surface-panel-secondary: #f9fafb;
-  --surface-node: rgba(255, 255, 255, 0.95);
-  --surface-node-secondary: rgba(243, 244, 246, 0.8);
-  --surface-node-header: rgba(249, 250, 251, 0.5);
-  --surface-input: #ffffff;
+  /* Surface colors — warm palette */
+  --surface-canvas: #FAFAF8;
+  --surface-grid: #EDECEA;
+  --surface-panel: #FAFAF8;
+  --surface-panel-secondary: #FFFFFF;
+  --surface-node: #FFFFFF;
+  --surface-node-secondary: rgba(255, 255, 255, 0.8);
+  --surface-node-header: transparent;
+  --surface-input: #FFFFFF;
+  --surface-elevated: #FFFFFF;
 
-  --text-primary: #111827;
-  --text-secondary: #4b5563;
-  --text-muted: #6b7280;
+  /* Text colors */
+  --text-primary: #1A1816;
+  --text-secondary: #6B6560;
+  --text-muted: #9E978D;
 
-  --accent-primary: #7c3aed;
-  --accent-secondary: #2563eb;
+  /* Cognograph accent (--cg-accent, not --accent) */
+  --cg-accent: #1A1816;
+  --accent-glow: #A67B30;
+  --accent-glow-subtle: rgba(166, 123, 48, 0.12);
+  --accent-glow-strong: rgba(166, 123, 48, 0.25);
 
+  /* Legacy accent aliases for light mode — gold, not neutral */
+  --accent-primary: var(--accent-glow);
+  --accent-secondary: var(--accent-glow);
+
+  /* Border colors */
+  --border-subtle: rgba(26, 24, 22, 0.06);
+  --border-default: rgba(26, 24, 22, 0.08);
+  --border-selection: rgba(26, 24, 22, 0.12);
   --border-node: rgb(209, 213, 219);
+
+  /* Canvas grid — light mode overrides */
+  --grid-dot-color: rgba(26, 24, 22, 0.06);
+  --grid-line-color: rgba(26, 24, 22, 0.04);
 
   /* Layered shadows for light mode */
   --shadow-node: 0px 1px 2px 0px rgba(0, 0, 0, 0.1), 0px 1px 3px 1px rgba(0, 0, 0, 0.06);
@@ -264,6 +353,14 @@
   --toolbar-icon-2: #0891b2;
   --toolbar-icon-3: #059669;
   --toolbar-icon-4: #7c3aed;
+
+  /* Glass tokens (light) */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(26, 24, 22, 0.08);
+  --glass-sidebar-bg: rgba(255, 255, 255, 0.88);
+  --glass-toolbar-bg: rgba(255, 255, 255, 0.82);
+
+  --surface-node-bg: rgba(255, 255, 255, 0.95);
 }
 
 /* =============================================================================

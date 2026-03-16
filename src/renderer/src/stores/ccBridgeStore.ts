@@ -44,7 +44,7 @@ interface CCBridgeState {
   lastEventTime: number | null
 
   // --- Session Tracking (Phase 2) ---
-  /** Active/recent CC session metadata, keyed by sessionId */
+  /** Active/recent Terminal metadata, keyed by sessionId */
   sessions: Map<string, CCSessionData>
 
   // --- File Touches (Phase 2) ---

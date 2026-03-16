@@ -74,7 +74,7 @@ Linear chat interfaces (ChatGPT, Claude.ai) collapse under complexity:
 4. **Local-First** — Data stays on machine, no subscription required
 
 **Design Philosophy:**
-1. Solve Real Problems — Prioritize actual usage over theoretical value
+1. Build for Stefan First — Prioritize creator's actual usage
 2. Working Software Over Plans — Ship small, iterate
 3. Spatial Thinking as First-Class — Everything is nodes, edges, canvas
 4. AI as Collaborator — AI sees same structure as user
@@ -89,7 +89,7 @@ Linear chat interfaces (ChatGPT, Claude.ai) collapse under complexity:
 - Electron 36 + React 19 + React Flow 12 + Zustand 5 + Tailwind 4 + TipTap
 
 ### Project Location
-`./` (repository root)
+`F:\Work Work\Aurochs\cognograph_02`
 
 ---
 

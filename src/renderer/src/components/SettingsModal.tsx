@@ -7,6 +7,7 @@ import { ConnectorsTab } from './Settings/ConnectorsTab'
 import { DefaultPropertySettings } from './Settings/DefaultPropertySettings'
 import { KeyboardSettings } from './Settings/KeyboardSettings'
 import { GlassSettingsSection } from './Settings/GlassSettingsSection'
+import { AppearanceSettings } from './Settings/AppearanceSettings'
 import { UsageStats } from './UsageStats'
 import { Switch } from './ui/switch'
 import { Slider } from './ui/slider'
@@ -21,7 +22,7 @@ import { getPluginSettingsTabs } from '@plugins/renderer-registry'
 // Types
 // -----------------------------------------------------------------------------
 
-type SettingsCategory = 'workspace' | 'ai' | 'preferences' | 'keyboard' | 'defaults' | 'usage' | `plugin:${string}`
+type SettingsCategory = 'appearance' | 'workspace' | 'ai' | 'preferences' | 'keyboard' | 'defaults' | 'usage' | `plugin:${string}`
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -33,7 +34,7 @@ interface SettingsModalProps {
 // -----------------------------------------------------------------------------
 
 function SettingsModalComponent({ isOpen, onClose }: SettingsModalProps): JSX.Element | null {
-  const [activeCategory, setActiveCategory] = useState<SettingsCategory>('workspace')
+  const [activeCategory, setActiveCategory] = useState<SettingsCategory>('appearance')
 
   // Theme settings
   const themeSettings = useWorkspaceStore((state) => state.themeSettings)
@@ -191,6 +192,7 @@ function SettingsModalComponent({ isOpen, onClose }: SettingsModalProps): JSX.El
   if (!isOpen) return null
 
   const navItems: Array<{ id: SettingsCategory; label: string; icon: typeof Monitor }> = [
+    { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'workspace', label: 'Workspace', icon: FolderOpen },
     { id: 'ai', label: 'AI & Connectors', icon: Brain },
     { id: 'preferences', label: 'Preferences', icon: SlidersHorizontal },
@@ -204,7 +206,7 @@ function SettingsModalComponent({ isOpen, onClose }: SettingsModalProps): JSX.El
 
   return (
     <div className="fixed inset-0 gui-z-modals flex items-center justify-center pointer-events-none">
-      <div ref={modalRef} className="gui-modal glass-fluid w-[680px] max-h-[80vh] flex flex-col pointer-events-auto" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+      <div ref={modalRef} className="gui-modal glass-fluid w-[680px] max-w-[calc(100vw-32px)] max-h-[80vh] flex flex-col pointer-events-auto" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
         {/* Header */}
         <div className="gui-panel-header p-4">
           <div className="gui-panel-header-title">
@@ -219,10 +221,10 @@ function SettingsModalComponent({ isOpen, onClose }: SettingsModalProps): JSX.El
           </button>
         </div>
 
-        {/* Content: Two-column layout */}
-        <div className="flex flex-1 overflow-hidden">
+        {/* Content: Two-column layout (stacks on mobile) */}
+        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
           {/* Left: Navigation */}
-          <div className="w-48 border-r gui-border p-2 space-y-1">
+          <div className="w-full md:w-48 border-b md:border-b-0 md:border-r gui-border p-2 space-y-1">
             {navItems.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
@@ -255,6 +257,9 @@ function SettingsModalComponent({ isOpen, onClose }: SettingsModalProps): JSX.El
 
           {/* Right: Settings content */}
           <div className="flex-1 p-4 overflow-y-auto" style={{ minHeight: '400px' }}>
+            {activeCategory === 'appearance' && (
+              <AppearanceSettings />
+            )}
             {activeCategory === 'workspace' && (
               <WorkspaceSettings
                 workspaceName={workspaceName}
@@ -810,7 +815,7 @@ function ProgramSettings({
       {/* Version Info */}
       <div className="pt-4 border-t gui-border">
         <p className="text-xs gui-text-secondary text-center">
-          Cognograph v0.1.0
+          [Cognograph] v0.1.0
         </p>
       </div>
     </div>
@@ -1008,61 +1013,63 @@ function WorkspaceSettings({
         )}
       </div>
 
-      {/* Export / Import */}
-      <div className="border-t border-[var(--border-subtle)] pt-4">
-        <h4 className="text-sm font-medium gui-text mb-3 flex items-center gap-2">
-          <Download className="w-4 h-4" />
-          Export / Import
-        </h4>
-        <div className="flex gap-2">
-          <button
-            onClick={async () => {
-              const state = useWorkspaceStore.getState()
-              const data = state.getWorkspaceData()
-              const result = await window.api.dialog.showSaveDialog({
-                title: 'Export Workspace',
-                defaultPath: `${data.name || 'workspace'}.json`,
-                filters: [
-                  { name: 'Cognograph Workspace', extensions: ['json'] },
-                  { name: 'All Files', extensions: ['*'] }
-                ]
-              })
-              if (!result.canceled && result.filePath) {
-                await window.api.workspace.saveAs(data, result.filePath)
-              }
-            }}
-            className="gui-btn gui-btn-ghost flex-1 flex items-center gap-2 justify-center"
-          >
-            <Upload className="w-4 h-4" />
-            <span className="text-sm">Export</span>
-          </button>
-          <button
-            onClick={async () => {
-              const result = await window.api.dialog.showOpenDialog({
-                title: 'Import Workspace',
-                filters: [
-                  { name: 'Cognograph Workspace', extensions: ['json'] },
-                  { name: 'All Files', extensions: ['*'] }
-                ],
-                properties: ['openFile']
-              })
-              if (!result.canceled && result.filePaths?.[0]) {
-                const loadResult = await window.api.workspace.loadFromPath(result.filePaths[0])
-                if (loadResult.success && loadResult.data) {
-                  useWorkspaceStore.getState().loadWorkspace(loadResult.data)
-                }
-              }
-            }}
-            className="gui-btn gui-btn-ghost flex-1 flex items-center gap-2 justify-center"
-          >
+      {/* Export / Import (Electron only — uses native file dialogs) */}
+      {(window as any).__ELECTRON__ && (
+        <div className="border-t border-[var(--border-subtle)] pt-4">
+          <h4 className="text-sm font-medium gui-text mb-3 flex items-center gap-2">
             <Download className="w-4 h-4" />
-            <span className="text-sm">Import</span>
-          </button>
+            Export / Import
+          </h4>
+          <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                const state = useWorkspaceStore.getState()
+                const data = state.getWorkspaceData()
+                const result = await window.api.dialog.showSaveDialog({
+                  title: 'Export Workspace',
+                  defaultPath: `${data.name || 'workspace'}.json`,
+                  filters: [
+                    { name: 'Cognograph Workspace', extensions: ['json'] },
+                    { name: 'All Files', extensions: ['*'] }
+                  ]
+                })
+                if (!result.canceled && result.filePath) {
+                  await window.api.workspace.saveAs(data, result.filePath)
+                }
+              }}
+              className="gui-btn gui-btn-ghost flex-1 flex items-center gap-2 justify-center"
+            >
+              <Upload className="w-4 h-4" />
+              <span className="text-sm">Export</span>
+            </button>
+            <button
+              onClick={async () => {
+                const result = await window.api.dialog.showOpenDialog({
+                  title: 'Import Workspace',
+                  filters: [
+                    { name: 'Cognograph Workspace', extensions: ['json'] },
+                    { name: 'All Files', extensions: ['*'] }
+                  ],
+                  properties: ['openFile']
+                })
+                if (!result.canceled && result.filePaths?.[0]) {
+                  const loadResult = await window.api.workspace.loadFromPath(result.filePaths[0])
+                  if (loadResult.success && loadResult.data) {
+                    useWorkspaceStore.getState().loadWorkspace(loadResult.data)
+                  }
+                }
+              }}
+              className="gui-btn gui-btn-ghost flex-1 flex items-center gap-2 justify-center"
+            >
+              <Download className="w-4 h-4" />
+              <span className="text-sm">Import</span>
+            </button>
+          </div>
+          <p className="text-xs gui-text-secondary mt-2">
+            Export saves a snapshot to any location. Import loads a workspace from a file.
+          </p>
         </div>
-        <p className="text-xs gui-text-secondary mt-2">
-          Export saves a snapshot to any location. Import loads a workspace from a file.
-        </p>
-      </div>
+      )}
 
       {/* Info box */}
       <div className="gui-card p-3">

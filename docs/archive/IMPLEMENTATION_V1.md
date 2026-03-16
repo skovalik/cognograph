@@ -10,8 +10,8 @@
 
 ```bash
 # Create project directory (if not exists)
-mkdir cognograph
-cd cognograph
+mkdir -p <project-root>
+cd <project-root>
 
 # Initialize electron-vite with React TypeScript template
 npm create electron-vite@latest . -- --template react-ts

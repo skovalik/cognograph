@@ -191,14 +191,14 @@ export interface CCDispatchHealthCheck {
 export type FileTouchOperation = 'read' | 'edit' | 'write' | 'grep'
 
 /**
- * Tracks how a specific CC session has interacted with a file.
+ * Tracks how a specific Terminal has interacted with a file.
  */
 export interface FileTouch {
   /** Absolute file path */
   filePath: string
   /** File path relative to project root */
   fileRelative: string
-  /** CC session that touched the file */
+  /** Terminal that touched the file */
   sessionId: string
   /** Unix ms timestamp of last interaction */
   lastTouched: number
@@ -212,7 +212,7 @@ export interface FileTouch {
 // Session Tracking
 // -----------------------------------------------------------------------------
 
-/** Lifecycle status of a CC session */
+/** Lifecycle status of a Terminal */
 export type CCSessionStatus = 'active' | 'idle' | 'ended'
 
 /**

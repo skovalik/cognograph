@@ -13,7 +13,7 @@
 // Primary stores (legacy - keep for backward compatibility during migration)
 export { useWorkspaceStore } from './workspaceStore'
 export { useCanvasStore, selectNodes, selectEdges, selectSelectedNodeIds, selectSelectedEdgeIds, selectViewport, selectIsNodeStreaming, selectIsRecentlySpawned } from './canvasStore'
-export { useUIStore, selectActivePanel, selectActiveChatNodeId, selectLeftSidebarOpen, selectLeftSidebarTab, selectIsNodeExpanded, selectThemeSettings, selectPinnedWindows, selectIsNodePinned } from './uiStore'
+export { useUIStore, selectActivePanel, selectActiveChatNodeId, selectLeftSidebarOpen, selectLeftSidebarTab, selectIsNodeExpanded, selectThemeSettings, selectPinnedWindows, selectIsNodePinned, selectArtboardNodeId, selectIsArtboardActive } from './uiStore'
 export { useFeaturesStore, selectWorkspaceId, selectWorkspaceName, selectIsDirty, selectIsLoading, selectSaveStatus, selectHistoryState, selectPendingExtractions, selectPendingExtractionsForSource, selectTrash, selectSyncMode } from './featuresStore'
 
 // Domain stores (Week 2 Stream B Track 2 Phase 2.2a)
@@ -44,6 +44,7 @@ export { useSessionStatsStore } from './sessionStatsStore'
 export { useAuditStore, selectAuditEvents, selectAuditEventCount, selectAuditTotalCost, selectAuditFilter, selectIsSearching } from './auditStore'
 export { useGraphIntelligenceStore, selectInsights, selectActiveInsights, selectInsightsByNode, selectCostHistory, selectDailyBudgetUsed, selectDailyBudgetLimit, selectCurrentSessionCost, selectIsAnalyzing } from './graphIntelligenceStore'
 export { useAnalyticsStore, selectMetrics, selectActivationScore, selectTimeToFirstNode, selectTimeToFirstConnection, selectTimeToFirstChat, selectTutorialCompleted, selectTemplateUsed, selectAhaAchieved } from './analyticsStore'
+export { useOnboardingStore, selectOnboardingStep, selectOnboardingCompleted, selectOnboardingTemplate } from './onboardingStore'
 
 // Types
 export type { CanvasState, UIState, FeaturesState, PinnedWindow, TrashedItem, ExtractionDragState, LastAcceptedExtraction } from './types'

@@ -4,7 +4,7 @@
  * Displays feature name, benefit description, and upgrade CTA.
  */
 
-import { memo, useState, useCallback } from 'react'
+import { memo, useState, useCallback, useEffect, useRef } from 'react'
 import { Lock, X, ArrowRight, Sparkles } from 'lucide-react'
 import {
   usePlan,
@@ -19,34 +19,27 @@ const FEATURE_INFO: Record<string, { name: string; description: string; benefit:
     description: 'Sync your workspaces across devices and access them from anywhere.',
     benefit: 'Never lose your work - automatic backup and cross-device access.'
   },
-  version_history: {
-    name: 'Version History',
-    description: 'View and restore previous versions of your workspace.',
-    benefit: 'Time travel through your work and recover deleted content.'
+  cloud_terminal_unlimited: {
+    name: 'Unlimited Cloud Terminals',
+    description: 'Run unlimited cloud terminal sessions without daily limits.',
+    benefit: 'Full-power cloud development environment, always available.'
   },
-  branching: {
-    name: 'Workspace Branching',
-    description: 'Create experimental copies of your workspace to try ideas safely.',
-    benefit: 'Experiment freely without affecting your main workspace.'
+  orchestrator_node: {
+    name: 'Orchestrator Nodes',
+    description: 'Multi-step AI pipelines with branching and error handling.',
+    benefit: 'Chain AI agents together for complex automated workflows.'
   },
-  mcp_integrations: {
-    name: 'MCP Integrations',
-    description: 'Connect Claude to external tools and services via MCP.',
-    benefit: 'Automate workflows and extend Claude\'s capabilities.'
+  full_context_injection: {
+    name: 'Full Context Injection',
+    description: 'Inject full workspace context into AI conversations.',
+    benefit: 'Give AI complete project awareness for better responses.'
   },
-  api_access: {
-    name: 'API Access',
-    description: 'Programmatically interact with your workspaces.',
-    benefit: 'Build custom integrations and automations.'
-  }
 }
 
 // Plan display information
 const PLAN_INFO: Record<Plan, { name: string; price: string }> = {
   free: { name: 'Free', price: '$0' },
-  pro: { name: 'Pro', price: '$12/mo' },
-  power: { name: 'Power', price: '$29/mo' },
-  team: { name: 'Team', price: '$49/seat/mo' }
+  pro: { name: 'Pro', price: '$9/mo' },
 }
 
 interface UpgradePromptProps {
@@ -70,30 +63,52 @@ export const UpgradePrompt = memo(function UpgradePrompt({
   const planInfo = PLAN_INFO[requiredPlan]
 
   const [isLoading, setIsLoading] = useState(false)
+  const upgradeBtnRef = useRef<HTMLButtonElement>(null)
+
+  // Escape key handler for modal variant
+  useEffect(() => {
+    if (variant !== 'modal' || !onClose) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [variant, onClose])
+
+  // Auto-focus upgrade button on mount for modal variant
+  useEffect(() => {
+    if (variant === 'modal') {
+      upgradeBtnRef.current?.focus()
+    }
+  }, [variant])
 
   const handleUpgrade = useCallback(async () => {
     setIsLoading(true)
     try {
-      // Open upgrade page in browser
-      // In production, this would go to the Stripe checkout
-      const upgradeUrl = `https://cognograph.app/upgrade?plan=${requiredPlan}&feature=${feature}`
-      window.open(upgradeUrl, '_blank')
+      const { isAuthEnabled } = await import('../../../web/lib/supabase')
+      if (isAuthEnabled()) {
+        const { createCheckoutSession } = await import('../../../web/lib/billingService')
+        await createCheckoutSession('pro_monthly')
+      } else {
+        window.open('https://cognograph.app/#pricing', '_blank')
+      }
     } finally {
       setIsLoading(false)
     }
-  }, [requiredPlan, feature])
+  }, [])
 
   if (variant === 'tooltip') {
     return (
       <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-lg shadow-lg p-3 max-w-xs">
-        <div className="flex items-center gap-2 text-yellow-500 mb-2">
+        <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--gold)' }}>
           <Lock size={14} />
           <span className="text-sm font-medium">{planInfo.name} Feature</span>
         </div>
         <p className="text-xs text-[var(--text-secondary)] mb-2">{featureInfo.description}</p>
         <button
           onClick={handleUpgrade}
-          className="w-full text-xs py-1.5 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded flex items-center justify-center gap-1"
+          className="w-full text-xs py-1.5 px-3 rounded flex items-center justify-center gap-1"
+          style={{ background: 'var(--gold)', color: 'var(--bg-primary)' }}
         >
           Upgrade to {planInfo.name}
           <ArrowRight size={12} />
@@ -105,8 +120,8 @@ export const UpgradePrompt = memo(function UpgradePrompt({
   if (variant === 'inline') {
     return (
       <div className="flex items-center gap-3 p-3 bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-lg">
-        <div className="p-2 rounded-full bg-yellow-500/10">
-          <Lock size={16} className="text-yellow-500" />
+        <div className="p-2 rounded-full" style={{ background: 'color-mix(in srgb, var(--gold) 10%, transparent)' }}>
+          <Lock size={16} style={{ color: 'var(--gold)' }} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-[var(--text-primary)]">{featureInfo.name}</p>
@@ -115,7 +130,8 @@ export const UpgradePrompt = memo(function UpgradePrompt({
         <button
           onClick={handleUpgrade}
           disabled={isLoading}
-          className="shrink-0 text-xs py-1.5 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded flex items-center gap-1 disabled:opacity-50"
+          className="shrink-0 text-xs py-1.5 px-3 rounded flex items-center gap-1 disabled:opacity-50"
+          style={{ background: 'var(--gold)', color: 'var(--bg-primary)' }}
         >
           Upgrade
           <ArrowRight size={12} />
@@ -140,8 +156,8 @@ export const UpgradePrompt = memo(function UpgradePrompt({
 
         {/* Header */}
         <div className="p-6 text-center border-b border-[var(--border-default)]">
-          <div className="inline-flex p-3 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 mb-4">
-            <Sparkles size={24} className="text-blue-400" />
+          <div className="inline-flex p-3 rounded-full mb-4" style={{ background: 'color-mix(in srgb, var(--gold) 15%, transparent)' }}>
+            <Sparkles size={24} style={{ color: 'var(--gold)' }} />
           </div>
           <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-1">
             Unlock {featureInfo.name}
@@ -157,8 +173,8 @@ export const UpgradePrompt = memo(function UpgradePrompt({
             {featureInfo.description}
           </p>
 
-          <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-6">
-            <p className="text-sm text-blue-300 flex items-start gap-2">
+          <div className="p-3 rounded-lg mb-6" style={{ background: 'color-mix(in srgb, var(--gold) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--gold) 20%, transparent)' }}>
+            <p className="text-sm flex items-start gap-2" style={{ color: 'var(--gui-accent-secondary)' }}>
               <Sparkles size={14} className="shrink-0 mt-0.5" />
               {featureInfo.benefit}
             </p>
@@ -173,8 +189,8 @@ export const UpgradePrompt = memo(function UpgradePrompt({
             <div className="flex items-center">
               <ArrowRight size={16} className="text-[var(--text-secondary)]" />
             </div>
-            <div className="flex-1 p-3 rounded-lg border-2 border-blue-500 bg-blue-500/5">
-              <p className="text-xs text-blue-400 mb-1">Upgrade to</p>
+            <div className="flex-1 p-3 rounded-lg" style={{ border: '2px solid var(--gold)', background: 'color-mix(in srgb, var(--gold) 5%, transparent)' }}>
+              <p className="text-xs mb-1" style={{ color: 'var(--gold)' }}>Upgrade to</p>
               <p className="font-medium text-[var(--text-primary)]">{planInfo.name}</p>
               <p className="text-xs text-[var(--text-secondary)]">{planInfo.price}</p>
             </div>
@@ -182,9 +198,11 @@ export const UpgradePrompt = memo(function UpgradePrompt({
 
           {/* CTA */}
           <button
+            ref={upgradeBtnRef}
             onClick={handleUpgrade}
             disabled={isLoading}
-            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 transition-opacity hover:opacity-90"
+            style={{ background: 'var(--gold)', color: 'var(--bg-primary)' }}
           >
             {isLoading ? (
               'Loading...'
@@ -200,7 +218,7 @@ export const UpgradePrompt = memo(function UpgradePrompt({
         {/* Footer */}
         <div className="px-6 py-4 bg-[var(--bg-secondary)] rounded-b-lg border-t border-[var(--border-default)]">
           <p className="text-xs text-center text-[var(--text-secondary)]">
-            14-day money-back guarantee · Cancel anytime
+            Cancel anytime — no questions asked
           </p>
         </div>
       </div>
@@ -221,7 +239,7 @@ export function useFeatureGate(feature: string): {
 } {
   const plan = usePlan()
   const requiredPlan = getRequiredPlan(feature)
-  const planOrder = ['free', 'pro', 'power', 'team']
+  const planOrder = ['free', 'pro']
   const isEnabled = planOrder.indexOf(plan) >= planOrder.indexOf(requiredPlan)
 
   const PromptComponent = memo(function PromptComponent({ onClose }: { onClose?: () => void }) {

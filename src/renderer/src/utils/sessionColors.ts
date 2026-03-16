@@ -2,7 +2,7 @@
 // sessionColors.ts -- Session accent color palette for CC terminal sessions
 //
 // 8 distinct accent colors assigned round-robin to active sessions.
-// Used by ccSession.accentColor to visually distinguish concurrent sessions.
+// Used by terminal.accentColor to visually distinguish concurrent sessions.
 // =============================================================================
 
 /** 8 distinct accent colors for terminal sessions */

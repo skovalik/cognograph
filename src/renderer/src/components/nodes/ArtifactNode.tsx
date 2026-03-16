@@ -17,10 +17,13 @@ import {
   Eye,
   FileCode,
   FileImage,
-  File
+  File,
+  Video,
+  Volume2,
+  Box,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
-import type { ArtifactNodeData, ArtifactContentType, ArtifactFile, PreviewViewport } from '@shared/types'
+import type { ArtifactNodeData, ArtifactContentType, ArtifactFile, ArtifactMediaMetadata, PreviewViewport } from '@shared/types'
 import { DEFAULT_THEME_SETTINGS } from '@shared/types'
 import { PropertyBadges } from '../properties/PropertyBadge'
 import { NodeSocketBars } from './SocketBar'
@@ -36,6 +39,7 @@ import { useNodeResize } from '../../hooks/useNodeResize'
 import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
 import { PreviewToolbar } from './PreviewToolbar'
 import { StructuredContentPreview } from './StructuredContentPreview'
+import { NodePropertyControls } from './NodePropertyControls'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
 import {
   isAllowedPreviewUrl,
@@ -44,6 +48,9 @@ import {
   clampRefreshInterval,
   PREVIEW_VIEWPORT_WIDTHS,
 } from '../../utils/previewUrlValidation'
+import { ArtifactVideoRenderer } from './ArtifactVideoRenderer'
+import { ArtifactAudioRenderer } from './ArtifactAudioRenderer'
+import { Artifact3DRenderer } from './Artifact3DRenderer'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -108,6 +115,12 @@ function getSmallContentTypeIcon(contentType: ArtifactContentType): JSX.Element 
       return <Table className="w-3 h-3" />
     case 'image':
       return <Image className="w-3 h-3" />
+    case 'video':
+      return <Video className="w-3 h-3" />
+    case 'audio':
+      return <Volume2 className="w-3 h-3" />
+    case '3d-model':
+      return <Box className="w-3 h-3" />
     case 'text':
     default:
       return <FileText className="w-3 h-3" />
@@ -125,6 +138,9 @@ function getContentTypeLabel(contentType: ArtifactContentType, customType?: stri
     json: 'JSON',
     csv: 'CSV',
     image: 'Image',
+    video: 'Video',
+    audio: 'Audio',
+    '3d-model': '3D Model',
     text: 'Text',
     custom: customType || 'Custom'
   }
@@ -206,6 +222,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   const defaultHeight = isPreviewMode ? Math.max(DEFAULT_HEIGHT, PREVIEW_MIN_HEIGHT) : DEFAULT_HEIGHT
   const nodeWidth = propsWidth || nodeData.width || defaultWidth
   const nodeHeight = propsHeight || nodeData.height || defaultHeight
+  const hasExplicitHeight = !!(propsHeight || nodeData.height)
 
   // Get content type for tint differentiation
   const activeFileContentType = nodeData.files?.[0]?.contentType || nodeData.contentType
@@ -213,39 +230,13 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.artifact ?? '#8b5cf7'
 
-    // Content type tint mapping (based on content complexity/importance)
-    const contentTypeTints: Record<ArtifactContentType, number> = {
-      code: 28,       // Medium-dark (structured content)
-      html: 30,       // Darker (rich content)
-      svg: 25,        // Medium (vector graphics)
-      mermaid: 25,    // Medium (diagrams)
-      json: 28,       // Medium-dark (data)
-      markdown: 22,   // Lighter (text content)
-      text: 20,       // Light (plain text)
-      csv: 24,        // Medium-light (tabular data)
-      image: 18,      // Lightest (visual content)
-      custom: 25      // Medium (fallback)
-    }
-
-    const baseOpacity = contentTypeTints[activeFileContentType] || 25
-    const tintOpacity = themeSettings.isDarkMode ? Math.round(baseOpacity * 0.5) : baseOpacity
-    const borderWidth = 2
-
     return {
-      borderWidth: `${borderWidth}px`,
-      borderStyle: 'solid', // FORCE solid borders
-      borderColor: safeNodeColor,
-      // ALWAYS add opaque background (CSS overrides when glass enabled)
-      background: `color-mix(in srgb, ${safeNodeColor} ${tintOpacity}%, var(--node-bg))`,
-      boxShadow: selected ? `0 0 0 2px ${safeNodeColor}40, 0 0 20px ${safeNodeColor}30` : 'none',
+      '--ring-color': safeNodeColor,
+      '--node-accent': safeNodeColor,
       width: nodeWidth,
-      height: nodeHeight,
-      transition: 'background 200ms ease-out, border-color 200ms ease-out, backdrop-filter 200ms ease-out, opacity 200ms ease-out',
-      // CSS custom properties for dynamic theming
-      '--ring-color': safeNodeColor,    // Edge handles color
-      '--node-accent': safeNodeColor     // Glass background tint
+      ...(hasExplicitHeight ? { height: nodeHeight } : { minHeight: nodeHeight }),
     }
-  }, [nodeColor, themeSettings.nodeColors.artifact, isGlassEnabled, selected, nodeWidth, nodeHeight, activeFileContentType])
+  }, [nodeColor, themeSettings.nodeColors.artifact, nodeWidth, nodeHeight, hasExplicitHeight])
 
   // Handle resize - also update node internals to trigger edge recalculation
   const handleResizeStart = useCallback(() => {
@@ -443,16 +434,17 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   const getPreviewContent = (): string => {
     if (!activeContent.content) return ''
 
-    if (activeContent.contentType === 'image') {
-      return '[Image content]'
-    }
+    if (activeContent.contentType === 'image') return '[Image content]'
+    if (activeContent.contentType === 'video') return '[Video content]'
+    if (activeContent.contentType === 'audio') return '[Audio content]'
+    if (activeContent.contentType === '3d-model') return '[3D Model]'
 
     const lines = activeContent.content.split('\n')
     const previewLines = nodeData.collapsed ? 3 : nodeData.previewLines || 10
     const preview = lines.slice(0, previewLines).join('\n')
 
-    if (preview.length > 500) {
-      return preview.slice(0, 500) + '...'
+    if (preview.length > 1500) {
+      return preview.slice(0, 1500) + '...'
     }
 
     return lines.length > previewLines ? preview + '\n...' : preview
@@ -531,7 +523,12 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   const isCut = useWorkspaceStore(s => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id))
 
   // LOD (Level of Detail) rendering based on zoom level
-  const { showContent, showTitle, showBadges, showLede, zoomLevel } = useNodeContentVisibility()
+  const {
+    showContent, showTitle, showBadges, showLede,
+    showHeader, showFooter, showPlaceholders,
+    showInteractiveControls, zoomLevel
+  } = useNodeContentVisibility()
+  const isUltraFar = zoomLevel === 'ultra-far'
   const isFar = zoomLevel === 'far'
 
   // Show members mode - dim non-members
@@ -550,6 +547,9 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
       case 'json': return <FileJson size={16} style={{ color: nodeColor }} />
       case 'csv': return <Table size={16} style={{ color: nodeColor }} />
       case 'mermaid': return <GitBranch size={16} style={{ color: nodeColor }} />
+      case 'video': return <Video size={16} style={{ color: nodeColor }} />
+      case 'audio': return <Volume2 size={16} style={{ color: nodeColor }} />
+      case '3d-model': return <Box size={16} style={{ color: nodeColor }} />
       default: return <File size={16} style={{ color: nodeColor }} />
     }
   }, [activeContent.contentType, nodeColor])
@@ -558,6 +558,9 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   const ledePreview = useMemo(() => {
     if (!activeContent.content) return ''
     if (activeContent.contentType === 'image') return '[Image content]'
+    if (activeContent.contentType === 'video') return '[Video content]'
+    if (activeContent.contentType === 'audio') return '[Audio content]'
+    if (activeContent.contentType === '3d-model') return '[3D Model]'
     return activeContent.content.slice(0, 120).replace(/\n/g, ' ') + (activeContent.content.length > 120 ? '...' : '')
   }, [activeContent.content, activeContent.contentType])
 
@@ -567,6 +570,8 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
     selected && 'selected',
     isDisabled && 'cognograph-node--disabled',
     isSpawning && 'spawning',
+    isSpawning && 'is-thinking',
+    // is-active reserved for functional state only (not selection)
     nonMemberClass,
     memberHighlightClass,
     warmthLevel && `warmth-${warmthLevel}`,
@@ -579,8 +584,15 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
 
   const nodeContent = (
     <div ref={nodeRef} className={nodeClassName} style={nodeStyle} data-transparent={transparent} data-lod={zoomLevel} onDoubleClick={handleDoubleClick}>
-      {/* Handles on all four sides — hidden at far zoom */}
-      {!isFar && (
+      {/* Type label: floats above node */}
+      <div className="cognograph-node__type-label" style={{ color: nodeColor ?? '#8b5cf7' }}>
+        ARTIFACT
+      </div>
+
+      {/* ================================================================
+          Handles — hidden at L0 (ultra-far), shown L1+
+          ================================================================ */}
+      {showHeader && (
         <>
           <Handle type="target" position={Position.Top} id="top-target" />
           <Handle type="source" position={Position.Top} id="top-source" />
@@ -600,7 +612,30 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
         </div>
       )}
 
-      {/* === LOD: Far zoom — compact pill with file-type icon + title + type badge === */}
+      {/* ================================================================
+          L0 (ultra-far): Format icon only + type color pill.
+          Minimal DOM — ~3 elements. No handles, no text, no editor.
+          ================================================================ */}
+      {isUltraFar && (
+        <div className="flex items-center justify-center h-full">
+          {fileTypeIcon}
+          {/* Spawning indicator at L0 — pulsing border glow */}
+          {isSpawning && (
+            <div
+              className="absolute inset-0 rounded-lg pointer-events-none"
+              style={{
+                boxShadow: `0 0 8px 2px ${nodeColor ?? '#8b5cf7'}80`,
+                animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+              }}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ================================================================
+          L1 (far): Title + format badge + placeholder bars.
+          Compact pill layout. No editor, no content body.
+          ================================================================ */}
       {isFar && (
         <div className="flex items-center gap-2 px-2 py-1 h-full min-h-0 overflow-hidden">
           {fileTypeIcon}
@@ -626,8 +661,18 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
         </div>
       )}
 
-      {/* === LOD: Mid + Close — full header === */}
-      {!isFar && (
+      {/* L1 placeholder bars — skeleton density preview for file content */}
+      {showPlaceholders && !nodeData.collapsed && activeContent.content && activeContent.contentType !== 'image' && (
+        <div className="cognograph-node__body" style={{ pointerEvents: 'none' }}>
+          <StructuredContentPreview content={activeContent.content} zoomLevel="far" />
+        </div>
+      )}
+
+      {/* ================================================================
+          L2 (mid): Header + content preview (lede) + format badge.
+          Summary card mode — no editor, no interactive controls.
+          ================================================================ */}
+      {showHeader && !isUltraFar && !isFar && (
         <>
           {/* Header — standard buttons or preview toggle */}
           {isPreviewMode ? (
@@ -646,7 +691,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                 className="cognograph-node__title flex-1 truncate"
                 placeholder="Untitled Artifact"
               />
-              {showContent && (
+              {showInteractiveControls && (
                 <NodeAIErrorBoundary compact>
                   <AIPropertyAssist
                     nodeId={id}
@@ -673,7 +718,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                 className="cognograph-node__title flex-1 truncate"
                 placeholder="Untitled Artifact"
               />
-              {showContent && (
+              {showInteractiveControls && (
                 <NodeAIErrorBoundary compact>
                   <AIPropertyAssist
                     nodeId={id}
@@ -682,7 +727,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                   />
                 </NodeAIErrorBoundary>
               )}
-              {showContent && (
+              {showInteractiveControls && (
                 <button
                   onClick={handleDownload}
                   className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
@@ -691,7 +736,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                   <Download className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
                 </button>
               )}
-              {showContent && (
+              {showInteractiveControls && (
                 <button
                   onClick={handleOpenProperties}
                   className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
@@ -716,15 +761,8 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
         </>
       )}
 
-      {/* === LOD: Far zoom — skeleton density preview for file content === */}
-      {isFar && !nodeData.collapsed && activeContent.content && activeContent.contentType !== 'image' && (
-        <div className="cognograph-node__body" style={{ pointerEvents: 'none' }}>
-          <StructuredContentPreview content={activeContent.content} zoomLevel="far" />
-        </div>
-      )}
-
-      {/* === LOD: Mid zoom — summary with content preview (lede) === */}
-      {showLede && !isFar && !nodeData.collapsed && (
+      {/* L2 lede — summary with content preview */}
+      {showLede && !nodeData.collapsed && (
         <div className="cognograph-node__body" style={{ maxHeight: '4.5em', overflow: 'hidden' }}>
           <div className="flex items-center gap-2 mb-1">
             <span
@@ -762,24 +800,29 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
         </div>
       )}
 
-      {/* === LOD: Close zoom — full content === */}
-      {showContent && !isFar && (
+      {/* ================================================================
+          L3-L4 (close / ultra-close): Full content renderer.
+          Monaco, preview iframe, file tabs, version history, property controls.
+          ================================================================ */}
+      {showContent && (
         <>
           {/* Preview Toolbar (replaces file tabs in preview mode — LP-T15) */}
           {isPreviewMode && (
-            <PreviewToolbar
-              viewport={previewViewport}
-              scale={previewScale}
-              autoRefresh={nodeData.previewAutoRefresh || false}
-              interactionMode={interactionMode}
-              previewUrl={fullPreviewUrl || nodeData.previewUrl || ''}
-              onViewportChange={handleViewportChange}
-              onScaleChange={handleScaleChange}
-              onAutoRefreshToggle={handleAutoRefreshToggle}
-              onRefresh={handlePreviewRefresh}
-              onInteractionModeToggle={handleInteractionModeToggle}
-              onPreviewToggle={handlePreviewToggle}
-            />
+            <div className="node-chrome--hover">
+              <PreviewToolbar
+                viewport={previewViewport}
+                scale={previewScale}
+                autoRefresh={nodeData.previewAutoRefresh || false}
+                interactionMode={interactionMode}
+                previewUrl={fullPreviewUrl || nodeData.previewUrl || ''}
+                onViewportChange={handleViewportChange}
+                onScaleChange={handleScaleChange}
+                onAutoRefreshToggle={handleAutoRefreshToggle}
+                onRefresh={handlePreviewRefresh}
+                onInteractionModeToggle={handleInteractionModeToggle}
+                onPreviewToggle={handlePreviewToggle}
+              />
+            </div>
           )}
 
           {/* File Tabs (for multi-file artifacts, standard mode only) */}
@@ -910,12 +953,50 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
             <>
               {!nodeData.collapsed && (
                 <div className="cognograph-node__body">
-                  {activeContent.contentType === 'image' && activeContent.content ? (
+                  {activeContent.contentType === 'video' && nodeData.metadata?.storageUrl ? (
+                    <ArtifactVideoRenderer
+                      storageUrl={nodeData.metadata.storageUrl}
+                      thumbnailUrl={nodeData.metadata.thumbnailUrl}
+                      title={nodeData.title}
+                      metadata={nodeData.metadata}
+                    />
+                  ) : activeContent.contentType === 'audio' && nodeData.metadata?.storageUrl ? (
+                    <ArtifactAudioRenderer
+                      storageUrl={nodeData.metadata.storageUrl}
+                      title={nodeData.title}
+                      metadata={nodeData.metadata}
+                    />
+                  ) : activeContent.contentType === '3d-model' && nodeData.metadata?.storageUrl ? (
+                    <Artifact3DRenderer
+                      nodeId={id}
+                      storageUrl={nodeData.metadata.storageUrl}
+                      thumbnailUrl={nodeData.metadata.thumbnailUrl}
+                      title={nodeData.title}
+                      metadata={nodeData.metadata}
+                    />
+                  ) : activeContent.contentType === 'image' && activeContent.content ? (
                     <div className="flex justify-center">
                       <img
                         src={activeContent.content}
                         alt={nodeData.title}
                         className="max-h-32 max-w-full rounded object-contain"
+                      />
+                    </div>
+                  ) : activeContent.contentType === 'html' && activeContent.content ? (
+                    <div className="rounded overflow-hidden">
+                      <iframe
+                        srcDoc={activeContent.content}
+                        sandbox="allow-scripts"
+                        style={{
+                          width: '100%',
+                          height: '320px',
+                          border: 'none',
+                          borderRadius: '4px',
+                          pointerEvents: 'none',
+                          overflow: 'hidden',
+                        }}
+                        scrolling="no"
+                        title={nodeData.title}
                       />
                     </div>
                   ) : (
@@ -930,6 +1011,8 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                     </pre>
                   )}
 
+                  {/* Inline property controls */}
+                  <NodePropertyControls nodeId={id} nodeType="artifact" data={data as Record<string, unknown>} />
                   {/* Property Badges */}
                   <PropertyBadges
                     properties={nodeData.properties || {}}
@@ -944,8 +1027,8 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
         </>
       )}
 
-      {/* Footer — hidden at far zoom */}
-      {!isFar && (
+      {/* Footer — shown at L2+ (mid and above) */}
+      {showFooter && (
         <div className="cognograph-node__footer">
           <div className="flex items-center gap-2">
             {isPreviewMode ? (
@@ -1005,8 +1088,8 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
         </div>
       )}
 
-      {/* Socket bars showing connections — hidden at far zoom */}
-      {!isFar && <NodeSocketBars nodeId={id} nodeColor={nodeColor} enabled={selected} />}
+      {/* Socket bars showing connections — shown at L2+ */}
+      {showFooter && <NodeSocketBars nodeId={id} nodeColor={nodeColor} enabled={selected} />}
     </div>
   )
 

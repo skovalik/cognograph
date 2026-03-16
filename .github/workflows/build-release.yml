@@ -6,13 +6,9 @@ on:
       - 'v*.*.*'  # Trigger on version tags like v0.1.0
   workflow_dispatch:  # Allow manual trigger from GitHub Actions tab
 
-permissions:
-  contents: write  # Required for creating releases
-
 jobs:
   build:
     strategy:
-      fail-fast: false  # Don't cancel other platforms if one fails
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
 
@@ -25,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
@@ -37,7 +33,6 @@ jobs:
 
       - name: Type check
         run: npm run typecheck
-        continue-on-error: true  # Pre-existing TS drift (node-pty types, Notion SDK)
 
       # ============ Build (Unsigned) ============
       - name: Build (macOS - unsigned)

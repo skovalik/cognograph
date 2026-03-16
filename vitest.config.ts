@@ -9,6 +9,9 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'dist', 'out'],
     passWithNoTests: true,
+    forks: {
+      execArgv: ['--max-old-space-size=8192'],
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

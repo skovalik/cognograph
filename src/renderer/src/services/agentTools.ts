@@ -1,4 +1,5 @@
 import { useWorkspaceStore } from '../stores/workspaceStore'
+import { getAvailableMediaTools } from './media/agentToolRegistry'
 import type {
   AgentToolDefinition,
   AgentSettings,
@@ -533,6 +534,9 @@ export function getToolsForAgent(settings: AgentSettings, agentNodeId?: string):
   if (settings.canExecuteCommands && hasFilesystemPaths) {
     tools.push(COMMAND_TOOL)
   }
+
+  // Media tools — auto-registered based on available API keys
+  tools.push(...getAvailableMediaTools())
 
   return tools
 }

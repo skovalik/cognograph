@@ -45,7 +45,9 @@ import {
   Workflow,
   Bot,
   MapPin,
+  Terminal,
 } from 'lucide-react'
+import { hasTerminalAccess } from '../utils/terminalAccess'
 import { toast } from 'react-hot-toast'
 import {
   useContextMenuStore,
@@ -250,6 +252,28 @@ function ContextMenuComponent(): JSX.Element | null {
     close()
   }, [target, addAgentNode, close])
 
+  // Handle add terminal node (terminal)
+  const handleAddTerminal = useCallback(() => {
+    if (target?.type === 'canvas') {
+      const id = addNode('conversation', target.position)
+      const updateNode = useWorkspaceStore.getState().updateNode
+      updateNode(id, {
+        title: 'Terminal',
+        mode: 'terminal',
+        terminal: {
+          sessionId: crypto.randomUUID(),
+          origin: 'embedded',
+          workingDirectory: '',
+          terminalState: 'idle',
+          startedAt: Date.now(),
+          lastActivityAt: Date.now(),
+          accentColor: '#22d3ee',
+        },
+      })
+    }
+    close()
+  }, [target, addNode, close])
+
   // Handle add node to project
   const handleAddNodeToProject = useCallback(
     (type: NodeData['type']) => {
@@ -364,6 +388,13 @@ function ContextMenuComponent(): JSX.Element | null {
               label="New Agent"
               onClick={handleAddAgent}
             />
+            {hasTerminalAccess() && (
+              <MenuItem
+                icon={<Terminal className="w-4 h-4" />}
+                label="New Terminal"
+                onClick={handleAddTerminal}
+              />
+            )}
             <MenuItem
               icon={<FileText className="w-4 h-4" />}
               label="New Note"

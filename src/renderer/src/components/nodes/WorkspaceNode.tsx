@@ -66,26 +66,15 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
   const nodeHeight = propsHeight || nodeData.height || DEFAULT_HEIGHT
 
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
-    const baseOpacity = 25
-    const tintOpacity = themeSettings.isDarkMode ? Math.round(baseOpacity * 0.5) : baseOpacity
-    const borderWidth = 2
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.workspace ?? '#8b5cf7'
 
     return {
-      borderWidth: `${borderWidth}px`,
-      borderStyle: 'solid', // FORCE solid borders
-      borderColor: safeNodeColor,
-      // ALWAYS add opaque background (CSS overrides when glass enabled)
-      background: `color-mix(in srgb, ${safeNodeColor} ${tintOpacity}%, var(--node-bg))`,
-      boxShadow: selected ? `0 0 0 2px ${safeNodeColor}40, 0 0 20px ${safeNodeColor}30` : 'none',
+      '--ring-color': safeNodeColor,
+      '--node-accent': safeNodeColor,
       width: nodeWidth,
       height: nodeHeight,
-      transition: 'background 200ms ease-out, border-color 200ms ease-out, backdrop-filter 200ms ease-out, opacity 200ms ease-out',
-      // CSS custom properties for dynamic theming
-      '--ring-color': safeNodeColor,    // Edge handles color
-      '--node-accent': safeNodeColor     // Glass background tint
     }
-  }, [nodeColor, themeSettings.nodeColors.workspace, isGlassEnabled, selected, nodeWidth, nodeHeight])
+  }, [nodeColor, themeSettings.nodeColors.workspace, nodeWidth, nodeHeight])
 
   // Handle resize - also update node internals to trigger edge recalculation
   const handleResizeStart = useCallback(() => {
@@ -128,21 +117,24 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
   const excludedCount = nodeData.excludedNodeIds.length
 
   // LOD (Level of Detail) rendering based on zoom level
-  const { showContent, showTitle, showBadges, showLede, zoomLevel } = useNodeContentVisibility()
+  const { showContent, showTitle, showLede, showInteractiveControls, showFooter, lodLevel, zoomLevel } = useNodeContentVisibility()
 
   // Check if node is disabled
   const isDisabled = nodeData.enabled === false
 
   // Visual feedback states
   const isSpawning = useIsSpawning(id)
-  const showInteractiveControls = showContent
-  const showFooter = showBadges
+  // Workspaces are configuration containers — no inherent processing state,
+  // but the className is wired so it activates if processing state is added later.
+  const isProcessing = false
 
   // Build className with all animation states
   const nodeClassName = [
     'cognograph-node',
     'cognograph-node--workspace',
     selected && 'selected',
+    // is-active reserved for functional state only (not selection)
+    isProcessing && 'is-thinking',
     isDisabled && 'cognograph-node--disabled',
     isSpawning && 'spawning',
     nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
@@ -167,7 +159,7 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
     setSelectedNodes([id])
   }, [id, setSelectedNodes])
 
-  // Format LLM settings summary
+  // Format LLM settings summary (L2 compact)
   const llmSummary = useMemo(() => {
     const { provider, model, temperature } = nodeData.llmSettings
     const parts: string[] = [provider]
@@ -176,24 +168,47 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
     return parts.join(' · ')
   }, [nodeData.llmSettings])
 
-  // Format context rules summary
+  // Format context rules summary (L2 compact — first 2 rules)
   const contextSummary = useMemo(() => {
-    const { maxDepth, traversalMode, maxTokens } = nodeData.contextRules
-    return `depth ${maxDepth} · ${traversalMode} · ${(maxTokens / 1000).toFixed(0)}k tokens`
+    const { maxDepth, traversalMode } = nodeData.contextRules
+    return `depth ${maxDepth} · ${traversalMode}`
   }, [nodeData.contextRules])
+
+  // Full context rules (L3+)
+  const contextDetailSummary = useMemo(() => {
+    const { maxDepth, traversalMode, maxTokens, includeDisabledNodes } = nodeData.contextRules
+    return `depth ${maxDepth} · ${traversalMode} · ${(maxTokens / 1000).toFixed(0)}k tokens${includeDisabledNodes ? ' · incl. disabled' : ''}`
+  }, [nodeData.contextRules])
+
+  // Direction indicator icon for L1
+  const directionLabel = useMemo(() => {
+    switch (nodeData.linkDirection) {
+      case 'to-members': return '→ members'
+      case 'from-members': return '← members'
+      case 'bidirectional': return '↔ members'
+      default: return '→ members'
+    }
+  }, [nodeData.linkDirection])
 
   const nodeContent = (
     <div
       ref={nodeRef}
       className={nodeClassName}
       style={nodeStyle}
-      data-lod={zoomLevel}
+      data-lod={lodLevel}
       data-transparent={transparent}
       onDoubleClick={handleDoubleClick}
-      {...(zoomLevel === 'far' ? { role: 'img', 'aria-label': `Workspace: ${nodeData.title} (${memberCount} members)` } : {})}
+      {...(lodLevel === 0 ? { role: 'img', 'aria-label': `Workspace: ${nodeData.title} (${memberCount} members)` } : {})}
     >
-      {/* Handles - hidden at far zoom */}
-      {zoomLevel !== 'far' && (
+      {/* Type label: floats above node — hidden at L0 */}
+      {lodLevel >= 1 && (
+        <div className="cognograph-node__type-label" style={{ color: nodeColor ?? '#ef4444' }}>
+          WORKSPACE
+        </div>
+      )}
+
+      {/* Handles - hidden at L0 (ultra-far) */}
+      {lodLevel >= 1 && (
         <>
           <Handle type="target" position={Position.Top} id="top-target" />
           <Handle type="source" position={Position.Top} id="top-source" />
@@ -206,18 +221,8 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
         </>
       )}
 
-      {/* Member count badge - always visible (key metric) */}
-      <span
-        className="absolute top-1.5 right-1.5 flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded"
-        style={{ background: `${nodeColor}25`, color: nodeColor }}
-        aria-label={`${memberCount} members`}
-      >
-        <Users className="w-3 h-3" />
-        {memberCount}
-      </span>
-
-      {/* L0 far: Colored rectangle with icon + title */}
-      {zoomLevel === 'far' && (
+      {/* ── L0 (ultra-far): Workspace icon + member count badge ── */}
+      {lodLevel === 0 && (
         <div className="flex items-center justify-center gap-1.5 h-full" aria-hidden={false}>
           <InlineIconPicker
             nodeData={nodeData}
@@ -227,16 +232,18 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
             className="cognograph-node__icon"
           />
           <span
-            className="text-[11px] font-medium truncate"
-            style={{ color: 'var(--node-text-primary)', maxWidth: '120px' }}
+            className="flex items-center gap-1 text-[10px]"
+            style={{ color: nodeColor }}
+            aria-label={`${memberCount} members`}
           >
-            {nodeData.title}
+            <Users className="w-3 h-3" />
+            {memberCount}
           </span>
         </div>
       )}
 
-      {/* Header - visible at mid + close */}
-      {showTitle && (
+      {/* ── L1+ (far+): Title + member count + direction indicator ── */}
+      {lodLevel >= 1 && showTitle && (
         <div className="cognograph-node__header">
           <InlineIconPicker
             nodeData={nodeData}
@@ -252,8 +259,29 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
             placeholder="Untitled Workspace"
           />
 
-          {/* AI Property Assist - only at close */}
-          {showInteractiveControls && (
+          {/* L1: Direction indicator + member count */}
+          {lodLevel === 1 && (
+            <span
+              className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded"
+              style={{ background: `${nodeColor}25`, color: nodeColor }}
+            >
+              <Compass className="w-3 h-3" />
+              {directionLabel}
+            </span>
+          )}
+
+          {/* L1+ member count badge */}
+          <span
+            className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded node-chrome--hover"
+            style={{ background: `${nodeColor}25`, color: nodeColor }}
+            aria-label={`${memberCount} members`}
+          >
+            <Users className="w-3 h-3" />
+            {memberCount}
+          </span>
+
+          {/* AI Property Assist — L3+ only */}
+          {lodLevel >= 3 && showInteractiveControls && (
             <NodeAIErrorBoundary compact>
               <AIPropertyAssist
                 nodeId={id}
@@ -263,8 +291,8 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
             </NodeAIErrorBoundary>
           )}
 
-          {/* Toggle buttons - only at close */}
-          {showInteractiveControls && (
+          {/* Toggle buttons — L3+ only */}
+          {lodLevel >= 3 && showInteractiveControls && (
             <>
               <button
                 onClick={handleToggleVisibility}
@@ -300,45 +328,90 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
         </div>
       )}
 
-      {/* Body - LOD-aware content */}
-      {(showContent || showLede) && (
-        <div className="cognograph-node__body space-y-2" aria-hidden={!showContent && !showLede}>
-          {/* Description editor - only at close */}
-          {showContent && (
-            <EditableText
-              value={nodeData.description || ''}
-              onChange={(newDescription) => updateNode(id, { description: newDescription })}
-              placeholder="Add description..."
-              className="text-xs"
-            />
-          )}
-
-          {/* LLM Settings Summary - lede at mid, full at close */}
-          <div className="flex items-center gap-2 text-xs">
-            <Bot className="w-3.5 h-3.5" style={{ color: nodeColor }} />
-            <span style={{ color: 'var(--node-text-secondary)' }}>{llmSummary}</span>
-          </div>
-
-          {/* Context Rules Summary - lede at mid, full at close */}
+      {/* ── L2 (mid): Summary — context rules (first 2) + provider icon ── */}
+      {lodLevel === 2 && showLede && (
+        <div className="cognograph-node__body space-y-2" aria-hidden={false}>
+          {/* Context rules summary — first 2 rules */}
           <div className="flex items-center gap-2 text-xs">
             <Compass className="w-3.5 h-3.5" style={{ color: nodeColor }} />
             <span style={{ color: 'var(--node-text-secondary)' }}>{contextSummary}</span>
           </div>
 
-          {/* Property Badges - only at close */}
-          {showContent && (
-            <PropertyBadges
-              properties={nodeData.properties || {}}
-              definitions={propertyDefinitions}
-              hiddenProperties={nodeData.hiddenProperties}
-              compact
-            />
-          )}
+          {/* Provider icon + model */}
+          <div className="flex items-center gap-2 text-xs">
+            <Bot className="w-3.5 h-3.5" style={{ color: nodeColor }} />
+            <span style={{ color: 'var(--node-text-secondary)' }}>{llmSummary}</span>
+          </div>
         </div>
       )}
 
-      {/* Footer - visible at mid + close */}
-      {showFooter && (
+      {/* ── L3+ (close/ultra-close): Full LLM config + member list + exclusion rules + settings ── */}
+      {lodLevel >= 3 && showContent && (
+        <div className="cognograph-node__body space-y-2" aria-hidden={false}>
+          {/* Description editor */}
+          <EditableText
+            value={nodeData.description || ''}
+            onChange={(newDescription) => updateNode(id, { description: newDescription })}
+            placeholder="Add description..."
+            className="text-xs"
+          />
+
+          {/* Full LLM config panel */}
+          <div className="flex items-center gap-2 text-xs">
+            <Bot className="w-3.5 h-3.5" style={{ color: nodeColor }} />
+            <span style={{ color: 'var(--node-text-secondary)' }}>{llmSummary}</span>
+          </div>
+
+          {/* Full context rules — depth + traversal + tokens + disabled flag */}
+          <div className="flex items-center gap-2 text-xs">
+            <Compass className="w-3.5 h-3.5" style={{ color: nodeColor }} />
+            <span style={{ color: 'var(--node-text-secondary)' }}>{contextDetailSummary}</span>
+          </div>
+
+          {/* Temperature + max tokens detail line */}
+          {(nodeData.llmSettings.temperature !== undefined || nodeData.llmSettings.maxTokens !== undefined) && (
+            <div className="flex items-center gap-3 text-[10px]" style={{ color: 'var(--node-text-muted)' }}>
+              {nodeData.llmSettings.temperature !== undefined && (
+                <span>temp {nodeData.llmSettings.temperature}</span>
+              )}
+              {nodeData.llmSettings.maxTokens !== undefined && (
+                <span>{(nodeData.llmSettings.maxTokens / 1000).toFixed(0)}k max tokens</span>
+              )}
+            </div>
+          )}
+
+          {/* Member list (L3+) */}
+          {memberCount > 0 && (
+            <div className="flex items-center gap-2 text-xs">
+              <Users className="w-3.5 h-3.5" style={{ color: nodeColor }} />
+              <span style={{ color: 'var(--node-text-secondary)' }}>
+                {memberCount} member{memberCount !== 1 ? 's' : ''}
+              </span>
+            </div>
+          )}
+
+          {/* Exclusion rules (L3+) */}
+          {excludedCount > 0 && (
+            <div className="flex items-center gap-2 text-xs">
+              <EyeOff className="w-3.5 h-3.5" style={{ color: 'var(--node-text-muted)' }} />
+              <span style={{ color: 'var(--node-text-muted)' }}>
+                {excludedCount} excluded
+              </span>
+            </div>
+          )}
+
+          {/* Property Badges */}
+          <PropertyBadges
+            properties={nodeData.properties || {}}
+            definitions={propertyDefinitions}
+            hiddenProperties={nodeData.hiddenProperties}
+            compact
+          />
+        </div>
+      )}
+
+      {/* Footer — visible at L2+ */}
+      {lodLevel >= 2 && showFooter && (
         <div className="cognograph-node__footer">
           <div className="flex items-center gap-2">
             <Users className="w-3.5 h-3.5" style={{ color: 'var(--node-text-muted)' }} />
@@ -352,8 +425,8 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
         </div>
       )}
 
-      {/* Socket bars showing connections - only at close */}
-      {showContent && <NodeSocketBars nodeId={id} nodeColor={nodeColor} enabled={selected} />}
+      {/* Socket bars — L3+ only */}
+      {lodLevel >= 3 && showContent && <NodeSocketBars nodeId={id} nodeColor={nodeColor} enabled={selected} />}
     </div>
   )
 

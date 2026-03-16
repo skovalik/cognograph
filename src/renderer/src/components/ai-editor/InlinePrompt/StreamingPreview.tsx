@@ -278,7 +278,7 @@ function StreamingPreviewComponent({
 
         .op-icon.create { color: #22c55e; }
         .op-icon.delete { color: #ef4444; }
-        .op-icon.update { color: #3b82f6; }
+        .op-icon.update { color: var(--cg-accent, #F0EDE8); }
         .op-icon.move { color: #f59e0b; }
         .op-icon.connect { color: #8b5cf6; }
         .op-icon.disconnect { color: #6b7280; }

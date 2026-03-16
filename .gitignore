@@ -12,6 +12,7 @@ p1-fig*.png
 # Build output
 dist/
 dist-electron/
+dist-web/
 out/
 release/
 
@@ -30,8 +31,13 @@ Thumbs.db
 
 # Environment
 .env
-.env.local
-.env.*.local
+.env.*
+orchestrator/.env
+
+# Secrets
+.keys/
+.supabase/keys.txt
+.resend/
 
 # TypeScript
 *.tsbuildinfo
@@ -60,8 +66,7 @@ e2e/test-results/
 # The hook script (.cognograph-activity/hook.mjs) IS tracked in git.
 .cognograph-activity/events.jsonl
 .env.test
+.worktrees/
 
-# E2E test artifacts (screenshots, results, AI evaluation data)
-e2e/smart-e2e/screenshots/
-e2e/smart-e2e/results/
-e2e/**/OPUS*.md
+# Secrets vault
+.secrets/

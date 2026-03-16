@@ -51,6 +51,7 @@ vi.mock('lucide-react', () => {
     Play: MockIcon,
     Pause: MockIcon,
     Square: MockIcon,
+    Terminal: MockIcon,
   }
 })
 

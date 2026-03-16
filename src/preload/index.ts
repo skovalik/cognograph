@@ -531,6 +531,8 @@ export interface TerminalAPI {
   onData: (nodeId: string, callback: (data: string) => void) => () => void
   /** Subscribe to PTY exit events for a specific node. Returns cleanup function. */
   onExit: (nodeId: string, callback: (exitCode: number) => void) => () => void
+  /** Subscribe to PTY data events for ALL nodes. Used by App.tsx for persistent card preview tee. */
+  onDataGlobal: (callback: (nodeId: string, data: string) => void) => () => void
 }
 
 export interface ElectronAPI {
@@ -823,6 +825,15 @@ const api: ElectronAPI = {
       }
       ipcRenderer.on('terminal:exit', handler)
       return () => ipcRenderer.removeListener('terminal:exit', handler)
+    },
+    // Global listener for ALL terminal data — used by App.tsx to tee output to node
+    // cards even when TerminalPanel is unmounted (user zoomed out from artboard)
+    onDataGlobal: (callback: (nodeId: string, data: string) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, id: string, data: string): void => {
+        callback(id, data)
+      }
+      ipcRenderer.on('terminal:data', handler)
+      return () => ipcRenderer.removeListener('terminal:data', handler)
     }
   },
   plugin: {
@@ -854,5 +865,6 @@ const api: ElectronAPI = {
 
 contextBridge.exposeInMainWorld('api', api)
 
-// Expose test mode flag for GPU detection safety
+// Expose runtime flags for feature gating
+contextBridge.exposeInMainWorld('__ELECTRON__', true)
 contextBridge.exposeInMainWorld('__TEST_MODE__', process.env.NODE_ENV === 'test')

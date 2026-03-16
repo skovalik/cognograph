@@ -84,7 +84,7 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
           style={{
             background: 'var(--gui-bg, #1a1a2e)',
             border: '1px solid var(--gui-border, #2a2a4a)',
-            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5), 0 0 80px rgba(99, 102, 241, 0.1)'
+            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5), 0 0 80px rgba(200, 150, 62, 0.1)'
           }}
           initial={{ scale: 0.9, y: 20 }}
           animate={{ scale: 1, y: 0 }}
@@ -105,24 +105,25 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
             <div className="flex items-center gap-3 mb-2">
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: 'var(--gui-accent-secondary, #6366f1)', opacity: 0.9 }}
+                style={{ background: 'var(--accent-glow, #C8963E)', opacity: 0.9 }}
               >
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold gui-text">Welcome to Cognograph</h1>
+                <h1 className="text-lg font-semibold gui-text">Welcome to [Cognograph]</h1>
               </div>
             </div>
 
             <p className="text-sm gui-text-secondary mb-6 leading-relaxed">
               Your spatial AI workspace. Connect ideas, conversations, and context on an infinite canvas.
+              Your workspaces save automatically in this browser. Export anytime to keep a backup or move to another device.
             </p>
 
             {/* Feature highlights */}
             <div className="flex gap-4 mb-6">
               {[
-                { icon: MessageSquare, label: 'AI Conversations', color: '#3b82f6' },
-                { icon: Link2, label: 'Connected Context', color: '#a855f7' },
+                { icon: MessageSquare, label: 'AI Conversations', color: '#C8963E' },
+                { icon: Link2, label: 'Connected Context', color: '#F0EDE8' },
                 { icon: Brain, label: 'Spatial Thinking', color: '#10b981' }
               ].map(({ icon: Icon, label, color }) => (
                 <div
@@ -136,102 +137,111 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
               ))}
             </div>
 
-            {/* Steps */}
-            <div className="space-y-3">
-              {/* Step 1: Configure AI Provider */}
-              <div
-                className="rounded-xl p-4 transition-all duration-200"
-                style={{
-                  background: step === 1 ? 'var(--gui-bg-hover, #252540)' : 'transparent',
-                  border: `1px solid ${step === 1 ? 'var(--gui-accent-secondary, #6366f1)' : 'var(--gui-border, #2a2a4a)'}`,
-                  opacity: step === 1 ? 1 : 0.6
-                }}
+            {/* Steps — AnimatePresence for smooth step transitions */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={step}
+                className="space-y-3"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                      style={{
-                        background: hasAnyConnector
-                          ? 'var(--gui-success, #10b981)'
-                          : step === 1
-                            ? 'var(--gui-accent-secondary, #6366f1)'
+                {/* Step 1: Configure AI Provider */}
+                <div
+                  className="rounded-xl p-4"
+                  style={{
+                    background: step === 1 ? 'var(--gui-bg-hover, #252540)' : 'transparent',
+                    border: `1px solid ${step === 1 ? 'var(--accent-glow, #C8963E)' : 'var(--gui-border, #2a2a4a)'}`,
+                    opacity: step === 1 ? 1 : 0.6
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                        style={{
+                          background: hasAnyConnector
+                            ? 'var(--gui-success, #10b981)'
+                            : step === 1
+                              ? 'var(--accent-glow, #C8963E)'
+                              : 'var(--gui-border, #3a3a5a)',
+                          color: 'white'
+                        }}
+                      >
+                        {hasAnyConnector ? <Check className="w-4 h-4" /> : '1'}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium gui-text">
+                          Set up your AI provider
+                        </div>
+                        <div className="text-xs gui-text-secondary mt-0.5">
+                          {hasAnyConnector
+                            ? `${connectors[0].provider} configured`
+                            : 'Add an API key for Anthropic, OpenAI, or others'
+                          }
+                        </div>
+                      </div>
+                    </div>
+
+                    {step === 1 && (
+                      <button
+                        onClick={handleConfigureProvider}
+                        className="gui-btn gui-btn-accent gui-btn-sm flex items-center gap-1.5 whitespace-nowrap"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        {hasAnyConnector ? 'Edit' : 'Configure'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Step 2: Create first conversation */}
+                <div
+                  className="rounded-xl p-4"
+                  style={{
+                    background: step === 2 ? 'var(--gui-bg-hover, #252540)' : 'transparent',
+                    border: `1px solid ${step === 2 ? 'var(--accent-glow, #C8963E)' : 'var(--gui-border, #2a2a4a)'}`,
+                    opacity: step === 2 ? 1 : 0.5
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                        style={{
+                          background: step === 2
+                            ? 'var(--accent-glow, #C8963E)'
                             : 'var(--gui-border, #3a3a5a)',
-                        color: 'white'
-                      }}
-                    >
-                      {hasAnyConnector ? <Check className="w-4 h-4" /> : '1'}
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium gui-text">
-                        Set up your AI provider
+                          color: 'white'
+                        }}
+                      >
+                        2
                       </div>
-                      <div className="text-xs gui-text-secondary mt-0.5">
-                        {hasAnyConnector
-                          ? `${connectors[0].provider} configured`
-                          : 'Add an API key for Anthropic, OpenAI, or others'
-                        }
+                      <div>
+                        <div className="text-sm font-medium gui-text">
+                          Create your first conversation
+                        </div>
+                        <div className="text-xs gui-text-secondary mt-0.5">
+                          Start a conversation -- connecting nodes configures AI context
+                        </div>
                       </div>
                     </div>
+
+                    {step === 2 && (
+                      <button
+                        onClick={handleCreateConversation}
+                        className="gui-btn gui-btn-accent gui-btn-sm flex items-center gap-1.5 whitespace-nowrap"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        Create
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
-
-                  {step === 1 && (
-                    <button
-                      onClick={handleConfigureProvider}
-                      className="gui-btn gui-btn-accent gui-btn-sm flex items-center gap-1.5 whitespace-nowrap"
-                    >
-                      <Zap className="w-3.5 h-3.5" />
-                      {hasAnyConnector ? 'Edit' : 'Configure'}
-                    </button>
-                  )}
                 </div>
-              </div>
-
-              {/* Step 2: Create first conversation */}
-              <div
-                className="rounded-xl p-4 transition-all duration-200"
-                style={{
-                  background: step === 2 ? 'var(--gui-bg-hover, #252540)' : 'transparent',
-                  border: `1px solid ${step === 2 ? 'var(--gui-accent-secondary, #6366f1)' : 'var(--gui-border, #2a2a4a)'}`,
-                  opacity: step === 2 ? 1 : 0.5
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                      style={{
-                        background: step === 2
-                          ? 'var(--gui-accent-secondary, #6366f1)'
-                          : 'var(--gui-border, #3a3a5a)',
-                        color: 'white'
-                      }}
-                    >
-                      2
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium gui-text">
-                        Create your first conversation
-                      </div>
-                      <div className="text-xs gui-text-secondary mt-0.5">
-                        Start a conversation -- connecting nodes configures AI context
-                      </div>
-                    </div>
-                  </div>
-
-                  {step === 2 && (
-                    <button
-                      onClick={handleCreateConversation}
-                      className="gui-btn gui-btn-accent gui-btn-sm flex items-center gap-1.5 whitespace-nowrap"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      Create
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           {/* Footer */}

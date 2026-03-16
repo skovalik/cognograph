@@ -5,7 +5,7 @@
  * and whether to include edges. Uses the native save dialog for file path.
  */
 
-import { memo, useState, useCallback } from 'react'
+import { memo, useState, useCallback, useEffect } from 'react'
 import { X, Download, FileText, Code, Globe } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { useWorkspaceStore } from '../stores/workspaceStore'
@@ -40,6 +40,16 @@ function ExportDialogComponent({ isOpen, onClose }: ExportDialogProps): JSX.Elem
   const selectedCount = selectedNodeIds.length
   const hasSelection = selectedCount > 0
 
+  // Escape key handler
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   const handleExport = useCallback(async () => {
     setExporting(true)
     try {
@@ -61,24 +71,44 @@ function ExportDialogComponent({ isOpen, onClose }: ExportDialogProps): JSX.Elem
         workspaceName: workspaceName || 'Untitled Workspace'
       })
 
-      const contentType = format === 'html' ? 'html' : format === 'json' ? 'text' : 'markdown'
       const sanitizedName = (workspaceName || 'workspace').replace(/[^a-zA-Z0-9_-]/g, '_')
+      const ext = format === 'html' ? '.html' : format === 'json' ? '.json' : '.md'
+      const isWeb = !(window as any).__ELECTRON__
 
-      // Use artifact download API — it handles save dialog + file writing
-      const result = await window.api.artifact.download({
-        title: sanitizedName,
-        content,
-        contentType
-      })
+      if (isWeb) {
+        // Web build: use Blob + temporary download link
+        const mimeType = format === 'html' ? 'text/html' : format === 'json' ? 'application/json' : 'text/markdown'
+        const blob = new Blob([content], { type: `${mimeType};charset=utf-8` })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${sanitizedName}${ext}`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      } else {
+        // Electron build: use artifact download API
+        const contentType = format === 'html' ? 'html' : format === 'json' ? 'text' : 'markdown'
+        const result = await window.api.artifact.download({
+          title: sanitizedName,
+          content,
+          contentType
+        })
 
-      if (result.canceled) {
-        setExporting(false)
-        return
+        if (result.canceled) {
+          setExporting(false)
+          return
+        }
+
+        if (!result.success) {
+          throw new Error(result.error || 'Download failed')
+        }
       }
 
-      if (!result.success) {
-        throw new Error(result.error || 'Download failed')
-      }
+      // Track export for StorageWarning
+      localStorage.setItem('cognograph:lastExportTimestamp', String(Date.now()))
+      window.dispatchEvent(new CustomEvent('cognograph:export'))
 
       toast.success(`Exported ${exportNodes.length} nodes as ${format.toUpperCase()}`)
       onClose()

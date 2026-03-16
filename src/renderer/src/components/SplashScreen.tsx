@@ -269,7 +269,7 @@ export const SplashScreen = memo(function SplashScreen() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.5, duration: 0.8 }}
         >
-          Cognograph
+          [Cognograph]
         </motion.h1>
 
         {/* Status */}

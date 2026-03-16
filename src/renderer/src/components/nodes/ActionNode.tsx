@@ -1,6 +1,6 @@
 import { memo, useMemo, useCallback, useEffect } from 'react'
 import { Handle, Position, NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
-import { Zap, Play } from 'lucide-react'
+import { Zap, Play, Power } from 'lucide-react'
 import type { ActionNodeData } from '@shared/actionTypes'
 import { DEFAULT_THEME_SETTINGS } from '@shared/types'
 import { useWorkspaceStore, useIsSpawning, useNodeWarmth, useIsNodePinned, useIsNodeBookmarked, useNodeNumberedBookmark } from '../../stores/workspaceStore'
@@ -11,6 +11,7 @@ import { AttachmentBadge } from './AttachmentBadge'
 import { useNodeResize } from '../../hooks/useNodeResize'
 import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
+import { NodePropertyControls } from './NodePropertyControls'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -39,6 +40,23 @@ const TRIGGER_LABELS: Record<string, string> = {
   'ancestor-change': 'Ancestor Change',
   'connection-count': 'Connection Count',
   'isolation': 'Isolation'
+}
+
+// Trigger type short labels (for L1 compact display)
+const TRIGGER_SHORT_LABELS: Record<string, string> = {
+  'property-change': 'on-change',
+  'manual': 'manual',
+  'schedule': 'on-schedule',
+  'node-created': 'on-create',
+  'connection-made': 'on-connect',
+  'region-enter': 'on-enter',
+  'region-exit': 'on-exit',
+  'cluster-size': 'on-cluster',
+  'proximity': 'on-proximity',
+  'children-complete': 'on-complete',
+  'ancestor-change': 'on-ancestor',
+  'connection-count': 'on-connections',
+  'isolation': 'on-isolate'
 }
 
 // Step type short labels
@@ -79,27 +97,24 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
   const nodeHeight = propsHeight || nodeData.height || DEFAULT_HEIGHT
   const effectiveHeight = Math.max(MIN_HEIGHT, nodeHeight)
 
+  // Check if node is disabled
+  const isDisabled = nodeData.enabled === false
+
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
-    const baseOpacity = 20
-    const tintOpacity = themeSettings.isDarkMode ? Math.round(baseOpacity * 0.5) : baseOpacity
-    const borderWidth = 2
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.action ?? '#10b981'
 
     return {
-      borderWidth: `${borderWidth}px`,
-      borderStyle: 'solid', // FORCE solid borders
-      borderColor: safeNodeColor,
-      // ALWAYS add opaque background (CSS overrides when glass enabled)
-      background: `color-mix(in srgb, ${safeNodeColor} ${tintOpacity}%, var(--node-bg))`,
-      boxShadow: selected ? `0 0 0 2px ${safeNodeColor}40, 0 0 20px ${safeNodeColor}30` : 'none',
+      '--ring-color': safeNodeColor,
+      '--node-accent': safeNodeColor,
       width: nodeWidth,
       height: effectiveHeight,
-      transition: 'background 200ms ease-out, border-color 200ms ease-out, backdrop-filter 200ms ease-out, opacity 200ms ease-out',
-      // CSS custom properties for dynamic theming
-      '--ring-color': safeNodeColor,    // Edge handles color
-      '--node-accent': safeNodeColor     // Glass background tint
+      // Grayscale + dim for disabled actions at ALL zoom levels
+      ...(isDisabled && {
+        filter: 'grayscale(1)',
+        opacity: 0.5
+      })
     }
-  }, [nodeColor, themeSettings.nodeColors.action, isGlassEnabled, selected, nodeWidth, effectiveHeight])
+  }, [nodeColor, themeSettings.nodeColors.action, nodeWidth, effectiveHeight, isDisabled])
 
   // Handle resize
   const handleResizeStart = useCallback(() => {
@@ -120,9 +135,6 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
     updateNodeInternals(id)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Check if node is disabled
-  const isDisabled = nodeData.enabled === false
-
   // Visual feedback states
   const isSpawning = useIsSpawning(id)
   const warmthLevel = useNodeWarmth(id)
@@ -132,17 +144,27 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
   const isCut = useWorkspaceStore(s => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id))
 
   // LOD (Level of Detail) rendering based on zoom level
-  const { showContent, showTitle, showBadges, showLede, zoomLevel } = useNodeContentVisibility()
+  const {
+    showContent, showTitle, showBadges, showLede,
+    showHeader, showFooter, showInteractiveControls,
+    showPlaceholders, zoomLevel, lodLevel
+  } = useNodeContentVisibility()
+
+  const isUltraFar = zoomLevel === 'ultra-far'
 
   // Show members mode - dim non-members
   const { nonMemberClass, memberHighlightClass } = useShowMembersClass(id, nodeData.parentId)
-  const showInteractiveControls = showContent
-  const showFooter = showBadges
+
+  // Activity indicator: spawning = processing analog for action nodes
+  const isProcessing = isSpawning
 
   // Build className
   const nodeClassName = [
-    'cognograph-node cognograph-node--action',
+    'cognograph-node',
+    'cognograph-node--action',
     selected && 'selected',
+    // is-active reserved for functional state only (not selection)
+    isProcessing && 'is-thinking',
     isDisabled && 'cognograph-node--disabled',
     !nodeData.enabled && 'action-node--inactive',
     isSpawning && 'spawning',
@@ -152,17 +174,19 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
     isPinned && 'node--pinned',
     isBookmarked && 'cognograph-node--bookmarked',
     isCut && 'cognograph-node--cut',
-    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
-    `action-node--lod-${zoomLevel}`
+    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`
   ].filter(Boolean).join(' ')
 
   // Build trigger summary
   const triggerLabel = TRIGGER_LABELS[nodeData.trigger.type] || nodeData.trigger.type
+  const triggerShortLabel = TRIGGER_SHORT_LABELS[nodeData.trigger.type] || nodeData.trigger.type
 
   // Build action steps summary
-  const stepsLabels = nodeData.actions
-    .filter(s => !s.disabled)
-    .map(s => STEP_TYPE_LABELS[s.type] || s.type)
+  const activeSteps = nodeData.actions.filter(s => !s.disabled)
+  const stepsLabels = activeSteps.map(s => STEP_TYPE_LABELS[s.type] || s.type)
+
+  // First 2 steps for L2 compact list
+  const compactSteps = activeSteps.slice(0, 2)
 
   // Manual trigger handler
   const handleManualTrigger = useCallback((e: React.MouseEvent) => {
@@ -171,17 +195,46 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
     window.dispatchEvent(new CustomEvent('action:manual-trigger', { detail: { actionNodeId: id } }))
   }, [id])
 
+  // Toggle enabled/disabled
+  const handleToggleEnabled = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    updateNode(id, { enabled: !nodeData.enabled })
+  }, [id, nodeData.enabled, updateNode])
+
   const nodeContent = (
     <div
       ref={nodeRef}
       className={nodeClassName}
       style={nodeStyle}
       data-lod={zoomLevel}
+      data-lod-level={lodLevel}
       data-transparent={transparent}
-      {...(zoomLevel === 'far' ? { role: 'img', 'aria-label': `Action: ${nodeData.title}` } : {})}
+      {...(isUltraFar ? { role: 'img', 'aria-label': `Action: ${nodeData.title}` } : {})}
     >
-      {/* Handles - hidden at far zoom */}
-      {zoomLevel !== 'far' && (
+      {/* Type label: floats above node */}
+      <div className="cognograph-node__type-label">
+        ACTION
+      </div>
+
+      {/* ================================================================
+          L0 (ultra-far): Trigger shape icon + enabled/disabled status dot
+          Minimal DOM. No handles, no text, no editor.
+          ================================================================ */}
+      {isUltraFar && (
+        <div className="flex items-center justify-center gap-2 h-full">
+          <Zap className="w-5 h-5 flex-shrink-0" style={{ color: nodeColor }} />
+          <span
+            className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${nodeData.enabled ? 'bg-emerald-400' : 'bg-[var(--text-muted)]'}`}
+            aria-label={nodeData.enabled ? 'Enabled' : 'Disabled'}
+          />
+        </div>
+      )}
+
+      {/* ================================================================
+          L1+ (far and above): Handles on all four sides
+          Suppressed at L0 — no connection affordance at navigation level
+          ================================================================ */}
+      {!isUltraFar && (
         <>
           <Handle type="target" position={Position.Top} id="top-target" className="cognograph-handle" />
           <Handle type="source" position={Position.Top} id="top-source" className="cognograph-handle" />
@@ -194,57 +247,61 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
         </>
       )}
 
-      {/* Numbered bookmark badge */}
-      {numberedBookmark && (
+      {/* Numbered bookmark badge — visible at L1+ (navigation aid) */}
+      {!isUltraFar && numberedBookmark && (
         <div className={`numbered-bookmark-badge numbered-bookmark-badge--${numberedBookmark}`}>
           {numberedBookmark}
         </div>
       )}
 
-      {/* Enabled/disabled status dot - always visible (important state indicator) */}
-      <span
-        className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${nodeData.enabled ? 'bg-emerald-400' : 'bg-[var(--text-muted)]'}`}
-        title={nodeData.enabled ? 'Enabled' : 'Disabled'}
-        aria-label={nodeData.enabled ? 'Action enabled' : 'Action disabled'}
-      />
-
-      {/* L0 far: Colored rectangle with Zap icon + title + status */}
-      {zoomLevel === 'far' && (
-        <div
-          className="flex items-center justify-center gap-1.5 h-full"
-          style={isDisabled ? { opacity: 0.5 } : undefined}
-          aria-hidden={false}
-        >
-          <Zap className="w-5 h-5 flex-shrink-0" style={{ color: nodeColor }} />
-          <span
-            className="text-[11px] font-medium truncate"
-            style={{ color: 'var(--node-text-primary)', maxWidth: '120px' }}
-          >
-            {nodeData.title}
-          </span>
-        </div>
+      {/* Enabled/disabled status dot — always visible at L1+ (important state indicator) */}
+      {!isUltraFar && (
+        <span
+          className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${nodeData.enabled ? 'bg-emerald-400' : 'bg-[var(--text-muted)]'}`}
+          title={nodeData.enabled ? 'Enabled' : 'Disabled'}
+          aria-label={nodeData.enabled ? 'Action enabled' : 'Action disabled'}
+        />
       )}
 
-      {/* Header - visible at mid + close */}
-      {showTitle && (
+      {/* ================================================================
+          L1 (far): Title + trigger type label + status dot
+          Shows identity and trigger type at a glance.
+          ================================================================ */}
+      {showHeader && (
         <div className="cognograph-node__header" style={{ borderBottomColor: `${nodeColor}30` }}>
           <Zap className="w-4 h-4 flex-shrink-0" style={{ color: nodeColor }} />
-          <EditableTitle
-            value={nodeData.title}
-            onChange={(title) => updateNode(id, { title })}
-            className="cognograph-node__title"
-          />
-          {/* AI Property Assist - only at close */}
-          {showInteractiveControls && (
-            <NodeAIErrorBoundary compact>
-              <AIPropertyAssist
-                nodeId={id}
-                nodeData={nodeData}
-                compact={true}
-              />
-            </NodeAIErrorBoundary>
+          {showTitle && (
+            <EditableTitle
+              value={nodeData.title}
+              onChange={(title) => updateNode(id, { title })}
+              className="cognograph-node__title"
+            />
           )}
-          {/* Manual trigger button - only at close */}
+          {/* Trigger type badge at L1 — visible when not showing full content */}
+          {showBadges && !showContent && (
+            <span
+              className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0"
+              style={{
+                backgroundColor: `${nodeColor}20`,
+                color: nodeColor
+              }}
+            >
+              {triggerShortLabel}
+            </span>
+          )}
+          {/* AI Property Assist — L3+ only (interactive control) */}
+          {showInteractiveControls && (
+            <div className="node-chrome--hover">
+              <NodeAIErrorBoundary compact>
+                <AIPropertyAssist
+                  nodeId={id}
+                  nodeData={nodeData}
+                  compact={true}
+                />
+              </NodeAIErrorBoundary>
+            </div>
+          )}
+          {/* Manual trigger button — L3+ only */}
           {showInteractiveControls && (
             <button
               onClick={handleManualTrigger}
@@ -257,10 +314,26 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
         </div>
       )}
 
-      {/* Body - LOD-aware content */}
-      {(showContent || showLede) && (
-        <div className="cognograph-node__body text-xs flex flex-col gap-1 overflow-hidden" aria-hidden={!showContent && !showLede}>
-          {/* WHEN line - visible at mid (lede) + close */}
+      {/* ================================================================
+          L1 (far): Placeholder shimmer bars for content preview
+          showPlaceholders is true only at L1.
+          ================================================================ */}
+      {showPlaceholders && nodeData.description && (
+        <div className="cognograph-node__body" style={{ pointerEvents: 'none' }}>
+          <div className="flex flex-col gap-1.5 px-1">
+            <div className="h-2 rounded-full bg-current opacity-10" style={{ width: '80%' }} />
+            <div className="h-2 rounded-full bg-current opacity-10" style={{ width: '60%' }} />
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================
+          L2 (mid): Trigger description (1-2 lines) + first 2 action steps
+          as compact list. Summary card mode.
+          ================================================================ */}
+      {showLede && (
+        <div className="cognograph-node__body text-xs flex flex-col gap-1 overflow-hidden" style={{ opacity: 0.8 }}>
+          {/* WHEN line — trigger type with detail */}
           <div className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
             <span className="font-medium uppercase text-[10px] opacity-70">WHEN:</span>
             <span className="truncate">{triggerLabel}</span>
@@ -271,26 +344,19 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
             )}
           </div>
 
-          {/* THEN + IF lines - only at close */}
-          {showContent && (
-            <>
-              {stepsLabels.length > 0 && (
-                <div className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
-                  <span className="font-medium uppercase text-[10px] opacity-70">THEN:</span>
-                  <span className="truncate">{stepsLabels.join(', ')}</span>
-                </div>
-              )}
-              {nodeData.conditions.length > 0 && (
-                <div className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
-                  <span className="font-medium uppercase text-[10px] opacity-70">IF:</span>
-                  <span>{nodeData.conditions.length} condition{nodeData.conditions.length > 1 ? 's' : ''}</span>
-                </div>
-              )}
-            </>
+          {/* First 2 action steps as compact list */}
+          {compactSteps.length > 0 && (
+            <div className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
+              <span className="font-medium uppercase text-[10px] opacity-70">THEN:</span>
+              <span className="truncate">
+                {compactSteps.map(s => STEP_TYPE_LABELS[s.type] || s.type).join(', ')}
+                {activeSteps.length > 2 && ` +${activeSteps.length - 2}`}
+              </span>
+            </div>
           )}
 
-          {/* Run count badge at mid zoom */}
-          {showLede && !showContent && nodeData.runCount > 0 && (
+          {/* Run count at mid zoom */}
+          {nodeData.runCount > 0 && (
             <span className="text-[10px] text-[var(--node-text-muted)]">
               Runs: {nodeData.runCount}
             </span>
@@ -298,13 +364,76 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
         </div>
       )}
 
-      {/* Footer - visible at mid + close */}
-      {showFooter && (
+      {/* ================================================================
+          L3+ (close and above): Full trigger config + all steps +
+          enable/disable toggle + test button.
+          Full body content — expensive interactive controls mount here.
+          ================================================================ */}
+      {showContent && (
+        <div className="cognograph-node__body text-xs flex flex-col gap-1 overflow-hidden">
+          {/* WHEN line — full trigger description */}
+          <div className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
+            <span className="font-medium uppercase text-[10px] opacity-70">WHEN:</span>
+            <span className="truncate">{triggerLabel}</span>
+            {nodeData.trigger.type === 'property-change' && (
+              <span className="opacity-60 truncate">
+                ({(nodeData.trigger as { property?: string }).property || '?'})
+              </span>
+            )}
+          </div>
+
+          {/* THEN — all steps */}
+          {stepsLabels.length > 0 && (
+            <div className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
+              <span className="font-medium uppercase text-[10px] opacity-70">THEN:</span>
+              <span className="truncate">{stepsLabels.join(', ')}</span>
+            </div>
+          )}
+
+          {/* IF — conditions */}
+          {nodeData.conditions.length > 0 && (
+            <div className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
+              <span className="font-medium uppercase text-[10px] opacity-70">IF:</span>
+              <span>{nodeData.conditions.length} condition{nodeData.conditions.length > 1 ? 's' : ''}</span>
+            </div>
+          )}
+
+          {/* Description (if present) */}
+          {nodeData.description && (
+            <p className="text-[11px] text-[var(--node-text-muted)] mt-1 line-clamp-2">
+              {nodeData.description}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ================================================================
+          L2 (mid): Simplified footer — attachment count only
+          ================================================================ */}
+      {showFooter && !showContent && (
+        <div className="cognograph-node__footer flex items-center gap-2 text-[10px] text-[var(--node-text-muted)]" style={{ opacity: 0.7 }}>
+          {nodeData.attachments && nodeData.attachments.length > 0 && (
+            <AttachmentBadge count={nodeData.attachments.length} />
+          )}
+        </div>
+      )}
+
+      {/* ================================================================
+          L3+ (close and above): Full footer with controls, stats, errors
+          ================================================================ */}
+      {showFooter && showContent && (
         <div className="cognograph-node__footer flex items-center gap-2 text-[10px] text-[var(--node-text-muted)]">
-          <span className={`flex items-center gap-1 ${nodeData.enabled ? 'text-emerald-400' : 'text-[var(--text-muted)]'}`}>
+          <NodePropertyControls nodeId={id} nodeType="action" data={data as Record<string, unknown>} />
+          {/* Enable/disable toggle */}
+          <button
+            onClick={handleToggleEnabled}
+            className={`flex items-center gap-1 cursor-pointer transition-colors ${nodeData.enabled ? 'text-emerald-400' : 'text-[var(--text-muted)]'}`}
+            title={nodeData.enabled ? 'Click to disable' : 'Click to enable'}
+          >
+            <Power className="w-3 h-3" />
             <span className={`w-1.5 h-1.5 rounded-full ${nodeData.enabled ? 'bg-emerald-400' : 'bg-[var(--text-muted)]'}`} />
             {nodeData.enabled ? 'Enabled' : 'Disabled'}
-          </span>
+          </button>
           {nodeData.runCount > 0 && (
             <span>Runs: {nodeData.runCount}</span>
           )}
@@ -326,6 +455,7 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
 
   return (
     <>
+      {/* NodeResizer only at L3+ (interactive controls) */}
       {showInteractiveControls && (
         <NodeResizer
           minWidth={MIN_WIDTH}

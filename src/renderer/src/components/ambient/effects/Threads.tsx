@@ -29,7 +29,6 @@ uniform vec3 uColor;
 uniform float uAmplitude;
 uniform float uDistance;
 uniform vec2 uMouse;
-uniform int uIsDark;
 
 #define PI 3.1415926538
 
@@ -120,12 +119,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     }
 
     float colorVal = 1.0 - line_strength;
-    if (uIsDark == 1) {
-      fragColor = vec4(uColor * colorVal, colorVal);
-    } else {
-      vec3 col = mix(vec3(1.0), uColor, colorVal);
-      fragColor = vec4(col, 1.0);
-    }
+    fragColor = vec4(uColor * colorVal, colorVal);
 }
 
 void main() {
@@ -144,6 +138,10 @@ const Threads: React.FC<ThreadsProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameId = useRef<number>(0);
+  const colorRef = useRef(color);
+
+  // Update color ref without recreating WebGL context
+  useEffect(() => { colorRef.current = color; }, [color]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -165,11 +163,10 @@ const Threads: React.FC<ThreadsProps> = ({
         iResolution: {
           value: new Color(gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height)
         },
-        uColor: { value: new Color(...color) },
+        uColor: { value: new Color(...colorRef.current) },
         uAmplitude: { value: amplitude },
         uDistance: { value: distance },
         uMouse: { value: new Float32Array([0.5, 0.5]) },
-        uIsDark: { value: isDark ? 1 : 0 }
       }
     });
 
@@ -213,6 +210,15 @@ const Threads: React.FC<ThreadsProps> = ({
         program.uniforms.uMouse.value[0] = 0.5;
         program.uniforms.uMouse.value[1] = 0.5;
       }
+
+      // Smoothly lerp shader color toward target (avoids flash from instant jump)
+      const target = colorRef.current;
+      const u = program.uniforms.uColor.value;
+      const k = 0.08;
+      u.r += (target[0] - u.r) * k;
+      u.g += (target[1] - u.g) * k;
+      u.b += (target[2] - u.b) * k;
+
       program.uniforms.iTime.value = t * 0.001;
 
       renderer.render({ scene: mesh });
@@ -231,7 +237,7 @@ const Threads: React.FC<ThreadsProps> = ({
       if (container.contains(gl.canvas)) container.removeChild(gl.canvas);
       gl.getExtension('WEBGL_lose_context')?.loseContext();
     };
-  }, [color, amplitude, distance, enableMouseInteraction, isDark]);
+  }, [amplitude, distance, enableMouseInteraction]);
 
   return <div ref={containerRef} className="w-full h-full relative" style={{ opacity }} {...rest} />;
 };

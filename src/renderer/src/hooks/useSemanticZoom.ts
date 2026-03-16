@@ -5,10 +5,10 @@
  * being distracted by content. Content progressively reveals as they zoom in.
  *
  * 5 Zoom levels (Phase 1A):
- * - 'ultra-far' (< 0.15): Cluster/region shapes only, supports "knowing WHERE"
- * - 'far' (0.15-0.30): Titles and badges visible, can identify specific nodes
- * - 'mid' (0.30-0.55): Titles + lede + badges, summary card mode
- * - 'close' (0.55-1.0): Full content visible, can read and edit
+ * - 'ultra-far' (< 0.05): Cluster/region shapes only, supports "knowing WHERE"
+ * - 'far' (0.05-0.08): Titles and badges visible, can identify specific nodes
+ * - 'mid' (0.08-0.12): Titles + lede + badges, summary card mode
+ * - 'close' (0.12-1.0): Full content visible, can read and edit (iframe at ~15%)
  * - 'ultra-close' (>= 1.0): Full content + expanded toolbar + interactive controls
  *
  * Hysteresis prevents "threshold jitter" -- nodes flickering between LOD states
@@ -40,16 +40,33 @@ export interface NodeContentVisibility {
   showFooter: boolean
   showHeader: boolean
   effectiveLevel: ZoomLevel
+
+  // Phase 2 fields (LOD universalization)
+  /** Whether the rich editor (TipTap/CodeMirror) should mount — close and ultra-close only */
+  showEditor: boolean
+  /** Whether placeholder shimmer bars should render (title/content stand-ins at far zoom) */
+  showPlaceholders: boolean
+  /** Numeric LOD level: 0=ultra-far, 1=far, 2=mid, 3=close, 4=ultra-close */
+  lodLevel: 0 | 1 | 2 | 3 | 4
 }
 
 // --- Constants (exported for testing) -------------------------------------
 
 /** Boundary thresholds between zoom levels */
 export const THRESHOLDS = {
-  ULTRA_FAR_FAR: 0.15,
-  FAR_MID: 0.30,
-  MID_CLOSE: 0.55,
+  ULTRA_FAR_FAR: 0.05,
+  FAR_MID: 0.08,
+  MID_CLOSE: 0.12,
   CLOSE_ULTRA_CLOSE: 1.0
+} as const
+
+/** Maps ZoomLevel to numeric LOD level (0-4) */
+export const ZOOM_LEVEL_TO_LOD: Record<ZoomLevel, 0 | 1 | 2 | 3 | 4> = {
+  'ultra-far': 0,
+  'far': 1,
+  'mid': 2,
+  'close': 3,
+  'ultra-close': 4
 } as const
 
 /** Standard hysteresis offset for most boundaries */
@@ -120,23 +137,28 @@ export function computeZoomLevel(zoom: number, prev: ZoomLevel): ZoomLevel {
  * Computes node content visibility flags for a given zoom level.
  * Pure function -- no React dependency. Extracted for testing.
  *
- * Visibility matrix (Phase 1A):
+ * Visibility matrix (Phase 2 — LOD universalization):
  *
- * | Flag                  | ultra-far | far   | mid   | close | ultra-close |
- * |-----------------------|-----------|-------|-------|-------|-------------|
- * | showClusterSummary    |     T     |   F   |   F   |   F   |      F      |
- * | showHeader            |     F     |   T   |   T   |   T   |      T      |
- * | showTitle             |     F     |   T   |   T   |   T   |      T      |
- * | showBadges            |     F     |   T   |   T   |   T   |      T      |
- * | showLede              |     F     |   F   |   T   |   F   |      F      |
- * | showFooter            |     F     |   F   |   T   |   T   |      T      |
- * | showContent           |     F     |   F   |   F   |   T   |      T      |
- * | showEmbeddedContent   |     F     |   F   |   F   |   T   |      T      |
- * | showInteractiveControls|    F     |   F   |   F   |   T   |      T      |
- * | showExpandedToolbar   |     F     |   F   |   F   |   F   |      T      |
- * | effectiveLevel        | =zoomLvl  |   =   |   =   |   =   |      =      |
+ * | Flag                   | ultra-far | far   | mid   | close | ultra-close |
+ * |------------------------|-----------|-------|-------|-------|-------------|
+ * | lodLevel               |     0     |   1   |   2   |   3   |      4      |
+ * | showClusterSummary     |     T     |   F   |   F   |   F   |      F      |
+ * | showPlaceholders       |     F     |   T   |   F   |   F   |      F      |
+ * | showHeader             |     F     |   T   |   T   |   T   |      T      |
+ * | showTitle              |     F     |   T   |   T   |   T   |      T      |
+ * | showBadges             |     F     |   T   |   T   |   T   |      T      |
+ * | showLede               |     F     |   F   |   T   |   F   |      F      |
+ * | showFooter             |     F     |   F   |   T   |   T   |      T      |
+ * | showContent            |     F     |   F   |   F   |   T   |      T      |
+ * | showEmbeddedContent    |     F     |   F   |   F   |   T   |      T      |
+ * | showEditor             |     F     |   F   |   F   |   T   |      T      |
+ * | showInteractiveControls|     F     |   F   |   F   |   T   |      T      |
+ * | showExpandedToolbar    |     F     |   F   |   F   |   F   |      T      |
+ * | effectiveLevel         | =zoomLvl  |   =   |   =   |   =   |      =      |
  */
 export function computeNodeContentVisibility(level: ZoomLevel): NodeContentVisibility {
+  const lodLevel = ZOOM_LEVEL_TO_LOD[level]
+
   switch (level) {
     case 'ultra-far':
       return {
@@ -151,7 +173,10 @@ export function computeNodeContentVisibility(level: ZoomLevel): NodeContentVisib
         showInteractiveControls: false,
         showFooter: false,
         showHeader: false,
-        effectiveLevel: level
+        effectiveLevel: level,
+        showEditor: false,
+        showPlaceholders: false,
+        lodLevel
       }
     case 'far':
       return {
@@ -166,7 +191,10 @@ export function computeNodeContentVisibility(level: ZoomLevel): NodeContentVisib
         showInteractiveControls: false,
         showFooter: false,
         showHeader: true,
-        effectiveLevel: level
+        effectiveLevel: level,
+        showEditor: false,
+        showPlaceholders: true,
+        lodLevel
       }
     case 'mid':
       return {
@@ -181,7 +209,10 @@ export function computeNodeContentVisibility(level: ZoomLevel): NodeContentVisib
         showInteractiveControls: false,
         showFooter: true,
         showHeader: true,
-        effectiveLevel: level
+        effectiveLevel: level,
+        showEditor: false,
+        showPlaceholders: false,
+        lodLevel
       }
     case 'close':
       return {
@@ -196,7 +227,10 @@ export function computeNodeContentVisibility(level: ZoomLevel): NodeContentVisib
         showInteractiveControls: true,
         showFooter: true,
         showHeader: true,
-        effectiveLevel: level
+        effectiveLevel: level,
+        showEditor: true,
+        showPlaceholders: false,
+        lodLevel
       }
     case 'ultra-close':
       return {
@@ -211,7 +245,10 @@ export function computeNodeContentVisibility(level: ZoomLevel): NodeContentVisib
         showInteractiveControls: true,
         showFooter: true,
         showHeader: true,
-        effectiveLevel: level
+        effectiveLevel: level,
+        showEditor: true,
+        showPlaceholders: false,
+        lodLevel
       }
     default: {
       // Exhaustiveness check

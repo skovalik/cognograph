@@ -18,6 +18,7 @@ import { useEffect, useRef, useCallback, memo } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 
 // ---------------------------------------------------------------------------
 // Props
@@ -67,6 +68,40 @@ const terminalTheme = {
 // ---------------------------------------------------------------------------
 
 const RESIZE_DEBOUNCE_MS = 150
+
+// ---------------------------------------------------------------------------
+// Terminal output tee — stores last 12 lines per node for card preview at L2+
+// ---------------------------------------------------------------------------
+
+const terminalOutputBuffers = new Map<string, string>()
+let teeFlushTimer: ReturnType<typeof setTimeout> | null = null
+
+function teeTerminalOutput(nodeId: string, data: string): void {
+  const existing = terminalOutputBuffers.get(nodeId) || ''
+  terminalOutputBuffers.set(nodeId, existing + data)
+
+  if (teeFlushTimer) return // already scheduled
+  teeFlushTimer = setTimeout(() => {
+    teeFlushTimer = null
+    const updateNode = useWorkspaceStore.getState().updateNode
+    for (const [nid, buf] of terminalOutputBuffers.entries()) {
+      // Strip ANSI escape sequences for clean preview
+      const clean = buf.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/\x1b\][^\x07]*\x07/g, '')
+      const lines = clean.split('\n').filter(l => l.trim().length > 0)
+      const last12 = lines.slice(-12).map(l => l.slice(0, 120))
+      if (last12.length > 0) {
+        updateNode(nid, { terminalPreviewLines: last12 })
+      }
+    }
+    // Don't clear buffers — keep accumulating so we always have context
+    // But trim to prevent memory leak — keep only last 4KB per node
+    for (const [nid, buf] of terminalOutputBuffers.entries()) {
+      if (buf.length > 4096) {
+        terminalOutputBuffers.set(nid, buf.slice(-4096))
+      }
+    }
+  }, 200) // 200ms debounce
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -239,6 +274,8 @@ function TerminalPanelInner({
         if (mountedRef.current && terminalRef.current) {
           terminalRef.current.write(data)
         }
+        // Tee output for node card preview at L2+ zoom
+        teeTerminalOutput(nodeId, data)
       })
       cleanups.push(removeDataListener)
 

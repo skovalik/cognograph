@@ -7,7 +7,7 @@
  * Phase 1C enhancements:
  * - District boundary overlays (colored rectangles at 20% opacity)
  * - Landmark node markers (filled circle with glow effect)
- * - CC session pulse animation on streaming conversation nodes
+ * - Terminal pulse animation on streaming conversation nodes
  */
 
 import { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react'
@@ -53,7 +53,7 @@ type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 // --------------------------------------------------------------------------
 // Phase 1C: Custom MiniMap node component
 // Renders landmark nodes with a distinctive filled circle marker and applies
-// a pulse CSS class to streaming conversation nodes (CC session pulse).
+// a pulse CSS class to streaming conversation nodes (Terminal pulse).
 // --------------------------------------------------------------------------
 interface CustomMiniMapNodeProps {
   id: string
@@ -448,6 +448,7 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
           </div>
           <button
             onClick={toggleCollapsed}
+            onMouseDown={(e) => e.stopPropagation()}
             className="p-0.5 gui-button rounded transition-colors"
             title={isCollapsed ? 'Expand minimap' : 'Collapse minimap'}
           >

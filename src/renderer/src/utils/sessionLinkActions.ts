@@ -28,7 +28,7 @@ export function getSessionLinkMenuItems(
 
   if (existingLink) {
     items.push({
-      label: 'Unlink CC session',
+      label: 'Unlink Terminal',
       icon: 'Unlink',
       action: 'unlink-session',
       sessionId: existingLink.sessionId,
@@ -37,14 +37,14 @@ export function getSessionLinkMenuItems(
   } else if (pendingSessionIds.length > 0) {
     // Offer to link to any pending session
     items.push({
-      label: `Link to CC session... (${pendingSessionIds.length} available)`,
+      label: `Link to Terminal... (${pendingSessionIds.length} available)`,
       icon: 'Link',
       action: 'link-session',
       nodeId
     })
   } else {
     items.push({
-      label: 'Link to CC session...',
+      label: 'Link to Terminal...',
       icon: 'Link',
       action: 'link-session',
       nodeId
