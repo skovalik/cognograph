@@ -798,12 +798,15 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
           <div
             className="flex-1 overflow-hidden rounded-b-lg"
             style={{ minHeight: 0 }}
-            onWheelCapture={isTouch ? undefined : (e) => e.stopPropagation()}
+            onWheelCapture={isTouch ? undefined : (e) => {
+              // Let Ctrl+wheel (zoom) pass through to React Flow; capture plain scroll for chat
+              if (!e.ctrlKey) e.stopPropagation()
+            }}
             onPointerDownCapture={(e) => {
               // Prevent React Flow panning when interacting with chat input — but allow pinch-zoom on touch
               if (isTouch) return
               const target = e.target as HTMLElement
-              if (target.closest('textarea') || target.closest('button') || target.closest('select') || target.closest('.overflow-y-auto')) {
+              if (target.closest('textarea') || target.closest('button') || target.closest('select') || target.closest('.overflow-y-auto') || target.closest('.chat-bubble')) {
                 e.stopPropagation()
               }
             }}
