@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 /**
  * Terminal access gate — replaces raw __ELECTRON__ checks for terminal features.
  *

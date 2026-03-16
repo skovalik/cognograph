@@ -4,8 +4,6 @@
 
 A spatial canvas where AI conversations, notes, tasks, and projects live as connected nodes. Draw a connection between two nodes and the AI reads both. Your layout is your prompt engineering.
 
-<!-- TODO: Add demo GIF showing: create note → create conversation → connect them → AI responds with note context -->
-
 ---
 
 ## The Problem
@@ -99,7 +97,7 @@ On first conversation, the app will ask for an API key. Paste it in and you're r
 
 ### Requirements
 
-- Node.js 18+
+- Node.js 20+
 - npm 9+
 - An API key from at least one provider (see below)
 
@@ -138,7 +136,7 @@ Each conversation node can use a different provider. Set per-node or use workspa
 | LLM SDKs | Anthropic, OpenAI, Google Generative AI |
 | 3D/Effects | Three.js, R3F, OGL |
 | Build | electron-vite, Vite |
-| Testing | Vitest (1,305 tests), Playwright |
+| Testing | Vitest (1,462 tests), Playwright |
 
 ---
 
@@ -150,7 +148,7 @@ src/
 ├── preload/        # IPC bridge (type-safe API surface)
 ├── renderer/       # React app
 │   ├── components/ # UI components + 8 node types
-│   ├── stores/     # Zustand stores (37 stores)
+│   ├── stores/     # Zustand stores (42 stores)
 │   ├── services/   # Agent tools, action executor, extraction
 │   └── utils/      # Mutation executor, helpers
 ├── plugins/        # Plugin system (Notion, etc.)
@@ -185,12 +183,9 @@ If you're not sure where to start, open an issue.
 |----------|---------|
 | [FEATURES.md](./FEATURES.md) | Comprehensive feature documentation |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, data flow, components |
-| [docs/strategy/VISION.md](./docs/strategy/VISION.md) | Strategy, goals, design philosophy |
-| [docs/strategy/NORTH_STAR.md](./docs/strategy/NORTH_STAR.md) | Long-term 3D desktop vision |
 | [docs/guides/PITFALLS.md](./docs/guides/PITFALLS.md) | Common bugs and how to avoid them |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | How to contribute |
 | [DECISIONS.md](./DECISIONS.md) | Decision log with rationale |
-| [CHANGELOG.md](./CHANGELOG.md) | Session-by-session work history |
 
 ---
 
@@ -209,7 +204,7 @@ Patent pending. Four provisional patent applications filed February 2026 coverin
 
 [AGPL-3.0](./LICENSE) with [Defensive Patent Pledge](./PATENTS). Patent pending.
 
-**Free for personal use.** Commercial use requires a commercial license — [contact us](mailto:stefan@aurochs.agency) for details.
+**Free for personal use.** Commercial use requires a commercial license — [contact me](mailto:stefan@aurochs.agency) for details.
 
 If you distribute modified versions or run them as a network service, AGPL-3.0 requires you to release your source code under the same license.
 

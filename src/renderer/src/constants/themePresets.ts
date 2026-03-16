@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import type { ThemePreset, GuiColors } from '@shared/types'
 import { DEFAULT_GLASS_SETTINGS } from '@shared/types'
 

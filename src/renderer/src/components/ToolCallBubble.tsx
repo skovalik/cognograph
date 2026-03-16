@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useState } from 'react'
 import { Wrench, ChevronDown, ChevronUp, AlertCircle, Check } from 'lucide-react'
 import type { Message } from '@shared/types'

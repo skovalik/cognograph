@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // ExecutionStatusBadge — Phase 5A: Visible Execution State Badges
 // Shape-coded status indicator for orchestrated workflow nodes.
 // Uses WCAG 1.4.1 shape redundancy: circle (active), square (queued),

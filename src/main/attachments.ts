@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { ipcMain, dialog, shell, nativeImage, app } from 'electron'
 import { join, basename, extname, resolve } from 'path'
 import { promises as fs } from 'fs'

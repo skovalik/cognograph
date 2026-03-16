@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { useState, useEffect, useCallback } from 'react'
 import { Database, CheckCircle, Loader2, Play, X, Link } from 'lucide-react'
 import { toast } from 'react-hot-toast'

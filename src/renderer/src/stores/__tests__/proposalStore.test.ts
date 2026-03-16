@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useProposalStore } from '../proposalStore'
 import type { Proposal, ProposedChange } from '@shared/types/bridge'

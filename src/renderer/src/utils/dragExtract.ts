@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // dragExtract — PFD Phase 5C: Drag-Extract Provenance Tracking
 //
 // Pure utility for creating extraction data: when a user selects text inside

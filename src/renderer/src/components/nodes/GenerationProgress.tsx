@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useEffect, useState } from 'react'
 import { Loader2, X, CheckCircle, AlertCircle } from 'lucide-react'
 import { useJobManager, type GenerationJob } from '../../services/media/jobManager'

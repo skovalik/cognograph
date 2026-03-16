@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 /**
  * Stub for node-pty — used by vitest's resolve alias so that Vite can resolve
  * the import when node-pty is not yet installed. Tests mock this module via

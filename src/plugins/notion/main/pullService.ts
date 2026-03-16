@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // PullService — Periodic poll of Notion for remote changes
 // Spec: COGNOGRAPH-NOTION-NODE-SYNC-SPEC.md Section 5c (Pull), Section 8
 //

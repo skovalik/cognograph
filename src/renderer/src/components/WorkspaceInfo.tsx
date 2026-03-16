@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { Edit2, Check, X, HardDrive, Clock, MoreHorizontal, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react'
 import { useNodesStore, useEdgesStore, usePersistenceStore, useWorkspaceStore } from '../stores'

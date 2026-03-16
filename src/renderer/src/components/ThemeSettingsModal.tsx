@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useState, useCallback, useRef } from 'react'
 import { X, Palette, RotateCcw, MessageSquare, Folder, FileText, CheckSquare, Code, Boxes, Layout, Sun, Moon, Layers, Sparkles, Plus, Save, Download, Upload, Wand2, ChevronDown, ChevronRight, RefreshCw, Check, Monitor, Link, Type, Pencil, Workflow } from 'lucide-react'
 import { toast } from 'react-hot-toast'

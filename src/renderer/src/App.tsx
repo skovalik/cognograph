@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { useCallback, useEffect, useRef, useState, useMemo, Suspense, lazy } from 'react'
 import {
   ReactFlow,

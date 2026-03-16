@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // WPConfigBody -- Renders inside NoteNode when noteMode === 'wp-config'
 // Displays WordPress connection settings: site URL, API endpoint, auth method, environment
 

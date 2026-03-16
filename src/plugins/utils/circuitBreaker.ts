@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // Circuit Breaker Pattern
 // Generic circuit breaker for resilient API calls
 

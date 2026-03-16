@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 /**
  * nodeModeUtils.test.ts - Unit tests for node mode visual differentiation utilities
  *

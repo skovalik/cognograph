@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useState, useCallback } from 'react'
 import { Trash2, TestTube, Star, Pencil, Loader2 } from 'lucide-react'
 import type { LLMConnector, ConnectorProvider } from '@shared/types'

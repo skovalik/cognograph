@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { useState, useCallback, memo } from 'react'
 import { X, Plus, Trash2 } from 'lucide-react'
 import type { PropertyType, PropertyDefinition, PropertyOption } from '@shared/types'

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // SessionReEntryPrompt — PFD Phase 6C: Session Re-Entry
 // Shows "Resume where you left off?" prompt on workspace load.
 // Zooms to last-active node on click. Auto-dismisses after 8 seconds.

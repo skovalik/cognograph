@@ -1,20 +1,24 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 /**
  * AnimatedContent — content transition animations (fade, slide, scale).
  *
  * Adapted from React Bits (reactbits.dev) for Cognograph.
- * The original component used GSAP ScrollTrigger which does not apply in
- * a canvas/pan-zoom app. This version triggers on mount (or when `trigger`
- * becomes true) using plain GSAP tweens.
+ * Triggers on mount (or when `trigger` becomes true) using Framer Motion.
  *
  * When the user prefers reduced motion, content appears immediately.
  */
 
 import { useRef, useEffect, type ReactNode, type CSSProperties } from 'react'
-import { gsap } from 'gsap'
+import { animate, type AnimationPlaybackControls } from 'framer-motion'
 import { useReducedMotion } from '../../../hooks/useReducedMotion'
 import { cn } from '../../../lib/utils'
 
 export type AnimationDirection = 'vertical' | 'horizontal'
+
+/** Cubic-bezier easing — default approximates GSAP power3.out */
+export type EaseCurve = [number, number, number, number]
 
 export interface AnimatedContentProps {
   children: ReactNode
@@ -26,8 +30,8 @@ export interface AnimatedContentProps {
   reverse?: boolean
   /** Duration in seconds */
   duration?: number
-  /** GSAP ease string */
-  ease?: string
+  /** Cubic-bezier easing curve */
+  ease?: EaseCurve
   /** Starting opacity (0-1) */
   initialOpacity?: number
   /** Whether to animate opacity alongside position */
@@ -50,7 +54,7 @@ export function AnimatedContent({
   direction = 'vertical',
   reverse = false,
   duration = 0.6,
-  ease = 'power3.out',
+  ease = [0.22, 1, 0.36, 1],
   initialOpacity = 0,
   animateOpacity = true,
   scale = 1,
@@ -71,47 +75,52 @@ export function AnimatedContent({
 
     // If reduced motion, just make content visible immediately
     if (prefersReducedMotion) {
-      gsap.set(el, { opacity: 1, x: 0, y: 0, scale: 1, visibility: 'visible' })
+      Object.assign(el.style, {
+        opacity: '1', transform: 'translate(0, 0) scale(1)', visibility: 'visible',
+      })
       hasAnimated.current = true
       return
     }
 
     if (!trigger) {
-      // Keep hidden until trigger fires
-      gsap.set(el, {
-        opacity: animateOpacity ? initialOpacity : 1,
+      Object.assign(el.style, {
+        opacity: animateOpacity ? String(initialOpacity) : '1',
         visibility: 'hidden',
       })
       return
     }
 
-    const axis = direction === 'horizontal' ? 'x' : 'y'
+    const isHorizontal = direction === 'horizontal'
     const offset = reverse ? -distance : distance
 
     // Set initial state
-    gsap.set(el, {
-      [axis]: offset,
-      scale,
-      opacity: animateOpacity ? initialOpacity : 1,
+    const tx = isHorizontal ? offset : 0
+    const ty = isHorizontal ? 0 : offset
+    Object.assign(el.style, {
+      transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
+      opacity: animateOpacity ? String(initialOpacity) : '1',
       visibility: 'visible',
     })
 
     // Animate to final state
-    const tween = gsap.to(el, {
-      [axis]: 0,
-      scale: 1,
-      opacity: 1,
-      duration,
-      ease,
-      delay,
-      onComplete() {
-        hasAnimated.current = true
-        onComplete?.()
-      },
-    })
+    let controls: AnimationPlaybackControls | undefined
+    const timeoutId = window.setTimeout(() => {
+      controls = animate(el, {
+        transform: 'translate(0px, 0px) scale(1)',
+        opacity: 1,
+      }, {
+        duration,
+        ease,
+        onComplete() {
+          hasAnimated.current = true
+          onComplete?.()
+        },
+      })
+    }, delay * 1000)
 
     return () => {
-      tween.kill()
+      window.clearTimeout(timeoutId)
+      controls?.stop()
     }
   }, [
     trigger,

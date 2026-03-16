@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { useEffect, useRef } from 'react'
 import type { Node } from '@xyflow/react'
 import type { NodeData } from '@shared/types'

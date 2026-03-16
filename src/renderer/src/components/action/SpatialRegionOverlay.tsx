@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useMemo } from 'react'
 import { useViewport } from '@xyflow/react'
 import { useSpatialRegionStore } from '../../stores/spatialRegionStore'

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useCallback } from 'react'
 import type { ActionTrigger, ActionTriggerType } from '@shared/actionTypes'
 import { useSpatialRegionStore } from '../../stores/spatialRegionStore'

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useCallback } from 'react'
 import { Plus, X, ChevronUp, ChevronDown, Power } from 'lucide-react'
 import { v4 as uuid } from 'uuid'

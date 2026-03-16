@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import React, { useState, useMemo } from 'react'
 import { Search, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import type { AgentMemory, MemoryEntry } from '@shared/types'

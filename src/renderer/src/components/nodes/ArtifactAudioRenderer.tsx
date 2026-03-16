@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useRef, useEffect, useState, useCallback } from 'react'
 import { Play, Pause, Volume2 } from 'lucide-react'
 import type { ArtifactMediaMetadata } from '@shared/types/nodes'

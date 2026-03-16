@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useState, useCallback } from 'react'
 import { FileText, CheckSquare, Check, Edit2, X, ChevronDown, ChevronUp } from 'lucide-react'
 import type { PendingExtraction, NoteNodeData, TaskNodeData } from '@shared/types'

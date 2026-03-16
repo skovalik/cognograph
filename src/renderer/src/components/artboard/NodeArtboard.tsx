@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useViewport } from '@xyflow/react'
 import { useWorkspaceStore } from '../../stores/workspaceStore'

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { LocalSyncProvider } from './LocalSyncProvider'
 import { YjsSyncProvider } from './YjsSyncProvider'

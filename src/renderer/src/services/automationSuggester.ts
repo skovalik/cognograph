@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import type { HistoryAction, NodeData } from '@shared/types'
 import type { ActionTrigger, ActionStep } from '@shared/actionTypes'
 import { useWorkspaceStore } from '../stores/workspaceStore'

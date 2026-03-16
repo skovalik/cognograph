@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { useMemo, memo } from 'react'
 import { calculateTokenUsage, getUsageLevel } from '../utils/tokenEstimation'
 import type { Message } from '@shared/types'

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // DesignTokenEditor — Renders inside NoteNode when noteMode === 'design-tokens'
 // Provides a monospace textarea for editing DesignTokenSet JSON with validation
 

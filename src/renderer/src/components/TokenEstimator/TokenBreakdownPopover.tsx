@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo } from 'react'
 import { FileText, MessageSquare, Bot, Layers } from 'lucide-react'
 import { formatTokenCount, formatCost, type TokenEstimate, type TokenBreakdownItem } from '../../utils/tokenEstimator'

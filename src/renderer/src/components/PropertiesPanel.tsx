@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { memo, useCallback, useState, useMemo } from 'react'
 import { X, Trash2, MessageSquare, Folder, FileText, CheckSquare, ChevronDown, ChevronRight, Tag, Plus, Code, Sparkles, Files, GripVertical, Power, Zap, Link2, Boxes, Bot, Compass, Users, Eye, EyeOff, Link2Off, HelpCircle, ExternalLink, Square, Circle, Hexagon, RectangleHorizontal, Workflow, CheckCircle, XCircle, Search, BarChart3, AlertTriangle } from 'lucide-react'
 import { useReactFlow } from '@xyflow/react'

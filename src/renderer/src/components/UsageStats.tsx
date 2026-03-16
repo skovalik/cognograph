@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 import { useSessionStatsStore } from '../stores/sessionStatsStore'
 import { formatCost, formatTokenCount } from '../utils/tokenEstimator'
 import { toast } from 'react-hot-toast'

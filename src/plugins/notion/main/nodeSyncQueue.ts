@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
+
 // NodeSyncQueue — Disk-backed FIFO queue for failed node-level syncs
 // Spec: COGNOGRAPH-NOTION-NODE-SYNC-SPEC.md Section 5d
 //
