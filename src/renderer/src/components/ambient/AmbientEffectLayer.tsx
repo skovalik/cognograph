@@ -14,6 +14,9 @@ import type { AmbientEffectSettings } from '@shared/types'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 import { getGPUTier } from '../../utils/gpuDetection'
 import { useProgramStore, selectReduceMotion } from '../../stores/programStore'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { useAdaptiveQuality } from '../../hooks/useAdaptiveQuality'
+import type { AdaptiveQualityState } from '../../hooks/useAdaptiveQuality'
 import { EFFECT_REGISTRY } from './effectRegistry'
 import { hexToRgbFloat, generatePaletteFromAccents, deriveColor } from './utils/colorConvert'
 
@@ -150,6 +153,9 @@ function AmbientEffectLayerComponent({
     appReduceMotionPref === 'always' ||
     (appReduceMotionPref === 'system' && osReducedMotion)
 
+  // Zoom performance tier — disable effects at minimal, cap quality at reduced
+  const zoomPerfTier = useWorkspaceStore(s => s.zoomPerfTier) ?? 'full'
+
   // Track container dimensions with ResizeObserver
   useEffect(() => {
     const container = containerRef.current
@@ -184,9 +190,17 @@ function AmbientEffectLayerComponent({
     settings.effect !== 'none' &&
     !shouldReduceMotion &&
     hasValidDimensions &&
-    gpuTierRef.current.tier !== 'low'
+    gpuTierRef.current.tier !== 'low' &&
+    zoomPerfTier !== 'minimal'
 
   const effectColor = getEffectColor(accentColor)
+
+  // Adaptive quality hook — FPS monitoring + resolution scaling
+  const { qualityRef, reportFrame } = useAdaptiveQuality({
+    initialScale: gpuTierRef.current.tier === 'medium' ? 0.5 : 1.0,
+    resetKey: settings.effect,
+    performanceMode: settings.performanceMode,
+  })
 
   // Bloom settings — quadratic curve for more dramatic high end
   // Cap bloom at 30% on medium-tier GPUs to reduce GPU load
@@ -206,6 +220,17 @@ function AmbientEffectLayerComponent({
     return buildEffectProps(entry, userOverrides, effectColor, accentSecondary, isDark)
   }, [settings.effect, settings.effectProps, effectColor, accentSecondary, isDark])
 
+  // Cap quality at reduced zoom tier — create a ref wrapper that limits resolutionScale
+  const cappedQualityRef = useRef<AdaptiveQualityState>({ resolutionScale: 1, frameSkip: false, shouldRender: true, dprCap: 1 })
+  useEffect(() => {
+    if (qualityRef.current) {
+      const src = qualityRef.current
+      cappedQualityRef.current = zoomPerfTier === 'reduced'
+        ? { ...src, resolutionScale: Math.min(src.resolutionScale, 0.5) }
+        : src
+    }
+  })
+
   const renderEffect = () => {
     const entry = EFFECT_REGISTRY[settings.effect]
     if (!entry || !resolvedProps) return null
@@ -216,6 +241,8 @@ function AmbientEffectLayerComponent({
         <Suspense fallback={null}>
           <Component
             {...resolvedProps}
+            qualityRef={zoomPerfTier === 'reduced' ? cappedQualityRef : qualityRef}
+            reportFrame={reportFrame}
             style={{
               position: 'absolute',
               inset: 0,
@@ -251,10 +278,11 @@ function AmbientEffectLayerComponent({
         </div>
       )}
 
-      {showBloom && (
+      {showBloom && zoomPerfTier === 'full' && (
         <BloomLayer
           bloomBlurPx={bloomBlurPx}
           bloomOpacity={bloomOpacity}
+          qualityRef={qualityRef}
         />
       )}
     </div>
@@ -268,9 +296,11 @@ function AmbientEffectLayerComponent({
 function BloomLayerComponent({
   bloomBlurPx,
   bloomOpacity,
+  qualityRef,
 }: {
   bloomBlurPx: number
   bloomOpacity: number
+  qualityRef?: React.RefObject<AdaptiveQualityState>
 }): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -278,6 +308,11 @@ function BloomLayerComponent({
     let animId: number | null = null
 
     const copyFrame = (): void => {
+      if (document.hidden || (qualityRef?.current && !qualityRef.current.shouldRender)) {
+        animId = requestAnimationFrame(copyFrame)
+        return
+      }
+
       const bloomCanvas = canvasRef.current
       if (!bloomCanvas) {
         animId = requestAnimationFrame(copyFrame)

@@ -116,6 +116,7 @@ function EditableTitleComponent({
           width: '100%'
         }}
         placeholder={placeholder}
+        aria-label="Node title"
       />
     )
   }

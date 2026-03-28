@@ -709,7 +709,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
       const result = await window.api.llm.extract({
         systemPrompt,
         userPrompt,
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         maxTokens: 1200 // Increased for guiColors
       })
 
@@ -924,8 +924,6 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
         side="right"
         className="w-[600px] max-w-[calc(100vw-32px)] overflow-y-auto text-sm"
         noOverlay
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
       >
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
@@ -1732,7 +1730,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                     {NODE_TYPES.find(n => n.type === colorPickerNodeType)?.label} Color
                   </span>
                 </div>
-                <button onClick={() => setShowColorPicker(false)} className={`p-1 ${buttonBg} rounded transition-colors`} title="Close (Cancel)">
+                <button onClick={() => setShowColorPicker(false)} className={`p-1 ${buttonBg} rounded transition-colors`} title="Close (Cancel)" aria-label="Close color picker">
                   <X className={`w-4 h-4 ${textSecondary}`} />
                 </button>
               </div>
@@ -2001,7 +1999,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                     {linkColorTarget.charAt(0).toUpperCase() + linkColorTarget.slice(1)} Link Color
                   </span>
                 </div>
-                <button onClick={() => setShowLinkColorPicker(false)} className={`p-1 ${buttonBg} rounded transition-colors`} title="Close">
+                <button onClick={() => setShowLinkColorPicker(false)} className={`p-1 ${buttonBg} rounded transition-colors`} title="Close" aria-label="Close link color picker">
                   <X className={`w-4 h-4 ${textSecondary}`} />
                 </button>
               </div>
@@ -2366,7 +2364,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                     {guiColorTarget.startsWith('toolbarIconAccent') && `Toolbar Icon ${parseInt(guiColorTarget.split('.')[1] ?? '0') + 1}`}
                   </span>
                 </div>
-                <button onClick={() => setShowGuiColorPicker(false)} className={`p-1 ${buttonBg} rounded transition-colors`} title="Close">
+                <button onClick={() => setShowGuiColorPicker(false)} className={`p-1 ${buttonBg} rounded transition-colors`} title="Close" aria-label="Close GUI color picker">
                   <X className={`w-4 h-4 ${textSecondary}`} />
                 </button>
               </div>
@@ -2510,7 +2508,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                     {genericColorPickerTarget === 'canvasGrid' && 'Canvas Grid Color'}
                   </span>
                 </div>
-                <button onClick={() => setShowGenericColorPicker(false)} className={`p-1 ${buttonBg} rounded transition-colors`} title="Close (Cancel)">
+                <button onClick={() => setShowGenericColorPicker(false)} className={`p-1 ${buttonBg} rounded transition-colors`} title="Close (Cancel)" aria-label="Close color picker">
                   <X className={`w-4 h-4 ${textSecondary}`} />
                 </button>
               </div>
@@ -2555,7 +2553,7 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
                   <Wand2 className="w-4 h-4" style={{ color: 'var(--gui-accent-primary)' }} />
                   <span className={`font-medium text-sm ${textPrimary}`}>Generate AI Theme</span>
                 </div>
-                <button onClick={() => setShowAiGenerateModal(false)} className={`p-1 ${buttonBg} rounded transition-colors`}>
+                <button onClick={() => setShowAiGenerateModal(false)} className={`p-1 ${buttonBg} rounded transition-colors`} aria-label="Close AI theme generator">
                   <X className={`w-4 h-4 ${textSecondary}`} />
                 </button>
               </div>

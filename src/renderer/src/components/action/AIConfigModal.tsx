@@ -10,6 +10,7 @@ import { memo, useCallback, useEffect, useReducer, useRef } from 'react'
 import { X, AlertCircle, Sparkles, RotateCcw } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createFocusTrap } from '../../utils/accessibility'
+import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 import { MiniConstellationLoader } from '../MiniConstellationLoader'
 import type {
   ActionNodeData,
@@ -409,13 +410,8 @@ function AIConfigModalComponent({
 
   // Keyboard handling
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        handleCancel()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    escapeManager.register('modal-ai-config', EscapePriority.MODAL, handleCancel)
+    return () => escapeManager.unregister('modal-ai-config')
   }, [handleCancel])
 
   return (

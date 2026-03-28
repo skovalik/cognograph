@@ -71,7 +71,7 @@ class ExecLogWriter {
       const firstAgent = run.agentResults[0]
       if (firstAgent.model) return firstAgent.model
     }
-    return 'claude-sonnet-4-20250514'
+    return 'claude-sonnet-4-6'
   }
 
   private extractOutputSummary(run: OrchestratorRun): string | undefined {

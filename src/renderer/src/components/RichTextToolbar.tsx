@@ -12,6 +12,8 @@ import {
   MoreHorizontal
 } from 'lucide-react'
 
+import { escapeManager, EscapePriority } from '../utils/EscapeManager'
+
 interface RichTextToolbarProps {
   editor: Editor
   enableLists?: boolean
@@ -103,11 +105,9 @@ function RichTextToolbarComponent({
   // Escape key to close dropdown
   useEffect(() => {
     if (!isOverflowOpen) return
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsOverflowOpen(false)
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    const closeOverflow = () => setIsOverflowOpen(false)
+    escapeManager.register('popover-richtext-overflow', EscapePriority.POPOVER, closeOverflow)
+    return () => escapeManager.unregister('popover-richtext-overflow')
   }, [isOverflowOpen])
 
   // Determine which button groups to show inline vs in overflow

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import './earlyInit'
 import { app, shell, BrowserWindow, ipcMain, session } from 'electron'
-import { join } from 'path'
+import { join, resolve as pathResolve, relative as pathRelative, isAbsolute as pathIsAbsolute } from 'path'
 import { promises as fs } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { registerWorkspaceHandlers } from './workspace'
@@ -12,6 +13,7 @@ import { registerTemplateHandlers } from './templates'
 import { registerAIEditorHandlers } from './aiEditor'
 import { registerAgentHandlers } from './agent/claudeAgent'
 import { registerFilesystemHandlers } from './agent/filesystemTools'
+import { registerFolderHandlers } from './ipc/folderHandler'
 import { registerAttachmentHandlers } from './attachments'
 import { registerConnectorHandlers } from './connectors'
 import { registerMultiplayerHandlers, registerDeepLinkProtocol, setupDeepLinkListeners } from './multiplayer'
@@ -19,7 +21,7 @@ import { registerBackupHandlers } from './backupManager'
 import { registerOrchestratorHandlers } from './orchestratorHandlers'
 import { registerMCPClientHandlers, disconnectAllMCPServers } from './mcp/mcpClient'
 import { registerAuditHandlers } from './services/auditService'
-import { registerGraphIntelligenceHandlers } from './services/graphIntelligence'
+import { registerGraphIntelligenceHandlers, registerSnapshotResponseHandler } from './services/graphIntelligence'
 import { registerNotionHandlers } from './services/registerNotionHandlers'
 import { registerTerminalHandlers } from './services/registerTerminalHandlers'
 import { killAll as killAllTerminals } from './services/terminalManager'
@@ -41,6 +43,7 @@ import {
   deleteCredential,
   listCredentials,
 } from './services/credentialStore'
+import { getLogBuffer } from './services/consoleForwarder'
 import { logger } from './utils/logger'
 import { loadPlugins, destroyPlugins, setMainWindow, emitPluginEvent } from '@plugins/registry'
 
@@ -125,19 +128,48 @@ function createWindow(): void {
  * Checks --workspace-path flag, then falls back to last opened workspace.
  */
 async function resolveWorkspacePath(): Promise<string | null> {
+  const workspacesDir = join(app.getPath('userData'), 'workspaces')
+
+  /**
+   * Validate that a resolved path stays within the workspaces directory.
+   * Prevents path traversal via malicious --workspace-path or --workspace-id arguments.
+   */
+  function isWithinWorkspacesDir(resolvedPath: string): boolean {
+    const normalizedPath = pathResolve(resolvedPath)
+    const normalizedDir = pathResolve(workspacesDir)
+    const rel = pathRelative(normalizedDir, normalizedPath)
+    // If relative path starts with ".." or is absolute, it escapes the dir
+    return !rel.startsWith('..') && !pathIsAbsolute(rel)
+  }
+
   // Check for explicit workspace path flag
   const pathIdx = process.argv.indexOf('--workspace-path')
   const pathArg = pathIdx !== -1 ? process.argv[pathIdx + 1] : undefined
   if (pathArg) {
-    return pathArg
+    const resolved = pathResolve(pathArg)
+    // Explicit path: must be within workspaces dir
+    if (!isWithinWorkspacesDir(resolved)) {
+      console.error(`[MCP] Workspace path rejected — outside workspaces directory: ${resolved}`)
+      return null
+    }
+    return resolved
   }
 
   // Check for workspace ID flag
   const idIdx = process.argv.indexOf('--workspace-id')
   const idArg = idIdx !== -1 ? process.argv[idIdx + 1] : undefined
   if (idArg) {
-    const workspacesDir = join(app.getPath('userData'), 'workspaces')
-    return join(workspacesDir, `${idArg}.json`)
+    // Sanitize ID: only allow alphanumeric, hyphens, underscores
+    if (!/^[\w-]+$/.test(idArg)) {
+      console.error(`[MCP] Invalid workspace ID: ${idArg}`)
+      return null
+    }
+    const resolved = join(workspacesDir, `${idArg}.json`)
+    if (!isWithinWorkspacesDir(resolved)) {
+      console.error(`[MCP] Workspace ID resolves outside workspaces directory: ${resolved}`)
+      return null
+    }
+    return resolved
   }
 
   // Fall back to last opened workspace from settings
@@ -146,7 +178,6 @@ async function resolveWorkspacePath(): Promise<string | null> {
     const settingsContent = await fs.readFile(settingsPath, 'utf-8')
     const settings = JSON.parse(settingsContent)
     if (settings.lastWorkspaceId) {
-      const workspacesDir = join(app.getPath('userData'), 'workspaces')
       return join(workspacesDir, `${settings.lastWorkspaceId}.json`)
     }
   } catch {
@@ -224,6 +255,7 @@ app.whenReady().then(async () => {
     registerAIEditorHandlers()
     registerAgentHandlers()
     registerFilesystemHandlers()
+    registerFolderHandlers()
     registerAttachmentHandlers()
     registerConnectorHandlers()
     registerMultiplayerHandlers()
@@ -232,6 +264,7 @@ app.whenReady().then(async () => {
     registerMCPClientHandlers()
     registerAuditHandlers()
     registerGraphIntelligenceHandlers()
+    registerSnapshotResponseHandler()
     registerNotionHandlers()
     registerTerminalHandlers()
     setupDeepLinkListeners()
@@ -339,6 +372,9 @@ app.whenReady().then(async () => {
       if (workspaceId.startsWith('__')) return []  // Silent deny
       return listCredentials(workspaceId)
     })
+
+    // Main process console log buffer — renderer fetches on mount
+    ipcMain.handle('main-process-log:getBuffer', () => getLogBuffer())
   }
 
   if (isMCPStandalone) {
@@ -352,6 +388,39 @@ app.whenReady().then(async () => {
   } else {
     // Normal app mode
     createWindow()
+
+    // Auto-updater (production only — safe init that handles "no updates" gracefully)
+    if (!is.dev && mainWindow) {
+      try {
+        const { autoUpdater } = await import('electron-updater')
+        autoUpdater.logger = logger as any
+        autoUpdater.autoDownload = false // Don't auto-download, just notify
+
+        autoUpdater.on('update-available', (info) => {
+          logger.log(`[AutoUpdate] Update available: ${info.version}`)
+          mainWindow?.webContents.send('auto-update:available', { version: info.version })
+        })
+        autoUpdater.on('update-downloaded', (info) => {
+          logger.log(`[AutoUpdate] Update downloaded: ${info.version}`)
+          mainWindow?.webContents.send('auto-update:downloaded', { version: info.version })
+        })
+        autoUpdater.on('error', (err) => {
+          // Don't crash on update errors — just log and continue
+          logger.log(`[AutoUpdate] Error: ${err.message}`)
+        })
+        autoUpdater.on('update-not-available', () => {
+          logger.log('[AutoUpdate] No updates available')
+        })
+
+        // Check for updates silently (won't throw if no publish config)
+        autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+          logger.log(`[AutoUpdate] Check failed (expected if no publish config): ${err.message}`)
+        })
+      } catch (err) {
+        // electron-updater may not be available in all builds
+        logger.log(`[AutoUpdate] Init skipped: ${(err as Error).message}`)
+      }
+    }
 
     // Start diagnostic server (dev mode only)
     if (is.dev && mainWindow) {

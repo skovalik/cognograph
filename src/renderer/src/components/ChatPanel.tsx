@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import { memo, useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { escapeManager, EscapePriority } from '../utils/EscapeManager'
 import { X, Send, Square, Link, Key, Package, ChevronDown, ChevronUp, Boxes, GripHorizontal, Bot, MessageSquare, Settings2 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -125,6 +126,20 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
   // Agent mode and chat-with-tools use store state because their services control streaming
   // Plain chat mode uses local state because LLM event handlers control it
   const isStreaming = (nodeData?.mode === 'agent' || storeIsStreaming) ? storeIsStreaming : isStreamingLocal
+
+  // Register Escape handler to cancel generation — higher priority than canvas deselect
+  useEffect(() => {
+    if (!isStreaming) return
+    const id = `chat-cancel-${nodeId}`
+    escapeManager.register(id, EscapePriority.DIALOG, () => {
+      // Cancel all active generation paths
+      if (isChatToolLoopActive(nodeId)) cancelChatToolLoop(nodeId)
+      interruptAgent(nodeId)
+      try { window.api?.llm?.cancel(nodeId) } catch {}
+      setIsStreamingLocal(false)
+    })
+    return () => escapeManager.unregister(id)
+  }, [isStreaming, nodeId])
 
   // Check if user has a BYOK key for the current provider
   const byokKey = typeof window !== 'undefined'
@@ -484,16 +499,55 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
 
     // Anthropic chat: always-on canvas tools — AI uses them when the user's request warrants it
     if (llmSettings.provider === 'anthropic') {
+      // Build spatial context from current viewport + visible nodes
+      let spatialContext = ''
+      try {
+        const wsState = useWorkspaceStore.getState()
+        const vp = wsState.viewport
+        const vpCenterX = (-vp.x + (window.innerWidth / 2)) / vp.zoom
+        const vpCenterY = (-vp.y + (window.innerHeight / 2)) / vp.zoom
+        const halfW = (window.innerWidth / 2) / vp.zoom
+        const halfH = (window.innerHeight / 2) / vp.zoom
+        const visibleNodes = wsState.nodes
+          .filter(n => {
+            const nx = n.position.x
+            const ny = n.position.y
+            return nx >= vpCenterX - halfW && nx <= vpCenterX + halfW &&
+                   ny >= vpCenterY - halfH && ny <= vpCenterY + halfH
+          })
+          .slice(0, 10)
+        const nodeList = visibleNodes.map(n => `  - "${n.data.title || n.id}" (${n.type}) at (${Math.round(n.position.x)}, ${Math.round(n.position.y)})`).join('\n')
+        spatialContext = `\n\nSPATIAL AWARENESS:
+- Viewport center: (${Math.round(vpCenterX)}, ${Math.round(vpCenterY)}), zoom: ${vp.zoom.toFixed(2)}
+- Visible nodes (up to 10):\n${nodeList || '  (none visible)'}
+- The system auto-layouts newly created nodes near the viewport center when no explicit position is given.`
+      } catch { /* spatial context non-critical */ }
+
       const toolSystemPrompt = (llmSettings.systemPrompt || '') +
-        `\nYou are inside Cognograph — a spatial canvas where AI conversations, notes, tasks, and projects live as connected nodes. You have access to canvas tools that can query and modify the user's workspace.
+        `\nYou are an AI running inside Cognograph — a spatial AI workflow canvas where conversations, notes, tasks, and projects exist as nodes connected by edges on a 2D canvas. You ARE a conversation node on this canvas.
+
+YOUR IDENTITY:
+- You are conversation node "${nodeId}" on the canvas.
+- You can see nodes connected to you via edges (injected as context below).
+- You can query the FULL canvas state with get_canvas_overview — use this whenever asked "what's on my canvas?", "what do you see?", "what changed?", or similar questions about the workspace.
 
 TOOL USE RULES:
-- Only use tools when the user explicitly asks to create, find, move, update, or connect nodes.
-- EXPLICIT requests (use tools): "Create a note about dogs", "Connect my notes to the project", "Find all my tasks"
-- NOT requests (respond in text): "I should probably...", "What about...", "Show me what you can do"
-- For filesystem access, code execution, or persistent memory, suggest switching to agent mode.
-- Be conversational and helpful. Explain what you did after using tools.` +
-        (context ? `\n\nCONTEXT FROM CONNECTED NODES:\n\n${context}` : '')
+- Use tools when the user asks to create, find, move, update, or connect things on the canvas.
+- **ALWAYS use batch_create when creating 2+ nodes.** Put ALL nodes AND ALL edges in a SINGLE batch_create call. Never call link_nodes or create_node separately when batch_create can do it. Include the edges array with source/target referencing temp_ids. Example: nodes: [{temp_id: "a", ...}, {temp_id: "b", ...}], edges: [{source: "a", target: "b"}]. One tool call, not twenty.
+- **NEVER split a graph across multiple tool calls.** Even if creating 10+ nodes with long HTML content, put EVERYTHING in one batch_create. The system handles large payloads. Splitting wastes API budget and causes rate limiting. If you need to create notes, artifacts, actions, and edges — one call.
+- When you need a node ID, use find_nodes to discover it — NEVER ask the user for IDs.
+- Use get_canvas_overview to see everything on the canvas (all nodes and edges, not just connected ones).
+- Use get_selection to see what the user has selected, and get_context for connected node content.
+- DO NOT use tools for casual conversation, opinions, or questions.
+- Be conversational and helpful. Briefly confirm what you did after using tools.
+
+NODE POSITIONING:
+- The system auto-layouts your created nodes after creation. You do NOT need to specify positions.
+- Nodes are automatically arranged in hierarchical layouts based on their connections.
+- Just create the nodes and edges — the layout pipeline handles spacing, collision avoidance, and camera focus.
+
+CONTENT TYPES:
+When creating artifact nodes with HTML content, set contentType: "html" so the content renders as a visual web page preview. For code snippets, use contentType: "code". For plain text, use "text" (default).` + spatialContext
 
       try {
         await sendChatWithTools(nodeId, userMessage, {
@@ -562,15 +616,17 @@ WHAT YOU SHOULD DO:
   }, [input, isStreamingLocal, storeIsStreaming, nodeData, nodeId, addMessage, getContextForNode, effectiveLLMSettings, connectedNodes.length, workspaceNodes.length])
 
   const handleCancel = useCallback(async () => {
-    if (nodeData?.mode === 'agent') {
-      interruptAgent()
-    } else if (isChatToolLoopActive(nodeId)) {
+    // Try all cancel paths — the streaming may be agent, chat-tools, or plain LLM
+    if (isChatToolLoopActive(nodeId)) {
       cancelChatToolLoop(nodeId)
-    } else {
-      await window.api.llm.cancel(nodeId)
     }
+    // Always try agent interrupt with nodeId (handles both explicit agent mode
+    // and default chat mode that routes through agent service)
+    interruptAgent(nodeId)
+    // Also try plain LLM cancel as fallback
+    try { await window.api.llm.cancel(nodeId) } catch { /* may not exist */ }
     setIsStreamingLocal(false)
-  }, [nodeData?.mode, nodeId])
+  }, [nodeId])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -582,11 +638,8 @@ WHAT YOU SHOULD DO:
     [handleSend]
   )
 
-  // Early return AFTER all hooks have been called
-  if (!isValidConversation || !nodeData) {
-    logger.log('ChatPanel: Invalid state', { nodeId, isValidConversation, hasNodeData: !!nodeData })
-    return null
-  }
+  // NOTE: Early return moved to after ALL hooks (line ~770) to avoid React hooks rule violation.
+  // Do NOT add an early return here — hooks below must always execute.
 
   const handleClose = useCallback(() => {
     closeChat(nodeId)
@@ -718,6 +771,12 @@ WHAT YOU SHOULD DO:
   // Get theme settings for light/dark mode
   const themeSettings = useWorkspaceStore((state) => state.themeSettings)
   const isLightMode = themeSettings.mode === 'light'
+
+  // Early return AFTER all hooks have been called (React hooks rule: no conditional hooks)
+  if (!isValidConversation || !nodeData) {
+    logger.log('ChatPanel: Invalid state', { nodeId, isValidConversation, hasNodeData: !!nodeData })
+    return null
+  }
 
   // Theme-aware styling (using design tokens)
   const bgClasses = 'bg-[var(--surface-panel)]'
@@ -852,6 +911,7 @@ WHAT YOU SHOULD DO:
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={nodeData.mode === 'agent' ? "Ask the agent..." : "Type a message..."}
+              aria-label={nodeData.mode === 'agent' ? "Agent message input" : "Chat message input"}
               rows={1}
               disabled={isStreaming || (creditExhausted && !byokKey)}
               spellCheck={true}
@@ -866,6 +926,7 @@ WHAT YOU SHOULD DO:
             {isStreaming ? (
               <button
                 onClick={handleCancel}
+                aria-label="Stop generating"
                 className={`px-2.5 bg-red-600 hover:bg-red-700 rounded transition-colors flex items-center justify-center ${isMobile ? 'min-w-[44px] min-h-[44px]' : ''}`}
               >
                 <Square className={`${isMobile ? 'w-5 h-5' : 'w-3.5 h-3.5'} text-white`} />
@@ -874,6 +935,7 @@ WHAT YOU SHOULD DO:
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
+                aria-label="Send message"
                 className={`px-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors flex items-center justify-center ${isMobile ? 'min-w-[44px] min-h-[44px]' : ''}`}
               >
                 <Send className={`${isMobile ? 'w-5 h-5' : 'w-3.5 h-3.5'} text-white`} />
@@ -923,7 +985,7 @@ WHAT YOU SHOULD DO:
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <h2 className={`font-medium ${textClasses} truncate`}>{nodeData.title}</h2>
+          <h2 className={`font-medium ${textClasses} truncate`} style={{ fontFamily: 'var(--font-display)' }}>{nodeData.title}</h2>
           <div className={`flex items-center gap-2 text-xs ${textMutedClasses}`}>
             <select
               value={effectiveLLMSettings?.provider || nodeData.provider || 'anthropic'}
@@ -984,6 +1046,7 @@ WHAT YOU SHOULD DO:
             onMouseDown={(e) => e.stopPropagation()}
             className={`p-2 ${hoverBgClasses} rounded transition-colors`}
             title="API Key Settings"
+            aria-label="API Key Settings"
           >
             <Key className={`w-4 h-4 ${textMutedClasses}`} />
           </button>
@@ -995,6 +1058,7 @@ WHAT YOU SHOULD DO:
             onMouseDown={(e) => e.stopPropagation()}
             className={`p-2 ${hoverBgClasses} rounded transition-colors`}
             title="Close"
+            aria-label="Close chat panel"
           >
             <X className={`w-5 h-5 ${textMutedClasses}`} />
           </button>
@@ -1153,6 +1217,7 @@ WHAT YOU SHOULD DO:
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={nodeData.mode === 'agent' ? "Ask me to modify your workspace..." : "Type a message..."}
+            aria-label={nodeData.mode === 'agent' ? "Agent message input" : "Chat message input"}
             rows={1}
             disabled={isStreaming || (creditExhausted && !byokKey)}
             spellCheck={true}
@@ -1167,6 +1232,7 @@ WHAT YOU SHOULD DO:
           {isStreaming ? (
             <button
               onClick={handleCancel}
+              aria-label="Stop generating"
               className={`px-4 bg-red-600 hover:bg-red-700 rounded transition-colors flex items-center justify-center ${isMobile ? 'min-w-[44px] min-h-[44px]' : ''}`}
             >
               <Square className="w-5 h-5 text-white" />
@@ -1175,6 +1241,7 @@ WHAT YOU SHOULD DO:
             <button
               onClick={handleSend}
               disabled={!input.trim()}
+              aria-label="Send message"
               className={`px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors flex items-center justify-center ${isMobile ? 'min-w-[44px] min-h-[44px]' : ''}`}
             >
               <Send className="w-5 h-5 text-white" />
@@ -1314,6 +1381,7 @@ const MessageBubble = memo(function MessageBubbleComponent({ message, conversati
               border: '1px solid var(--gui-border-subtle, #4b5563)'
             }}
             title="Delete message"
+            aria-label="Delete message"
           >
             <X className="w-3 h-3" />
           </button>

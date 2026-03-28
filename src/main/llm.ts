@@ -82,8 +82,8 @@ async function streamAnthropic(request: LLMRequest): Promise<void> {
   let fullResponse = ''
 
   const stream = await client.messages.stream({
-    model: request.model || 'claude-sonnet-4-20250514',
-    max_tokens: request.maxTokens || 4096,
+    model: request.model || 'claude-sonnet-4-6',
+    max_tokens: request.maxTokens || 64000,
     temperature: request.temperature ?? 0.7,
     system: request.systemPrompt || 'You are a helpful AI assistant.',
     messages
@@ -107,7 +107,7 @@ async function streamAnthropic(request: LLMRequest): Promise<void> {
     outputTokens: finalMessage.usage.output_tokens,
     cacheCreationTokens: (finalMessage.usage as any).cache_creation_input_tokens || 0,
     cacheReadTokens: (finalMessage.usage as any).cache_read_input_tokens || 0,
-    model: request.model || 'claude-sonnet-4-20250514'
+    model: request.model || 'claude-sonnet-4-6'
   } : undefined
 
   activeStreams.delete(conversationId)
@@ -147,7 +147,7 @@ async function streamGemini(request: LLMRequest): Promise<void> {
   const chat = model.startChat({
     history: history as Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>,
     generationConfig: {
-      maxOutputTokens: request.maxTokens || 4096,
+      maxOutputTokens: request.maxTokens || 64000,
       temperature: request.temperature ?? 0.7
     }
   })
@@ -207,7 +207,7 @@ async function streamOpenAI(request: LLMRequest): Promise<void> {
 
   const stream = await client.chat.completions.create({
     model: request.model || 'gpt-4-turbo-preview',
-    max_tokens: request.maxTokens || 4096,
+    max_tokens: request.maxTokens || 64000,
     temperature: request.temperature ?? 0.7,
     messages,
     stream: true,

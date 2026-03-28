@@ -125,6 +125,17 @@ export function registerWorkspaceHandlers(): void {
       lastSaveTimestamp = Date.now()
       await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
 
+      // Cancel any pending watcher debounce for this workspace to prevent
+      // our own save from triggering loadWorkspace in the renderer.
+      // The SELF_WRITE_GRACE_MS check handles most cases, but if the watcher
+      // debounce timer was already armed before this save, it would fire
+      // after the grace period and cause a spurious reload.
+      const pendingTimer = activeDebounceTimers.get(data.id)
+      if (pendingTimer) {
+        clearTimeout(pendingTimer)
+        activeDebounceTimers.delete(data.id)
+      }
+
       // Update last workspace ID
       const settingsPath = join(app.getPath('userData'), 'settings.json')
       try {

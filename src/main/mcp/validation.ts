@@ -197,7 +197,7 @@ export function validateCreateNodeData(
         ...base,
         title: validateString(data.title, 'title') || 'Untitled Artifact',
         content: typeof data.content === 'string' ? data.content : '',
-        contentType: 'text',
+        contentType: typeof data.contentType === 'string' && ['html', 'code', 'text'].includes(data.contentType) ? data.contentType : 'text',
         source: { type: 'created', method: 'manual' },
         version: 1,
         versionHistory: [],

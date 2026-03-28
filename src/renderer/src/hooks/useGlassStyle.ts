@@ -9,7 +9,7 @@
  */
 
 import { useMemo } from 'react'
-import { useWorkspaceStore } from '@/stores'
+import { useWorkspaceStore } from '@/store'
 import { getGPUTier } from '@/utils/gpuDetection'
 import { resolveGlassStyle } from '@/utils/glassUtils'
 import { DEFAULT_GLASS_SETTINGS } from '@shared/types'

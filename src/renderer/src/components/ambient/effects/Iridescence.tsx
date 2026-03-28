@@ -3,6 +3,7 @@
 
 import { Renderer, Program, Mesh, Color, Triangle } from 'ogl';
 import React, { useEffect, useRef } from 'react';
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
 
 const vertexShader = `
 attribute vec2 uv;
@@ -63,6 +64,8 @@ interface IridescenceProps {
   isDark?: boolean;
   opacity?: number;
   style?: React.CSSProperties;
+  qualityRef?: React.RefObject<AdaptiveQualityState>;
+  reportFrame?: () => void;
 }
 
 export default function Iridescence({
@@ -73,6 +76,8 @@ export default function Iridescence({
   isDark = true,
   opacity = 1,
   style,
+  qualityRef,
+  reportFrame: reportFrameFn,
 }: IridescenceProps) {
   const ctnDom = useRef<HTMLDivElement>(null);
   const mousePos = useRef({ x: 0.5, y: 0.5 });
@@ -80,7 +85,7 @@ export default function Iridescence({
   useEffect(() => {
     if (!ctnDom.current) return;
     const ctn = ctnDom.current;
-    const renderer = new Renderer();
+    const renderer = new Renderer({ dpr: 1.0 });
     const gl = renderer.gl;
     gl.clearColor(0, 0, 0, 0);
     gl.enable(gl.BLEND);
@@ -122,8 +127,28 @@ export default function Iridescence({
     const mesh = new Mesh(gl, { geometry, program });
     let animateId: number;
 
+    let frameCount = 0;
+    let currentScale = -1;
     function update(t: number) {
       animateId = requestAnimationFrame(update);
+      if (qualityRef?.current && !qualityRef.current.shouldRender) return;
+      if (reportFrameFn) reportFrameFn();
+      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
+      if (qualityRef?.current) {
+        const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap;
+        if (scale !== currentScale) {
+          currentScale = scale;
+          renderer.setSize(ctn.offsetWidth * scale, ctn.offsetHeight * scale);
+          // OGL setSize also sets canvas CSS dimensions — force back to 100% so
+          // low-res content stretches to fill container (CSS upscaling, not shrinking)
+          const c = renderer.gl.canvas as HTMLCanvasElement;
+          c.style.width = '100%';
+          c.style.height = '100%';
+          program.uniforms.uResolution.value = new Color(
+            gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height
+          );
+        }
+      }
       program.uniforms.uTime.value = t * 0.001;
       renderer.render({ scene: mesh });
     }

@@ -6,6 +6,7 @@ import React, { forwardRef, useEffect, useMemo, useRef, useLayoutEffect } from '
 import { Canvas, useFrame, useThree, RootState } from '@react-three/fiber';
 import { Color, Mesh, ShaderMaterial } from 'three';
 import { IUniform } from 'three';
+import { useUIStore } from '../../../stores/uiStore';
 
 type NormalizedRGB = [number, number, number];
 
@@ -110,6 +111,8 @@ const SilkPlane = forwardRef<Mesh, SilkPlaneProps>(function SilkPlane({ uniforms
   }, [ref, viewport]);
 
   useFrame((_state: RootState, delta: number) => {
+    const q = useUIStore.getState().ambientQuality;
+    if (!q.shouldRender) return;
     const mesh = ref as React.MutableRefObject<Mesh | null>;
     if (mesh.current) {
       const material = mesh.current.material as ShaderMaterial & {
@@ -168,7 +171,7 @@ const Silk: React.FC<SilkProps> = ({ speed = 5, scale = 1, color = '#7B7481', no
 
   return (
     <div className="w-full h-full" style={{ opacity }}>
-      <Canvas dpr={[1, 2]} frameloop="always">
+      <Canvas dpr={[1, 1]} frameloop="always">
         <SilkPlane ref={meshRef} uniforms={uniforms} />
       </Canvas>
     </div>

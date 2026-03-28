@@ -403,12 +403,16 @@
   font-weight: 500;
 }
 
+/* Node content area minimum — prevents collapse at micro sizes */
+.cognograph-node__content { min-height: 56px; }
+
 /* Node footer */
 .cognograph-node__footer {
   @apply flex items-center justify-between px-3 py-2 text-xs;
   color: var(--node-text-muted);
   flex-shrink: 0;
   gap: 8px;
+  overflow: hidden;
 }
 
 /* Resize handle */
@@ -489,14 +493,19 @@
   transform: var(--handle-translate) scale(1);
 }
 
-/* Show handles when connecting (dragging from another handle) */
+/* Show handles when connecting (dragging from another handle).
+   NOTE: .react-flow.connecting was v11 — v12 does NOT add .connecting to root.
+   v12 uses per-handle classes: connectingfrom, connectingto, valid, connectionindicator. */
 .react-flow__handle.connectingfrom,
-.react-flow__handle.connectingto,
-.react-flow.connecting .react-flow__handle {
+.react-flow__handle.connectingto {
   opacity: 1;
   pointer-events: auto;
   transform: var(--handle-translate) scale(1);
 }
+
+/* NOTE: .connectionindicator is always-on in RF v12 (not drag-only).
+   Center handle visibility is handled by .cognograph-node:hover rule above.
+   Do NOT add opacity rules here — they'd override the hover gate. */
 
 .react-flow__handle:hover {
   background-color: color-mix(in srgb, var(--ring-color, var(--cg-accent)) 90%, white);
@@ -514,6 +523,36 @@
   0%, 100% { transform: var(--handle-translate) scale(1); opacity: 1; }
   50% { transform: var(--handle-translate) scale(1.2); opacity: 0.8; }
 }
+
+/* ── Spread handles: invisible at rest, smaller hit area ── */
+/* Must use high-specificity selectors to override .cognograph-node:hover .react-flow__handle { opacity: 1 } */
+.cognograph-node .spread-handle,
+.cognograph-node:hover .spread-handle,
+.react-flow__node.selected .spread-handle {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.spread-handle::before {
+  width: 24px;
+  height: 24px;
+}
+
+/* Spread handles: ONLY visible during active edge drag (connection mode).
+   RF v12 adds per-handle classes: connectingfrom/connectingto/valid/connectionindicator.
+   NOTE: v12 does NOT add .connecting to the root .react-flow element (that was v11).
+   These selectors must beat .cognograph-node:hover .spread-handle (0,3,0 + !important),
+   so we scope them under .cognograph-node for (0,3,0) + later source order = win. */
+.cognograph-node .spread-handle.connectingfrom,
+.cognograph-node .spread-handle.connectingto,
+.cognograph-node .spread-handle.valid,
+.cognograph-node .spread-handle.connection-target-highlight {
+  opacity: 0.6 !important;
+  pointer-events: auto !important;
+}
+
+/* NOTE: .connectionindicator is NOT drag-only in RF v12 — it's always present on
+   valid handles. Do NOT use it to show spread handles (they'd show at rest).
+   The connectingfrom/connectingto/valid classes above ARE drag-only and sufficient. */
 
 /* Connection target highlight — clean, no pulse */
 .react-flow__handle.connection-target-highlight {
@@ -924,8 +963,9 @@
     transform 0.15s ease,
     opacity 0.15s ease,
     box-shadow 0.15s ease;
-  z-index: 100;
+  z-index: 200;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
 }
 
 .auto-fit-button:hover {
@@ -2999,7 +3039,8 @@
    ============================================================================= */
 
 .conversation-node--terminal {
-  background: color-mix(in srgb, var(--surface-panel, var(--terminal-bg)) 95%, #000 5%);
+  background: var(--terminal-bg, #1a1a2e) !important;
+  opacity: 1 !important;
 }
 
 /* Light mode: softer terminal node shell */
@@ -3019,7 +3060,6 @@
 
 .terminal-node-idle {
   box-shadow: 0 0 2px 0 var(--pulse-color, #22d3ee);
-  opacity: 0.6;
 }
 
 .terminal-node-exited {
@@ -3272,6 +3312,8 @@
   font-size: var(--text-body);
   line-height: var(--leading-normal);
   margin-bottom: 6px;
+  user-select: text;
+  cursor: text;
 }
 
 .chat-bubble:last-child {
@@ -3304,6 +3346,45 @@
 
 .chat-bubble__role--assistant {
   color: var(--ring-color, var(--node-conversation));
+}
+
+/* =============================================================================
+   CHAT/TERMINAL SCROLLBAR — wider grab target for in-node scrolling
+   Default 8px is too narrow; 14px with inset padding gives a ~8px visible thumb
+   that's easy to grab without affecting content width.
+   ============================================================================= */
+
+.cognograph-node .overflow-y-auto::-webkit-scrollbar {
+  width: 14px;
+}
+
+.cognograph-node .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 7px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+.cognograph-node .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+  background-clip: padding-box;
+}
+
+.cognograph-node .overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Light mode: darker scrollbar thumb for contrast */
+[data-theme="light"] .cognograph-node .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 7px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+[data-theme="light"] .cognograph-node .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: padding-box;
 }
 
 /* =============================================================================

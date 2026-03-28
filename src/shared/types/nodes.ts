@@ -19,6 +19,17 @@ export type { ActionNodeData } from '../actionTypes'
 // Node Data Types (Discriminated Union)
 // -----------------------------------------------------------------------------
 
+/** Shell types available in terminal nodes. */
+export type TerminalShell = 'claude-code' | 'git-bash' | 'powershell' | 'cmd'
+
+/** Human-readable labels for the shell selector UI. */
+export const TERMINAL_SHELL_OPTIONS: { value: TerminalShell; label: string }[] = [
+  { value: 'claude-code', label: 'Claude Code' },
+  { value: 'git-bash', label: 'Git Bash' },
+  { value: 'powershell', label: 'PowerShell' },
+  { value: 'cmd', label: 'Command Prompt' },
+]
+
 export interface ConversationNodeData extends ContextMetadata {
   type: 'conversation'
   title: string
@@ -43,7 +54,7 @@ export interface ConversationNodeData extends ContextMetadata {
     origin: 'embedded' | 'external'
     workingDirectory: string
     model?: string
-    shell?: string                  // default shell or specific CLI path
+    shell?: TerminalShell           // Which shell to spawn (default: 'claude-code')
     terminalState: 'running' | 'idle' | 'exited'
     exitCode?: number
     startedAt: number               // Unix ms
@@ -71,6 +82,9 @@ export interface ProjectNodeData extends ContextMetadata {
   collapsed: boolean
   childNodeIds: string[]
   color: string
+  folderPath?: string          // Platform-native absolute path to project directory
+  fileListVisible?: boolean    // File listing toggle (undefined = auto: <=20 visible, >20 collapsed)
+  fileFilter?: string          // Comma-separated extensions: ".tsx,.ts,.js"
   width?: number
   height?: number
   createdAt: number
@@ -349,6 +363,11 @@ export interface ArtifactNodeData extends ContextMetadata {
   properties?: Record<string, unknown> // Flexible property storage
   // Media metadata (for video/audio/3d-model/image content types)
   metadata?: ArtifactMediaMetadata
+
+  // Folder reference (coexists with content — shows sibling files)
+  folderPath?: string          // Platform-native absolute path to referenced directory
+  fileListVisible?: boolean    // File listing toggle
+  fileFilter?: string          // Comma-separated extensions
 
   [key: string]: unknown
 }

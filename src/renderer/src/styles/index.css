@@ -285,6 +285,8 @@ body::after {
   background: var(--surface-elevated);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
+  user-select: text;
+  cursor: text;
 }
 
 /* Chat: AI responses — accent left border, transparent bg */
@@ -292,6 +294,8 @@ body::after {
   background: transparent;
   border-left: 2px solid var(--cg-accent);
   padding: 8px 12px;
+  user-select: text;
+  cursor: text;
 }
 
 /* Panel header — minimal (replaces glass-heavy headers) */
@@ -540,6 +544,13 @@ html, body, #root {
 
 .chat-message-content p:last-child {
   margin-bottom: 0 !important;
+}
+
+.chat-message-content h1,
+.chat-message-content h2,
+.chat-message-content h3,
+.chat-message-content h4 {
+  font-family: var(--font-display);
 }
 
 /* =============================================================================

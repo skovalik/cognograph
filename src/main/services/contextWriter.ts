@@ -10,9 +10,27 @@
  * 3. Returns the context string for MCP tool consumption
  */
 
-import { app } from 'electron'
 import { join } from 'path'
 import { promises as fs } from 'fs'
+import { homedir } from 'os'
+import { sanitizeForContext } from '@shared/utils/sanitizeContext'
+
+// Safe Electron app import — falls back to homedir when running outside Electron (MCP CLI)
+let electronApp: { getPath: (name: string) => string } | null = null
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  electronApp = require('electron').app
+  if (!electronApp?.getPath) electronApp = null
+} catch {
+  // Not in Electron — use fallback paths
+}
+
+export function getAppPath(name: string): string {
+  if (electronApp) return electronApp.getPath(name)
+  // Fallback for standalone Node.js (MCP CLI)
+  if (name === 'userData') return join(homedir(), '.cognograph')
+  return homedir()
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -82,7 +100,7 @@ const ACTIVITY_DIR_NAME = '.cognograph-activity'
  */
 async function loadCurrentWorkspaceSnapshot(): Promise<WorkspaceSnapshot | null> {
   try {
-    const userDataPath = app.getPath('userData')
+    const userDataPath = getAppPath('userData')
     const settingsPath = join(userDataPath, 'settings.json')
     const settingsContent = await fs.readFile(settingsPath, 'utf-8')
     const settings = JSON.parse(settingsContent) as { lastWorkspaceId?: string }
@@ -291,7 +309,7 @@ export function generateMarkdown(rootTitle: string, entries: ContextEntry[]): st
   for (const entry of entries) {
     lines.push(`### [${entry.nodeType}] ${entry.title} (depth: ${entry.depth}, role: ${entry.edgeRole})`)
     if (entry.content) {
-      lines.push(entry.content)
+      lines.push(sanitizeForContext(entry.content))
     }
     lines.push('')
     lines.push('---')
@@ -368,11 +386,31 @@ export async function writeContextFile(context: GeneratedContext): Promise<strin
 // ---------------------------------------------------------------------------
 
 function getActivityDir(): string {
-  return join(app.getPath('userData'), ACTIVITY_DIR_NAME)
+  return join(getAppPath('userData'), ACTIVITY_DIR_NAME)
 }
 
 export function getContextFilePath(nodeId: string): string {
   // Sanitize nodeId to prevent path traversal
   const safeId = nodeId.replace(/[^a-zA-Z0-9_-]/g, '_')
   return join(getActivityDir(), `context-${safeId}.md`)
+}
+
+/**
+ * Resolve the absolute file path to the current workspace JSON.
+ * Reads {userData}/settings.json for lastWorkspaceId, returns the full path.
+ * Returns null if no workspace is active or settings can't be read.
+ */
+export async function getWorkspaceFilePath(): Promise<string | null> {
+  try {
+    const userDataPath = getAppPath('userData')
+    const settingsPath = join(userDataPath, 'settings.json')
+    const settingsContent = await fs.readFile(settingsPath, 'utf-8')
+    const settings = JSON.parse(settingsContent) as { lastWorkspaceId?: string }
+
+    if (!settings.lastWorkspaceId) return null
+
+    return join(userDataPath, 'workspaces', `${settings.lastWorkspaceId}.json`)
+  } catch {
+    return null
+  }
 }

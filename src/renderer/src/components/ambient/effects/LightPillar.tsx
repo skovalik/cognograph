@@ -3,6 +3,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
 
 interface LightPillarProps {
   topColor?: string;
@@ -19,6 +20,8 @@ interface LightPillarProps {
   pillarRotation?: number;
   quality?: 'low' | 'medium' | 'high';
   isDark?: boolean;
+  qualityRef?: React.RefObject<AdaptiveQualityState>;
+  reportFrame?: () => void;
 }
 
 const LightPillar: React.FC<LightPillarProps> = ({
@@ -35,7 +38,9 @@ const LightPillar: React.FC<LightPillarProps> = ({
   mixBlendMode = 'screen',
   pillarRotation = 0,
   quality = 'high',
-  isDark = true
+  isDark = true,
+  qualityRef,
+  reportFrame: reportFrameFn,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
@@ -331,8 +336,14 @@ const LightPillar: React.FC<LightPillarProps> = ({
     const targetFPS = effectiveQuality === 'low' ? 30 : 60;
     const frameTime = 1000 / targetFPS;
 
+    let frameCount = 0;
     const animate = (currentTime: number) => {
       if (!materialRef.current || !rendererRef.current || !sceneRef.current || !cameraRef.current) return;
+
+      rafRef.current = requestAnimationFrame(animate);
+      if (qualityRef?.current && !qualityRef.current.shouldRender) return;
+      if (reportFrameFn) reportFrameFn();
+      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
 
       const deltaTime = currentTime - lastTime;
 
@@ -348,8 +359,6 @@ const LightPillar: React.FC<LightPillarProps> = ({
         rendererRef.current.render(sceneRef.current, cameraRef.current);
         lastTime = currentTime - (deltaTime % frameTime);
       }
-
-      rafRef.current = requestAnimationFrame(animate);
     };
     rafRef.current = requestAnimationFrame(animate);
 

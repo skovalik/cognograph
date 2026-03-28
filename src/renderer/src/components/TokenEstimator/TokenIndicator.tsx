@@ -7,6 +7,7 @@ import { useTokenEstimate } from '../../hooks/useTokenEstimate'
 import { formatTokenCount, formatCost } from '../../utils/tokenEstimator'
 import { getUsageLevel } from '../../utils/tokenEstimation'
 import { TokenBreakdownPopover } from './TokenBreakdownPopover'
+import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 
 interface TokenIndicatorProps {
   nodeId: string
@@ -37,17 +38,13 @@ function TokenIndicatorComponent({ nodeId, currentInput, isLightMode }: TokenInd
       }
     }
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setShowBreakdown(false)
-      }
-    }
+    const closeBreakdown = () => setShowBreakdown(false)
+    escapeManager.register('popover-token-breakdown', EscapePriority.POPOVER, closeBreakdown)
 
     document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('keydown', handleKeyDown)
     return () => {
+      escapeManager.unregister('popover-token-breakdown')
       document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('keydown', handleKeyDown)
     }
   }, [showBreakdown])
 

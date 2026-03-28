@@ -119,6 +119,7 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
   { id: 'paste', label: 'Paste', defaultCombo: 'Ctrl+V', category: 'edit' },
   { id: 'selectAll', label: 'Select All', defaultCombo: 'Ctrl+A', category: 'edit' },
   { id: 'delete', label: 'Delete', defaultCombo: 'Delete', category: 'edit' },
+  { id: 'fitToContent', label: 'Fit to Content', defaultCombo: 'Shift+F', category: 'edit' },
 
   // View
   { id: 'toggleSidebar', label: 'Toggle Sidebar', defaultCombo: 'Ctrl+\\', category: 'view' },

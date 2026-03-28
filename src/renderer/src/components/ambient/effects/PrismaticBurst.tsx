@@ -3,6 +3,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Renderer, Program, Mesh, Triangle, Texture } from 'ogl';
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
 
 type Offset = { x?: number | string; y?: number | string };
 type AnimationType = 'rotate' | 'rotate3d' | 'hover';
@@ -19,6 +20,8 @@ export type PrismaticBurstProps = {
   rayCount?: number;
   mixBlendMode?: React.CSSProperties['mixBlendMode'] | 'none';
   isDark?: boolean;
+  qualityRef?: React.RefObject<AdaptiveQualityState>;
+  reportFrame?: () => void;
 };
 
 const vertexShader = `#version 300 es
@@ -238,7 +241,9 @@ const PrismaticBurst = ({
   hoverDampness = 0,
   rayCount,
   mixBlendMode = 'lighten',
-  isDark = true
+  isDark = true,
+  qualityRef,
+  reportFrame: reportFrameFn,
 }: PrismaticBurstProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const programRef = useRef<Program | null>(null);
@@ -263,7 +268,7 @@ const PrismaticBurst = ({
     const container = containerRef.current;
     if (!container) return;
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = 1.0;
     const renderer = new Renderer({ dpr, alpha: true, antialias: false });
     rendererRef.current = renderer;
 
@@ -362,15 +367,37 @@ const PrismaticBurst = ({
     let raf = 0;
     let last = performance.now();
     let accumTime = 0;
+    let frameCount = 0;
+    let currentScale = -1;
 
     const update = (now: number) => {
       const dt = Math.max(0, now - last) * 0.001;
       last = now;
       const visible = isVisibleRef.current && !document.hidden;
       if (!pausedRef.current) accumTime += dt;
-      if (!visible) {
+      if (!visible || (qualityRef?.current && !qualityRef.current.shouldRender)) {
         raf = requestAnimationFrame(update);
         return;
+      }
+      if (reportFrameFn) reportFrameFn();
+      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) {
+        raf = requestAnimationFrame(update);
+        return;
+      }
+      if (qualityRef?.current) {
+        const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap;
+        if (scale !== currentScale) {
+          currentScale = scale;
+          const w = container.clientWidth || 1;
+          const h = container.clientHeight || 1;
+          renderer.setSize(w * scale, h * scale);
+          // OGL setSize also sets canvas CSS dimensions — force back to 100% so
+          // low-res content stretches to fill container (CSS upscaling, not shrinking)
+          const c = renderer.gl.canvas as HTMLCanvasElement;
+          c.style.width = '100%';
+          c.style.height = '100%';
+          program.uniforms.uResolution.value = [gl.drawingBufferWidth, gl.drawingBufferHeight];
+        }
       }
       const tau = 0.02 + Math.max(0, Math.min(1, hoverDampRef.current)) * 0.5;
       const alpha = 1 - Math.exp(-dt / tau);

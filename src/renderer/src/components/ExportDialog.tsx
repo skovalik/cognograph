@@ -17,6 +17,7 @@ import {
   type ExportFormat,
   type ExportScope
 } from '../utils/exportWorkspace'
+import { escapeManager, EscapePriority } from '../utils/EscapeManager'
 
 interface ExportDialogProps {
   isOpen: boolean
@@ -46,11 +47,8 @@ function ExportDialogComponent({ isOpen, onClose }: ExportDialogProps): JSX.Elem
   // Escape key handler
   useEffect(() => {
     if (!isOpen) return
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    escapeManager.register('modal-export-dialog', EscapePriority.MODAL, onClose)
+    return () => escapeManager.unregister('modal-export-dialog')
   }, [isOpen, onClose])
 
   const handleExport = useCallback(async () => {

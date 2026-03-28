@@ -217,6 +217,15 @@ export const useNodesStore = create<NodesStore>()(
       },
 
       updateNode: (nodeId, data) => {
+        // Validate provider if being set
+        const VALID_PROVIDERS = ['anthropic', 'gemini', 'openai', 'ollama', 'custom', 'google', 'openrouter'] as const
+        if ('provider' in data && data.provider && typeof data.provider === 'string') {
+          if (!VALID_PROVIDERS.includes(data.provider as typeof VALID_PROVIDERS[number])) {
+            console.warn(`[nodesStore] Invalid provider "${data.provider}" — falling back to "anthropic"`)
+            ;(data as Record<string, unknown>).provider = 'anthropic'
+          }
+        }
+
         set((state) => {
           const node = state.nodes.find((n) => n.id === nodeId)
           if (node) {

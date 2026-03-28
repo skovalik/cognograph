@@ -6,6 +6,7 @@ import { forwardRef, useImperativeHandle, useEffect, useRef, useMemo, FC, ReactN
 import * as THREE from 'three';
 
 import { Canvas, useFrame } from '@react-three/fiber';
+import { useUIStore } from '../../../stores/uiStore';
 import { PerspectiveCamera } from '@react-three/drei';
 import { degToRad } from 'three/src/math/MathUtils.js';
 
@@ -79,7 +80,7 @@ function extendMaterial<T extends THREE.Material = THREE.Material>(
 }
 
 const CanvasWrapper: FC<{ children: ReactNode }> = ({ children }) => (
-  <Canvas dpr={[1, 2]} frameloop="always" className="w-full h-full relative" gl={{ alpha: true }}>
+  <Canvas dpr={[1, 1]} frameloop="always" className="w-full h-full relative" gl={{ alpha: true }}>
     {children}
   </Canvas>
 );
@@ -342,6 +343,8 @@ const MergedPlanes = forwardRef<
     [count, width, height]
   );
   useFrame((_, delta) => {
+    const q = useUIStore.getState().ambientQuality;
+    if (!q.shouldRender) return;
     mesh.current.material.uniforms.time.value += 0.1 * delta;
   });
   return <mesh ref={mesh} geometry={geometry} material={material} />;

@@ -7,6 +7,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { EffectComposer, wrapEffect } from '@react-three/postprocessing';
 import { Effect } from 'postprocessing';
 import * as THREE from 'three';
+import { useUIStore } from '../../../stores/uiStore';
 
 const waveVertexShader = `
 precision highp float;
@@ -243,6 +244,8 @@ function DitheredWaves({
 
   const prevColor = useRef([...waveColor]);
   useFrame(({ clock }) => {
+    const q = useUIStore.getState().ambientQuality;
+    if (!q.shouldRender) return;
     const u = waveUniformsRef.current;
 
     if (!disableAnimation) {

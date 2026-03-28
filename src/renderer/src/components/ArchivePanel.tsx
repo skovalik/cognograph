@@ -125,6 +125,7 @@ function ArchivePanelComponent({ isOpen, onClose }: ArchivePanelProps): JSX.Elem
             onClick={onClose}
             className="p-1 rounded hover:bg-white/10 ml-1"
             title="Close"
+            aria-label="Close archive panel"
           >
             <X className="w-4 h-4" style={{ color: 'var(--gui-text-muted)' }} />
           </button>
@@ -238,6 +239,7 @@ function ArchiveItem({ node, onRestore, onTrash }: ArchiveItemProps): JSX.Elemen
           onClick={onRestore}
           className="p-1 rounded hover:bg-white/10 transition-colors"
           title="Restore to canvas"
+          aria-label="Restore to canvas"
         >
           <RotateCcw className="w-3.5 h-3.5" style={{ color: 'var(--gui-accent-primary)' }} />
         </button>
@@ -245,6 +247,7 @@ function ArchiveItem({ node, onRestore, onTrash }: ArchiveItemProps): JSX.Elemen
           onClick={onTrash}
           className="p-1 rounded hover:bg-red-500/20 transition-colors"
           title="Move to trash"
+          aria-label="Move to trash"
         >
           <Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--gui-text-muted)' }} />
         </button>

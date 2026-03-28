@@ -4,6 +4,7 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useViewport } from '@xyflow/react'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 
 interface NodeArtboardProps {
   nodeId: string
@@ -57,24 +58,11 @@ export const NodeArtboard = memo(function NodeArtboard({
     return { width, height }
   }, [])
 
-  // Exit artboard on Escape key
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        e.stopPropagation()
-        collapseInPlaceExpansion()
-      }
-    },
-    [collapseInPlaceExpansion]
-  )
-
+  // Exit artboard on Escape key (via EscapeManager)
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown, { capture: true })
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown, { capture: true })
-    }
-  }, [handleKeyDown])
+    escapeManager.register('artboard-node', EscapePriority.ARTBOARD, collapseInPlaceExpansion)
+    return () => escapeManager.unregister('artboard-node')
+  }, [collapseInPlaceExpansion])
 
   // Exit artboard if zoom drops below 0.97
   useEffect(() => {

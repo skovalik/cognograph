@@ -16,6 +16,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 
 interface SelectionRect {
   startX: number
@@ -108,12 +109,7 @@ export const ZoomOverlay = memo(function ZoomOverlay(): JSX.Element | null {
           setActive(true)
         }
       }
-      // Escape also closes
-      if (e.key === 'Escape' && active) {
-        setActive(false)
-        setSelection(null)
-        setIsDragging(false)
-      }
+      // Escape handled by EscapeManager (see separate useEffect below)
     }
 
     const handleKeyUp = (e: KeyboardEvent): void => {
@@ -175,6 +171,18 @@ export const ZoomOverlay = memo(function ZoomOverlay(): JSX.Element | null {
       window.removeEventListener('keyup', handleKeyUp)
     }
   }, [active, selection, isDragging, setViewport, screenToFlow])
+
+  // Escape closes the zoom overlay (via EscapeManager)
+  useEffect(() => {
+    if (!active) return
+    const closeOverlay = () => {
+      setActive(false)
+      setSelection(null)
+      setIsDragging(false)
+    }
+    escapeManager.register('presentation-zoom-overlay', EscapePriority.PRESENTATION, closeOverlay)
+    return () => escapeManager.unregister('presentation-zoom-overlay')
+  }, [active])
 
   // Mouse handlers for drag-select
   const handleMouseDown = useCallback((e: React.MouseEvent) => {

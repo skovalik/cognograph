@@ -13,6 +13,7 @@
 import { useRef, useEffect, useCallback, forwardRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { useUIStore } from '../../../stores/uiStore'
 
 // ---------------------------------------------------------------------------
 // Shaders
@@ -348,6 +349,8 @@ function DitherCursorScene({
 
   // Render loop
   useFrame(({ clock }) => {
+    const q = useUIStore.getState().ambientQuality
+    if (!q.shouldRender) return
     if (!rtA.current || !rtB.current || !simMatRef.current || !ditherMatRef.current) return
 
     const readRT = frameRef.current % 2 === 0 ? rtB.current : rtA.current
@@ -397,6 +400,7 @@ const DitherCursor = forwardRef<HTMLDivElement, DitherCursorProps>(function Dith
     >
       <Canvas
         gl={{ alpha: true, antialias: false, premultipliedAlpha: false }}
+        dpr={[1, 1]}
         style={{ background: 'transparent' }}
         resize={{ scroll: false }}
       >

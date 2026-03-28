@@ -35,7 +35,7 @@ interface UIActions {
   // Left Sidebar
   toggleLeftSidebar: () => void
   setLeftSidebarWidth: (width: number) => void
-  setLeftSidebarTab: (tab: 'layers' | 'extractions' | 'activity' | 'dispatch' | 'bridge-log') => void
+  setLeftSidebarTab: (tab: 'layers' | 'extractions' | 'activity' | 'dispatch' | 'bridge-log' | 'console') => void
   toggleNodeExpanded: (nodeId: string) => void
   setLayersSortMode: (mode: 'hierarchy' | 'type' | 'recent' | 'manual') => void
   setManualLayerOrder: (order: string[] | null) => void
@@ -64,6 +64,10 @@ interface UIActions {
 
   // Keyboard navigation
   setKeyboardNavActive: (active: boolean) => void
+
+  // Canvas interaction (for shader performance throttling)
+  setCanvasInteracting: (interacting: boolean) => void
+  setAmbientQuality: (quality: { resolutionScale: number; frameSkip: boolean; shouldRender: boolean; dprCap: number }) => void
 
   // Theme
   setThemeSettings: (settings: Partial<ThemeSettings>) => void
@@ -111,6 +115,17 @@ const initialUIState: UIState = {
 
   // Keyboard navigation
   keyboardNavActive: false,
+
+  // Canvas interaction
+  isCanvasInteracting: false,
+
+  // Ambient quality (synced from useAdaptiveQuality for R3F effects)
+  ambientQuality: {
+    resolutionScale: 1.0,
+    frameSkip: false,
+    shouldRender: true,
+    dprCap: Math.min(window.devicePixelRatio || 1, 2.0),
+  },
 
   // Theme and preferences (initialized from DEFAULT_THEME_SETTINGS)
   themeSettings: DEFAULT_THEME_SETTINGS,
@@ -363,16 +378,42 @@ export const useUIStore = create<UIStore>()(
       },
 
       // -------------------------------------------------------------------------
+      // Canvas Interaction (shader performance throttling)
+      // -------------------------------------------------------------------------
+
+      setCanvasInteracting: (interacting) => {
+        set((state) => {
+          state.isCanvasInteracting = interacting
+        })
+      },
+
+      setAmbientQuality: (quality) => {
+        set((state) => {
+          state.ambientQuality = quality
+        })
+      },
+
+      // -------------------------------------------------------------------------
       // Theme (can implement directly)
       // -------------------------------------------------------------------------
 
       setThemeSettings: (settings) => {
+        // Validate fontSize if being set (must be 8-32)
+        if (settings.fontSize !== undefined) {
+          settings = { ...settings, fontSize: Math.max(8, Math.min(32, settings.fontSize)) }
+        }
+
         set((state) => {
           state.themeSettings = { ...state.themeSettings, ...settings }
         })
       },
 
       setWorkspacePreferences: (preferences) => {
+        // Validate autoSaveInterval if being set (must be >= 1000ms)
+        if (preferences.autoSaveInterval !== undefined) {
+          preferences = { ...preferences, autoSaveInterval: Math.max(1000, preferences.autoSaveInterval) }
+        }
+
         set((state) => {
           state.workspacePreferences = { ...state.workspacePreferences, ...preferences }
         })

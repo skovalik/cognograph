@@ -3,6 +3,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Renderer, Program, Mesh, Color, Triangle } from 'ogl';
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
 
 const VERT = `#version 300 es
 in vec2 position;
@@ -124,6 +125,8 @@ interface AuroraProps {
   speed?: number;
   isDark?: boolean;
   opacity?: number;
+  qualityRef?: React.RefObject<AdaptiveQualityState>;
+  reportFrame?: () => void;
 }
 
 export default function Aurora(props: AuroraProps) {
@@ -140,7 +143,8 @@ export default function Aurora(props: AuroraProps) {
     const renderer = new Renderer({
       alpha: true,
       premultipliedAlpha: true,
-      antialias: true
+      antialias: true,
+      dpr: 1.0,
     });
     const gl = renderer.gl;
     gl.clearColor(0, 0, 0, 0);
@@ -188,8 +192,28 @@ export default function Aurora(props: AuroraProps) {
     ctn.appendChild(gl.canvas);
 
     let animateId = 0;
+    let frameCount = 0;
+    let currentScale = -1;
     const update = (t: number) => {
       animateId = requestAnimationFrame(update);
+      if (propsRef.current.qualityRef?.current && !propsRef.current.qualityRef.current.shouldRender) return;
+      if (propsRef.current.reportFrame) propsRef.current.reportFrame();
+      if (propsRef.current.qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
+      if (propsRef.current.qualityRef?.current) {
+        const scale = propsRef.current.qualityRef.current.resolutionScale * propsRef.current.qualityRef.current.dprCap;
+        if (scale !== currentScale && ctn) {
+          currentScale = scale;
+          const width = ctn.offsetWidth * scale;
+          const height = ctn.offsetHeight * scale;
+          renderer.setSize(width, height);
+          // OGL setSize also sets canvas CSS dimensions — force back to 100% so
+          // low-res content stretches to fill container (CSS upscaling, not shrinking)
+          const c = renderer.gl.canvas as HTMLCanvasElement;
+          c.style.width = '100%';
+          c.style.height = '100%';
+          if (program) program.uniforms.uResolution.value = [width, height];
+        }
+      }
       const { time = t * 0.01, speed = 1.0 } = propsRef.current;
       if (program) {
         program.uniforms.uTime.value = time * speed * 0.1;

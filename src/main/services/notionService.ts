@@ -193,7 +193,7 @@ class NotionService {
   }
 
   isSyncEnabled(): boolean {
-    return this.store.get('notionSyncEnabled', true) as boolean
+    return this.store.get('notionSyncEnabled', false) as boolean
   }
 
   private initClient(): boolean {

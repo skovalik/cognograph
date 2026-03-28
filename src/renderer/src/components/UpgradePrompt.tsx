@@ -9,6 +9,7 @@
 
 import { memo, useState, useCallback, useEffect, useRef } from 'react'
 import { Lock, X, ArrowRight, Sparkles } from 'lucide-react'
+import { escapeManager, EscapePriority } from '../utils/EscapeManager'
 import {
   usePlan,
   getRequiredPlan,
@@ -71,11 +72,8 @@ export const UpgradePrompt = memo(function UpgradePrompt({
   // Escape key handler for modal variant
   useEffect(() => {
     if (variant !== 'modal' || !onClose) return
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    escapeManager.register('modal-upgrade-prompt', EscapePriority.MODAL, onClose)
+    return () => escapeManager.unregister('modal-upgrade-prompt')
   }, [variant, onClose])
 
   // Auto-focus upgrade button on mount for modal variant

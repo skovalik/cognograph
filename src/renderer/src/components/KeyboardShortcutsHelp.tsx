@@ -11,6 +11,7 @@
 import { memo, useEffect, useCallback } from 'react'
 import { X, Keyboard } from 'lucide-react'
 import { create } from 'zustand'
+import { escapeManager, EscapePriority } from '../utils/EscapeManager'
 
 // Store for shortcut help visibility
 interface ShortcutHelpStore {
@@ -131,18 +132,23 @@ function KeyboardShortcutsHelpComponent(): JSX.Element | null {
   const isOpen = useShortcutHelpStore((s) => s.isOpen)
   const close = useShortcutHelpStore((s) => s.close)
 
-  // Close on Escape
+  // Close on Escape (via EscapeManager) or '?' key
   useEffect(() => {
     if (!isOpen) return
+    escapeManager.register('modal-keyboard-shortcuts', EscapePriority.MODAL, close)
 
+    // '?' key still uses direct listener (not an Escape key)
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape' || e.key === '?') {
+      if (e.key === '?') {
         close()
       }
     }
-
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+
+    return () => {
+      escapeManager.unregister('modal-keyboard-shortcuts')
+      window.removeEventListener('keydown', handleKeyDown)
+    }
   }, [isOpen, close])
 
   // Handle backdrop click

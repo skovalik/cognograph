@@ -1263,3 +1263,19 @@
   animation: skeleton-shimmer 1.5s ease-in-out infinite;
   border-radius: 4px;
 }
+
+/* =============================================================================
+   ZOOM PERFORMANCE TIER — Proactive animation throttling at low zoom
+   ============================================================================= */
+
+/* Pause infinite animations at low zoom for performance */
+[data-zoom-tier="reduced"] .react-flow__node [style*="animation"],
+[data-zoom-tier="reduced"] [class*="pulse"],
+[data-zoom-tier="reduced"] [class*="bounce"] {
+  animation-play-state: paused !important;
+}
+
+[data-zoom-tier="minimal"] .react-flow__node * {
+  animation: none !important;
+  transition: none !important;
+}

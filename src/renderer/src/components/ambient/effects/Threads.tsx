@@ -3,6 +3,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Renderer, Program, Mesh, Triangle, Color } from 'ogl';
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
 
 interface ThreadsProps {
   color?: [number, number, number];
@@ -11,6 +12,8 @@ interface ThreadsProps {
   enableMouseInteraction?: boolean;
   isDark?: boolean;
   opacity?: number;
+  qualityRef?: React.RefObject<AdaptiveQualityState>;
+  reportFrame?: () => void;
 }
 
 const vertexShader = `
@@ -137,6 +140,8 @@ const Threads: React.FC<ThreadsProps> = ({
   enableMouseInteraction = false,
   isDark = true,
   opacity = 1,
+  qualityRef,
+  reportFrame,
   ...rest
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -150,7 +155,7 @@ const Threads: React.FC<ThreadsProps> = ({
     if (!containerRef.current) return;
     const container = containerRef.current;
 
-    const renderer = new Renderer({ alpha: true });
+    const renderer = new Renderer({ alpha: true, dpr: 1.0 });
     const gl = renderer.gl;
     gl.clearColor(0, 0, 0, 0);
     gl.enable(gl.BLEND);
@@ -202,7 +207,34 @@ const Threads: React.FC<ThreadsProps> = ({
       container.addEventListener('mouseleave', handleMouseLeave);
     }
 
+    let frameCount = 0;
+    let currentScale = -1;
     function update(t: number) {
+      if (qualityRef?.current && !qualityRef.current.shouldRender) {
+        animationFrameId.current = requestAnimationFrame(update);
+        return;
+      }
+      if (reportFrame) reportFrame();
+      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) {
+        animationFrameId.current = requestAnimationFrame(update);
+        return;
+      }
+      if (qualityRef?.current) {
+        const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap;
+        if (scale !== currentScale) {
+          currentScale = scale;
+          const { clientWidth, clientHeight } = container;
+          renderer.setSize(clientWidth * scale, clientHeight * scale);
+          // OGL setSize also sets canvas CSS dimensions — force back to 100% so
+          // low-res content stretches to fill container (CSS upscaling, not shrinking)
+          const c = renderer.gl.canvas as HTMLCanvasElement;
+          c.style.width = '100%';
+          c.style.height = '100%';
+          program.uniforms.iResolution.value.r = clientWidth * scale;
+          program.uniforms.iResolution.value.g = clientHeight * scale;
+          program.uniforms.iResolution.value.b = (clientWidth * scale) / (clientHeight * scale);
+        }
+      }
       if (enableMouseInteraction) {
         const smoothing = 0.05;
         currentMouse[0] += smoothing * (targetMouse[0] - currentMouse[0]);

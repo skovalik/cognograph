@@ -10,6 +10,9 @@ import { useWorkspaceStore } from '../stores/workspaceStore'
 import type { WorkspaceData } from '@shared/types'
 import type { ConnectionStatus } from '@shared/multiplayerTypes'
 import { logger } from '../utils/logger'
+import { calculateAutoFitDimensions } from '../utils/nodeUtils'
+import { layoutEvents, requestFitView } from '../utils/layoutEvents'
+import { toast } from 'react-hot-toast'
 
 interface SyncContextValue {
   provider: SyncProvider
@@ -41,6 +44,7 @@ interface SyncProviderWrapperProps {
 export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX.Element {
   const localProviderRef = useRef<LocalSyncProvider | null>(null)
   const yjsProviderRef = useRef<YjsSyncProvider | null>(null)
+  const autoFitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected')
 
@@ -133,9 +137,18 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
       })
       localProvider.setSaveSuccessCallback(() => {
         useWorkspaceStore.getState().markClean()
+        // Race condition fix: if changes arrived during the async save,
+        // isDirty was set to true (no-op since already true) and markClean
+        // just reset it to false. Those changes would be lost. Re-check
+        // and queue another save if the store became dirty during the write.
+        if (useWorkspaceStore.getState().isDirty) {
+          const data = useWorkspaceStore.getState().getWorkspaceData()
+          localProvider.save(data)
+        }
       })
       localProvider.setSaveErrorCallback(() => {
         useWorkspaceStore.getState().setSaveStatus('error')
+        toast.error("Could not save workspace. Check disk space or file permissions.")
       })
 
       // Connect to workspace (starts file watcher)
@@ -145,21 +158,75 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
       const unsubExternalChange = localProvider.onExternalChange((data: WorkspaceData) => {
         const currentId = useWorkspaceStore.getState().workspaceId
         if (data.id === currentId) {
+          const prevNodeCount = useWorkspaceStore.getState().nodes.length
           logger.log('[SyncProvider] External change detected, reloading workspace')
           useWorkspaceStore.getState().loadWorkspace(data)
+
+          // If new nodes appeared (e.g., from CLI Claude creating via MCP),
+          // debounce auto-fit so rapid file changes settle before we resize.
+          // Without debounce, each loadWorkspace overwrites the previous auto-fit
+          // before the 2000ms save debounce can persist the resized dimensions.
+          const newNodeCount = useWorkspaceStore.getState().nodes.length
+          if (newNodeCount > prevNodeCount) {
+            logger.log(`[SyncProvider] ${newNodeCount - prevNodeCount} new nodes detected, scheduling auto-fit`)
+            // Cancel any pending auto-fit — only the last one fires
+            if (autoFitTimerRef.current) clearTimeout(autoFitTimerRef.current)
+            autoFitTimerRef.current = setTimeout(() => {
+              autoFitTimerRef.current = null
+              // Re-read fresh store state (not a stale closure snapshot)
+              const store = useWorkspaceStore.getState()
+              if (store.batchFitNodesToContent) {
+                const items: Array<{ nodeId: string; width: number; height: number }> = []
+                for (const node of store.nodes) {
+                  const nd = node.data as any
+                  const title = nd.title || ''
+                  const content = nd.content || nd.description || ''
+                  if (!content && !title) continue
+                  const headerH = nd.type === 'note' ? 44 : 40
+                  const dims = calculateAutoFitDimensions(title, content, headerH, 36, node.width ?? 280)
+                  const isHtml = nd.contentType === 'html'
+                  const contentFloor = isHtml
+                    ? Math.max(480, Math.min(1200, Math.round(content.length * 0.9)))
+                    : content.length > 500 ? 400 : content.length > 200 ? 300 : 0
+                  const widthFloor = isHtml ? 680 : content.length > 300 ? 480 : content.length > 100 ? 340 : 0
+                  const finalW = Math.max(node.width ?? 280, dims.width, widthFloor)
+                  const finalH = Math.max(node.height ?? 140, dims.height, contentFloor)
+                  if (finalW > (node.width ?? 280) || finalH > (node.height ?? 140)) {
+                    items.push({ nodeId: node.id, width: finalW, height: finalH })
+                  }
+                }
+                if (items.length > 0) {
+                  store.batchFitNodesToContent(items)
+                  logger.log(`[SyncProvider] Auto-fitted ${items.length} nodes`)
+                  // Write resized dims to disk IMMEDIATELY — don't rely on the
+                  // 2000ms debounced save which loses the race against rapid CLI writes.
+                  // SELF_WRITE_GRACE_MS (1000ms) in workspace.ts suppresses the echo.
+                  const resizedData = useWorkspaceStore.getState().getWorkspaceData()
+                  localProvider.saveImmediate(resizedData)
+                    .then(() => logger.log('[SyncProvider] Resized dims flushed to disk'))
+                    .catch((err: unknown) => logger.log('[SyncProvider] saveImmediate failed:', err))
+                }
+              }
+              // After auto-fit, dispatch layout so nodes get repositioned with proper spacing
+              const convNode = store.nodes.find((n: any) => n.data?.type === 'conversation')
+              layoutEvents.dispatchEvent(new CustomEvent('run-layout', {
+                detail: {
+                  nodeIds: store.nodes.filter((n: any) => n.data?.type !== 'conversation').map((n: any) => n.id),
+                  edgeIds: [],
+                  conversationId: convNode?.id
+                }
+              }))
+              // Zoom to fit all nodes
+              requestFitView(store.nodes.map((n: any) => n.id), 0.15, 300)
+            }, 600) // 600ms > 500ms file watcher debounce — fires after rapid writes settle
+          }
         }
       })
 
       // Subscribe to store's isDirty changes — trigger debounced save
-      let isFirstChange = true
       const unsubStore = useWorkspaceStore.subscribe(
         (state) => state.isDirty,
         (isDirty) => {
-          // Skip the initial subscription firing
-          if (isFirstChange) {
-            isFirstChange = false
-            return
-          }
           if (!isDirty) return
 
           // In multiplayer mode, don't save locally (Yjs handles persistence)
@@ -170,6 +237,15 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
         }
       )
 
+      // Flush dirty state on window close to prevent data loss
+      const handleBeforeUnload = () => {
+        if (useWorkspaceStore.getState().isDirty) {
+          const data = useWorkspaceStore.getState().getWorkspaceData()
+          localProvider.saveImmediate(data).catch(() => {})
+        }
+      }
+      window.addEventListener('beforeunload', handleBeforeUnload)
+
       return () => {
         unsubExternalChange()
         unsubStore()
@@ -177,6 +253,7 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
         localProvider.setSaveSuccessCallback(null)
         localProvider.setSaveErrorCallback(null)
         localProvider.disconnect()
+        window.removeEventListener('beforeunload', handleBeforeUnload)
       }
     }
   }, [workspaceId, isMultiplayer, multiplayerConfig, localProvider])

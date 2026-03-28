@@ -25,12 +25,12 @@ LICENSE was overwritten from AGPL-3.0 + Defensive Patent Pledge to MIT and nobod
 - This is NOT MIT (permissive) — AGPL is copyleft
 - Defensive Patent Pledge protects users from patent assertion
 
-**License checklist (when touching license):**
-- [ ] `LICENSE` contains full AGPL-3.0 text
-- [ ] `PATENTS` is present and accurate
-- [ ] `package.json` says `"AGPL-3.0-only"`
+**Cross-repo sync checklist (when touching license):**
+- [ ] `cognograph_02/LICENSE` matches `cognograph_public/LICENSE`
+- [ ] `cognograph_02/PATENTS` matches `cognograph_public/PATENTS`
+- [ ] Both `package.json` say `"AGPL-3.0-only"`
 - [ ] `package-lock.json` root entry says `"AGPL-3.0-only"` (stale after `npm install`)
-- [ ] README License section matches
+- [ ] Both README License sections match
 - [ ] DECISIONS.md updated
 
 ---

@@ -68,6 +68,49 @@ const CONNECT_TIMEOUT_MS = 15_000
 const TOOL_CALL_TIMEOUT_MS = 30_000
 const MAX_RESULT_SIZE = 500 * 1024 // 500KB
 
+// Allowlist of known-safe MCP server commands.
+// Users can run Node/Python/npx scripts but not arbitrary shell commands.
+const ALLOWED_MCP_COMMANDS = new Set([
+  'node', 'npx', 'python', 'python3', 'uvx',
+  'deno', 'bun',
+  // Common MCP server binaries
+  'mcp-server-filesystem', 'mcp-server-github', 'mcp-server-slack',
+  'mcp-server-sqlite', 'mcp-server-brave-search',
+])
+
+/**
+ * Validate an MCP server command for security.
+ * - Command must be in allowlist OR be an absolute path to an existing file.
+ * - Args must not contain shell metacharacters.
+ */
+function validateMCPCommand(command: string, args?: string[]): { valid: boolean; error?: string } {
+  // Extract basename for allowlist check
+  const basename = command.includes('/') || command.includes('\\')
+    ? command.split(/[\\/]/).pop() || ''
+    : command
+
+  if (!ALLOWED_MCP_COMMANDS.has(basename) && !ALLOWED_MCP_COMMANDS.has(command)) {
+    // Allow absolute paths (user-installed binaries) but log a warning
+    const isAbsolutePath = command.startsWith('/') || /^[A-Z]:\\/i.test(command)
+    if (!isAbsolutePath) {
+      return { valid: false, error: `MCP command "${command}" is not in the allowed list. Allowed: ${[...ALLOWED_MCP_COMMANDS].join(', ')}` }
+    }
+    console.warn(`[MCPClient] Running non-allowlisted absolute path: ${command}`)
+  }
+
+  // Block shell metacharacters in args
+  if (args) {
+    const shellMetachars = /[;&|`$(){}!<>]/
+    for (const arg of args) {
+      if (shellMetachars.test(arg)) {
+        return { valid: false, error: `Shell metacharacters not allowed in MCP server args: "${arg}"` }
+      }
+    }
+  }
+
+  return { valid: true }
+}
+
 // -----------------------------------------------------------------------------
 // Connection State
 // -----------------------------------------------------------------------------
@@ -93,6 +136,12 @@ export async function connectMCPServer(config: MCPServerConfig): Promise<{
 
   if (connections.size >= MAX_CONNECTIONS) {
     return { success: false, error: `Maximum of ${MAX_CONNECTIONS} MCP connections reached.` }
+  }
+
+  // Validate command before spawning process
+  const cmdCheck = validateMCPCommand(config.command, config.args)
+  if (!cmdCheck.valid) {
+    return { success: false, error: cmdCheck.error }
   }
 
   let transport: StdioClientTransport | null = null

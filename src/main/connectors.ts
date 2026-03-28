@@ -39,7 +39,7 @@ async function testAnthropic(apiKey: string, model: string): Promise<ConnectorTe
   try {
     const client = new Anthropic({ apiKey })
     await client.messages.create({
-      model: model || 'claude-sonnet-4-20250514',
+      model: model || 'claude-sonnet-4-6',
       max_tokens: 1,
       messages: [{ role: 'user', content: 'Hi' }]
     })
@@ -53,8 +53,54 @@ async function testAnthropic(apiKey: string, model: string): Promise<ConnectorTe
   }
 }
 
+/**
+ * Validate a base URL to prevent SSRF attacks.
+ * Allows HTTPS only, except localhost for local dev servers (Ollama, LM Studio, etc.).
+ * Blocks internal/link-local IP ranges.
+ */
+function validateBaseUrl(url: string): { valid: boolean; error?: string } {
+  try {
+    const parsed = new URL(url)
+    const hostname = parsed.hostname
+
+    // Allow localhost for local servers
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+      return { valid: true }
+    }
+
+    // Block non-HTTPS for remote URLs
+    if (parsed.protocol !== 'https:') {
+      return { valid: false, error: `Only HTTPS allowed for remote URLs (got ${parsed.protocol})` }
+    }
+
+    // Block internal/private IP ranges
+    const internalPatterns = [
+      /^10\./,                    // 10.0.0.0/8
+      /^172\.(1[6-9]|2\d|3[01])\./, // 172.16.0.0/12
+      /^192\.168\./,             // 192.168.0.0/16
+      /^169\.254\./,             // Link-local
+      /^0\./,                    // Current network
+      /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // Shared address space
+    ]
+
+    for (const pattern of internalPatterns) {
+      if (pattern.test(hostname)) {
+        return { valid: false, error: `Internal IP addresses are not allowed: ${hostname}` }
+      }
+    }
+
+    return { valid: true }
+  } catch {
+    return { valid: false, error: `Invalid URL: ${url}` }
+  }
+}
+
 async function testOpenAI(apiKey: string, model: string, baseUrl?: string): Promise<ConnectorTestResponse> {
   try {
+    if (baseUrl) {
+      const urlCheck = validateBaseUrl(baseUrl)
+      if (!urlCheck.valid) return { success: false, error: urlCheck.error }
+    }
     const client = new OpenAI({
       apiKey,
       ...(baseUrl ? { baseURL: baseUrl } : {})
@@ -91,9 +137,12 @@ async function testGemini(apiKey: string, model: string): Promise<ConnectorTestR
 
 async function testOllama(baseUrl: string, model: string): Promise<ConnectorTestResponse> {
   try {
+    const effectiveUrl = baseUrl || 'http://localhost:11434'
+    const urlCheck = validateBaseUrl(effectiveUrl)
+    if (!urlCheck.valid) return { success: false, error: urlCheck.error }
     const client = new OpenAI({
       apiKey: 'ollama',
-      baseURL: `${baseUrl || 'http://localhost:11434'}/v1`
+      baseURL: `${effectiveUrl}/v1`
     })
     await client.chat.completions.create({
       model: model || 'llama3',
@@ -114,10 +163,22 @@ async function testCustom(apiKey: string, model: string, baseUrl?: string): Prom
   if (!baseUrl) {
     return { success: false, error: 'Base URL is required for custom providers' }
   }
+  const urlCheck = validateBaseUrl(baseUrl)
+  if (!urlCheck.valid) return { success: false, error: urlCheck.error }
   return testOpenAI(apiKey, model, baseUrl)
 }
 
 async function testMCPServer(request: MCPTestRequest): Promise<MCPTestResponse> {
+  // Validate command — block shell metacharacters in args
+  if (request.args) {
+    const shellMetachars = /[;&|`$(){}!<>]/
+    for (const arg of request.args) {
+      if (shellMetachars.test(arg)) {
+        return { success: false, error: `Shell metacharacters not allowed in MCP server args: "${arg}"` }
+      }
+    }
+  }
+
   let transport: StdioClientTransport | null = null
   let client: Client | null = null
 

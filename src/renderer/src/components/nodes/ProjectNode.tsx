@@ -2,9 +2,12 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import { memo, useState, useCallback, useMemo, useEffect } from 'react'
-import { Handle, Position, type NodeProps, NodeResizer, useUpdateNodeInternals, useReactFlow, type ResizeParams } from '@xyflow/react'
-import { ChevronDown, ChevronRight, Plus, Link2, FolderKanban } from 'lucide-react'
+import { type NodeProps, NodeResizer, useUpdateNodeInternals, useReactFlow, type ResizeParams } from '@xyflow/react'
+import { SpreadHandles } from './SpreadHandles'
+import { ChevronDown, ChevronRight, Plus, Link2, FolderKanban, FolderOpen } from 'lucide-react'
+import { FilePreviewSection } from '../FilePreviewSection'
 import type { ProjectNodeData } from '@shared/types'
+import * as path from 'path'
 import { DEFAULT_THEME_SETTINGS } from '@shared/types'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
 import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
@@ -218,19 +221,8 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
         PROJECT
       </div>
 
-      {/* Handles on all four sides — hidden at L0-L1 */}
-      {showHeader && (
-        <>
-          <Handle type="target" position={Position.Top} id="top-target" />
-          <Handle type="source" position={Position.Top} id="top-source" />
-          <Handle type="target" position={Position.Bottom} id="bottom-target" />
-          <Handle type="source" position={Position.Bottom} id="bottom-source" />
-          <Handle type="target" position={Position.Left} id="left-target" />
-          <Handle type="source" position={Position.Left} id="left-source" />
-          <Handle type="target" position={Position.Right} id="right-target" />
-          <Handle type="source" position={Position.Right} id="right-source" />
-        </>
-      )}
+      {/* Handles on all four sides — hidden at L0 (ultra-far) */}
+      <SpreadHandles hidden={isUltraFar} />
 
       {/* Numbered bookmark badge */}
       {numberedBookmark && (
@@ -333,6 +325,16 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
             className="cognograph-node__title"
             placeholder="Untitled Project"
           />
+          {nodeData.folderPath && (
+            <span
+              className="flex items-center gap-0.5 text-[10px] shrink-0"
+              style={{ color: 'var(--node-text-muted)' }}
+              title={nodeData.folderPath}
+            >
+              <FolderOpen className="w-3 h-3" />
+              <span className="truncate max-w-[80px]">{path.basename(nodeData.folderPath)}</span>
+            </span>
+          )}
           {!!nodeData.properties?.url && (
             <span title={nodeData.properties.url as string}>
               <Link2
@@ -487,6 +489,17 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
 
           {childNodes.length === 0 && !isDragOver && (
             <p className="italic text-center" style={{ color: 'var(--node-text-muted)' }}>Drag nodes here</p>
+          )}
+
+          {/* File listing preview — only when folderPath is set and zoom >= 0.3 */}
+          {nodeData.folderPath && zoomLevel !== 'ultra-far' && zoomLevel !== 'far' && (
+            <FilePreviewSection
+              folderPath={nodeData.folderPath}
+              fileFilter={nodeData.fileFilter}
+              fileListVisible={nodeData.fileListVisible ?? false}
+              onToggleVisible={() => updateNode(id, { fileListVisible: !nodeData.fileListVisible })}
+              compact
+            />
           )}
         </div>
       )}

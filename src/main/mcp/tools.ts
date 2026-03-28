@@ -103,7 +103,7 @@ export const TOOL_DEFINITIONS = [
         changes: {
           type: 'object',
           description:
-            'Fields to update. Task: title, description, status, priority, complexity, tags, color. Note: title, content, tags, color. Conversation: title, tags, color. Text: content, color. Project: title, description, color.',
+            'Fields to update. Task: title, description, status, priority, complexity, tags, color. Note: title, content, tags, color. Conversation: title, tags, color. Text: content, color. Project: title, description, color, folderPath, fileFilter. Artifact: all standard fields plus folderPath, fileFilter.',
           properties: {
             title: { type: 'string' },
             description: { type: 'string' },
@@ -115,7 +115,9 @@ export const TOOL_DEFINITIONS = [
               enum: ['trivial', 'simple', 'moderate', 'complex', 'very-complex']
             },
             tags: { type: 'array', items: { type: 'string' } },
-            color: { type: 'string' }
+            color: { type: 'string' },
+            folderPath: { type: 'string', description: 'Absolute path to linked folder (project/artifact nodes)' },
+            fileFilter: { type: 'string', description: 'Comma-separated extensions to filter, e.g. ".ts,.tsx,.js"' }
           }
         }
       },
@@ -137,7 +139,7 @@ export const TOOL_DEFINITIONS = [
         data: {
           type: 'object',
           description:
-            'Node data. Task: title, description, status, priority, tags. Note: title, content, tags. Conversation: title. Text: content. Project: title, description.'
+            'Node data. Task: title, description, status, priority, tags. Note: title, content, tags. Conversation: title. Text: content. Project: title, description, folderPath, fileFilter. Artifact: title, content, contentType (use "html" for HTML markup to render as live preview; "code" for source code; "text" for plain text — default is "text"), folderPath, fileFilter.'
         },
         position: {
           type: 'object',

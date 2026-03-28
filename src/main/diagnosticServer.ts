@@ -112,12 +112,13 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
     next()
   })
 
-  // SECURITY: Rate limiting (10 requests per minute)
+  // SECURITY: Rate limiting (configurable, default 120/min for dogfood testing)
+  const maxRequests = parseInt(process.env.DIAGNOSTIC_RATE_LIMIT || '120', 10)
   const limiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 10,
+    max: maxRequests,
     message: {
-      error: 'Too many requests. Max 10/minute.',
+      error: `Too many requests. Max ${maxRequests}/minute.`,
       code: 'RATE_LIMIT',
       suggestion: 'Wait 60 seconds before retrying'
     },
@@ -344,6 +345,31 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
         code: 'INVALID_ACTION',
         suggestion: 'action must be "start" or "stop"'
       })
+    }
+  })
+
+  // Tool 7: Screenshot — returns PNG as base64
+  app.get('/screenshot', async (_req: Request, res: Response) => {
+    try {
+      const image = await mainWindow.webContents.capturePage()
+      const pngBuffer = image.toPNG()
+      res.json({ screenshot: pngBuffer.toString('base64'), width: image.getSize().width, height: image.getSize().height })
+    } catch (error: any) {
+      res.status(500).json({ error: error.message, code: 'SCREENSHOT_ERROR' })
+    }
+  })
+
+  // Tool 8: Save screenshot to file
+  app.post('/screenshot', async (req: Request, res: Response) => {
+    const { path: filePath } = req.body
+    if (!filePath) return res.status(400).json({ error: 'path required' })
+    try {
+      const image = await mainWindow.webContents.capturePage()
+      const fs = await import('fs')
+      fs.writeFileSync(filePath, image.toPNG())
+      res.json({ saved: filePath, width: image.getSize().width, height: image.getSize().height })
+    } catch (error: any) {
+      res.status(500).json({ error: error.message, code: 'SCREENSHOT_SAVE_ERROR' })
     }
   })
 

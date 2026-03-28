@@ -87,6 +87,23 @@ function EffectControlsPanelComponent({
 
   return (
     <div className="space-y-2">
+      {/* Performance mode selector — global, above per-effect controls */}
+      <div className="space-y-1">
+        <div className={`text-[9px] ${textMuted} uppercase tracking-wider`}>Performance</div>
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] ${textMuted} w-20 truncate`}>Quality</span>
+          <select
+            value={settings.performanceMode ?? 'auto'}
+            onChange={(e) => onChange({ ...settings, performanceMode: e.target.value as 'auto' | 'quality' | 'battery' })}
+            className={`flex-1 text-[10px] ${textMuted} bg-transparent border border-current/20 rounded px-1 py-0.5`}
+          >
+            <option value="auto">Auto (adaptive)</option>
+            <option value="quality">Quality (max res)</option>
+            <option value="battery">Battery (min res)</option>
+          </select>
+        </div>
+      </div>
+
       <div className={`text-[9px] ${textMuted} uppercase tracking-wider`}>Effect Settings</div>
 
       {entry.propSchema.map((schema) => {

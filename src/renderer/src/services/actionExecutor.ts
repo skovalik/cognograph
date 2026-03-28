@@ -5,6 +5,8 @@ import type { ActionStep, ExecutionContext } from '@shared/actionTypes'
 import type { NodeData } from '@shared/types'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useConnectorStore } from '../stores/connectorStore'
+import { runAgent } from './agentService'
+import { useOrchestratorStore } from '../stores/orchestratorStore'
 
 export interface ExecutionResult {
   success: boolean
@@ -321,6 +323,47 @@ async function executeStep(step: ActionStep, context: ExecutionContext): Promise
       return {}
     }
 
+    case 'run-agent': {
+      const targetId = resolveTarget(step.config.target, step.config.targetNodeId, context)
+      if (!targetId) throw new Error('Target conversation node not found for run-agent')
+
+      const node = store.nodes.find(n => n.id === targetId)
+      if (!node) throw new Error(`Node ${targetId} not found`)
+      if (node.data.type !== 'conversation') {
+        throw new Error(`run-agent requires a conversation node, got: ${node.data.type}`)
+      }
+
+      try {
+        await runAgent(targetId)
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error)
+        console.error(`[ActionExecutor] run-agent failed for ${targetId}: ${msg}`)
+        if (step.onError === 'stop') throw error
+        // For 'continue' or 'retry', the outer loop handles it
+      }
+      return {}
+    }
+
+    case 'run-orchestrator': {
+      const targetId = resolveTarget(step.config.target, step.config.targetNodeId, context)
+      if (!targetId) throw new Error('Target orchestrator node not found for run-orchestrator')
+
+      const node = store.nodes.find(n => n.id === targetId)
+      if (!node) throw new Error(`Node ${targetId} not found`)
+      if (node.data.type !== 'orchestrator') {
+        throw new Error(`run-orchestrator requires an orchestrator node, got: ${node.data.type}`)
+      }
+
+      try {
+        await useOrchestratorStore.getState().startRun(targetId)
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error)
+        console.error(`[ActionExecutor] run-orchestrator failed for ${targetId}: ${msg}`)
+        if (step.onError === 'stop') throw error
+      }
+      return {}
+    }
+
     default:
       throw new Error(`Unknown step type: ${(step as ActionStep).type}`)
   }
@@ -475,11 +518,17 @@ function resolveTemplate(
   })
 }
 
+const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
 function getNestedValue(obj: unknown, path: string): unknown {
   const parts = path.split('.')
   let current: unknown = obj
   for (const part of parts) {
     if (current === null || current === undefined) return undefined
+    if (FORBIDDEN_KEYS.has(part)) {
+      console.warn(`[ActionExecutor] Blocked prototype pollution attempt via path: ${path}`)
+      return undefined
+    }
     current = (current as Record<string, unknown>)[part]
   }
   return current

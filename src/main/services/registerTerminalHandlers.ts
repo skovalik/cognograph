@@ -35,6 +35,9 @@ export function registerTerminalHandlers(): void {
         cwd: config.cwd,
         cols: config.cols,
         rows: config.rows,
+        shell: config.shell,
+        nodeTitle: config.nodeTitle,
+        workspaceId: config.workspaceId,
       })
       return { sessionId: session.sessionId, nodeId: session.nodeId, pid: session.pid }
     } catch (err) {

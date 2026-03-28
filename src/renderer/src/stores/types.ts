@@ -129,7 +129,7 @@ export interface UIState {
   // Left sidebar
   leftSidebarOpen: boolean
   leftSidebarWidth: number
-  leftSidebarTab: 'layers' | 'extractions' | 'activity' | 'dispatch' | 'bridge-log'
+  leftSidebarTab: 'layers' | 'extractions' | 'activity' | 'dispatch' | 'bridge-log' | 'console'
   expandedNodeIds: Set<string>
   layersSortMode: 'hierarchy' | 'type' | 'recent' | 'manual'
   manualLayerOrder: string[] | null
@@ -151,6 +151,17 @@ export interface UIState {
 
   // Keyboard navigation
   keyboardNavActive: boolean
+
+  // Canvas interaction (transient — for shader performance throttling)
+  isCanvasInteracting: boolean
+
+  // Ambient quality state (synced from useAdaptiveQuality for R3F effects)
+  ambientQuality: {
+    resolutionScale: number
+    frameSkip: boolean
+    shouldRender: boolean
+    dprCap: number
+  }
 
   // Theme and preferences
   themeSettings: ThemeSettings

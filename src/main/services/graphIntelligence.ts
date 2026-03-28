@@ -18,6 +18,7 @@
  */
 
 import { ipcMain, BrowserWindow } from 'electron'
+import { parseCommand } from './bridgeCommandParser'
 
 // =============================================================================
 // Types
@@ -525,6 +526,48 @@ export async function runAnalysis(snapshot: GraphSnapshot): Promise<void> {
 }
 
 // =============================================================================
+// IPC-based Snapshot Request (replaces window.__getGraphSnapshot)
+// =============================================================================
+
+/** Pending snapshot request resolve callbacks keyed by request ID */
+const pendingSnapshotRequests = new Map<string, (snapshot: GraphSnapshot | null) => void>()
+
+/**
+ * Request a graph snapshot from the renderer via IPC.
+ * Main sends 'bridge:request-snapshot' with a unique ID,
+ * renderer responds with 'bridge:snapshot-response' carrying the same ID + data.
+ * Times out after 5 seconds to prevent hanging.
+ */
+function requestSnapshotViaIPC(win: BrowserWindow): Promise<GraphSnapshot | null> {
+  const requestId = `snap-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+  return new Promise<GraphSnapshot | null>((resolve) => {
+    const timeout = setTimeout(() => {
+      pendingSnapshotRequests.delete(requestId)
+      resolve(null)
+    }, 5000)
+
+    pendingSnapshotRequests.set(requestId, (snapshot) => {
+      clearTimeout(timeout)
+      pendingSnapshotRequests.delete(requestId)
+      resolve(snapshot)
+    })
+
+    win.webContents.send('bridge:request-snapshot', requestId)
+  })
+}
+
+/** Register the IPC listener for snapshot responses from the renderer. Call once at startup. */
+export function registerSnapshotResponseHandler(): void {
+  ipcMain.on('bridge:snapshot-response', (_event, requestId: string, snapshot: GraphSnapshot | null) => {
+    const resolve = pendingSnapshotRequests.get(requestId)
+    if (resolve) {
+      resolve(snapshot)
+    }
+  })
+}
+
+// =============================================================================
 // Analysis Scheduler
 // =============================================================================
 
@@ -547,14 +590,12 @@ export function startGraphAnalysis(intervalMs = 30000): void {
     // Skip if no changes since last analysis
     if (changedNodeIds.size === 0 && lastAnalyzedAt > 0) return
 
-    // Request current graph snapshot from renderer
+    // Request current graph snapshot from renderer via IPC (no window global pollution)
     const win = BrowserWindow.getAllWindows()[0]
     if (!win || win.isDestroyed()) return
 
     try {
-      const snapshot = await win.webContents.executeJavaScript(
-        `window.__getGraphSnapshot ? window.__getGraphSnapshot() : null`
-      )
+      const snapshot = await requestSnapshotViaIPC(win)
       if (snapshot) {
         await runAnalysis(snapshot)
       }
@@ -651,6 +692,33 @@ export function registerGraphIntelligenceHandlers(): void {
     (_event, insightId: string, action: 'apply' | 'dismiss') => {
       // Audit logging happens on renderer side via auditHooks
       return { success: true, insightId, action }
+    }
+  )
+
+  // Natural language command submission (Spatial Command Bridge)
+  // Wired to bridgeCommandParser.parseCommand() for intent classification + proposal generation.
+  ipcMain.handle(
+    'bridge:submitCommand',
+    async (_event, text: string, workspaceContext?: { nodeCount: number; nodeTypes: Record<string, number>; viewportCenter: { x: number; y: number }; recentNodes: Array<{ id: string; title: string; type: string }> }) => {
+      try {
+        const result = await parseCommand(text, workspaceContext ?? {
+          nodeCount: 0,
+          nodeTypes: {},
+          viewportCenter: { x: 0, y: 0 },
+          recentNodes: []
+        })
+        return {
+          success: true,
+          data: {
+            parsed: result.parsed,
+            proposalId: result.proposalId,
+            changes: result.changes,
+            proposal: result.proposal
+          }
+        }
+      } catch (err) {
+        return { success: false, error: 'Could not parse command' }
+      }
     }
   )
 }

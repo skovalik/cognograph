@@ -314,3 +314,22 @@ html[data-glass-panels="false"] .gui-panel.glass-soft {
 /* REMOVED: This selector was too broad - it matched ALL glass elements (toolbars, panels, etc)
    not just actual overlay elements. Overlays are already controlled by nodes/modals/panels settings.
    If we need overlay-specific control in the future, use a more specific class like .gui-overlay */
+
+/* =============================================================================
+   ZOOM PERFORMANCE TIER — Replace backdrop-filter with opaque solid at low zoom
+   ============================================================================= */
+
+[data-zoom-tier="reduced"] .glass-soft,
+[data-zoom-tier="reduced"] .glass-fluid {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: var(--surface-panel, rgba(15, 15, 25, 0.95)) !important;
+}
+
+[data-zoom-tier="minimal"] .glass-soft,
+[data-zoom-tier="minimal"] .glass-fluid,
+[data-zoom-tier="minimal"] .glass-solid {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(15, 15, 25, 0.98) !important;
+}

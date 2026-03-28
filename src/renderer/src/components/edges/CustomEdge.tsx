@@ -12,6 +12,7 @@ import { useBridgeStore } from '../../stores/bridgeStore'
 import { toast } from 'react-hot-toast'
 import { Plus, MapPin, Trash2 } from 'lucide-react'
 import { FormattedText } from '../FormattedText'
+import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 
 // =============================================================================
 // CONSTANTS
@@ -603,6 +604,8 @@ function CustomEdgeComponent({
 
   // Store subscriptions
   const zoom = useStore((s) => s.transform[2])
+  // Default to 'rounded' (orthogonal + 20px corner radius) — clean right-angle routing.
+  // 'smooth' (bezier) produces wild arcs with auto control points.
   const globalEdgeStyle = useWorkspaceStore((state) => state.themeSettings.edgeStyle) || 'smooth'
   const linkGradientEnabled = useWorkspaceStore((state) => state.themeSettings.linkGradientEnabled) ?? true
   const themeMode = useWorkspaceStore((state) => state.themeSettings.mode)
@@ -1172,15 +1175,7 @@ function CustomEdgeComponent({
         setSelectedWaypointIndex(null)
       }
 
-      // Escape key cancels drag or deselects
-      if (e.key === 'Escape') {
-        if (isDragging) {
-          setIsDragging(false)
-          setDraggedWaypointIndex(null)
-          dragStartRef.current = null
-        }
-        setSelectedWaypointIndex(null)
-      }
+      // Escape key handled by EscapeManager (see separate useEffect)
 
       // Arrow keys nudge selected waypoint (P3-1)
       if (selectedWaypointIndex !== null && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
@@ -1205,6 +1200,21 @@ function CustomEdgeComponent({
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [hoveredWaypointIndex, selectedWaypointIndex, isDragging, waypoints, centerOffset, id, updateEdge, isWorkspaceLink])
+
+  // Escape key cancels waypoint drag or deselects (via EscapeManager)
+  useEffect(() => {
+    if (selectedWaypointIndex === null && !isDragging) return
+    const handleEscape = () => {
+      if (isDragging) {
+        setIsDragging(false)
+        setDraggedWaypointIndex(null)
+        dragStartRef.current = null
+      }
+      setSelectedWaypointIndex(null)
+    }
+    escapeManager.register(`canvas-edge-waypoint-${id}`, EscapePriority.CANVAS, handleEscape)
+    return () => escapeManager.unregister(`canvas-edge-waypoint-${id}`)
+  }, [selectedWaypointIndex, isDragging, id])
 
   // Click elsewhere to deselect waypoint
   useEffect(() => {

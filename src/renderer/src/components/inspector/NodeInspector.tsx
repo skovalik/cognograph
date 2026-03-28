@@ -15,6 +15,8 @@
  */
 
 import { useRef, useCallback, useEffect, useMemo } from 'react'
+import { FolderOpen, XCircle } from 'lucide-react'
+import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 import { Popover, PopoverContent } from '@/components/ui/popover'
 import * as PopoverPrimitive from '@radix-ui/react-popover'
 import { cn } from '@/lib/utils'
@@ -40,8 +42,8 @@ const INSPECTOR_FIELDS: Record<string, string[]> = {
   task: ['status', 'priority', 'tags', 'dueDate'],
   note: ['noteMode', 'tags'],
   conversation: ['provider', 'mode'],
-  artifact: ['contentType', 'tags'],
-  project: ['color', 'tags'],
+  artifact: ['contentType', 'folderPath', 'tags'],
+  project: ['color', 'folderPath', 'tags'],
   action: ['enabled'],
   orchestrator: ['strategy'],
   text: ['tags'],
@@ -167,11 +169,8 @@ export function NodeInspector({
 
   // Escape key dismissal (belt-and-suspenders — Radix also handles this)
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
+    escapeManager.register('dialog-node-inspector', EscapePriority.DIALOG, onClose)
+    return () => escapeManager.unregister('dialog-node-inspector')
   }, [onClose])
 
   if (!node) return null
@@ -230,9 +229,87 @@ export function NodeInspector({
 
         {/* ---- Property fields (interactive) ---- */}
         <div className="px-4 py-2 space-y-2 overflow-y-auto max-h-[340px]">
-          {fields.map((fieldId) => (
-            <PropertyField key={fieldId} nodeId={nodeId} fieldId={fieldId} extraDefs={INSPECTOR_PROPERTY_DEFS} />
-          ))}
+          {fields.map((fieldId) => {
+            // Custom renderer for folderPath — browse + clear buttons
+            if (fieldId === 'folderPath') {
+              const currentPath = data.folderPath as string | undefined
+              const basename = currentPath?.split(/[/\\]/).pop() || ''
+              const hasDialog = typeof window.api?.dialog?.showOpenDialog === 'function'
+
+              return (
+                <div key={fieldId} className="space-y-1">
+                  <label className="text-[11px] text-[var(--text-secondary)] font-medium">
+                    Folder Path
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    {currentPath ? (
+                      <span
+                        className={cn(
+                          'flex-1 text-[11px] text-[var(--text-primary)] font-mono truncate',
+                          'px-1.5 py-1 rounded bg-[var(--surface-overlay)]',
+                        )}
+                        title={currentPath}
+                      >
+                        {basename}
+                      </span>
+                    ) : (
+                      <span className="flex-1 text-[11px] text-[var(--text-secondary)] italic">
+                        No folder linked
+                      </span>
+                    )}
+                    {hasDialog ? (
+                      <button
+                        type="button"
+                        className={cn(
+                          'p-1 rounded transition-colors',
+                          'text-[var(--text-secondary)] hover:text-[var(--accent-primary)]',
+                          'hover:bg-[var(--surface-overlay)]',
+                        )}
+                        title="Browse for folder"
+                        onClick={async () => {
+                          const result = await window.api.dialog.showOpenDialog({
+                            title: 'Select project folder',
+                            properties: ['openDirectory'],
+                            ...(currentPath ? { defaultPath: currentPath } : {}),
+                          })
+                          if (result.success && !result.canceled && result.filePaths?.[0]) {
+                            updateNode(nodeId, { folderPath: result.filePaths[0] })
+                          }
+                        }}
+                      >
+                        <FolderOpen className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      // Web build — read-only display
+                      currentPath && (
+                        <span className="text-[10px] text-[var(--text-secondary)] italic">
+                          (read-only)
+                        </span>
+                      )
+                    )}
+                    {currentPath && (
+                      <button
+                        type="button"
+                        className={cn(
+                          'p-1 rounded transition-colors',
+                          'text-[var(--text-secondary)] hover:text-red-400',
+                          'hover:bg-[var(--surface-overlay)]',
+                        )}
+                        title="Clear folder path"
+                        onClick={() => updateNode(nodeId, { folderPath: undefined })}
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            }
+
+            return (
+              <PropertyField key={fieldId} nodeId={nodeId} fieldId={fieldId} extraDefs={INSPECTOR_PROPERTY_DEFS} />
+            )
+          })}
 
           {fields.length === 0 && (
             <p className="text-[11px] text-[var(--text-secondary)] italic">

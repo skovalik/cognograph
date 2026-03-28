@@ -27,7 +27,7 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
   const hasCompleted = useProgramStore(selectHasCompletedOnboarding)
   const completeOnboarding = useProgramStore((s) => s.completeOnboarding)
   const addNode = useWorkspaceStore((s) => s.addNode)
-  const selectNode = useWorkspaceStore((s) => s.selectNode)
+  const setSelectedNodes = useWorkspaceStore((s) => s.setSelectedNodes)
   const connectors = useConnectorStore((s) => s.connectors)
   const { screenToFlowPosition } = useReactFlow()
 
@@ -54,12 +54,12 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
     })
 
     // Select it to open the properties/chat panel
-    selectNode(nodeId)
+    setSelectedNodes([nodeId])
 
     // Mark onboarding as complete
     completeOnboarding()
     setDismissed(true)
-  }, [screenToFlowPosition, addNode, selectNode, completeOnboarding])
+  }, [screenToFlowPosition, addNode, setSelectedNodes, completeOnboarding])
 
   const handleSkip = useCallback(() => {
     completeOnboarding()

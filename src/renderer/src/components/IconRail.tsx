@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import { memo, useCallback, useState, useEffect, useRef } from 'react'
-import { Layers, Activity, Zap, Terminal, Settings, Share2, PanelRight, User, LayoutDashboard, LogOut } from 'lucide-react'
+import { Layers, Activity, Zap, Terminal, ScrollText, Settings, Share2, PanelRight, User, LayoutDashboard, LogOut } from 'lucide-react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useUIStore, selectLeftSidebarTab } from '../stores/uiStore'
 import { useMultiplayer } from '../hooks/useMultiplayer'
@@ -13,13 +13,14 @@ import ElementBadge from '../../../web/components/ElementBadge'
 import { isAuthEnabled, supabase } from '../../../web/lib/supabase'
 import '../styles/icon-rail.css'
 
-type SidebarTab = 'layers' | 'extractions' | 'activity' | 'dispatch' | 'bridge-log'
+type SidebarTab = 'layers' | 'extractions' | 'activity' | 'dispatch' | 'bridge-log' | 'console'
 
 const RAIL_TABS: Array<{ id: SidebarTab; label: string; icon: typeof Layers; electronOnly?: boolean }> = [
   { id: 'layers', label: 'Outline', icon: Layers },
   { id: 'activity', label: 'Activity', icon: Activity },
   { id: 'dispatch', label: 'Dispatch', icon: Zap, electronOnly: true },
   { id: 'bridge-log', label: 'Bridge Log', icon: Terminal, electronOnly: true },
+  { id: 'console', icon: ScrollText, label: 'Console', electronOnly: true },
 ]
 
 interface IconRailProps {

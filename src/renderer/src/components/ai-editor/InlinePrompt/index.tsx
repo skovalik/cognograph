@@ -103,7 +103,8 @@ function InlinePromptComponent({ position, onClose }: InlinePromptProps): JSX.El
       workspaceSettings: {
         defaultProvider: 'anthropic',
         themeMode: themeSettings.mode
-      }
+      },
+      includeEnhancedAnalysis: true
     })
 
     // Use streaming by default

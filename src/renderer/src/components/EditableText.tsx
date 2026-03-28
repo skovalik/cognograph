@@ -135,6 +135,7 @@ function EditableTextComponent({
           minHeight: '1.5em'
         }}
         placeholder={placeholder}
+        aria-label="Node description"
         rows={1}
       />
     )

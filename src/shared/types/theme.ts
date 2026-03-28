@@ -366,13 +366,15 @@ export interface AmbientEffectSettings {
   effect: AmbientEffectType
   /** Bloom post-processing intensity (0-100, 0 = disabled) */
   bloomIntensity?: number
+  /** Performance mode: auto (adaptive FPS), quality (max res), battery (min res + frame skip) */
+  performanceMode?: 'auto' | 'quality' | 'battery'
   /** Per-effect native prop overrides, keyed by effect type */
   effectProps: Record<string, Record<string, unknown>>
 }
 
 export const DEFAULT_AMBIENT_EFFECT: AmbientEffectSettings = {
-  enabled: false,
-  effect: 'none',
+  enabled: true,
+  effect: 'particles',
   bloomIntensity: 100,
   effectProps: {}
 }

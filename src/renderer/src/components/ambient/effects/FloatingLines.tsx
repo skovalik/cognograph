@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Scene,
   OrthographicCamera,
@@ -13,6 +13,7 @@ import {
   Vector2,
   Clock
 } from 'three';
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
 
 const vertexShader = `
 precision highp float;
@@ -230,6 +231,8 @@ type FloatingLinesProps = {
   parallaxStrength?: number;
   opacity?: number;
   mixBlendMode?: React.CSSProperties['mixBlendMode'];
+  qualityRef?: React.RefObject<AdaptiveQualityState>;
+  reportFrame?: () => void;
 };
 
 function hexToVec3(hex: string): Vector3 {
@@ -272,7 +275,9 @@ export default function FloatingLines({
   parallax = true,
   parallaxStrength = 0.2,
   opacity = 1,
-  mixBlendMode = 'screen'
+  mixBlendMode = 'screen',
+  qualityRef,
+  reportFrame: reportFrameFn,
 }: FloatingLinesProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const targetMouseRef = useRef<Vector2>(new Vector2(-1000, -1000));
@@ -446,7 +451,12 @@ export default function FloatingLines({
     }
 
     let raf = 0;
+    let frameCount = 0;
     const renderLoop = () => {
+      raf = requestAnimationFrame(renderLoop);
+      if (qualityRef?.current && !qualityRef.current.shouldRender) return;
+      if (reportFrameFn) reportFrameFn();
+      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
       uniforms.iTime.value = clock.getElapsedTime();
 
       if (interactive) {
@@ -463,7 +473,6 @@ export default function FloatingLines({
       }
 
       renderer.render(scene, camera);
-      raf = requestAnimationFrame(renderLoop);
     };
     renderLoop();
 

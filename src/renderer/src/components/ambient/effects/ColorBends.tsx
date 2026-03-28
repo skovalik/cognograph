@@ -3,6 +3,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
 
 type ColorBendsProps = {
   className?: string;
@@ -20,6 +21,8 @@ type ColorBendsProps = {
   noise?: number;
   isDark?: boolean;
   opacity?: number;
+  qualityRef?: React.RefObject<AdaptiveQualityState>;
+  reportFrame?: () => void;
 };
 
 const MAX_COLORS = 8 as const;
@@ -138,7 +141,9 @@ export default function ColorBends({
   parallax = 0.5,
   noise = 0.1,
   isDark = true,
-  opacity = 1
+  opacity = 1,
+  qualityRef,
+  reportFrame: reportFrameFn,
 }: ColorBendsProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -219,7 +224,12 @@ export default function ColorBends({
       (window as Window).addEventListener('resize', handleResize);
     }
 
+    let frameCount = 0;
     const loop = () => {
+      rafRef.current = requestAnimationFrame(loop);
+      if (qualityRef?.current && !qualityRef.current.shouldRender) return;
+      if (reportFrameFn) reportFrameFn();
+      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
       const dt = clock.getDelta();
       const elapsed = clock.elapsedTime;
       material.uniforms.uTime.value = elapsed;
@@ -236,7 +246,6 @@ export default function ColorBends({
       cur.lerp(tgt, amt);
       (material.uniforms.uPointer.value as THREE.Vector2).copy(cur);
       renderer.render(scene, camera);
-      rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
 

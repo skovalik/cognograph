@@ -367,6 +367,12 @@ export interface MultiplayerAPI {
   createBranch: (workspaceId: string, branchName: string) => Promise<{ success: boolean; branchWorkspaceId?: string; token?: string; error?: string }>
   listBranches: (workspaceId: string) => Promise<{ success: boolean; branches?: unknown[]; error?: string }>
   mergeBranch: (targetWorkspaceId: string, sourceWorkspaceId: string) => Promise<{ success: boolean; error?: string }>
+  // Token management (matches ipcMain handlers in multiplayer.ts)
+  storeToken: (workspaceId: string, token: string) => Promise<{ success: boolean; error?: string }>
+  getToken: (workspaceId: string) => Promise<{ success: boolean; token?: string | null; error?: string }>
+  removeToken: (workspaceId: string) => Promise<{ success: boolean; error?: string }>
+  validateToken: (workspaceId: string) => Promise<{ success: boolean; valid?: boolean; workspaceId?: string; permissions?: string; expiresAt?: string; expiresIn?: number; error?: string; code?: string }>
+  refreshToken: (workspaceId: string) => Promise<{ success: boolean; token?: string; expiresAt?: string; expiresIn?: number | null; error?: string; code?: string }>
 }
 
 export interface BackupAPI {
@@ -514,7 +520,10 @@ export interface BridgeAPI {
   stopAnalysis: () => Promise<{ success: boolean }>
   markNodesChanged: (nodeIds: string[]) => Promise<{ success: boolean }>
   insightAction: (insightId: string, action: 'apply' | 'dismiss') => Promise<{ success: boolean; insightId: string; action: string }>
+  submitCommand: (text: string) => Promise<{ success: boolean; data?: { parsed: unknown; proposalId: string; proposal?: unknown }; message?: string; error?: string }>
   onInsights: (callback: (insights: unknown[]) => void) => () => void
+  onSnapshotRequest: (callback: (requestId: string) => void) => () => void
+  respondSnapshot: (requestId: string, snapshot: unknown) => void
 }
 
 export interface NotionAPI {
@@ -524,7 +533,7 @@ export interface NotionAPI {
 }
 
 export interface TerminalAPI {
-  spawn: (config: { nodeId: string; sessionId: string; cwd?: string; cols?: number; rows?: number }) =>
+  spawn: (config: { nodeId: string; sessionId: string; cwd?: string; cols?: number; rows?: number; shell?: string; nodeTitle?: string; workspaceId?: string }) =>
     Promise<{ sessionId: string; nodeId: string; pid: number }>
   write: (nodeId: string, data: string) => Promise<void>
   resize: (nodeId: string, cols: number, rows: number) => Promise<void>
@@ -546,7 +555,10 @@ export interface ElectronAPI {
   dialog: DialogAPI
   artifact: ArtifactAPI
   aiEditor: AIEditorAPI
-  agent: AgentAPI
+  agent: AgentAPI & {
+    checkCli: () => Promise<{ installed: boolean; loggedIn: boolean }>
+    login: () => Promise<{ success: boolean }>
+  }
   filesystem: FilesystemAPI
   attachment: AttachmentAPI
   connector: ConnectorAPI
@@ -565,6 +577,18 @@ export interface ElectronAPI {
   }
   plugins: {
     getEnabledIds: () => Promise<string[]>
+  }
+  folder: {
+    list: (folderPath: string) => Promise<{ success: boolean; entries: Array<{ name: string; type: 'file' | 'directory' }>; total: number; truncated: boolean; error?: string }>
+  }
+  mainLog?: {
+    getBuffer: () => Promise<any[]>
+    onEntry: (callback: (entry: any) => void) => () => void
+  }
+  sdkTool?: {
+    onCall: (callback: (data: any) => void) => void
+    sendResult: (id: string, result: unknown) => void
+    sendError: (id: string, error: string) => void
   }
 }
 
@@ -677,7 +701,9 @@ const api: ElectronAPI = {
       const handler = (_event: Electron.IpcRendererEvent, data: AgentStreamChunk): void => callback(data)
       ipcRenderer.on('agent:stream', handler)
       return () => ipcRenderer.removeAllListeners('agent:stream')
-    }
+    },
+    checkCli: () => ipcRenderer.invoke('agent:checkCli'),
+    login: () => ipcRenderer.invoke('agent:login'),
   },
   filesystem: {
     readFile: (filePath, allowedPaths, startLine?, endLine?) => ipcRenderer.invoke('fs:readFile', filePath, allowedPaths, startLine, endLine),
@@ -712,7 +738,12 @@ const api: ElectronAPI = {
     },
     createBranch: (workspaceId, branchName) => ipcRenderer.invoke('multiplayer:createBranch', workspaceId, branchName),
     listBranches: (workspaceId) => ipcRenderer.invoke('multiplayer:listBranches', workspaceId),
-    mergeBranch: (targetWorkspaceId, sourceWorkspaceId) => ipcRenderer.invoke('multiplayer:mergeBranch', targetWorkspaceId, sourceWorkspaceId)
+    mergeBranch: (targetWorkspaceId, sourceWorkspaceId) => ipcRenderer.invoke('multiplayer:mergeBranch', targetWorkspaceId, sourceWorkspaceId),
+    storeToken: (workspaceId, token) => ipcRenderer.invoke('multiplayer:storeToken', workspaceId, token),
+    getToken: (workspaceId) => ipcRenderer.invoke('multiplayer:getToken', workspaceId),
+    removeToken: (workspaceId) => ipcRenderer.invoke('multiplayer:removeToken', workspaceId),
+    validateToken: (workspaceId) => ipcRenderer.invoke('multiplayer:validateToken', workspaceId),
+    refreshToken: (workspaceId) => ipcRenderer.invoke('multiplayer:refreshToken', workspaceId)
   },
   backup: {
     list: () => ipcRenderer.invoke('backup:list'),
@@ -798,11 +829,23 @@ const api: ElectronAPI = {
       ipcRenderer.invoke('bridge:mark-nodes-changed', nodeIds),
     insightAction: (insightId: string, action: 'apply' | 'dismiss') =>
       ipcRenderer.invoke('bridge:insight-action', insightId, action),
+    submitCommand: (text: string) =>
+      ipcRenderer.invoke('bridge:submitCommand', text),
     onInsights: (callback: (insights: unknown[]) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, data: unknown[]): void => callback(data)
       ipcRenderer.on('bridge:insights', handler)
       return () => ipcRenderer.removeListener('bridge:insights', handler)
     },
+    /** Listen for snapshot requests from main process (graph intelligence) */
+    onSnapshotRequest: (callback: (requestId: string) => void) => {
+      ipcRenderer.removeAllListeners('bridge:request-snapshot')
+      const handler = (_event: Electron.IpcRendererEvent, requestId: string): void => callback(requestId)
+      ipcRenderer.on('bridge:request-snapshot', handler)
+      return () => ipcRenderer.removeListener('bridge:request-snapshot', handler)
+    },
+    /** Respond to a snapshot request from main process */
+    respondSnapshot: (requestId: string, snapshot: unknown) =>
+      ipcRenderer.send('bridge:snapshot-response', requestId, snapshot),
   },
   notion: {
     testConnection: () => ipcRenderer.invoke('notion:testConnection'),
@@ -863,6 +906,31 @@ const api: ElectronAPI = {
   // Separate namespace — not routed through plugin:call (avoids method regex validation)
   plugins: {
     getEnabledIds: () => ipcRenderer.invoke('plugins:getEnabledIds')
+  },
+  folder: {
+    list: (folderPath: string) => ipcRenderer.invoke('folder:list', folderPath)
+  },
+  mainLog: {
+    getBuffer: () => ipcRenderer.invoke('main-process-log:getBuffer'),
+    onEntry: (callback: (entry: any) => void) => {
+      // Remove any stale listeners from previous mounts to prevent duplicates
+      ipcRenderer.removeAllListeners('main-process-log')
+      const handler = (_event: any, entry: any) => callback(entry)
+      ipcRenderer.on('main-process-log', handler)
+      return () => ipcRenderer.removeListener('main-process-log', handler)
+    }
+  },
+  sdkTool: {
+    onCall: (callback: (data: { id: string; toolName: string; args: Record<string, unknown>; conversationId?: string }) => void) => {
+      ipcRenderer.removeAllListeners('sdk-tool-call')
+      ipcRenderer.on('sdk-tool-call', (_event, data) => callback(data))
+    },
+    sendResult: (id: string, result: unknown) => {
+      ipcRenderer.send('sdk-tool-result', { id, result })
+    },
+    sendError: (id: string, error: string) => {
+      ipcRenderer.send('sdk-tool-result', { id, error })
+    }
   }
 }
 

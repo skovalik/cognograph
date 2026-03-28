@@ -2,7 +2,8 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import { memo, useMemo, useCallback, useEffect } from 'react'
-import { Handle, Position, NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
+import { NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
+import { SpreadHandles } from './SpreadHandles'
 import { Zap, Play, Power } from 'lucide-react'
 import type { ActionNodeData } from '@shared/actionTypes'
 import { DEFAULT_THEME_SETTINGS } from '@shared/types'
@@ -237,18 +238,7 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
           L1+ (far and above): Handles on all four sides
           Suppressed at L0 — no connection affordance at navigation level
           ================================================================ */}
-      {!isUltraFar && (
-        <>
-          <Handle type="target" position={Position.Top} id="top-target" className="cognograph-handle" />
-          <Handle type="source" position={Position.Top} id="top-source" className="cognograph-handle" />
-          <Handle type="target" position={Position.Bottom} id="bottom-target" className="cognograph-handle" />
-          <Handle type="source" position={Position.Bottom} id="bottom-source" className="cognograph-handle" />
-          <Handle type="target" position={Position.Left} id="left-target" className="cognograph-handle" />
-          <Handle type="source" position={Position.Left} id="left-source" className="cognograph-handle" />
-          <Handle type="target" position={Position.Right} id="right-target" className="cognograph-handle" />
-          <Handle type="source" position={Position.Right} id="right-source" className="cognograph-handle" />
-        </>
-      )}
+      <SpreadHandles hidden={isUltraFar} />
 
       {/* Numbered bookmark badge — visible at L1+ (navigation aid) */}
       {!isUltraFar && numberedBookmark && (

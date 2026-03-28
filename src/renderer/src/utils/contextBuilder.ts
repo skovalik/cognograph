@@ -29,6 +29,7 @@ import type {
   WorkspaceNodeData,
   EnhancedContextAnalysis
 } from '@shared/types'
+import { sanitizeForContext } from '@shared/utils/sanitizeContext'
 import { buildEnhancedContext } from './enhancedContextBuilder'
 import { describeContext } from './contextDescriber'
 import { estimateTokens, getModelContextLimit } from './tokenEstimation'
@@ -155,17 +156,24 @@ export function buildAIEditorContext(input: ContextBuilderInput): AIEditorContex
 
   const edgeSummaries = relevantEdges.map(buildEdgeSummary)
 
-  // Build enhanced context analysis if requested
+  // Build enhanced context analysis if requested (with security guard)
   let enhanced: EnhancedContextAnalysis | undefined
   if (includeEnhancedAnalysis) {
-    enhanced = buildEnhancedContext(nodes, edges)
+    try {
+      enhanced = buildEnhancedContext(nodes, edges)
+    } catch (_err) {
+      // Swallow error — stack traces must not reach the AI.
+      // Fall back to basic context (enhanced stays undefined).
+      enhanced = undefined
+    }
   }
 
-  // Build human-readable context descriptions for spatial/edge intelligence
-  const contextDescription = describeContext(nodes, edges)
+  // Build human-readable context descriptions for spatial/edge intelligence.
+  // Pass pre-computed enhanced analysis to avoid redundant computation.
+  const contextDescription = describeContext(nodes, edges, enhanced)
 
   // Estimate tokens (include enhanced analysis if present)
-  const estimatedTokens = estimateContextTokens({
+  let estimatedTokens = estimateContextTokens({
     selectedNodes,
     visibleNodes,
     allNodes,
@@ -175,21 +183,76 @@ export function buildAIEditorContext(input: ContextBuilderInput): AIEditorContex
     contextDescription
   })
 
+  // Token overflow guard: progressively shed context layers to stay within budget.
+  // Order: drop enhanced analysis first, then properties, then reduce visible nodes.
+  let finalEnhanced = enhanced
+  let finalSelectedNodes = selectedNodes
+  let finalVisibleNodes = visibleNodes
+
+  if (estimatedTokens > maxTokens * 0.5) {
+    // Stage 1: Drop enhanced analysis
+    if (finalEnhanced) {
+      finalEnhanced = undefined
+      estimatedTokens = estimateContextTokens({
+        selectedNodes: finalSelectedNodes,
+        visibleNodes: finalVisibleNodes,
+        allNodes,
+        edges: edgeSummaries,
+        prompt,
+        enhanced: finalEnhanced,
+        contextDescription
+      })
+    }
+
+    // Stage 2: Strip properties from node summaries
+    if (estimatedTokens > maxTokens * 0.5) {
+      const stripProps = (n: AIEditorNodeSummary): AIEditorNodeSummary => {
+        const { properties: _p, ...rest } = n
+        return rest
+      }
+      finalSelectedNodes = finalSelectedNodes.map(stripProps)
+      finalVisibleNodes = finalVisibleNodes.map(stripProps)
+      estimatedTokens = estimateContextTokens({
+        selectedNodes: finalSelectedNodes,
+        visibleNodes: finalVisibleNodes,
+        allNodes,
+        edges: edgeSummaries,
+        prompt,
+        enhanced: finalEnhanced,
+        contextDescription
+      })
+    }
+
+    // Stage 3: Reduce visible node count (keep only the closest half)
+    if (estimatedTokens > maxTokens * 0.5 && finalVisibleNodes.length > 4) {
+      finalVisibleNodes = finalVisibleNodes.slice(0, Math.ceil(finalVisibleNodes.length / 2))
+      estimatedTokens = estimateContextTokens({
+        selectedNodes: finalSelectedNodes,
+        visibleNodes: finalVisibleNodes,
+        allNodes,
+        edges: edgeSummaries,
+        prompt,
+        enhanced: finalEnhanced,
+        contextDescription
+      })
+    }
+  }
+
   return {
     mode,
     prompt,
     scope,
     viewport,
     canvasBounds,
-    selectedNodes,
+    selectedNodes: finalSelectedNodes,
     selectedNodeIds: effectiveSelectedIds,
-    visibleNodes,
+    visibleNodes: finalVisibleNodes,
     allNodes,
     edges: edgeSummaries,
     workspaceSettings,
     estimatedTokens,
     maxTokens,
-    enhanced,
+    enhanced: finalEnhanced,
     spatialDescription: contextDescription.spatial,
     edgeDescription: contextDescription.edges,
     layoutSuggestions: contextDescription.suggestions,
@@ -202,6 +265,29 @@ export function buildAIEditorContext(input: ContextBuilderInput): AIEditorContex
 // -----------------------------------------------------------------------------
 
 type DetailLevel = 'full' | 'summary' | 'minimal'
+
+// Security: filter sensitive keys and values from node properties before sending to AI
+const SENSITIVE_KEY_PATTERN = /key|secret|token|password|credential|apikey|api_key|auth|bearer|private/i
+const SECRET_VALUE_PATTERN = /^(sk-|Bearer |ghp_|gho_|xox[bpas]-|AKIA|eyJ)/
+
+function filterAndSanitizeProperties(props: Record<string, unknown>, depth = 0): Record<string, unknown> {
+  if (depth > 3) return {}
+  const filtered: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(props)) {
+    if (SENSITIVE_KEY_PATTERN.test(k)) continue
+    if (typeof v === 'string') {
+      if (SECRET_VALUE_PATTERN.test(v)) continue
+      filtered[k] = sanitizeForContext(v.slice(0, 200))
+    } else if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+      filtered[k] = filterAndSanitizeProperties(v as Record<string, unknown>, depth + 1)
+    } else if (Array.isArray(v)) {
+      filtered[k] = v.map(item => typeof item === 'string' ? sanitizeForContext(item.slice(0, 200)) : item).slice(0, 20)
+    } else {
+      filtered[k] = v
+    }
+  }
+  return filtered
+}
 
 function buildNodeSummary(
   node: Node<NodeData>,
@@ -219,7 +305,8 @@ function buildNodeSummary(
       : undefined,
     tags: ((data.properties as Record<string, unknown> | undefined)?.tags as string[] | undefined) || data.tags,
     contextRole: data.contextRole,
-    color: data.color
+    color: data.color,
+    properties: filterAndSanitizeProperties((data.properties as Record<string, unknown>) || {})
   }
 
   // Add type-specific info based on detail level
@@ -231,7 +318,7 @@ function buildNodeSummary(
         // Include content preview from last few messages
         const lastMessages = convData.messages.slice(-3)
         const preview = lastMessages
-          .map((m) => `${m.role}: ${m.content.slice(0, 100)}`)
+          .map((m) => `${m.role}: ${sanitizeForContext(m.content.slice(0, 100))}`)
           .join('\n')
         summary.contentPreview = truncateText(preview, CONTENT_PREVIEW_LENGTH)
       }
@@ -241,7 +328,7 @@ function buildNodeSummary(
     case 'note': {
       const noteData = data as NoteNodeData
       summary.contentPreview = detailLevel !== 'minimal'
-        ? truncateText(noteData.content, CONTENT_PREVIEW_LENGTH)
+        ? truncateText(sanitizeForContext(noteData.content), CONTENT_PREVIEW_LENGTH)
         : undefined
       break
     }
@@ -249,8 +336,16 @@ function buildNodeSummary(
     case 'artifact': {
       const artifactData = data as ArtifactNodeData
       summary.contentPreview = detailLevel !== 'minimal'
-        ? truncateText(serializeArtifactForContext(artifactData), CONTENT_PREVIEW_LENGTH)
+        ? truncateText(sanitizeForContext(serializeArtifactForContext(artifactData)), CONTENT_PREVIEW_LENGTH)
         : undefined
+      if (artifactData.folderPath) {
+        const basename = artifactData.folderPath.split(/[/\\]/).pop() || artifactData.folderPath
+        summary.properties = {
+          ...summary.properties,
+          projectFolder: sanitizeForContext(basename),
+          ...(artifactData.fileFilter ? { fileFilter: artifactData.fileFilter } : {}),
+        }
+      }
       break
     }
 
@@ -258,7 +353,7 @@ function buildNodeSummary(
       const taskData = data as TaskNodeData
       summary.status = taskData.status
       if (detailLevel !== 'minimal') {
-        summary.contentPreview = truncateText(taskData.description, CONTENT_PREVIEW_LENGTH)
+        summary.contentPreview = truncateText(sanitizeForContext(taskData.description), CONTENT_PREVIEW_LENGTH)
       }
       break
     }
@@ -267,7 +362,15 @@ function buildNodeSummary(
       const projectData = data as ProjectNodeData
       summary.childCount = projectData.childNodeIds.length
       if (detailLevel !== 'minimal') {
-        summary.contentPreview = truncateText(projectData.description, CONTENT_PREVIEW_LENGTH)
+        summary.contentPreview = truncateText(sanitizeForContext(projectData.description), CONTENT_PREVIEW_LENGTH)
+      }
+      if (projectData.folderPath) {
+        const basename = projectData.folderPath.split(/[/\\]/).pop() || projectData.folderPath
+        summary.properties = {
+          ...summary.properties,
+          projectFolder: sanitizeForContext(basename),
+          ...(projectData.fileFilter ? { fileFilter: projectData.fileFilter } : {}),
+        }
       }
       break
     }
@@ -276,7 +379,7 @@ function buildNodeSummary(
       const workspaceData = data as WorkspaceNodeData
       summary.memberCount = workspaceData.includedNodeIds.length
       if (detailLevel !== 'minimal') {
-        summary.contentPreview = truncateText(workspaceData.description, CONTENT_PREVIEW_LENGTH)
+        summary.contentPreview = truncateText(sanitizeForContext(workspaceData.description), CONTENT_PREVIEW_LENGTH)
       }
       break
     }
@@ -284,7 +387,7 @@ function buildNodeSummary(
     case 'text': {
       const textData = data as TextNodeData
       summary.contentPreview = detailLevel !== 'minimal'
-        ? truncateText(textData.content, CONTENT_PREVIEW_LENGTH)
+        ? truncateText(sanitizeForContext(textData.content), CONTENT_PREVIEW_LENGTH)
         : undefined
       break
     }

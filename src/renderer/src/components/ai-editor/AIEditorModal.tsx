@@ -28,14 +28,18 @@ import {
 } from 'lucide-react'
 import { useAIEditorStore } from '../../stores/aiEditorStore'
 import { createFocusTrap } from '../../utils/accessibility'
+import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
 import { buildAIEditorContext } from '../../utils/contextBuilder'
 import { buildPreviewState } from '../../utils/previewBuilder'
 import { executeMutationPlan } from '../../utils/mutationExecutor'
 import LoadingState from './LoadingState'
 import PreviewControls from './PreviewControls'
+import RefinementInput from './RefinementInput'
 import type { AIEditorMode, AIEditorScope } from '@shared/types'
 import { AI_EDITOR_MODE_DESCRIPTIONS, AI_EDITOR_SCOPE_DESCRIPTIONS } from '@shared/types'
+
+const MAX_REFINEMENT_TURNS = 10
 
 interface Position {
   x: number
@@ -94,6 +98,13 @@ function AIEditorModalComponent(): JSX.Element | null {
   const selectedNodeIds = useWorkspaceStore((state) => state.selectedNodeIds)
   const viewport = useWorkspaceStore((state) => state.viewport)
   const themeSettings = useWorkspaceStore((state) => state.themeSettings)
+
+  const addToConversation = useAIEditorStore((s) => s.addToConversation)
+  const getConversationContext = useAIEditorStore((s) => s.getConversationContext)
+  const conversationHistory = useAIEditorStore((s) => s.conversationHistory)
+
+  const [refinementCount, setRefinementCount] = useState(0)
+  const [isRefining, setIsRefining] = useState(false)
 
   const [position, setPosition] = useState<Position>(() => {
     if (lastModalPosition) {
@@ -202,7 +213,8 @@ function AIEditorModalComponent(): JSX.Element | null {
       workspaceSettings: {
         defaultProvider: 'anthropic',
         themeMode: themeSettings.mode
-      }
+      },
+      includeEnhancedAnalysis: true
     })
 
     await generatePlan(context)
@@ -217,20 +229,70 @@ function AIEditorModalComponent(): JSX.Element | null {
   // Handle cancel
   const handleCancel = useCallback(() => {
     setPreviewState(null)
+    setRefinementCount(0)
     closeModal()
   }, [setPreviewState, closeModal])
 
-  // Handle keyboard shortcuts
+  // Handle refinement
+  const handleRefine = useCallback(async (refinementPrompt: string) => {
+    if (refinementCount >= MAX_REFINEMENT_TURNS) return
+    setIsRefining(true)
+
+    try {
+      // Record the user's refinement in conversation history
+      addToConversation({ role: 'user', content: refinementPrompt })
+
+      // Build context that includes the conversation history
+      const conversationContext = getConversationContext()
+      const context = buildAIEditorContext({
+        mode,
+        prompt: `${prompt}\n\n--- Refinement History ---\n${conversationContext}\n\n--- Latest Refinement ---\n${refinementPrompt}`,
+        scope,
+        nodes,
+        edges,
+        selectedNodeIds,
+        viewport,
+        viewportBounds: { width: window.innerWidth, height: window.innerHeight },
+        workspaceSettings: {
+          defaultProvider: 'anthropic',
+          themeMode: themeSettings.mode
+        },
+        includeEnhancedAnalysis: true
+      })
+
+      await generatePlan(context)
+      setRefinementCount(c => c + 1)
+
+      // Record the assistant response in conversation
+      addToConversation({ role: 'assistant', content: `Plan refined based on: "${refinementPrompt}"` })
+    } finally {
+      setIsRefining(false)
+    }
+  }, [refinementCount, addToConversation, getConversationContext, mode, prompt, scope, nodes, edges, selectedNodeIds, viewport, themeSettings.mode, generatePlan])
+
+  // Escape key via EscapeManager
+  useEffect(() => {
+    if (!isOpen) return
+    const handleEscape = () => {
+      if (isGeneratingPlan) {
+        cancelGeneration()
+      } else {
+        handleCancel()
+      }
+    }
+    escapeManager.register('modal-ai-editor', EscapePriority.MODAL, handleEscape)
+    return () => escapeManager.unregister('modal-ai-editor')
+  }, [isOpen, isGeneratingPlan, handleCancel, cancelGeneration])
+
+  // Handle non-Escape keyboard shortcuts
   useEffect(() => {
     if (!isOpen) return
 
     const handleKeyDown = (e: KeyboardEvent): void => {
-      // Don't capture if typing in a text input
+      // Don't capture if typing in a text input (except Ctrl+Enter)
       const target = e.target as HTMLElement
       if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') {
-        if (e.key === 'Escape') {
-          handleCancel()
-        } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
           if (!isGeneratingPlan && prompt.trim()) {
             handleGenerate()
           }
@@ -238,13 +300,7 @@ function AIEditorModalComponent(): JSX.Element | null {
         return
       }
 
-      if (e.key === 'Escape') {
-        if (isGeneratingPlan) {
-          cancelGeneration()
-        } else {
-          handleCancel()
-        }
-      } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         if (currentPlan) {
           handleApply()
         } else if (!isGeneratingPlan) {
@@ -261,7 +317,7 @@ function AIEditorModalComponent(): JSX.Element | null {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, currentPlan, isGeneratingPlan, previewState, prompt, handleCancel, handleApply, handleGenerate, cancelGeneration, togglePreviewVisibility])
+  }, [isOpen, currentPlan, isGeneratingPlan, previewState, prompt, handleApply, handleGenerate, cancelGeneration, togglePreviewVisibility])
 
   if (!isOpen) return null
 
@@ -337,16 +393,28 @@ function AIEditorModalComponent(): JSX.Element | null {
               onCancel={cancelGeneration}
             />
           ) : currentPlan && previewState ? (
-            <PreviewControls
-              preview={previewState}
-              warnings={currentPlan.warnings}
-              reasoning={currentPlan.reasoning}
-              isExecuting={isExecutingPlan}
-              isPreviewVisible={isPreviewVisible}
-              onApply={handleApply}
-              onCancel={handleCancel}
-              onToggleVisibility={togglePreviewVisibility}
-            />
+            <>
+              <PreviewControls
+                preview={previewState}
+                warnings={currentPlan.warnings}
+                reasoning={currentPlan.reasoning}
+                isExecuting={isExecutingPlan}
+                isPreviewVisible={isPreviewVisible}
+                onApply={handleApply}
+                onCancel={handleCancel}
+                onToggleVisibility={togglePreviewVisibility}
+              />
+              {refinementCount >= MAX_REFINEMENT_TURNS ? (
+                <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-sm text-center">
+                  Maximum refinements reached. Start a new generation.
+                </div>
+              ) : (
+                <RefinementInput
+                  onRefine={handleRefine}
+                  isRefining={isRefining}
+                />
+              )}
+            </>
           ) : (
             <div className="flex flex-col gap-3">
               {/* Mode Selection */}

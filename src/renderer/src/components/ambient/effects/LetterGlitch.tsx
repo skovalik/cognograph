@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
 
 const LetterGlitch = ({
   glitchColors = ['#2b4539', '#61dca3', '#61b3dc'],
@@ -10,7 +11,9 @@ const LetterGlitch = ({
   centerVignette = false,
   outerVignette = true,
   smooth = true,
-  characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$&*()-_+=/[]{};:<>.,0123456789'
+  characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$&*()-_+=/[]{};:<>.,0123456789',
+  qualityRef,
+  reportFrame: reportFrameFn,
 }: {
   glitchColors: string[];
   glitchSpeed: number;
@@ -19,6 +22,8 @@ const LetterGlitch = ({
   outerVignette: boolean;
   smooth: boolean;
   characters: string;
+  qualityRef?: React.RefObject<AdaptiveQualityState>;
+  reportFrame?: () => void;
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationRef = useRef<number | null>(null);
@@ -186,7 +191,13 @@ const LetterGlitch = ({
     }
   };
 
+  let frameCount = 0;
   const animate = () => {
+    animationRef.current = requestAnimationFrame(animate);
+    if (qualityRef?.current && !qualityRef.current.shouldRender) return;
+    if (reportFrameFn) reportFrameFn();
+    if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
+
     const now = Date.now();
     if (now - lastGlitchTime.current >= glitchSpeed) {
       updateLetters();
@@ -197,8 +208,6 @@ const LetterGlitch = ({
     if (smooth) {
       handleSmoothTransitions();
     }
-
-    animationRef.current = requestAnimationFrame(animate);
   };
 
   useEffect(() => {

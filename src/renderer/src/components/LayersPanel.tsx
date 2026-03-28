@@ -23,9 +23,13 @@ import {
 } from 'lucide-react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useContextMenuStore } from '../stores/contextMenuStore'
+import { useFileListingStore, EXPAND_THRESHOLD_MS } from '../stores/fileListingStore'
+import { FileEntryRow } from './FileEntryRow'
 import { ScrollArea } from './ui'
 import { cn } from '../lib/utils'
+import { HardDrive } from 'lucide-react'
 import type { NodeData } from '@shared/types'
+import * as path from 'path'
 
 interface LayerNode {
   id: string
@@ -33,6 +37,8 @@ interface LayerNode {
   type: NodeData['type']
   parentId: string | null
   children: LayerNode[]
+  filesystemChildren?: LayerNode[]
+  fsPath?: string
   depth: number
   createdAt: number
 }
@@ -64,6 +70,11 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
   const manualLayerOrder = useWorkspaceStore((state) => state.manualLayerOrder)
   const showMembersProjectId = useWorkspaceStore((state) => state.showMembersProjectId)
   const setShowMembersProject = useWorkspaceStore((state) => state.setShowMembersProject)
+
+  // File listing store (for filesystem children in project nodes)
+  const fileListings = useFileListingStore((state) => state.listings)
+  const fetchFileListing = useFileListingStore((state) => state.fetchListing)
+  const isFileListingStale = useFileListingStore((state) => state.isStale)
 
   // Drag-and-drop state
   const [dragOverNodeId, setDragOverNodeId] = useState<string | null>(null)
@@ -120,8 +131,30 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
     }
     rootNodes.forEach((node) => setDepths(node, 0))
 
+    // Attach filesystem children to project/artifact nodes with folderPath
+    nodeMap.forEach((layerNode) => {
+      const sourceNode = nodes.find((n) => n.id === layerNode.id)
+      if (!sourceNode) return
+      const folderPath = sourceNode.data.folderPath as string | undefined
+      if (!folderPath) return
+
+      const listing = fileListings[folderPath]
+      if (!listing?.entries?.length) return
+
+      layerNode.filesystemChildren = listing.entries.map((entry) => ({
+        id: `__fs:${layerNode.id}:${entry.name}`,
+        title: entry.name,
+        type: entry.type === 'directory' ? 'project' as NodeData['type'] : 'artifact' as NodeData['type'],
+        parentId: layerNode.id,
+        children: [],
+        depth: layerNode.depth + 2, // +2 because they sit under the "Files" divider
+        createdAt: 0,
+        fsPath: path.join(folderPath, entry.name),
+      }))
+    })
+
     return rootNodes
-  }, [nodes])
+  }, [nodes, fileListings])
 
   // Sort nodes based on mode
   const sortedNodes = useMemo(() => {
@@ -197,6 +230,11 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
         const filteredChildren = filterRecursive(node.children)
         if (filteredChildren.length > 0) {
           node.children = filteredChildren
+          return true
+        }
+
+        // Check filesystem children titles for matches
+        if (node.filesystemChildren?.some((fc) => fc.title.toLowerCase().includes(filterLower))) {
           return true
         }
 
@@ -425,6 +463,7 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
             value={layersFilter}
             onChange={(e) => setLayersFilter(e.target.value)}
             placeholder="Search nodes..."
+            aria-label="Filter nodes"
             className={`w-full ${inputBgClass} border rounded pl-8 pr-3 py-1.5 text-xs focus:outline-none`}
             style={{ borderColor: 'var(--gui-border-strong)' }}
           />
@@ -443,6 +482,8 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
                 : inactiveButtonClass
             }`}
             title="Hierarchy"
+            aria-label="Sort by hierarchy"
+            aria-pressed={layersSortMode === 'hierarchy'}
           >
             <Network className="w-3.5 h-3.5" />
           </button>
@@ -454,6 +495,8 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
                 : inactiveButtonClass
             }`}
             title="By Type"
+            aria-label="Sort by type"
+            aria-pressed={layersSortMode === 'type'}
           >
             <ArrowDownAZ className="w-3.5 h-3.5" />
           </button>
@@ -465,6 +508,8 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
                 : inactiveButtonClass
             }`}
             title="Recent"
+            aria-label="Sort by recent"
+            aria-pressed={layersSortMode === 'recent'}
           >
             <Clock className="w-3.5 h-3.5" />
           </button>
@@ -477,6 +522,8 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
                   : inactiveButtonClass
               }`}
               title="Manual (drag to reorder)"
+              aria-label="Sort manually"
+              aria-pressed={layersSortMode === 'manual'}
             >
               <GripVertical className="w-3.5 h-3.5" />
             </button>
@@ -594,7 +641,7 @@ function LayerItemComponent({
 }: LayerItemProps): JSX.Element {
   const isSelected = selectedNodeIds.includes(node.id)
   const isExpanded = expandedNodeIds.has(node.id)
-  const hasChildren = node.children.length > 0
+  const hasChildren = node.children.length > 0 || (node.filesystemChildren?.length ?? 0) > 0
   const isDragOver = dragOverNodeId === node.id
   const isProject = node.type === 'project'
   const showDropBefore = isDragOver && dropPosition === 'before'
@@ -718,6 +765,44 @@ function LayerItemComponent({
           ))}
         </div>
       )}
+
+      {/* Filesystem children section */}
+      {node.filesystemChildren && node.filesystemChildren.length > 0 && isExpanded && (() => {
+        const fsSectionId = `__fs-section:${node.id}`
+        const isFsExpanded = expandedNodeIds.has(fsSectionId)
+        return (
+          <div style={{ paddingLeft: `${8 + (node.depth + 1) * 16}px` }}>
+            <button
+              className="flex items-center gap-1 w-full py-0.5 text-[10px] gui-text-secondary hover:gui-text transition-colors"
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleExpand(fsSectionId)
+              }}
+            >
+              {isFsExpanded ? (
+                <ChevronDown className="w-2.5 h-2.5" />
+              ) : (
+                <ChevronRight className="w-2.5 h-2.5" />
+              )}
+              <HardDrive className="w-2.5 h-2.5" />
+              <span>Files ({node.filesystemChildren.length})</span>
+            </button>
+            {isFsExpanded && (
+              <div role="list" aria-label="Filesystem entries">
+                {node.filesystemChildren.map((fc) => (
+                  <FileEntryRow
+                    key={fc.id}
+                    name={fc.title}
+                    type={fc.type === 'project' ? 'directory' : 'file'}
+                    fullPath={fc.fsPath || ''}
+                    compact
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Drop indicator: after (when has children or after expanded) */}
       {showDropAfter && hasChildren && (

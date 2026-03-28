@@ -11,15 +11,14 @@
  * - All paths resolved to absolute before comparison
  * - Symlink resolution prevents escape via fs.realpath()
  * - allowedPaths enforced at every tool invocation
- * - execute_command has 60s timeout, stdin closed
- * - exec() is intentionally used (not execFile) because agent commands
- *   need shell features: pipes, redirects, env var expansion.
- *   Security is enforced via canExecuteCommands gate + allowedCommands whitelist.
+ * - execute_command uses execFile (no shell) with 60s timeout, stdin closed
+ * - Shell metacharacters blocked in all command arguments
+ * - allowedCommands whitelist validates the binary name
  */
 
 import * as fs from 'fs'
 import * as path from 'path'
-import { exec } from 'child_process'
+import { execFile } from 'child_process'
 import { ipcMain } from 'electron'
 
 // -----------------------------------------------------------------------------
@@ -247,10 +246,10 @@ export function searchFiles(
   }
 }
 
-// NOTE: exec() with shell: true is intentional here. Agent commands need shell
-// features (pipes, redirects, env vars) for commands like `npm test | head -50`.
-// Security is enforced via: canExecuteCommands gate (default false),
-// allowedCommands whitelist, allowedPaths for cwd, and 60s timeout.
+// Security: execFile() is used instead of exec() to prevent shell injection.
+// Commands are split into binary + args and executed WITHOUT a shell.
+// The allowedCommands whitelist validates the binary name.
+// Shell features (pipes, redirects) are NOT supported — use separate tool calls.
 export function executeCommand(
   command: string,
   allowedPaths: string[],
@@ -260,6 +259,22 @@ export function executeCommand(
 ): Promise<FilesystemToolResult> {
   const cmdValidation = validateCommand(command, allowedCommands)
   if (!cmdValidation.valid) return Promise.resolve({ success: false, error: cmdValidation.error })
+
+  // Parse command into binary and args (no shell interpolation)
+  const parts = parseCommandLine(command)
+  if (parts.length === 0) return Promise.resolve({ success: false, error: 'Empty command' })
+  const [binary, ...args] = parts
+
+  // Block shell metacharacters in all args as defense-in-depth
+  const shellMetachars = /[;&|`$(){}!<>]/
+  for (const arg of args) {
+    if (shellMetachars.test(arg)) {
+      return Promise.resolve({
+        success: false,
+        error: `Shell metacharacters not allowed in arguments: "${arg}". Use separate tool calls instead of pipes/redirects.`
+      })
+    }
+  }
 
   // Use first allowed path as default cwd
   const workingDir = cwd ? path.resolve(cwd) : (allowedPaths[0] ? path.resolve(allowedPaths[0]) : process.cwd())
@@ -271,10 +286,11 @@ export function executeCommand(
   }
 
   return new Promise((resolve) => {
-    const child = exec(command, {
+    const child = execFile(binary!, args, {
       cwd: workingDir,
       timeout: timeoutMs,
       maxBuffer: 100 * 1024, // 100KB
+      shell: false // Explicit: no shell
     }, (error, stdout, stderr) => {
       if (error) {
         resolve({
@@ -293,6 +309,37 @@ export function executeCommand(
     // Close stdin — no interactive commands
     child.stdin?.end()
   })
+}
+
+/**
+ * Parse a command string into binary + args, respecting quotes.
+ * Does NOT use a shell — just splits on whitespace with quote handling.
+ */
+function parseCommandLine(cmd: string): string[] {
+  const parts: string[] = []
+  let current = ''
+  let inSingleQuote = false
+  let inDoubleQuote = false
+
+  for (let i = 0; i < cmd.length; i++) {
+    const ch = cmd[i]!
+
+    if (ch === "'" && !inDoubleQuote) {
+      inSingleQuote = !inSingleQuote
+    } else if (ch === '"' && !inSingleQuote) {
+      inDoubleQuote = !inDoubleQuote
+    } else if (ch === ' ' && !inSingleQuote && !inDoubleQuote) {
+      if (current.length > 0) {
+        parts.push(current)
+        current = ''
+      }
+    } else {
+      current += ch
+    }
+  }
+
+  if (current.length > 0) parts.push(current)
+  return parts
 }
 
 // Helper: convert simple glob to regex

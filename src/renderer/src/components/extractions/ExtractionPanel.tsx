@@ -12,6 +12,7 @@ import {
   useOpenExtractionPanelNodeId
 } from '../../stores'
 import { ScrollArea } from '../ui'
+import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 import { ExtractionGhostCard } from './ExtractionGhostCard'
 import { TetherLine } from './TetherLine'
 
@@ -108,15 +109,8 @@ function ExtractionPanelComponent(): JSX.Element | null {
   // Handle Escape key
   useEffect(() => {
     if (!openNodeId) return
-
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        closeExtractionPanel()
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    escapeManager.register('dialog-extraction-panel', EscapePriority.DIALOG, closeExtractionPanel)
+    return () => escapeManager.unregister('dialog-extraction-panel')
   }, [openNodeId, closeExtractionPanel])
 
   // Auto-close panel when extractions become empty
@@ -211,6 +205,7 @@ function ExtractionPanelComponent(): JSX.Element | null {
           <button
             onClick={closeExtractionPanel}
             className="p-1 rounded hover:bg-white/10 transition-colors"
+            aria-label="Close extraction panel"
           >
             <X className="w-4 h-4" />
           </button>
@@ -226,7 +221,7 @@ function ExtractionPanelComponent(): JSX.Element | null {
           ))}
 
           {!showAll && hiddenCount > 0 && (
-            <div className="extraction-panel__more" onClick={() => setShowAll(true)}>
+            <div className="extraction-panel__more" onClick={() => setShowAll(true)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowAll(true) } }}>
               +{hiddenCount} more
             </div>
           )}

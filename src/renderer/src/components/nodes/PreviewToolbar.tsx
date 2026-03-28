@@ -37,7 +37,7 @@ interface PreviewToolbarProps {
   /** Whether interaction mode is active (overlay removed) */
   interactionMode: boolean
   /** The full preview URL being displayed */
-  previewUrl: string
+  previewUrl?: string
   /** Callback to change viewport preset */
   onViewportChange: (viewport: PreviewViewport) => void
   /** Callback to change scale */
@@ -50,6 +50,16 @@ interface PreviewToolbarProps {
   onInteractionModeToggle: () => void
   /** Callback to toggle preview mode (back to code view) */
   onPreviewToggle: () => void
+
+  // Optional: hide URL-specific controls for inline HTML mode
+  /** Show refresh button (default true) */
+  showRefresh?: boolean
+  /** Show auto-refresh toggle (default true) */
+  showAutoRefresh?: boolean
+  /** Show open in browser button (default true) */
+  showOpenInBrowser?: boolean
+  /** Show code toggle button (default true) */
+  showCodeToggle?: boolean
 }
 
 const VIEWPORT_PRESETS: { key: PreviewViewport; label: string; icon: typeof Monitor; width: number }[] = [
@@ -70,6 +80,10 @@ function PreviewToolbarComponent({
   onRefresh,
   onInteractionModeToggle,
   onPreviewToggle,
+  showRefresh = true,
+  showAutoRefresh = true,
+  showOpenInBrowser = true,
+  showCodeToggle = true,
 }: PreviewToolbarProps): JSX.Element {
   const clampedScale = clampPreviewScale(scale)
 
@@ -161,39 +175,43 @@ function PreviewToolbarComponent({
       />
 
       {/* Refresh button */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation()
-          onRefresh()
-        }}
-        className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
-        title="Refresh preview"
-      >
-        <RefreshCw className="w-3.5 h-3.5" style={{ color: 'var(--node-text-secondary)' }} />
-      </button>
+      {showRefresh && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onRefresh()
+          }}
+          className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
+          title="Refresh preview"
+        >
+          <RefreshCw className="w-3.5 h-3.5" style={{ color: 'var(--node-text-secondary)' }} />
+        </button>
+      )}
 
       {/* Auto-refresh toggle */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation()
-          onAutoRefreshToggle()
-        }}
-        className={`p-1 rounded transition-colors ${
-          autoRefresh
-            ? 'bg-cyan-600/30'
-            : 'hover:bg-black/10 dark:hover:bg-white/10'
-        }`}
-        title={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
-      >
-        <RotateCw
-          className="w-3.5 h-3.5"
-          style={{
-            color: autoRefresh
-              ? 'var(--node-text-primary)'
-              : 'var(--node-text-secondary)',
+      {showAutoRefresh && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onAutoRefreshToggle()
           }}
-        />
-      </button>
+          className={`p-1 rounded transition-colors ${
+            autoRefresh
+              ? 'bg-cyan-600/30'
+              : 'hover:bg-black/10 dark:hover:bg-white/10'
+          }`}
+          title={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
+        >
+          <RotateCw
+            className="w-3.5 h-3.5"
+            style={{
+              color: autoRefresh
+                ? 'var(--node-text-primary)'
+                : 'var(--node-text-secondary)',
+            }}
+          />
+        </button>
+      )}
 
       {/* Interaction mode toggle */}
       <button
@@ -219,25 +237,29 @@ function PreviewToolbarComponent({
       </button>
 
       {/* Open in browser */}
-      <button
-        onClick={handleOpenInBrowser}
-        className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
-        title="Open in default browser"
-      >
-        <ExternalLink className="w-3.5 h-3.5" style={{ color: 'var(--node-text-secondary)' }} />
-      </button>
+      {showOpenInBrowser && (
+        <button
+          onClick={handleOpenInBrowser}
+          className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
+          title="Open in default browser"
+        >
+          <ExternalLink className="w-3.5 h-3.5" style={{ color: 'var(--node-text-secondary)' }} />
+        </button>
+      )}
 
       {/* Toggle back to code view */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation()
-          onPreviewToggle()
-        }}
-        className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors ml-auto"
-        title="Switch to code view"
-      >
-        <EyeOff className="w-3.5 h-3.5" style={{ color: 'var(--node-text-secondary)' }} />
-      </button>
+      {showCodeToggle && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onPreviewToggle()
+          }}
+          className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors ml-auto"
+          title="Switch to code view"
+        >
+          <EyeOff className="w-3.5 h-3.5" style={{ color: 'var(--node-text-secondary)' }} />
+        </button>
+      )}
     </div>
   )
 }

@@ -156,7 +156,7 @@ export const ClusterOverlay = memo(function ClusterOverlay(): JSX.Element | null
   // Debounced cluster computation
   useEffect(() => {
     if (!isUltraFar) {
-      setClusters([])
+      setClusters(prev => prev.length === 0 ? prev : [])
       return
     }
 

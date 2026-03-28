@@ -19,7 +19,6 @@ dotenv.config({ path: path.resolve(__dirname, '.env.test') })
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: '**/*.spec.ts',
 
   // Fail the build on CI if you accidentally left test.only in the source code
   forbidOnly: !!process.env.CI,
@@ -27,32 +26,43 @@ export default defineConfig({
   // Retry on CI only
   retries: process.env.CI ? 2 : 0,
 
-  // Opt out of parallel tests for Electron (single app instance)
-  workers: 1,
-
   // Reporter to use
   reporter: process.env.CI ? 'github' : 'list',
 
   // Shared settings for all projects
   use: {
-    // Collect trace when retrying the failed test
     trace: 'on-first-retry',
-
-    // Screenshot on failure
     screenshot: 'only-on-failure',
-
-    // Video on failure
     video: 'on-first-retry'
   },
 
-  // Timeout for each test
   timeout: 60000,
+  expect: { timeout: 10000 },
+  outputDir: 'e2e/test-results',
 
-  // Timeout for expect assertions
-  expect: {
-    timeout: 10000
+  // Split Electron and Web into separate projects
+  projects: [
+    {
+      name: 'electron',
+      testMatch: /(?:app|conversation|gpu|electron|critical).*\.spec\.ts/,
+      // Electron tests must run sequentially (single app instance)
+      fullyParallel: false,
+    },
+    {
+      name: 'web',
+      testMatch: /web.*\.spec\.ts/,
+      use: {
+        baseURL: 'http://localhost:5174',
+      },
+      fullyParallel: true,
+    },
+  ],
+
+  // Auto-start web dev server for web tests
+  webServer: {
+    command: 'npm run dev:web',
+    port: 5174,
+    reuseExistingServer: true,
+    timeout: 30000,
   },
-
-  // Output folder for test artifacts
-  outputDir: 'e2e/test-results'
 })

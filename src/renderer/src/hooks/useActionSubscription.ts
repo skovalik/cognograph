@@ -220,16 +220,14 @@ export function useActionSubscription(): void {
       { equalityFn: Object.is }
     )
 
-    // Subscribe to node position changes for spatial triggers
+    // Subscribe to node position changes for spatial triggers (regions + proximity)
     const prevPositionsRef = new Map<string, { x: number; y: number }>()
     const unsubPositions = useWorkspaceStore.subscribe(
       (state) => state.nodes,
       (nodes) => {
         const actionStore = useActionStore.getState()
         const spatialStore = useSpatialRegionStore.getState()
-
-        // Only check if there are regions defined
-        if (spatialStore.regions.length === 0) return
+        const hasRegions = spatialStore.regions.length > 0
 
         for (const node of nodes) {
           const prevPos = prevPositionsRef.get(node.id)
@@ -243,33 +241,44 @@ export function useActionSubscription(): void {
           // Skip initial population (no previous position)
           if (!prevPos) continue
 
-          // Check spatial region membership changes
-          const nodeWidth = (node.width as number) || node.measured?.width || 280
-          const nodeHeight = (node.height as number) || node.measured?.height || 140
-          const { entered, exited } = spatialStore.checkNodePosition(
-            node.id, currPos.x, currPos.y, nodeWidth, nodeHeight
-          )
-
-          // Emit region-enter events
-          for (const regionId of entered) {
-            const event: ActionEvent = {
-              type: 'node-position-change',
-              nodeId: node.id,
-              timestamp: Date.now(),
-              data: { enteredRegion: regionId, nodeType: node.data.type }
-            }
-            actionStore.handleEvent(event)
+          // Always emit a bare position-change event so proximity triggers can fire
+          const positionEvent: ActionEvent = {
+            type: 'node-position-change',
+            nodeId: node.id,
+            timestamp: Date.now(),
+            data: { nodeType: node.data.type }
           }
+          actionStore.handleEvent(positionEvent)
 
-          // Emit region-exit events
-          for (const regionId of exited) {
-            const event: ActionEvent = {
-              type: 'node-position-change',
-              nodeId: node.id,
-              timestamp: Date.now(),
-              data: { exitedRegion: regionId, nodeType: node.data.type }
+          // Region membership check only runs if regions exist
+          if (hasRegions) {
+            const nodeWidth = (node.width as number) || node.measured?.width || 280
+            const nodeHeight = (node.height as number) || node.measured?.height || 140
+            const { entered, exited } = spatialStore.checkNodePosition(
+              node.id, currPos.x, currPos.y, nodeWidth, nodeHeight
+            )
+
+            // Emit region-enter events
+            for (const regionId of entered) {
+              const event: ActionEvent = {
+                type: 'node-position-change',
+                nodeId: node.id,
+                timestamp: Date.now(),
+                data: { enteredRegion: regionId, nodeType: node.data.type }
+              }
+              actionStore.handleEvent(event)
             }
-            actionStore.handleEvent(event)
+
+            // Emit region-exit events
+            for (const regionId of exited) {
+              const event: ActionEvent = {
+                type: 'node-position-change',
+                nodeId: node.id,
+                timestamp: Date.now(),
+                data: { exitedRegion: regionId, nodeType: node.data.type }
+              }
+              actionStore.handleEvent(event)
+            }
           }
         }
 

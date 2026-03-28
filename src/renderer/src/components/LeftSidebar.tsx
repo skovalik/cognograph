@@ -11,6 +11,7 @@ import { LayersPanel } from './LayersPanel'
 import { ActivityFeedPanel } from './ActivityFeedPanel'
 import { DispatchPanel } from './DispatchPanel'
 import { BridgeLogPanel } from './bridge/BridgeLogPanel'
+import { ConsolePanel } from './ConsolePanel'
 import { hasTerminalAccess } from '../utils/terminalAccess'
 
 function LeftSidebarComponent(): JSX.Element | null {
@@ -60,6 +61,7 @@ function LeftSidebarComponent(): JSX.Element | null {
     'activity': 'Activity',
     'dispatch': 'Dispatch',
     'bridge-log': 'Bridge Log',
+    'console': 'Console',
   }
 
   return (
@@ -106,6 +108,11 @@ function LeftSidebarComponent(): JSX.Element | null {
         {hasTerminalAccess() && activeTab === 'bridge-log' && (
           <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
             <BridgeLogPanel sidebarWidth={leftSidebarWidth} />
+          </AnimatedContent>
+        )}
+        {hasTerminalAccess() && activeTab === 'console' && (
+          <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
+            <ConsolePanel />
           </AnimatedContent>
         )}
       </div>

@@ -266,6 +266,7 @@ export interface AIEditorNodeSummary {
   tags?: string[]
   contextRole?: string
   color?: string
+  properties?: Record<string, unknown>
 }
 
 /**

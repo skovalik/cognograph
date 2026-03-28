@@ -49,8 +49,10 @@ import {
   Bot,
   MapPin,
   Terminal,
+  Maximize2,
 } from 'lucide-react'
 import { hasTerminalAccess } from '../utils/terminalAccess'
+import { calculateAutoFitDimensions, AUTO_FIT_CONSTRAINTS } from '../utils/nodeUtils'
 import { toast } from 'react-hot-toast'
 import {
   useContextMenuStore,
@@ -63,11 +65,13 @@ import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useTemplateStore } from '../stores/templateStore'
 import { useAIEditorStore } from '../stores/aiEditorStore'
 import { suggestTemplateName } from '../utils/templateUtils'
-import type { Node as FlowNode } from '@xyflow/react'
+import { useUpdateNodeInternals, type Node as FlowNode } from '@xyflow/react'
 import { logger } from '../utils/logger'
 import type { NodeData } from '@shared/types'
 import { getConversionTargets } from '../utils/nodeConversion'
 import { useCCBridgeStore } from '../stores/ccBridgeStore'
+import { useSpatialRegionStore } from '../stores/spatialRegionStore'
+import { escapeManager, EscapePriority } from '../utils/EscapeManager'
 
 // -----------------------------------------------------------------------------
 // Menu Item Component
@@ -192,6 +196,12 @@ function ContextMenuComponent(): JSX.Element | null {
   const canUndo = useWorkspaceStore((s) => s.canUndo)
   const canRedo = useWorkspaceStore((s) => s.canRedo)
 
+  // Fit-to-content hooks
+  const updateNodeInternals = useUpdateNodeInternals()
+  const startNodeResize = useWorkspaceStore((s) => s.startNodeResize)
+  const updateNodeDimensions = useWorkspaceStore((s) => s.updateNodeDimensions)
+  const commitNodeResize = useWorkspaceStore((s) => s.commitNodeResize)
+
   // Template actions
   const openBrowser = useTemplateStore((s) => s.openBrowser)
   const openSaveModal = useTemplateStore((s) => s.openSaveModal)
@@ -209,18 +219,14 @@ function ContextMenuComponent(): JSX.Element | null {
       }
     }
 
-    const handleEscape = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        close()
-      }
-    }
+    // Escape via EscapeManager
+    escapeManager.register('popover-context-menu', EscapePriority.POPOVER, close)
 
     // Use timeout to avoid closing immediately when the menu opens
     // Use capture phase so the listener fires before React Flow can stop propagation
     // (React Flow intercepts mousedown on nodes for drag/selection)
     const timeoutId = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside, true)
-      document.addEventListener('keydown', handleEscape)
     }, 0)
 
     // Close on window blur (switching apps) and scroll
@@ -229,8 +235,8 @@ function ContextMenuComponent(): JSX.Element | null {
 
     return () => {
       clearTimeout(timeoutId)
+      escapeManager.unregister('popover-context-menu')
       document.removeEventListener('mousedown', handleClickOutside, true)
-      document.removeEventListener('keydown', handleEscape)
       window.removeEventListener('blur', close)
       document.removeEventListener('scroll', close, true)
     }
@@ -276,6 +282,24 @@ function ContextMenuComponent(): JSX.Element | null {
     }
     close()
   }, [target, addNode, close])
+
+  // Handle add spatial region (Fix 2.6)
+  const addRegion = useSpatialRegionStore((s) => s.addRegion)
+  const handleAddRegion = useCallback(() => {
+    if (target?.type === 'canvas') {
+      addRegion({
+        name: 'New Region',
+        bounds: {
+          x: target.position.x,
+          y: target.position.y,
+          width: 600,
+          height: 400
+        }
+      })
+      toast.success('Region created')
+    }
+    close()
+  }, [target, addRegion, close])
 
   // Handle add node to project
   const handleAddNodeToProject = useCallback(
@@ -365,6 +389,72 @@ function ContextMenuComponent(): JSX.Element | null {
     close()
   }, [close])
 
+  // Handle fit to content
+  const handleFitToContent = useCallback(() => {
+    if (target?.type !== 'node') return
+    const node = nodes.find((n) => n.id === target.nodeId)
+    if (!node) { close(); return }
+
+    const nodeData = node.data as Record<string, unknown>
+    const nodeType = nodeData.type as string
+
+    // Per-type parameter table
+    let headerH = 40
+    let footerH = 36
+    let title = (nodeData.title as string) || ''
+    let content = ''
+
+    switch (nodeType) {
+      case 'note':
+        headerH = 44
+        footerH = 36
+        content = (nodeData.content as string) || ''
+        break
+      case 'task':
+        headerH = 40
+        footerH = 36
+        content = (nodeData.description as string) || ''
+        break
+      case 'text':
+        headerH = 0
+        footerH = 0
+        title = ''
+        content = (nodeData.content as string) || ''
+        break
+      case 'artifact': {
+        headerH = 40
+        footerH = 36
+        // Use active file content if available
+        const files = nodeData.files as Array<{ id: string; content: string }> | undefined
+        const activeFileId = nodeData.activeFileId as string | undefined
+        if (files && files.length > 0) {
+          const activeFile = activeFileId ? files.find((f) => f.id === activeFileId) : files[0]
+          content = activeFile?.content || (nodeData.content as string) || ''
+        } else {
+          content = (nodeData.content as string) || ''
+        }
+        break
+      }
+      default:
+        headerH = 40
+        footerH = 36
+        content = (nodeData.description as string) || ''
+        break
+    }
+
+    const currentW = node.measured?.width ?? (node.width as number) ?? 280
+    const { width: fitW, height: fitH } = calculateAutoFitDimensions(title, content, headerH, footerH, currentW)
+    const finalWidth = Math.max(AUTO_FIT_CONSTRAINTS.minWidth, fitW)
+    const finalHeight = Math.max(AUTO_FIT_CONSTRAINTS.minHeight, fitH)
+
+    startNodeResize(target.nodeId)
+    updateNodeDimensions(target.nodeId, finalWidth, finalHeight)
+    updateNodeInternals(target.nodeId)
+    commitNodeResize(target.nodeId)
+    toast.success('Fitted to content', { duration: 1500, icon: '📐' })
+    close()
+  }, [target, nodes, startNodeResize, updateNodeDimensions, updateNodeInternals, commitNodeResize, close])
+
   if (!isOpen || !target) return null
 
   // Calculate menu position (keep within viewport)
@@ -437,6 +527,11 @@ function ContextMenuComponent(): JSX.Element | null {
               icon={<Workflow className="w-4 h-4" />}
               label="New Orchestrator"
               onClick={() => handleAddNode('orchestrator')}
+            />
+            <MenuItem
+              icon={<MapPin className="w-4 h-4" />}
+              label="New Region"
+              onClick={handleAddRegion}
             />
             <MenuSeparator />
             <div className="px-3 py-2 text-xs font-medium text-[var(--text-muted)] uppercase">Templates</div>
@@ -747,6 +842,12 @@ function ContextMenuComponent(): JSX.Element | null {
               icon={<Archive className="w-4 h-4" />}
               label="Archive"
               onClick={handleArchive}
+            />
+            <MenuItem
+              icon={<Maximize2 className="w-4 h-4" />}
+              label="Fit to Content"
+              onClick={handleFitToContent}
+              disabled={!!(node?.data as { collapsed?: boolean }).collapsed}
             />
             {/* Convert to... submenu */}
             {(() => {

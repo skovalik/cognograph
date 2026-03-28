@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Scene,
   OrthographicCamera,
@@ -13,6 +13,7 @@ import {
   Vector3,
   Color
 } from 'three';
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
 
 const vertexShader = `
 void main() {
@@ -196,6 +197,8 @@ interface PixelSnowProps {
   isDark?: boolean;
   className?: string;
   style?: React.CSSProperties;
+  qualityRef?: React.RefObject<AdaptiveQualityState>;
+  reportFrame?: () => void;
 }
 
 export default function PixelSnow({
@@ -213,7 +216,9 @@ export default function PixelSnow({
   direction = 125,
   isDark = true,
   className = '',
-  style = {}
+  style = {},
+  qualityRef,
+  reportFrame: reportFrameFn,
 }: PixelSnowProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>(0);
@@ -318,8 +323,12 @@ export default function PixelSnow({
     window.addEventListener('resize', handleResize);
 
     const startTime = performance.now();
+    let frameCount = 0;
     const animate = () => {
       animationRef.current = requestAnimationFrame(animate);
+      if (qualityRef?.current && !qualityRef.current.shouldRender) return;
+      if (reportFrameFn) reportFrameFn();
+      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
 
       // Only render if visible
       if (isVisibleRef.current) {

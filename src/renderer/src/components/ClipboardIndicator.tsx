@@ -36,6 +36,7 @@ function ClipboardIndicatorComponent(): JSX.Element | null {
           onClick={clearClipboard}
           className="ml-1 p-0.5 rounded-full hover:bg-white/10 transition-colors"
           title="Clear clipboard (Esc)"
+          aria-label="Clear clipboard"
         >
           <X className="w-3 h-3" />
         </button>

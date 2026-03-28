@@ -117,6 +117,7 @@ const SelectBadge = memo(function SelectBadge({
     <span
       onClick={handleClick}
       onMouseDown={onCycle ? (e) => e.stopPropagation() : undefined}
+      onKeyDown={onCycle ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick?.(e as unknown as React.MouseEvent) } } : undefined}
       className={`inline-flex items-center gap-1 rounded-full font-medium ${
         compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'
       } ${onCycle ? 'cursor-pointer hover:brightness-125 transition-all' : ''}`}
@@ -125,6 +126,9 @@ const SelectBadge = memo(function SelectBadge({
         color: option.color || 'inherit'
       }}
       title={onCycle ? `Click to cycle ${type}` : undefined}
+      role={onCycle ? 'button' : undefined}
+      tabIndex={onCycle ? 0 : undefined}
+      aria-label={onCycle ? `Cycle ${type}: ${option.label}` : undefined}
     >
       <Icon className={compact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
       {option.label}
