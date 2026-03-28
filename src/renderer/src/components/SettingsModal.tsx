@@ -31,14 +31,20 @@ type SettingsCategory = 'appearance' | 'workspace' | 'ai' | 'preferences' | 'key
 interface SettingsModalProps {
   isOpen: boolean
   onClose: () => void
+  defaultCategory?: SettingsCategory
 }
 
 // -----------------------------------------------------------------------------
 // SettingsModal Component
 // -----------------------------------------------------------------------------
 
-function SettingsModalComponent({ isOpen, onClose }: SettingsModalProps): JSX.Element | null {
-  const [activeCategory, setActiveCategory] = useState<SettingsCategory>('appearance')
+function SettingsModalComponent({ isOpen, onClose, defaultCategory }: SettingsModalProps): JSX.Element | null {
+  const [activeCategory, setActiveCategory] = useState<SettingsCategory>(defaultCategory || 'appearance')
+
+  // Update active category when defaultCategory changes (e.g., onboarding opens to AI tab)
+  useEffect(() => {
+    if (defaultCategory && isOpen) setActiveCategory(defaultCategory)
+  }, [defaultCategory, isOpen])
 
   // Theme settings
   const themeSettings = useWorkspaceStore((state) => state.themeSettings)
