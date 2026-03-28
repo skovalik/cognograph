@@ -11,6 +11,7 @@ import { useReactFlow } from '@xyflow/react'
 import { X, Search, ArrowUpDown } from 'lucide-react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import type { NoteMode } from '@shared/types'
+import { escapeManager, EscapePriority } from '../utils/EscapeManager'
 
 type SortMode = 'recent' | 'alpha' | 'type'
 
@@ -48,11 +49,8 @@ function CanvasTableOfContentsComponent({ onClose }: CanvasTableOfContentsProps)
 
   // Close on Escape
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    escapeManager.register('dialog-canvas-toc', EscapePriority.DIALOG, onClose)
+    return () => escapeManager.unregister('dialog-canvas-toc')
   }, [onClose])
 
   // Filter and sort nodes
@@ -127,12 +125,13 @@ function CanvasTableOfContentsComponent({ onClose }: CanvasTableOfContentsProps)
             ref={searchRef}
             className="canvas-toc__search"
             placeholder="Search nodes..."
+            aria-label="Search nodes"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <div className="canvas-toc__filters">
-          <button className="canvas-toc__sort-btn" onClick={cycleSortMode} title={`Sort: ${sortMode}`}>
+          <button className="canvas-toc__sort-btn" onClick={cycleSortMode} title={`Sort: ${sortMode}`} aria-label={`Sort by ${sortMode}`}>
             <ArrowUpDown className="w-3.5 h-3.5" />
             <span>{sortMode === 'recent' ? 'Recent' : sortMode === 'alpha' ? 'A-Z' : 'Type'}</span>
           </button>

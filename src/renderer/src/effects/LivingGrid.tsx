@@ -23,6 +23,7 @@
 import { useRef, useEffect, useCallback, memo } from 'react'
 import { useViewport } from '@xyflow/react'
 import { useEffectiveReducedMotion } from '../stores/programStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -165,9 +166,13 @@ export const LivingGrid = memo(function LivingGrid() {
   // Draw loop
   // ------------------------------------------
   const draw = useCallback((timestamp: number) => {
-    // Throttle to ~30fps
+    // Zoom performance tier — read from store (no React subscription needed)
+    const tier = useWorkspaceStore.getState().zoomPerfTier ?? 'full'
+
+    // Tier-aware frame throttle: 15fps at reduced, 30fps at full
+    const effectiveInterval = tier === 'reduced' ? 66 : FRAME_INTERVAL
     const elapsed = timestamp - lastFrameTimeRef.current
-    if (elapsed < FRAME_INTERVAL) {
+    if (elapsed < effectiveInterval) {
       rafRef.current = requestAnimationFrame(draw)
       return
     }
@@ -192,6 +197,12 @@ export const LivingGrid = memo(function LivingGrid() {
     // Clear
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, w, h)
+
+    // At minimal tier: canvas is cleared, keep RAF alive but skip drawing
+    if (tier === 'minimal') {
+      rafRef.current = requestAnimationFrame(draw)
+      return
+    }
 
     const vp = viewportRef.current
     const { x: vpX, y: vpY, zoom } = vp
@@ -225,8 +236,9 @@ export const LivingGrid = memo(function LivingGrid() {
     const hasCursor = cursor !== null
     const radiusSq = ATTRACTION_RADIUS * ATTRACTION_RADIUS
 
-    for (let col = startCol; col <= endCol; col++) {
-      for (let row = startRow; row <= endRow; row++) {
+    const step = tier === 'reduced' ? 2 : 1
+    for (let col = startCol; col <= endCol; col += step) {
+      for (let row = startRow; row <= endRow; row += step) {
         // World position of this grid dot
         const wx = col * GRID_SPACING
         const wy = row * GRID_SPACING

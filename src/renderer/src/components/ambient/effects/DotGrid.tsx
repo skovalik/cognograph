@@ -4,6 +4,7 @@
 'use client';
 import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 import { animate, type AnimationPlaybackControls } from 'framer-motion';
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
 
 const throttle = (func: (...args: any[]) => void, limit: number) => {
   let lastCall = 0;
@@ -48,6 +49,8 @@ export interface DotGridProps {
   returnDuration?: number;
   className?: string;
   style?: React.CSSProperties;
+  qualityRef?: React.RefObject<AdaptiveQualityState>;
+  reportFrame?: () => void;
 }
 
 function hexToRgb(hex: string) {
@@ -73,7 +76,9 @@ const DotGrid: React.FC<DotGridProps> = ({
   resistance = 750,
   returnDuration = 1.5,
   className = '',
-  style
+  style,
+  qualityRef,
+  reportFrame: reportFrameFn,
 }) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -143,9 +148,14 @@ const DotGrid: React.FC<DotGridProps> = ({
     if (!circlePath) return;
 
     let rafId: number;
+    let frameCount = 0;
     const proxSq = proximity * proximity;
 
     const draw = () => {
+      rafId = requestAnimationFrame(draw);
+      if (qualityRef?.current && !qualityRef.current.shouldRender) return;
+      if (reportFrameFn) reportFrameFn();
+      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
@@ -178,7 +188,6 @@ const DotGrid: React.FC<DotGridProps> = ({
         ctx.restore();
       }
 
-      rafId = requestAnimationFrame(draw);
     };
 
     draw();

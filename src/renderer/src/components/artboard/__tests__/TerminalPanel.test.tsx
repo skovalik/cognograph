@@ -36,6 +36,8 @@ class MockTerminal {
   attachCustomKeyEventHandler = vi.fn()
   cols = 80
   rows = 24
+  unicode = { activeVersion: '6' }
+  options = {}
 }
 
 vi.mock('@xterm/xterm', () => ({
@@ -52,8 +54,36 @@ vi.mock('@xterm/addon-fit', () => ({
   FitAddon: MockFitAddon,
 }))
 
+// Mock Unicode11 addon
+vi.mock('@xterm/addon-unicode11', () => ({
+  Unicode11Addon: class { dispose = vi.fn() },
+}))
+
+// Mock WebGL addon
+vi.mock('@xterm/addon-webgl', () => ({
+  WebglAddon: class {
+    onContextLoss = vi.fn()
+    dispose = vi.fn()
+  },
+}))
+
 // Mock xterm CSS import (no-op)
 vi.mock('@xterm/xterm/css/xterm.css', () => ({}))
+
+// Mock workspace store — provides themeSettings.mode for terminal theme sync
+vi.mock('../../../stores/workspaceStore', () => ({
+  useWorkspaceStore: Object.assign(
+    vi.fn((selector: (state: Record<string, unknown>) => unknown) =>
+      selector({ themeSettings: { mode: 'dark' } })
+    ),
+    {
+      getState: vi.fn(() => ({
+        updateNode: vi.fn(),
+        themeSettings: { mode: 'dark' },
+      })),
+    }
+  ),
+}))
 
 // Mock window.api.terminal
 const mockTerminalApi = {
@@ -142,5 +172,89 @@ describe('TerminalPanel', () => {
     // If TerminalPanelProps is not exported, tsc --noEmit would catch it.
     const mod = await import('../TerminalPanel')
     expect(mod.TerminalPanel).toBeDefined()
+  })
+
+  it('should use dark tooltip color by default', async () => {
+    const { TerminalPanel } = await import('../TerminalPanel')
+
+    const { container } = render(
+      <TerminalPanel nodeId="node-abc-123" sessionId="session-xyz" />
+    )
+
+    // Find the tooltip by its direct text content — the innermost div whose
+    // childNodes contain the text. We filter for divs with no child elements
+    // (leaf nodes) to avoid matching the container parent.
+    const allDivs = Array.from(container.querySelectorAll('div'))
+    const tooltip = allDivs.find(
+      el => el.children.length === 0 && el.textContent?.includes('Ctrl+`')
+    )
+    expect(tooltip).not.toBeUndefined()
+    // Dark mode tooltip should have the light-on-dark color
+    const style = tooltip?.getAttribute('style') || ''
+    expect(style).toContain('rgba(224, 224, 224, 0.4)')
+  })
+})
+
+describe('terminalThemes constants', () => {
+  it('should export dark and light themes with all 16 ANSI colors', async () => {
+    const { TERMINAL_THEME_DARK, TERMINAL_THEME_LIGHT } = await import(
+      '../../../constants/terminalThemes'
+    )
+
+    const requiredKeys = [
+      'background', 'foreground', 'cursor', 'cursorAccent', 'selectionBackground',
+      'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white',
+      'brightBlack', 'brightRed', 'brightGreen', 'brightYellow', 'brightBlue',
+      'brightMagenta', 'brightCyan', 'brightWhite',
+    ]
+
+    for (const key of requiredKeys) {
+      expect(TERMINAL_THEME_DARK).toHaveProperty(key)
+      expect(TERMINAL_THEME_LIGHT).toHaveProperty(key)
+    }
+  })
+
+  it('should return dark theme for dark mode', async () => {
+    const { getTerminalTheme, TERMINAL_THEME_DARK } = await import(
+      '../../../constants/terminalThemes'
+    )
+
+    const theme = getTerminalTheme('dark')
+    expect(theme).toEqual(TERMINAL_THEME_DARK)
+  })
+
+  it('should return light theme for light mode', async () => {
+    const { getTerminalTheme, TERMINAL_THEME_LIGHT } = await import(
+      '../../../constants/terminalThemes'
+    )
+
+    const theme = getTerminalTheme('light')
+    expect(theme).toEqual(TERMINAL_THEME_LIGHT)
+  })
+
+  it('should override cursor with accent color when provided', async () => {
+    const { getTerminalTheme } = await import(
+      '../../../constants/terminalThemes'
+    )
+
+    const theme = getTerminalTheme('dark', '#ff0000')
+    expect(theme.cursor).toBe('#ff0000')
+    expect(theme.selectionBackground).toBe('#ff00004D')
+  })
+
+  it('dark theme background should match CSS variable', async () => {
+    const { TERMINAL_THEME_DARK } = await import(
+      '../../../constants/terminalThemes'
+    )
+    // Must match nodes.css :root --terminal-bg
+    expect(TERMINAL_THEME_DARK.background).toBe('#1a1a2e')
+  })
+
+  it('light theme background should match CSS variable', async () => {
+    const { TERMINAL_THEME_LIGHT } = await import(
+      '../../../constants/terminalThemes'
+    )
+    // Must match nodes.css [data-theme="light"] --terminal-bg
+    expect(TERMINAL_THEME_LIGHT.background).toBe('#f1f5f9')
   })
 })

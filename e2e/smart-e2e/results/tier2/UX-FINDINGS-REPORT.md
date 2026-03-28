@@ -4,7 +4,7 @@
 **Test Type:** Blind Cognitive Proxy (AI Vision)
 **States Evaluated:** 10
 **Total Cost:** $0.20
-**Source:** E2E Cognitive Testing — Tier 2
+**Bead:** cognograph_02-bku
 
 ---
 

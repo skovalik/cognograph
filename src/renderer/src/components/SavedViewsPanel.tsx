@@ -120,6 +120,7 @@ function SavedViewsPanelComponent({ isOpen, onClose }: SavedViewsPanelProps): JS
             onClick={() => setIsAdding(!isAdding)}
             className="p-1 rounded hover:bg-white/10 transition-colors"
             title="Save current view"
+            aria-label="Save current view"
           >
             <Plus className="w-4 h-4" style={{ color: 'var(--gui-text-secondary)' }} />
           </button>
@@ -127,6 +128,7 @@ function SavedViewsPanelComponent({ isOpen, onClose }: SavedViewsPanelProps): JS
             onClick={onClose}
             className="p-1 rounded hover:bg-white/10"
             title="Close"
+            aria-label="Close saved views panel"
           >
             <X className="w-4 h-4" style={{ color: 'var(--gui-text-muted)' }} />
           </button>
@@ -229,6 +231,7 @@ function SavedViewsPanelComponent({ isOpen, onClose }: SavedViewsPanelProps): JS
                       onClick={() => handleStartEdit(view)}
                       className="p-1 rounded hover:bg-white/10"
                       title="Rename"
+                      aria-label="Rename view"
                     >
                       <Edit2 className="w-3 h-3" style={{ color: 'var(--gui-text-muted)' }} />
                     </button>
@@ -236,6 +239,7 @@ function SavedViewsPanelComponent({ isOpen, onClose }: SavedViewsPanelProps): JS
                       onClick={() => deleteView(view.id)}
                       className="p-1 rounded hover:bg-red-500/20"
                       title="Delete"
+                      aria-label="Delete view"
                     >
                       <Trash2 className="w-3 h-3" style={{ color: 'var(--gui-text-muted)' }} />
                     </button>

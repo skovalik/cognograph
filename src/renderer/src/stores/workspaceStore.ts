@@ -11,6 +11,7 @@ enableMapSet()
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react'
 import { applyNodeChanges, applyEdgeChanges } from '@xyflow/react'
 import { v4 as uuid } from 'uuid'
+import { calculateOptimalHandles } from '../utils/positionResolver'
 import type {
   NodeData,
   WorkspaceData,
@@ -55,6 +56,8 @@ import { getPresetColors } from '../constants/themePresets'
 import { useSpatialRegionStore } from './spatialRegionStore'
 import { computeGraphHash, getCachedContext, getCachedTraversal, invalidateContextCache } from '../utils/contextCache'
 import type { ContextTraversalResult } from '../utils/contextCache'
+import { emitNodeCreated, emitNodeUpdated, emitNodeDeleted, emitEdgeCreated, emitEdgeDeleted } from '../utils/auditHooks'
+import type { ZoomPerfTier } from '../hooks/useZoomPerformanceTier'
 
 // Import store types from dedicated types file
 import type {
@@ -148,6 +151,9 @@ interface WorkspaceState {
     timestamp: number
   } | null
 
+  // Zoom performance tier (proactive effect throttling at low zoom)
+  zoomPerfTier: ZoomPerfTier
+
   // Visual feedback state
   streamingConversations: Set<string> // Set of nodeIds currently streaming
   recentlySpawnedNodes: Set<string> // Set of nodeIds that were just created (for spawn animation)
@@ -203,6 +209,7 @@ interface WorkspaceState {
   changeNodeType: (nodeId: string, newType: NodeData['type']) => void
   deleteNodes: (nodeIds: string[]) => void
   moveNode: (nodeId: string, position: { x: number; y: number }) => void
+  applyPositionsBatch: (positions: Map<string, { x: number; y: number }>) => void
   resizeNode: (nodeId: string, dimensions: { width?: number; height?: number }) => void
   updateNodeDimensions: (nodeId: string, width: number, height: number) => void
 
@@ -238,6 +245,7 @@ interface WorkspaceState {
   // Actions - Edges
   addEdge: (connection: Connection) => void
   updateEdge: (edgeId: string, data: Partial<EdgeData>, options?: { skipHistory?: boolean }) => void
+  updateEdgeHandlesBatch: (updates: Array<{edgeId: string, sourceHandle: string, targetHandle: string}>) => void
   commitEdgeWaypointDrag: (edgeId: string, beforeWaypoints: EdgeWaypoint[] | undefined, afterWaypoints: EdgeWaypoint[] | undefined) => void
   deleteEdges: (edgeIds: string[]) => void
   reverseEdge: (edgeId: string) => void
@@ -361,6 +369,7 @@ interface WorkspaceState {
   commitNodeDrag: (nodeIds: string[]) => void
   startNodeResize: (nodeId: string) => void
   commitNodeResize: (nodeId: string) => void
+  batchFitNodesToContent: (items: Array<{ nodeId: string; width: number; height: number }>) => void
 
   // Actions - Context
   getConnectedNodes: (nodeId: string) => Node<NodeData>[]
@@ -768,6 +777,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       openExtractionPanelNodeId: null,
       extractionDrag: null,
       lastAcceptedExtraction: null,
+      zoomPerfTier: 'full' as ZoomPerfTier,
       streamingConversations: new Set<string>(),
       recentlySpawnedNodes: new Set<string>(),
       spawningNodeIds: [],
@@ -808,41 +818,41 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         switch (type) {
           case 'conversation':
             data = createConversationData()
-            dimensions = { width: 300, height: 140 }
+            dimensions = { width: 300, height: 160 }
             break
           case 'project': {
             const projectColor = get().themeSettings?.nodeColors?.project || '#64748b'
             data = createProjectData(projectColor)
-            dimensions = { width: 400, height: 300 }
+            dimensions = { width: 400, height: 320 }
             break
           }
           case 'note':
             data = createNoteData()
-            dimensions = { width: 280, height: 140 }
+            dimensions = { width: 280, height: 180 }
             break
           case 'task':
             data = createTaskData()
-            dimensions = { width: 260, height: 140 }
+            dimensions = { width: 260, height: 200 }
             break
           case 'artifact':
             data = createArtifactData()
-            dimensions = { width: 320, height: 200 }
+            dimensions = { width: 320, height: 220 }
             break
           case 'workspace':
             data = createWorkspaceData()
-            dimensions = { width: 320, height: 220 }
+            dimensions = { width: 320, height: 240 }
             break
           case 'text':
             data = createTextData()
-            dimensions = { width: 200, height: 60 }
+            dimensions = { width: 200, height: 104 }
             break
           case 'action':
             data = createActionData()
-            dimensions = { width: 280, height: 140 }
+            dimensions = { width: 280, height: 160 }
             break
           case 'orchestrator':
             data = createOrchestratorData()
-            dimensions = { width: 360, height: 280 }
+            dimensions = { width: 360, height: 300 }
             break
           default:
             throw new Error(`Unknown node type: ${type}`)
@@ -897,6 +907,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           state.recentlySpawnedNodes.add(id)
         })
 
+        // Audit hook: node created (non-critical)
+        try { emitNodeCreated(id, type, data.title || 'Untitled') } catch { /* audit non-critical */ }
+
         // Auto-clear spawn state after animation completes
         setTimeout(() => {
           set((state) => {
@@ -946,6 +959,17 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             }
           }
         })
+        // Audit hook: node updated (non-critical) — only emit changed field names, not content
+        try {
+          const node = get().nodes.find((n) => n.id === nodeId)
+          if (node) {
+            const changedFields: Record<string, { before: unknown; after: unknown }> = {}
+            for (const key of Object.keys(data)) {
+              changedFields[key] = { before: '(redacted)', after: '(redacted)' }
+            }
+            emitNodeUpdated(nodeId, node.type || 'unknown', node.data.title || 'Untitled', changedFields)
+          }
+        } catch { /* audit non-critical */ }
         // If enabled state changed, evaluate dependent node activations
         if (enabledChanged) {
           // Schedule evaluation for next tick to allow state to settle
@@ -1315,6 +1339,31 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               s.historyIndex++
             }
           })
+
+          // Recalculate edge handles after layout (fresh state, not stale snapshot)
+          const freshState = get()
+          const movedIds = new Set(Array.from(newPositions.keys()))
+          const affectedEdges = freshState.edges.filter(
+            e => movedIds.has(e.source) || movedIds.has(e.target)
+          )
+          const handleUpdates: Array<{ edgeId: string; sourceHandle: string; targetHandle: string }> = []
+          for (const edge of affectedEdges) {
+            const src = freshState.nodes.find(n => n.id === edge.source)
+            const tgt = freshState.nodes.find(n => n.id === edge.target)
+            if (!src || !tgt) continue
+            const { sourceHandle, targetHandle } = calculateOptimalHandles(
+              src.position,
+              { width: src.measured?.width ?? (src.width as number) ?? 280, height: src.measured?.height ?? (src.height as number) ?? 140 },
+              tgt.position,
+              { width: tgt.measured?.width ?? (tgt.width as number) ?? 280, height: tgt.measured?.height ?? (tgt.height as number) ?? 140 }
+            )
+            if (edge.sourceHandle !== sourceHandle || edge.targetHandle !== targetHandle) {
+              handleUpdates.push({ edgeId: edge.id, sourceHandle, targetHandle })
+            }
+          }
+          if (handleUpdates.length > 0) {
+            get().updateEdgeHandlesBatch(handleUpdates)
+          }
         })
       },
 
@@ -1781,6 +1830,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       },
 
       deleteNodes: (nodeIds) => {
+        // Capture node metadata before deletion for audit hooks
+        const deletedNodeMeta = get().nodes
+          .filter((n) => nodeIds.includes(n.id))
+          .map((n) => ({ id: n.id, type: n.type || 'unknown', title: n.data.title || 'Untitled' }))
+
         set((state) => {
           const deletedNodes = state.nodes.filter((n) => nodeIds.includes(n.id))
           const deletedEdges = state.edges.filter(
@@ -1824,6 +1878,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           // Close pinned windows for deleted nodes
           state.pinnedWindows = state.pinnedWindows.filter(w => !nodeIds.includes(w.nodeId))
         })
+        // Audit hooks: node deleted (non-critical)
+        for (const meta of deletedNodeMeta) {
+          try { emitNodeDeleted(meta.id, meta.type, meta.title) } catch { /* audit non-critical */ }
+        }
       },
 
       moveNode: (nodeId, position) => {
@@ -1833,6 +1891,18 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             node.position = position
             state.isDirty = true
           }
+        })
+      },
+
+      applyPositionsBatch: (positions) => {
+        set((state) => {
+          for (const [id, pos] of positions) {
+            const node = state.nodes.find(n => n.id === id)
+            if (node) {
+              node.position = { x: pos.x, y: pos.y }
+            }
+          }
+          state.isDirty = true
         })
       },
 
@@ -1923,6 +1993,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             }
           }
         })
+        // Audit hook: edge created (non-critical)
+        try { emitEdgeCreated(edgeId, connection.source, connection.target) } catch { /* audit non-critical */ }
         // Evaluate activations when edge is added
         setTimeout(() => get().evaluateAllNodeActivations(), 0)
 
@@ -1973,6 +2045,20 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         setTimeout(() => get().evaluateAllNodeActivations(), 0)
       },
 
+      // Batch update edge source/target handles — single re-render regardless of edge count
+      updateEdgeHandlesBatch: (updates) => {
+        if (updates.length === 0) return
+        set((state) => {
+          for (const { edgeId, sourceHandle, targetHandle } of updates) {
+            const idx = state.edges.findIndex((e) => e.id === edgeId)
+            if (idx !== -1) {
+              state.edges[idx] = { ...state.edges[idx]!, sourceHandle, targetHandle }
+            }
+          }
+          state.isDirty = true
+        })
+      },
+
       // Commit waypoint drag as a single undo action (called at drag end)
       commitEdgeWaypointDrag: (edgeId, beforeWaypoints, afterWaypoints) => {
         set((state) => {
@@ -1999,6 +2085,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       },
 
       deleteEdges: (edgeIds) => {
+        // Capture edge IDs before deletion for audit hooks
+        const edgeIdsToAudit = [...edgeIds]
+
         set((state) => {
           const deleted = state.edges.filter((e) => edgeIds.includes(e.id))
           state.edges = state.edges.filter((e) => !edgeIds.includes(e.id))
@@ -2015,6 +2104,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             state.historyIndex = state.history.length - 1
           }
         })
+        // Audit hooks: edge deleted (non-critical)
+        for (const eid of edgeIdsToAudit) {
+          try { emitEdgeDeleted(eid) } catch { /* audit non-critical */ }
+        }
         // Evaluate activations when edges are deleted
         setTimeout(() => get().evaluateAllNodeActivations(), 0)
       },
@@ -3766,6 +3859,15 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 }
                 break
               }
+              case 'RECONNECT_EDGE': {
+                // Remove the reconnected edge (has new ID)
+                const afterIdx = state.edges.findIndex((e) => e.id === act.after.id)
+                if (afterIdx !== -1) state.edges.splice(afterIdx, 1)
+                // Restore original edge (old ID)
+                const beforeExists = state.edges.some((e) => e.id === act.before.id)
+                if (!beforeExists) state.edges.push(JSON.parse(JSON.stringify(act.before)))
+                break
+              }
               case 'REORDER_LAYERS': {
                 // Restore previous z-index values
                 for (const update of act.updates) {
@@ -3883,6 +3985,15 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 if (edgeIndex !== -1) {
                   state.edges[edgeIndex] = JSON.parse(JSON.stringify(act.after))
                 }
+                break
+              }
+              case 'RECONNECT_EDGE': {
+                // Remove original edge
+                const beforeIdx = state.edges.findIndex((e) => e.id === act.before.id)
+                if (beforeIdx !== -1) state.edges.splice(beforeIdx, 1)
+                // Re-apply reconnected edge
+                const afterExists = state.edges.some((e) => e.id === act.after.id)
+                if (!afterExists) state.edges.push(JSON.parse(JSON.stringify(act.after)))
                 break
               }
               case 'REORDER_LAYERS': {
@@ -4008,6 +4119,47 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             }
           }
           state.resizeStartDimensions.delete(nodeId)
+        })
+      },
+
+      batchFitNodesToContent: (items) => {
+        set((state) => {
+          const actions: HistoryAction[] = []
+          for (const { nodeId, width: rawW, height: rawH } of items) {
+            const node = state.nodes.find((n) => n.id === nodeId)
+            if (!node) continue
+
+            const beforeW = (node.data as { width?: number }).width || node.width || 280
+            const beforeH = (node.data as { height?: number }).height || node.height || 120
+            const afterW = Math.max(150, rawW)
+            const afterH = Math.max(80, rawH)
+
+            if (beforeW === afterW && beforeH === afterH) continue
+
+            // Write dimensions
+            node.width = afterW
+            node.height = afterH
+            ;(node.data as { width?: number; height?: number }).width = afterW
+            ;(node.data as { width?: number; height?: number }).height = afterH
+
+            actions.push({
+              type: 'RESIZE_NODE',
+              nodeId,
+              before: { width: beforeW, height: beforeH },
+              after: { width: afterW, height: afterH }
+            })
+          }
+
+          if (actions.length > 0) {
+            state.isDirty = true
+            state.history = state.history.slice(0, state.historyIndex + 1)
+            state.history.push(actions.length === 1 ? actions[0]! : { type: 'BATCH', actions })
+            state.historyIndex++
+            if (state.history.length > 100) {
+              state.history = state.history.slice(-100)
+              state.historyIndex = state.history.length - 1
+            }
+          }
         })
       },
 
@@ -4913,6 +5065,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       },
 
       updateThemeSettings: (settings) => {
+        // Validate fontSize if being set (must be 8-32)
+        if (settings.fontSize !== undefined) {
+          settings = { ...settings, fontSize: Math.max(8, Math.min(32, settings.fontSize)) }
+        }
+
         set((state) => {
           state.themeSettings = {
             ...state.themeSettings,

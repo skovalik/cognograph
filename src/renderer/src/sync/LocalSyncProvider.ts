@@ -28,6 +28,11 @@ export class LocalSyncProvider implements SyncProvider {
   private _watcherStarted = false
   private _watchPromise: Promise<void> | null = null
 
+  /** Monotonically increasing save version counter — incremented each time a save is initiated.
+   *  Used to detect stale saves: if _saveVersion has advanced by the time a save completes,
+   *  the written data may already be outdated and another save is triggered. */
+  private _saveVersion = 0
+
   get isConnected(): boolean {
     return this._isConnected
   }
@@ -133,7 +138,7 @@ export class LocalSyncProvider implements SyncProvider {
     }
   }
 
-  save(data: WorkspaceData): void {
+  save(_data: WorkspaceData): void {
     // Check if auto-save is enabled
     const { autoSave } = useProgramStore.getState()
     if (!autoSave.enabled) return
@@ -148,11 +153,28 @@ export class LocalSyncProvider implements SyncProvider {
     this._saveTimer = setTimeout(async () => {
       this._saveTimer = null
       this._onSaveStart?.()
+
+      // Capture version at the moment we snapshot state — if it advances during
+      // the async IPC save, the data we wrote is already stale.
+      const versionAtSave = ++this._saveVersion
+
       try {
-        const result = await window.api.workspace.save(data)
+        // Re-read fresh data at execution time — the data parameter was captured
+        // when isDirty first fired, but more changes may have arrived during debounce.
+        const { useWorkspaceStore } = await import('../stores/workspaceStore')
+        const freshData = useWorkspaceStore.getState().getWorkspaceData()
+        const result = await window.api.workspace.save(freshData)
         if (result.success) {
           await this._ensureWatching()
-          this._onSaveSuccess?.()
+
+          // If the save version advanced while we were writing, another mutation
+          // occurred after our snapshot — trigger another save to persist it.
+          if (this._saveVersion !== versionAtSave) {
+            console.warn('[LocalSyncProvider] State changed during save — scheduling follow-up save')
+            this.save(undefined as unknown as WorkspaceData) // re-enter debounced path
+          } else {
+            this._onSaveSuccess?.()
+          }
         } else {
           console.error('[LocalSyncProvider] Auto-save failed:', result.error)
           this._onSaveError?.()
@@ -172,11 +194,22 @@ export class LocalSyncProvider implements SyncProvider {
     }
 
     this._onSaveStart?.()
+
+    // Capture version at snapshot time — same race-detection logic as debounced save.
+    const versionAtSave = ++this._saveVersion
+
     try {
       const result = await window.api.workspace.save(data)
       if (result.success) {
         await this._ensureWatching()
-        this._onSaveSuccess?.()
+
+        // If version advanced during the IPC round-trip, queue a follow-up save.
+        if (this._saveVersion !== versionAtSave) {
+          console.warn('[LocalSyncProvider] State changed during immediate save — scheduling follow-up save')
+          this.save(undefined as unknown as WorkspaceData) // re-enter debounced path
+        } else {
+          this._onSaveSuccess?.()
+        }
       } else {
         this._onSaveError?.()
       }

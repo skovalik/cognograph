@@ -25,6 +25,7 @@ import type { PropertyDefinition, PropertyOption } from '@shared/types'
 import { getMergedPropertyOptions, BUILTIN_PROPERTIES } from '../../constants/properties'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
 import { ICON_MAP } from '../IconPicker'
+import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 
 // Quick icon selection - most commonly used for property options
 const QUICK_ICONS: { name: string; icon: LucideIcon }[] = [
@@ -102,13 +103,8 @@ function PropertyOptionsEditorComponent({
 
   // Close on escape
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    escapeManager.register('dialog-property-options-editor', EscapePriority.DIALOG, onClose)
+    return () => escapeManager.unregister('dialog-property-options-editor')
   }, [onClose])
 
   // Check if an option is built-in (can't be deleted, but can be hidden/customized)

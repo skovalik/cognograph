@@ -30,8 +30,10 @@ import type {
   PropertyDefinition,
   NodeActivationCondition,
   ActivationTrigger,
-  NodeShape
+  NodeShape,
+  TerminalShell
 } from '@shared/types'
+import { TERMINAL_SHELL_OPTIONS } from '@shared/types'
 import { ActionPropertiesFields } from './action/ActionPropertiesFields'
 import { AttachmentsSection as AttachmentsSectionExtracted } from './inspector/sections/AttachmentsSection'
 import { ExtractionsSection } from './inspector/sections/ExtractionsSection'
@@ -826,6 +828,60 @@ function ConversationFields({
         </select>
       </div>
 
+      {/* Shell selector — only visible in terminal mode */}
+      {data.mode === 'terminal' && (<>
+        <div>
+          <label className="panel-section-label">
+            Shell
+            <HelpTooltip text="Choose which shell runs in this terminal. Claude Code launches an AI coding agent with project context. Other shells open plain terminals." />
+          </label>
+          <select
+            value={data.terminal?.shell || 'claude-code'}
+            onChange={(e) => {
+              const newShell = e.target.value as TerminalShell
+              onChange('terminal', {
+                ...data.terminal,
+                shell: newShell,
+              })
+            }}
+            className="w-full gui-input border rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+          >
+            {TERMINAL_SHELL_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          {data.terminal?.shell && data.terminal.shell !== 'claude-code' && (
+            <p className="text-xs gui-text-secondary mt-1">
+              Plain shell — no AI context injection.
+            </p>
+          )}
+          {data.terminal?.terminalState === 'running' && (
+            <p className="text-xs gui-text-secondary mt-1" style={{ color: 'var(--warning, #eab308)' }}>
+              Shell change takes effect after restarting the terminal.
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="panel-section-label">Working Directory</label>
+          <input
+            type="text"
+            value={data.terminal?.workingDirectory || ''}
+            placeholder="Default (project root)"
+            onChange={(e) => {
+              onChange('terminal', {
+                ...data.terminal,
+                workingDirectory: e.target.value,
+              })
+            }}
+            className="w-full gui-input border rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+          />
+          <p className="text-xs gui-text-secondary mt-1">
+            Leave empty for project root. Takes effect on next terminal spawn.
+          </p>
+        </div>
+      </>)}
+
       <div>
         <label className="panel-section-label">
           Provider
@@ -1517,7 +1573,7 @@ function TaskFields({
       const result = await window.api.llm.extract({
         systemPrompt: 'You are a task complexity estimator. Given a task description, estimate its complexity as one of: simple, moderate, complex. Respond with ONLY one of these three words, nothing else.',
         userPrompt: `Estimate the complexity of this task:\n\n${data.title || ''}\n${data.description}`,
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         maxTokens: 10
       })
       if (result.success && result.data) {

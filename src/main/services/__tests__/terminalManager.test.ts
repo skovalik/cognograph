@@ -34,6 +34,18 @@ vi.mock('node-pty', () => ({
   spawn: (...args: unknown[]) => mockSpawn(...args),
 }))
 
+// Mock fs.existsSync for Git Bash path detection.
+// vi.hoisted is required because vi.mock() is hoisted to the top of the file
+// by Vitest's transform — the factory runs before top-level variable declarations.
+const { mockExistsSync } = vi.hoisted(() => ({
+  mockExistsSync: vi.fn().mockReturnValue(false),
+}))
+
+vi.mock('fs', () => ({
+  default: { existsSync: (...args: unknown[]) => mockExistsSync(...args) },
+  existsSync: (...args: unknown[]) => mockExistsSync(...args),
+}))
+
 // Mock contextWriter so terminalManager doesn't attempt real file I/O
 vi.mock('../contextWriter', () => ({
   buildContextForNode: vi.fn().mockResolvedValue({
@@ -44,6 +56,14 @@ vi.mock('../contextWriter', () => ({
   }),
   writeContextFile: vi.fn().mockResolvedValue('/mock/context.md'),
   getContextFilePath: vi.fn().mockReturnValue('/mock/context.md'),
+  getWorkspaceFilePath: vi.fn().mockResolvedValue(null),
+}))
+
+// Mock claudeConfigWriter so terminalManager doesn't write .mcp.json / CLAUDE.md
+vi.mock('../claudeConfigWriter', () => ({
+  writeClaudeConfig: vi.fn().mockResolvedValue({ success: true, appendedToExisting: false }),
+  cleanupClaudeConfig: vi.fn().mockResolvedValue(undefined),
+  recoverClaudeMd: vi.fn().mockResolvedValue(undefined),
 }))
 
 // Import AFTER mocking
@@ -69,6 +89,7 @@ describe('terminalManager', () => {
     storedOnDataCb = null
     storedOnExitCb = null
     mockSpawn.mockClear()
+    mockExistsSync.mockReturnValue(false)
     // Re-supply fresh instances for each spawn call
     mockSpawn.mockImplementation(() => createMockPtyInstance())
   })
@@ -375,5 +396,187 @@ describe('terminalManager', () => {
       expect.any(Array),
       expect.objectContaining({ cols: 200, rows: 50 }),
     )
+  })
+
+  // -------------------------------------------------------------------------
+  // 16. Shell selector: cmd
+  // -------------------------------------------------------------------------
+  it('spawnTerminal with shell=cmd spawns cmd.exe with no args on Windows', async () => {
+    const originalPlatform = process.platform
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
+
+    try {
+      await spawnTerminal({ nodeId: 'node-cmd', sessionId: 'sess-cmd', shell: 'cmd' })
+
+      expect(mockSpawn).toHaveBeenCalledWith(
+        'cmd.exe',
+        [],
+        expect.objectContaining({
+          env: expect.not.objectContaining({
+            COGNOGRAPH_NODE_ID: expect.any(String),
+          }),
+        }),
+      )
+    } finally {
+      Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true })
+    }
+  })
+
+  // -------------------------------------------------------------------------
+  // 17. Shell selector: powershell
+  // -------------------------------------------------------------------------
+  it('spawnTerminal with shell=powershell spawns pwsh.exe on Windows', async () => {
+    const originalPlatform = process.platform
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
+
+    try {
+      await spawnTerminal({ nodeId: 'node-ps', sessionId: 'sess-ps', shell: 'powershell' })
+
+      expect(mockSpawn).toHaveBeenCalledWith(
+        'pwsh.exe',
+        ['-NoLogo'],
+        expect.objectContaining({
+          env: expect.not.objectContaining({
+            COGNOGRAPH_NODE_ID: expect.any(String),
+          }),
+        }),
+      )
+    } finally {
+      Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true })
+    }
+  })
+
+  // -------------------------------------------------------------------------
+  // 18. Shell selector: git-bash (fallback when not found)
+  // -------------------------------------------------------------------------
+  it('spawnTerminal with shell=git-bash falls back to claude-code if bash not found', async () => {
+    const originalPlatform = process.platform
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
+    mockExistsSync.mockReturnValue(false)
+
+    try {
+      await spawnTerminal({ nodeId: 'node-gb', sessionId: 'sess-gb', shell: 'git-bash' })
+
+      // Should fall back to claude-code (cmd.exe /c claude)
+      expect(mockSpawn).toHaveBeenCalledWith(
+        'cmd.exe',
+        ['/c', 'claude'],
+        expect.any(Object),
+      )
+    } finally {
+      Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true })
+    }
+  })
+
+  it('spawnTerminal with shell=git-bash uses found bash.exe path', async () => {
+    const originalPlatform = process.platform
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
+    mockExistsSync.mockImplementation((p: string) =>
+      p === 'C:\\Program Files\\Git\\bin\\bash.exe'
+    )
+
+    try {
+      await spawnTerminal({ nodeId: 'node-gb2', sessionId: 'sess-gb2', shell: 'git-bash' })
+
+      expect(mockSpawn).toHaveBeenCalledWith(
+        'C:\\Program Files\\Git\\bin\\bash.exe',
+        ['--login'],
+        expect.any(Object),
+      )
+    } finally {
+      mockExistsSync.mockReturnValue(false)
+      Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true })
+    }
+  })
+
+  // -------------------------------------------------------------------------
+  // 19. Context injection gating
+  // -------------------------------------------------------------------------
+  it('spawnTerminal with shell=cmd does NOT set COGNOGRAPH env vars', async () => {
+    const originalPlatform = process.platform
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
+
+    try {
+      await spawnTerminal({ nodeId: 'node-noctx', sessionId: 'sess-noctx', shell: 'cmd' })
+
+      const envArg = mockSpawn.mock.calls[0]?.[2]?.env as Record<string, string> | undefined
+      expect(envArg).toBeDefined()
+      expect(envArg).not.toHaveProperty('CLAUDE_SESSION_ID')
+      expect(envArg).not.toHaveProperty('COGNOGRAPH_NODE_ID')
+      expect(envArg).not.toHaveProperty('COGNOGRAPH_CONTEXT_FILE')
+    } finally {
+      Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true })
+    }
+  })
+
+  it('spawnTerminal with shell=claude-code DOES set COGNOGRAPH env vars', async () => {
+    const originalPlatform = process.platform
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
+
+    try {
+      await spawnTerminal({ nodeId: 'node-ctx', sessionId: 'sess-ctx', shell: 'claude-code' })
+
+      const envArg = mockSpawn.mock.calls[0]?.[2]?.env as Record<string, string> | undefined
+      expect(envArg).toBeDefined()
+      expect(envArg).toHaveProperty('CLAUDE_SESSION_ID', 'sess-ctx')
+      expect(envArg).toHaveProperty('COGNOGRAPH_NODE_ID', 'node-ctx')
+      expect(envArg).toHaveProperty('COGNOGRAPH_CONTEXT_FILE')
+    } finally {
+      Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true })
+    }
+  })
+
+  // -------------------------------------------------------------------------
+  // 20. Claude config generation on spawn
+  // -------------------------------------------------------------------------
+  it('spawnTerminal triggers Claude config generation', async () => {
+    const { writeClaudeConfig } = await import('../claudeConfigWriter')
+
+    await spawnTerminal({
+      nodeId: 'node-config',
+      sessionId: 'sess-config',
+      cwd: '/test/cwd',
+      nodeTitle: 'Test Terminal',
+    })
+
+    // Allow async fire-and-forget to complete
+    await new Promise(resolve => setTimeout(resolve, 10))
+
+    expect(writeClaudeConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nodeId: 'node-config',
+        cwd: '/test/cwd',
+      }),
+    )
+  })
+
+  // -------------------------------------------------------------------------
+  // 21. Claude config cleanup on exit
+  // -------------------------------------------------------------------------
+  it('terminal exit triggers Claude config cleanup', async () => {
+    const { cleanupClaudeConfig, writeClaudeConfig } = await import('../claudeConfigWriter')
+    vi.mocked(writeClaudeConfig).mockResolvedValue({
+      mcpConfigPath: '/test/cwd/.mcp.json',
+      claudeMdPath: '/test/cwd/CLAUDE.md',
+      success: true,
+      appendedToExisting: false,
+    })
+
+    await spawnTerminal({
+      nodeId: 'node-cleanup',
+      sessionId: 'sess-cleanup',
+      cwd: '/test/cwd',
+    })
+
+    // Wait for config generation to set claudeConfigCwd
+    await new Promise(resolve => setTimeout(resolve, 10))
+
+    // Trigger exit via the stored callback
+    storedOnExitCb?.({ exitCode: 0 })
+
+    // Allow async cleanup to run
+    await new Promise(resolve => setTimeout(resolve, 10))
+
+    expect(cleanupClaudeConfig).toHaveBeenCalledWith('/test/cwd')
   })
 })

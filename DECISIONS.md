@@ -205,13 +205,17 @@ Pre-launch session focused on positioning, patent strategy, security, and commun
 **1. Patent Filing: 4 Separate Provisionals (Not 1 Comprehensive)**
 - **Decision:** File P1-P4 as separate provisional applications ($65 each = $260 total)
 - **Rationale:** Independent prosecution paths firewall claims from each other. If one application gets rejected, it doesn't contaminate the others. Also enables granular licensing.
-- **Status:** ALL 4 FILED — Application numbers in PATENTS file
+- **Status:** ALL 4 FILED — Application numbers in MEMORY.md
 
 **2. P1 Prior Art Risk Downgraded from HIGH to MEDIUM-LOW**
 - **Decision:** Obsidian Augmented Canvas is NOT strong prior art for P1
 - **Rationale:** Researched directly — Obsidian uses connections for sequential chat history, not BFS graph traversal with typed nodes, weighted edges, and token budgets. Fundamentally different mechanism.
 
-**3. HN Title Selected**
+**3. Git History Rewrite Required Before Going Public**
+- **Decision:** Must run `git filter-repo` to scrub `workplace saves/` from history
+- **Rationale:** Security audit found client names, revenue targets, and business strategy in committed workspace save files. Gitignore prevents future commits but doesn't remove historical data.
+
+**4. HN Title Selected**
 - **Decision:** "Show HN: I built a spatial canvas for AI -- connections between nodes become context"
 - **Rationale:** "I built" = authentic (HN loves this). "connections become context" = killer feature in 4 words. 80 chars exactly.
 
@@ -258,6 +262,7 @@ Planning the UI polish sprint to elevate Cognograph from 6.2/10 to 9.0/10. Multi
 
 ### What Changed
 - Plan document: `docs/specs/ui-polish-implementation-plan.md`
+- Tracking: `.claude/ralph-loop.local.md`
 
 ---
 
@@ -456,7 +461,7 @@ Implement three connected features in this order:
 Previous build (cognograph) had issues accumulating. Features were partially implemented, some dead code, state got messy. User decided to start fresh.
 
 ### Decision
-Start fresh with clean implementation following the existing specs (VISION.md, NORTH_STAR.md).
+Create new project (cognograph_02) with clean implementation following the existing specs (VISION.md, NORTH_STAR.md).
 
 ### Rationale
 - Cleaner codebase from start
@@ -465,9 +470,10 @@ Start fresh with clean implementation following the existing specs (VISION.md, N
 - Fresh context for Claude Code
 
 ### What Changed
-- All spec documents carried forward
-- Build instructions rewritten
-- Implementation phases reorganized
+- New directory: cognograph_02
+- All spec documents copied over
+- CLAUDE.md rewritten as build instructions
+- TODO.md reorganized as implementation phases
 
 ---
 

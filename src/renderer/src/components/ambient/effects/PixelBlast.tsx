@@ -3,6 +3,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
 
 type PixelBlastVariant = 'square' | 'circle' | 'triangle' | 'diamond';
 
@@ -24,6 +25,8 @@ type PixelBlastProps = {
   speed?: number;
   transparent?: boolean;
   edgeFade?: number;
+  qualityRef?: React.RefObject<AdaptiveQualityState>;
+  reportFrame?: () => void;
 };
 
 const SHAPE_MAP: Record<PixelBlastVariant, number> = {
@@ -224,7 +227,9 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
   autoPauseOffscreen = true,
   speed = 0.15,
   transparent = true,
-  edgeFade = 0.5
+  edgeFade = 0.5,
+  qualityRef,
+  reportFrame: reportFrameFn,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const visibilityRef = useRef({ visible: true });
@@ -371,14 +376,15 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
       window.addEventListener('pointerdown', onPointerDown, { passive: true });
 
       let raf = 0;
+      let frameCount = 0;
       const animate = () => {
-        if (autoPauseOffscreen && !visibilityRef.current.visible) {
-          raf = requestAnimationFrame(animate);
-          return;
-        }
+        raf = requestAnimationFrame(animate);
+        if (autoPauseOffscreen && !visibilityRef.current.visible) return;
+        if (qualityRef?.current && !qualityRef.current.shouldRender) return;
+        if (reportFrameFn) reportFrameFn();
+        if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
         uniforms.uTime.value = timeOffset + clock.getElapsedTime() * speedRef.current;
         renderer.render(scene, camera);
-        raf = requestAnimationFrame(animate);
       };
       raf = requestAnimationFrame(animate);
 

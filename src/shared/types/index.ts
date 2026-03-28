@@ -30,6 +30,7 @@ export type {
 
 // --- nodes.ts ---
 export type {
+  TerminalShell,
   ConversationNodeData,
   ProjectNodeData,
   NoteMode,
@@ -100,6 +101,7 @@ export {
   DEFAULT_AGENT_STATUS,
   DEFAULT_AGENT_MEMORY,
   DEFAULT_AGENT_NODE_EXTENSIONS,
+  TERMINAL_SHELL_OPTIONS,
   DEFAULT_WORKSPACE_LLM_SETTINGS,
   DEFAULT_WORKSPACE_CONTEXT_RULES,
   isConversationNode,

@@ -8,6 +8,7 @@ import {
   Background,
   BackgroundVariant,
   useReactFlow,
+  useUpdateNodeInternals,
   ConnectionLineType,
   ConnectionMode,
   SelectionMode,
@@ -35,6 +36,8 @@ import { LeftSidebar } from './components/LeftSidebar'
 import { IconRail } from './components/IconRail'
 import { ExtractionPanel, ExtractionDragPreview } from './components/extractions'
 import { ErrorBoundary, InlineErrorBoundary } from './components/ErrorBoundary'
+import { OfflineIndicatorCompact } from './components/OfflineIndicator'
+import { initOfflineListeners } from './stores/offlineStore'
 import { SaveTemplateModal, PasteTemplateModal, TemplateBrowser } from './components/templates'
 import { ContextMenu } from './components/ContextMenu'
 import { ThemeSettingsModal } from './components/ThemeSettingsModal'
@@ -70,9 +73,13 @@ import { ArtboardOverlay, FocusModeHint } from './components/ArtboardOverlay'
 import { useArtboardMode } from './hooks/useArtboardMode'
 import { KeyboardShortcutsHelp, useShortcutHelpStore } from './components/KeyboardShortcutsHelp'
 import { useWorkspaceStore, getHistoryActionLabel } from './stores/workspaceStore'
+import './stores/storeSyncBridge' // Bidirectional sync: workspaceStore ↔ nodesStore/edgesStore
 import { initCCBridgeListener } from './stores/ccBridgeStore'
+import { initConsoleLogBridge } from './stores/consoleLogStore'
 import { initOrchestratorIPC } from './stores/orchestratorStore'
 import { initBridgeIPC, useBridgeStore } from './stores/bridgeStore'
+import { initSdkToolBridge } from './services/sdkToolBridge'
+import { useGraphIntelligenceStore } from './stores/graphIntelligenceStore'
 import { useProposalStore } from './stores/proposalStore'
 // NOTE: ProposalCard, CommandBar, and bridge/BridgeStatusBar are deferred to v0.3.0.
 // See docs/TODO-BRIDGE.md. Uncomment these imports when re-enabling.
@@ -110,13 +117,17 @@ import { StorageWarning } from '../../web/components/StorageWarning'
 import { DemoBanner } from '../../web/components/DemoBanner'
 import { MessageSquare, FileText, CheckSquare, Folder, Code, Boxes, Link2 } from 'lucide-react'
 import { calculateSnapGuides, type SnapGuide } from './utils/snapGuides'
+import { calculateAutoFitDimensions, AUTO_FIT_CONSTRAINTS } from './utils/nodeUtils'
 import { filterParentProjects } from './utils/selectionUtils'
 import type { NodeData, WorkspaceNodeData, GuiColors, EdgeData } from '@shared/types'
 import { DEFAULT_AMBIENT_EFFECT, DEFAULT_GLASS_SETTINGS, FONT_THEMES, FONT_LOAD_URLS } from '@shared/types'
 import type { FontTheme } from '@shared/types'
 import { DEFAULT_GUI_DARK, DEFAULT_GUI_LIGHT } from './constants/themePresets'
 import { getGPUTier } from './utils/gpuDetection'
+import { layoutEvents } from './utils/layoutEvents'
+import { calculateOptimalHandles, assignSpreadHandles } from './utils/positionResolver'
 import { resolveGlassStyle } from './utils/glassUtils'
+import { computeZoomPerfTier } from './hooks/useZoomPerformanceTier'
 
 import type { Edge } from '@xyflow/react'
 import { UserCursors } from './components/Presence/UserCursors'
@@ -127,6 +138,7 @@ import { useSemanticZoomClass } from './hooks/useSemanticZoom'
 import { useNavigationHistory } from './hooks/useNavigationHistory'
 import { useSpacebarPan } from './hooks/useSpacebarPan'
 import { ZoomOverlay } from './components/canvas/ZoomOverlay'
+import { ClusterOverlay } from './components/canvas/ClusterOverlay'
 import { KeyboardModeIndicator } from './components/canvas/KeyboardModeIndicator'
 import { DirectionalGuides } from './components/DirectionalGuides'
 import { KeyboardLegend } from './components/KeyboardLegend'
@@ -135,11 +147,13 @@ import { useSpatialRegionStore } from './stores/spatialRegionStore'
 import { tidyUpLayout } from './utils/tidyUpLayout'
 import type { LayoutNode, LayoutEdge } from './utils/tidyUpLayout'
 import { useIsMobile, useIsTouch } from './hooks/useIsMobile'
+import { useLongPress } from './hooks/useLongPress'
 import { useShiftDragEdgeCreation } from './hooks/useShiftDragEdgeCreation'
 import { useSpatialNavigation } from './hooks/useSpatialNavigation'
 import { usePhysicsSimulation, DEFAULT_PHYSICS_CONFIG, getPhysicsConfigForStrength } from './hooks/usePhysicsSimulation'
 import { playSound } from './services/audioService'
 import { performThemeTransition } from './utils/themeTransition'
+import { escapeManager, EscapePriority } from './utils/EscapeManager'
 import './styles/nodes.css'
 import './styles/token-estimator.css'
 import './styles/presence.css'
@@ -151,6 +165,12 @@ const isWeb = import.meta.env.VITE_BUILD_TARGET === 'web'
 // Initialize plugin renderer registry
 // Returns Promise<void> — no await needed at module level (fire-and-forget)
 initRendererPlugins()
+
+// Expose stores on window for diagnostic server + dogfood testing (dev only)
+if (import.meta.env.DEV) {
+  ;(window as any).workspaceStore = useWorkspaceStore
+  ;(window as any).programStore = useProgramStore
+}
 
 // Lazy font loading — module-level Set tracks which fonts have been loaded
 const loadedFonts = new Set<string>(['space-grotesk'])
@@ -247,12 +267,31 @@ interface ConnectionTarget {
 }
 
 function Canvas(): JSX.Element {
-  const { getViewport, screenToFlowPosition, getInternalNode, setCenter } = useReactFlow()
+  const { getViewport, screenToFlowPosition, getInternalNode, setCenter, fitView, zoomTo } = useReactFlow()
+  const updateNodeInternals = useUpdateNodeInternals()
   const semanticZoomClass = useSemanticZoomClass()
   const { goBack, goForward, canGoBack, canGoForward } = useNavigationHistory()
   const demoMode = useWorkspaceStore((s) => s.demoMode)
   const isMobile = useIsMobile()
   const isTouch = useIsTouch()
+
+  // Layout pipeline event bridge — listen for fitView requests from chatToolService
+  // Uses nodesRef declared below (line ~354) to avoid dependency on nodes array
+  // Initialize offline detection listeners
+  useEffect(() => {
+    const cleanup = initOfflineListeners()
+    return cleanup
+  }, [])
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { nodeIds, padding, duration, minZoom } = (e as CustomEvent).detail
+      const targets = nodesRef.current.filter((n: any) => nodeIds.includes(n.id))
+      if (targets.length) fitView({ nodes: targets, padding, duration, minZoom: minZoom ?? 0.35 })
+    }
+    layoutEvents.addEventListener('fitView', handler)
+    return () => layoutEvents.removeEventListener('fitView', handler)
+  }, [fitView])
 
   // PFD Phase 5B: Spacebar + Arrow key panning
   useSpacebarPan()
@@ -303,6 +342,7 @@ function Canvas(): JSX.Element {
   }, [])
   const snapResultRef = useRef<{ x: number; y: number } | null>(null)
   const viewportRef = useRef<{ x: number; y: number; zoom: number }>({ x: 0, y: 0, zoom: 1 })
+  const canvasContainerRef = useRef<HTMLDivElement>(null)
   const [indicatorZoom, setIndicatorZoom] = useState(1)
   const lastIndicatorZoomRef = useRef(1)
 
@@ -436,7 +476,68 @@ function Canvas(): JSX.Element {
     const cleanupCCBridge = initCCBridgeListener()
     const cleanupOrch = initOrchestratorIPC()       // Must init BEFORE bridge
     const cleanupSpatialBridge = initBridgeIPC()     // Bridge subscribes to orchestrator events
-    return () => { cleanupSpatialBridge(); cleanupCCBridge(); cleanupOrch() }
+    initSdkToolBridge()                              // Agent SDK in-process MCP tool bridge
+
+    // Wire graph intelligence insights from main process
+    let unsubInsights: (() => void) | undefined
+    if (window.api?.bridge?.onInsights) {
+      unsubInsights = window.api.bridge.onInsights((rawInsights: unknown) => {
+        if (!Array.isArray(rawInsights)) return
+        const insights = rawInsights.map((i: any) => ({
+          ...i,
+          status: i.status || 'new',
+          detectedAt: i.detectedAt || Date.now(),
+        }))
+        useGraphIntelligenceStore.getState().addInsights(insights)
+      })
+    }
+
+    // Wire graph intelligence snapshot requests from main process (Fix 2.2)
+    // Responds to IPC snapshot requests with minimal graph data (no content bodies or credentials)
+    let unsubSnapshot: (() => void) | undefined
+    if (window.api?.bridge?.onSnapshotRequest) {
+      unsubSnapshot = window.api.bridge.onSnapshotRequest((requestId: string) => {
+        try {
+          const { nodes, edges } = useWorkspaceStore.getState()
+          const snapshot = {
+            nodes: nodes.map((n) => ({
+              id: n.id,
+              type: n.data?.type || n.type || 'unknown',
+              title: n.data?.title || '',
+              updatedAt: n.data?.updatedAt || 0,
+              createdAt: n.data?.createdAt || 0,
+              position: { x: n.position.x, y: n.position.y },
+            })),
+            edges: edges.map((e) => ({
+              id: e.id,
+              source: e.source,
+              target: e.target,
+              bidirectional: (e.data as any)?.bidirectional ?? false,
+            })),
+            timestamp: Date.now(),
+          }
+          window.api.bridge.respondSnapshot(requestId, snapshot)
+        } catch {
+          window.api.bridge.respondSnapshot(requestId, null)
+        }
+      })
+    }
+
+    return () => {
+      cleanupSpatialBridge()
+      cleanupCCBridge()
+      cleanupOrch()
+      unsubInsights?.()
+      unsubSnapshot?.()
+    }
+  }, [])
+
+  // Initialize main process console log bridge (Electron only)
+  useEffect(() => {
+    if (!(window as any).__ELECTRON__) return
+    let cleanup: (() => void) | undefined
+    initConsoleLogBridge().then(fn => { cleanup = fn })
+    return () => { cleanup?.() }
   }, [])
 
   // Global terminal output tee — persists across artboard open/close so node cards
@@ -1120,10 +1221,22 @@ function Canvas(): JSX.Element {
     }
   }, [getWorkspaceData, markClean])
 
-  // Viewport change handler
+  // Viewport change handlers — throttle shader quality during pan/zoom
+  const canvasInteractTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleMoveStart = useCallback((): void => {
+    useUIStore.getState().setCanvasInteracting(true)
+    if (canvasInteractTimerRef.current) clearTimeout(canvasInteractTimerRef.current)
+  }, [])
+
   const handleMoveEnd = useCallback((): void => {
     const viewport = getViewport()
     setViewport(viewport)
+    // Debounce 500ms before restoring shader quality
+    if (canvasInteractTimerRef.current) clearTimeout(canvasInteractTimerRef.current)
+    canvasInteractTimerRef.current = setTimeout(() => {
+      useUIStore.getState().setCanvasInteracting(false)
+    }, 500)
   }, [getViewport, setViewport])
 
   // Edge double-click handler - show connection info or delete option
@@ -1200,45 +1313,39 @@ function Canvas(): JSX.Element {
     [screenToFlowPosition]
   )
 
-  // Calculate closest handle when hovering over a node during connection
-  const calculateClosestHandle = useCallback(
-    (targetNodeId: string, clientX: number, clientY: number): { handleId: string; position: { x: number; y: number } } | null => {
+  // Determine closest side when hovering over a node during connection.
+  // Returns the side name (top/bottom/left/right) — React Flow's native hit-test
+  // governs actual handle snapping for spread handles.
+  const calculateClosestSide = useCallback(
+    (targetNodeId: string, clientX: number, clientY: number): { side: string } | null => {
       const targetNode = getInternalNode(targetNodeId)
       if (!targetNode) return null
 
-      // Get flow position of cursor
       const cursorPos = screenToFlowPosition({ x: clientX, y: clientY })
-
-      // Node bounds in flow coordinates
       const nodeX = targetNode.internals.positionAbsolute.x
       const nodeY = targetNode.internals.positionAbsolute.y
       const nodeWidth = targetNode.measured?.width || 300
       const nodeHeight = targetNode.measured?.height || 150
 
-      // Handle positions (center of each side)
-      const handles: Array<{ id: string; x: number; y: number }> = [
-        { id: 'top-target', x: nodeX + nodeWidth / 2, y: nodeY },
-        { id: 'bottom-target', x: nodeX + nodeWidth / 2, y: nodeY + nodeHeight },
-        { id: 'left-target', x: nodeX, y: nodeY + nodeHeight / 2 },
-        { id: 'right-target', x: nodeX + nodeWidth, y: nodeY + nodeHeight / 2 }
+      const sides: Array<{ side: string; x: number; y: number }> = [
+        { side: 'top', x: nodeX + nodeWidth / 2, y: nodeY },
+        { side: 'bottom', x: nodeX + nodeWidth / 2, y: nodeY + nodeHeight },
+        { side: 'left', x: nodeX, y: nodeY + nodeHeight / 2 },
+        { side: 'right', x: nodeX + nodeWidth, y: nodeY + nodeHeight / 2 }
       ]
 
-      // Find closest handle
-      let closestHandle: { id: string; x: number; y: number } = handles[0]!
+      let closestSide = sides[0]!
       let minDistance = Infinity
-
-      for (const handle of handles) {
-        const dx = cursorPos.x - handle.x
-        const dy = cursorPos.y - handle.y
-        const distance = Math.sqrt(dx * dx + dy * dy)
-
+      for (const s of sides) {
+        const dx = cursorPos.x - s.x
+        const dy = cursorPos.y - s.y
+        const distance = dx * dx + dy * dy
         if (distance < minDistance) {
           minDistance = distance
-          closestHandle = handle
+          closestSide = s
         }
       }
-
-      return { handleId: closestHandle.id, position: { x: closestHandle.x, y: closestHandle.y } }
+      return { side: closestSide.side }
     },
     [getInternalNode, screenToFlowPosition]
   )
@@ -1269,7 +1376,7 @@ function Canvas(): JSX.Element {
       }
 
       if (targetNodeId) {
-        const result = calculateClosestHandle(targetNodeId, e.clientX, e.clientY)
+        const result = calculateClosestSide(targetNodeId, e.clientX, e.clientY)
         if (result) {
           // Get the target node's color
           const targetNode = nodesRef.current.find(n => n.id === targetNodeId)
@@ -1280,7 +1387,8 @@ function Canvas(): JSX.Element {
             themeSettings.nodeColors[nodeType as keyof typeof themeSettings.nodeColors] ||
             '#6366f1'
 
-          const target = { nodeId: targetNodeId, handleId: result.handleId, nodeColor }
+          // Use side for visual highlighting; RF's native hit-test handles actual handle snapping
+          const target = { nodeId: targetNodeId, handleId: `${result.side}-target`, nodeColor }
           connectionTargetRef.current = target
           setConnectionTarget(target)
         }
@@ -1292,7 +1400,7 @@ function Canvas(): JSX.Element {
 
     window.addEventListener('mousemove', handleMouseMove)
     return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [pendingConnection, calculateClosestHandle, themeSettings.nodeColors])
+  }, [pendingConnection, calculateClosestSide, themeSettings.nodeColors])
 
   // Apply visual feedback class to target node's handle
   useEffect(() => {
@@ -1333,15 +1441,8 @@ function Canvas(): JSX.Element {
       // If Ctrl was held, don't auto-connect - let quick-connect popup handle it
       if (lastConnectionCtrlRef.current) return
 
-      // If we have a calculated target, use that handle
-      if (connectionTarget && connection.target === connectionTarget.nodeId) {
-        onConnect({
-          ...connection,
-          targetHandle: connectionTarget.handleId
-        })
-      } else {
-        onConnect(connection)
-      }
+      // Let React Flow's native hit-test provide the correct handle (including spread handles)
+      onConnect(connection)
 
       // Visual + audio feedback for successful connection
       playSound('connect')
@@ -1350,7 +1451,7 @@ function Canvas(): JSX.Element {
         animateEdgeCreation(edgeId)
       }
     },
-    [onConnect, connectionTarget, animateEdgeCreation]
+    [onConnect, animateEdgeCreation]
   )
 
   // Node drag start handler - capture initial positions for undo/redo
@@ -1361,6 +1462,7 @@ function Canvas(): JSX.Element {
       startNodeDrag(nodesToTrack)
       snapResultRef.current = null
       setIsDraggingNode(true)  // Pause physics during drag
+      useUIStore.getState().setCanvasInteracting(true) // Throttle shader quality during drag
     },
     [selectedNodeIds, startNodeDrag]
   )
@@ -1437,6 +1539,33 @@ function Canvas(): JSX.Element {
       // Commit drag to history for undo/redo
       const nodesToCommit = selectedNodeIds.includes(node.id) ? selectedNodeIds : [node.id]
       commitNodeDrag(nodesToCommit)
+
+      // Recalculate edge handles via spread distribution for all edges connected to dragged nodes
+      try {
+        const draggedIds = new Set(nodesToCommit)
+        const affectedEdges = useWorkspaceStore.getState().edges.filter(
+          (e) => draggedIds.has(e.source) || draggedIds.has(e.target)
+        )
+
+        // Build nodePositions from FRESH store state (not stale closed-over `nodes`)
+        const nodePositions = new Map<string, { x: number; y: number; width: number; height: number }>()
+        for (const n of useWorkspaceStore.getState().nodes) {
+          nodePositions.set(n.id, {
+            x: n.position.x, y: n.position.y,
+            width: n.measured?.width ?? (n.width as number) ?? 280,
+            height: n.measured?.height ?? (n.height as number) ?? 140
+          })
+        }
+
+        const spreadAssignments = assignSpreadHandles(affectedEdges, nodePositions)
+        const handleUpdates: Array<{ edgeId: string; sourceHandle: string; targetHandle: string }> = []
+        for (const [edgeId, handles] of spreadAssignments) {
+          handleUpdates.push({ edgeId, sourceHandle: handles.sourceHandle, targetHandle: handles.targetHandle })
+        }
+        if (handleUpdates.length > 0) {
+          useWorkspaceStore.getState().updateEdgeHandlesBatch(handleUpdates)
+        }
+      } catch { /* edge handle recalc non-critical */ }
 
       // Don't allow projects to be nested
       if (node.type === 'project') return
@@ -1527,6 +1656,7 @@ function Canvas(): JSX.Element {
 
       // Resume physics after drag
       setIsDraggingNode(false)
+      useUIStore.getState().setCanvasInteracting(false) // Restore shader quality
     },
     [addNodeToProject, removeNodeFromProject, selectedNodeIds, commitNodeDrag, onNodesChange, updateNode, spatialRegions, autoGrowRegion]
   )
@@ -1800,6 +1930,54 @@ function Canvas(): JSX.Element {
     [screenToFlowPosition, openContextMenu, selectedNodeIds]
   )
 
+  // Long-press handler for touch devices — mirrors handleContextMenu logic
+  const handleLongPress = useCallback(
+    (position: { clientX: number; clientY: number }, target: HTMLElement) => {
+      const nodeElement = target.closest('[data-id]')
+      const edgeElement = target.closest('.react-flow__edge')
+
+      const screenPosition = { x: position.clientX, y: position.clientY }
+
+      if (nodeElement) {
+        const nodeId = nodeElement.getAttribute('data-id')
+        if (nodeId) {
+          if (selectedNodeIds.length > 1 && selectedNodeIds.includes(nodeId)) {
+            openContextMenu(screenPosition, { type: 'nodes', nodeIds: selectedNodeIds })
+          } else {
+            openContextMenu(screenPosition, { type: 'node', nodeId })
+          }
+          return
+        }
+      }
+
+      if (edgeElement) {
+        const edgeId = edgeElement.getAttribute('data-testid')?.replace('rf__edge-', '')
+        if (edgeId) {
+          const flowPosition = screenToFlowPosition({
+            x: position.clientX,
+            y: position.clientY
+          })
+          openContextMenu(screenPosition, { type: 'edge', edgeId, position: flowPosition })
+          return
+        }
+      }
+
+      // Canvas long-press
+      const flowPosition = screenToFlowPosition({
+        x: position.clientX,
+        y: position.clientY
+      })
+      openContextMenu(screenPosition, { type: 'canvas', position: flowPosition })
+    },
+    [screenToFlowPosition, openContextMenu, selectedNodeIds]
+  )
+
+  const longPressHandlers = useLongPress(handleLongPress, {
+    delay: 500,
+    moveThreshold: 10,
+    enabled: isTouch && !demoMode
+  })
+
   // Quick-connect: create node + edge when popup option is selected
   const handleQuickConnectSelect = useCallback(
     (type: NodeData['type']) => {
@@ -1832,23 +2010,22 @@ function Canvas(): JSX.Element {
   useEffect(() => {
     if (!quickConnectPopup) return
 
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') setQuickConnectPopup(null)
-    }
+    const closePopup = () => setQuickConnectPopup(null)
+    escapeManager.register('popover-quick-connect', EscapePriority.POPOVER, closePopup)
+
     const handleMouseDown = (e: MouseEvent): void => {
       // Don't close if clicking inside the popup
       if (quickConnectRef.current?.contains(e.target as HTMLElement)) return
       setQuickConnectPopup(null)
     }
 
-    window.addEventListener('keydown', handleKeyDown)
     // Delay adding mousedown to avoid closing on the same mouseup that opened it
     const timer = setTimeout(() => {
       window.addEventListener('mousedown', handleMouseDown)
     }, 100)
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown)
+      escapeManager.unregister('popover-quick-connect')
       window.removeEventListener('mousedown', handleMouseDown)
       clearTimeout(timer)
     }
@@ -1881,19 +2058,8 @@ function Canvas(): JSX.Element {
         }
       }
 
-      // Escape: collapse expansion > exit focus mode > clear clipboard > clear selection (progressive exit)
-      if (e.key === 'Escape') {
-        if (inPlaceExpandedNodeId) {
-          collapseInPlaceExpansion()
-        } else if (focusModeNodeId) {
-          setFocusModeNode(null)
-          sciFiToast('Focus mode exited', 'info', 1500)
-        } else if (clipboardState) {
-          clearClipboard()
-        } else {
-          clearSelection()
-        }
-      }
+      // Escape is now handled by EscapeManager (canvas-level progressive exit)
+      // See the separate useEffect below that registers at CANVAS priority.
 
       // --- File shortcuts ---
       if (m('undo')) {
@@ -1918,14 +2084,9 @@ function Canvas(): JSX.Element {
         e.preventDefault()
         cutNodes(selectedNodeIds)
       }
-      if (m('paste') && !isInputFocused) {
-        e.preventDefault()
-        const viewportCenter = screenToFlowPosition({
-          x: window.innerWidth / 2,
-          y: window.innerHeight / 2
-        })
-        pasteNodes(viewportCenter)
-      }
+      // Paste is handled by the 'paste' event listener below (handlePaste),
+      // NOT here in keydown. This allows ClipboardEvent.clipboardData access
+      // for image detection. See Task 1, Step 2.
       if (m('save')) {
         e.preventDefault()
         handleSave()
@@ -1986,6 +2147,70 @@ function Canvas(): JSX.Element {
           sciFiToast(`Tidied ${changes.length} nodes`, 'success', 1500)
         }
       }
+      // Fit to Content (Shift+F) — resize selected nodes to fit their content
+      if (m('fitToContent') && !isInputFocused && selectedNodeIds.length > 0) {
+        e.preventDefault()
+        const currentNodes = nodesRef.current
+        const items: Array<{ nodeId: string; width: number; height: number }> = []
+
+        for (const nodeId of selectedNodeIds) {
+          const node = currentNodes.find((n) => n.id === nodeId)
+          if (!node) continue
+          const nodeData = node.data as Record<string, unknown>
+          if ((nodeData as { collapsed?: boolean }).collapsed) continue
+
+          const nodeType = nodeData.type as string
+          let headerH = 40
+          let footerH = 36
+          let title: string = (nodeData.title as string) || ''
+          let content: string = ''
+
+          switch (nodeType) {
+            case 'note':
+              headerH = 44
+              content = (nodeData.content as string) || ''
+              break
+            case 'task':
+              content = (nodeData.description as string) || ''
+              break
+            case 'text':
+              headerH = 0
+              footerH = 0
+              title = ''
+              content = (nodeData.content as string) || ''
+              break
+            case 'artifact': {
+              const files = nodeData.files as Array<{ id: string; content: string }> | undefined
+              const activeFileId = nodeData.activeFileId as string | undefined
+              if (files && files.length > 0) {
+                const activeFile = activeFileId ? files.find((f) => f.id === activeFileId) : files[0]
+                content = activeFile?.content || (nodeData.content as string) || ''
+              } else {
+                content = (nodeData.content as string) || ''
+              }
+              break
+            }
+            default:
+              content = (nodeData.description as string) || (nodeData.content as string) || ''
+              break
+          }
+
+          const currentW = node.measured?.width ?? (node.width as number) ?? 280
+          const { width, height } = calculateAutoFitDimensions(title, content, headerH, footerH, currentW)
+          items.push({
+            nodeId,
+            width: Math.max(AUTO_FIT_CONSTRAINTS.minWidth, width),
+            height: Math.max(AUTO_FIT_CONSTRAINTS.minHeight, height)
+          })
+        }
+
+        if (items.length > 0) {
+          useWorkspaceStore.getState().batchFitNodesToContent(items)
+          items.forEach((item) => updateNodeInternals(item.nodeId))
+          const msg = items.length === 1 ? 'Fitted to content' : `Fitted ${items.length} nodes to content`
+          sciFiToast(msg, 'success', 1500)
+        }
+      }
       // Edge Grammar Legend (Ctrl + Shift + E)
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'E' && !isInputFocused) {
         e.preventDefault()
@@ -2003,6 +2228,22 @@ function Canvas(): JSX.Element {
         e.preventDefault()
         const allNodeIds = nodesRef.current.map((n) => n.id)
         setSelectedNodes(allNodeIds)
+      }
+
+      // --- Zoom shortcuts (Ctrl+0/+/-) — always fire, even when node fills viewport ---
+      if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+        e.preventDefault()
+        fitView({ padding: 0.15, duration: 300, minZoom: 0.2 })
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === '-' || e.key === '_')) {
+        e.preventDefault()
+        const currentZoom = viewportRef.current.zoom
+        zoomTo(Math.max(0.1, currentZoom * 0.75), { duration: 200 })
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
+        e.preventDefault()
+        const currentZoom = viewportRef.current.zoom
+        zoomTo(Math.min(4, currentZoom * 1.33), { duration: 200 })
       }
 
       // --- View shortcuts ---
@@ -2360,8 +2601,109 @@ function Canvas(): JSX.Element {
       }
     }
 
+    const handlePaste = async (e: ClipboardEvent): Promise<void> => {
+      // Demo mode: suppress all interactions
+      if (demoMode) return
+
+      // Don't intercept paste in input fields — let native behavior work
+      const activeElement = document.activeElement
+      const isInputFocused =
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement?.getAttribute('contenteditable') === 'true'
+      if (isInputFocused) return
+
+      // Check for image files in the clipboard
+      const files = e.clipboardData?.files
+      if (files && files.length > 0) {
+        // Filter to image files only
+        const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'))
+        if (imageFiles.length > 0) {
+          e.preventDefault()
+
+          const viewportCenter = screenToFlowPosition({
+            x: window.innerWidth / 2,
+            y: window.innerHeight / 2
+          })
+
+          let successCount = 0
+          let errorCount = 0
+          for (let i = 0; i < imageFiles.length; i++) {
+            const file = imageFiles[i]!
+            const offset = { x: i * 340, y: i * 20 }
+
+            // Enforce same 10MB limit as file drop
+            if (file.size > 10 * 1024 * 1024) {
+              toast.error(`Image too large (${(file.size / (1024 * 1024)).toFixed(1)}MB, max 10MB)`)
+              errorCount++
+              continue
+            }
+
+            try {
+              const content = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader()
+                reader.onload = () => resolve(reader.result as string)
+                reader.onerror = reject
+                reader.readAsDataURL(file)
+              })
+
+              // Derive a filename — clipboard images typically have no name
+              const ext = file.type.split('/')[1] || 'png'
+              const name = file.name && file.name !== 'image.png'
+                ? file.name
+                : `pasted-image-${Date.now()}.${ext}`
+
+              const nodeId = createArtifactFromFile(
+                { name, content, isBase64: true },
+                { x: viewportCenter.x + offset.x, y: viewportCenter.y + offset.y }
+              )
+              successCount++
+
+              // Apply creation highlight animation (same as file drop)
+              requestAnimationFrame(() => {
+                const nodeEl = document.querySelector(`[data-id="${nodeId}"]`)
+                if (nodeEl) {
+                  nodeEl.classList.add('node-just-created')
+                  setTimeout(() => nodeEl.classList.remove('node-just-created'), 800)
+                }
+              })
+            } catch (error) {
+              console.error('Error reading pasted image:', error)
+              errorCount++
+            }
+          }
+
+          if (successCount > 0 && errorCount === 0) {
+            sciFiToast(
+              successCount === 1
+                ? 'Created artifact from pasted image'
+                : `Created ${successCount} artifacts from pasted images`,
+              'success'
+            )
+          } else if (successCount > 0 && errorCount > 0) {
+            sciFiToast(`Created ${successCount} artifact${successCount !== 1 ? 's' : ''}, ${errorCount} failed`, 'warning')
+          } else if (errorCount > 0) {
+            toast.error(`Failed to read pasted image${errorCount !== 1 ? 's' : ''}`)
+          }
+          return // Image handled — don't fall through to node paste
+        }
+      }
+
+      // No image in clipboard — fall through to internal node paste
+      e.preventDefault()
+      const viewportCenter = screenToFlowPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2
+      })
+      pasteNodes(viewportCenter)
+    }
+
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('paste', handlePaste)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('paste', handlePaste)
+    }
   }, [
     selectedNodeIds,
     selectedEdgeIds,
@@ -2375,6 +2717,8 @@ function Canvas(): JSX.Element {
     cutNodes,
     pasteNodes,
     screenToFlowPosition,
+    createArtifactFromFile,
+    demoMode,
     setSelectedNodes,
     handleSave,
     handleSaveAs,
@@ -2408,8 +2752,37 @@ function Canvas(): JSX.Element {
     keyboardOverrides,
     calmMode,
     toggleCalmMode,
-    onNodesChange
+    onNodesChange,
+    fitView,
+    zoomTo,
+    updateNodeInternals
   ])
+
+  // Canvas-level Escape: progressive exit (collapse > focus > clipboard > selection > zoom-out)
+  // Registered at CANVAS priority so modals/dialogs/popovers take precedence.
+  useEffect(() => {
+    const handleCanvasEscape = () => {
+      if (demoMode) return
+      if (inPlaceExpandedNodeId) {
+        collapseInPlaceExpansion()
+      } else if (focusModeNodeId) {
+        setFocusModeNode(null)
+        sciFiToast('Focus mode exited', 'info', 1500)
+      } else if (clipboardState) {
+        clearClipboard()
+      } else if (selectedNodeIds.length > 0 || selectedEdgeIds.length > 0) {
+        clearSelection()
+      } else {
+        // Last resort: if zoomed in far enough to be trapped, zoom out to fit
+        const currentZoom = viewportRef.current.zoom
+        if (currentZoom > 1.5) {
+          fitView({ padding: 0.15, duration: 300, minZoom: 0.35 })
+        }
+      }
+    }
+    escapeManager.register('canvas-progressive-exit', EscapePriority.CANVAS, handleCanvasEscape)
+    return () => escapeManager.unregister('canvas-progressive-exit')
+  }, [demoMode, inPlaceExpandedNodeId, collapseInPlaceExpansion, focusModeNodeId, setFocusModeNode, clipboardState, clearClipboard, clearSelection, selectedNodeIds, selectedEdgeIds, fitView])
 
   return (
     <div className="h-screen w-screen relative flex flex-col overflow-hidden">
@@ -2428,8 +2801,10 @@ function Canvas(): JSX.Element {
           Frontend integration has debugging issues (components not rendering).
           Deferred to v0.3.0. See docs/TODO-BRIDGE.md for details. */}
 
-      {/* Bridge Status Bar (Phase 1) */}
-      {/* <BridgeStatusBar /> */}
+      {/* Bridge Status Bar (Phase 1) — re-enabled for v0.3.0 */}
+      <InlineErrorBoundary name="BridgeStatusBar-canvas">
+        <BridgeStatusBar />
+      </InlineErrorBoundary>
 
       {/* Proposal Card (Phase 3) - shows when agent proposes changes */}
       {/* {activeProposal && activeProposal.status === 'pending' && (
@@ -2450,7 +2825,9 @@ function Canvas(): JSX.Element {
 
       {/* Main canvas area */}
       <div
+        ref={canvasContainerRef}
         className="flex-1 relative"
+        data-zoom-tier="full"
         onMouseMove={(e) => {
           // Track mouse position for InlinePrompt positioning
           mousePositionRef.current = { x: e.clientX, y: e.clientY }
@@ -2481,6 +2858,7 @@ function Canvas(): JSX.Element {
           </Suspense>
         )}
 
+        <ErrorBoundary componentName="Canvas">
         <ClickSpark>
         <ReactFlow
           className={`${semanticZoomClass} ${shiftDragState.isShiftHeld && !shiftDragState.isActive ? 'shift-drag-ready' : ''} ${shiftDragState.isActive ? 'shift-drag-active' : ''} ${focusModeNodeId ? 'focus-mode-active' : ''} ${contextVizActive ? 'context-viz-active' : ''} ${contextVizIsTerminal ? 'context-viz-terminal' : ''} ${inPlaceExpandedNodeId ? 'in-place-expansion-active' : ''} ${calmMode ? 'calm-mode-active' : ''}`}
@@ -2493,6 +2871,7 @@ function Canvas(): JSX.Element {
           onConnect={handleConnect}
           onConnectStart={handleConnectStart}
           onConnectEnd={handleConnectEnd}
+          onMoveStart={handleMoveStart}
           onMoveEnd={handleMoveEnd}
           onNodeDragStart={handleNodeDragStart}
           onNodeDrag={handleNodeDrag}
@@ -2503,6 +2882,7 @@ function Canvas(): JSX.Element {
           reconnectRadius={20}
           onPaneClick={handlePaneClick}
           onContextMenu={demoMode || isTouch ? undefined : handleContextMenu}
+          {...(isTouch && !demoMode ? longPressHandlers : {})}
           onSelectionChange={handleSelectionChange}
           onNodeClick={handleNodeClick}
           nodesConnectable={!demoMode}
@@ -2523,11 +2903,21 @@ function Canvas(): JSX.Element {
           selectionMode={isTouch ? SelectionMode.Full : SelectionMode.Partial}
           panOnDrag={isTouch ? [0] : [1, 2]}
           onViewportChange={(viewport) => {
+            const prevZoom = viewportRef.current.zoom
             viewportRef.current = viewport
             const newZoom = viewport.zoom
             if (Math.abs(newZoom - lastIndicatorZoomRef.current) > 0.01) {
               lastIndicatorZoomRef.current = newZoom
               setIndicatorZoom(newZoom)
+            }
+            // Zoom perf tier — only compute when zoom actually changed (not on pan)
+            if (newZoom !== prevZoom) {
+              const prevTier = useWorkspaceStore.getState().zoomPerfTier ?? 'full'
+              const newTier = computeZoomPerfTier(newZoom, prevTier)
+              if (newTier !== prevTier) {
+                useWorkspaceStore.setState({ zoomPerfTier: newTier })
+                canvasContainerRef.current?.setAttribute('data-zoom-tier', newTier)
+              }
             }
           }}
           selectNodesOnDrag={false}
@@ -2569,15 +2959,24 @@ function Canvas(): JSX.Element {
           />
         </Suspense>
         {/* Controls (zoom +/-) removed — DS v3 chrome cleanup */}
-        {!isMobile && <EmptyCanvasHint />}
+        <EmptyCanvasHint />
         {!isMobile && minimapVisible && <CollapsibleMinimap />}
         {!isMobile && <ZoomIndicator zoom={indicatorZoom} />}
+        {indicatorZoom > 1.5 && (
+          <button
+            className="fixed bottom-4 right-4 z-50 px-2 py-1 rounded bg-[var(--surface-panel)]/80 text-xs backdrop-blur hover:bg-[var(--surface-panel)]"
+            onClick={() => fitView({ padding: 0.15, duration: 300, minZoom: 0.35 })}
+            title="Fit all nodes (Ctrl+0)"
+          >
+            Fit View
+          </button>
+        )}
         <CanvasDistrictOverlay />
         <SpatialRegionOverlay />
         <ExecutionStatusOverlay />
         <ContextScopeBadge />
         <NodeHoverPreview />
-        <SessionReEntryPrompt />
+        {/* SessionReEntryPrompt disabled — removed per Stefan's request */}
         {showCanvasTOC && <CanvasTableOfContents onClose={() => setShowCanvasTOC(false)} />}
         <CognitiveLoadMeter />
         {!isMobile && showEdgeLegend && <EdgeGrammarLegend onClose={() => setShowEdgeLegend(false)} />}
@@ -2625,6 +3024,7 @@ function Canvas(): JSX.Element {
 
         </ReactFlow>
         </ClickSpark>
+        </ErrorBoundary>
 
         {/* Shift+drag edge creation preview line - positioned outside ReactFlow to avoid internal transforms */}
         {shiftDragState.isActive && shiftDragState.sourcePosition && shiftDragState.cursorPosition && (() => {
@@ -2670,6 +3070,9 @@ function Canvas(): JSX.Element {
 
         {/* Multiplayer: Session expired modal */}
         <SessionExpiredModal onClose={() => { /* Modal auto-hides when status changes */ }} />
+
+        {/* PFD Phase 6B: L0 cluster summary bubbles */}
+        <ClusterOverlay />
 
         {/* PFD Phase 5B: Z-key zoom overlay */}
         <ZoomOverlay />
@@ -2749,6 +3152,9 @@ function Canvas(): JSX.Element {
         {/* Clipboard indicator - shows when nodes are cut/copied */}
         <ClipboardIndicator />
 
+        {/* Offline status indicator */}
+        <OfflineIndicatorCompact />
+
         {/* Spatial extraction system - floating panel and drag preview */}
         <ExtractionPanel />
         <ExtractionDragPreview />
@@ -2760,7 +3166,7 @@ function Canvas(): JSX.Element {
             style={{ left: '16px' }}
           >
             <FilterViewDropdown />
-            {!demoMode && <SuggestedAutomations />}
+            {/* SuggestedAutomations disabled — too intrusive during normal use */}
           </div>
         )}
 

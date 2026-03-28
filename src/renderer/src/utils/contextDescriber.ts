@@ -26,17 +26,20 @@ export interface ContextDescription {
 }
 
 /**
- * Generate human-readable context descriptions for the AI Editor
+ * Generate human-readable context descriptions for the AI Editor.
+ * Accepts an optional pre-computed EnhancedContextAnalysis to avoid
+ * redundant computation when the caller has already built it.
  */
 export function describeContext(
   nodes: Node<NodeData>[],
-  edges: Edge<EdgeData>[]
+  edges: Edge<EdgeData>[],
+  precomputed?: EnhancedContextAnalysis
 ): ContextDescription {
   if (nodes.length === 0) {
     return { spatial: '', edges: '', suggestions: [] }
   }
 
-  const analysis = buildEnhancedContext(nodes, edges)
+  const analysis = precomputed ?? buildEnhancedContext(nodes, edges)
 
   return {
     spatial: describeSpatialLayout(nodes, analysis),

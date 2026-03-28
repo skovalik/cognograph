@@ -2,7 +2,8 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import { memo, useMemo, useCallback, useState, useEffect, useRef } from 'react'
-import { Handle, Position, NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
+import { NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
+import { SpreadHandles } from './SpreadHandles'
 import { Link2, Maximize2 } from 'lucide-react'
 import { sciFiToast } from '../ui/SciFiToast'
 import type { TaskNodeData } from '@shared/types'
@@ -21,7 +22,7 @@ import { CollaborativeEditor } from '../CollaborativeEditor'
 import { SelectionIndicator } from '../Presence/SelectionIndicators'
 import { useNodeRemoteSelectors } from '../../hooks/useOtherUserSelections'
 import { useWorkspaceStore as useWsStoreForSync } from '../../stores/workspaceStore'
-import { measureTextWidth } from '../../utils/nodeUtils'
+import { measureTextWidth, calculateAutoFitDimensions } from '../../utils/nodeUtils'
 import { ExtractionBadge, ExtractionControls } from '../extractions'
 import { AutoFitButton } from './AutoFitButton'
 import { FoldBadge } from './FoldBadge'
@@ -40,8 +41,8 @@ interface NodeStyleWithCustomProps extends React.CSSProperties {
 // Default dimensions
 const DEFAULT_WIDTH = 260
 const DEFAULT_HEIGHT = 140
-const MIN_WIDTH = 200
-const MIN_HEIGHT = 100
+const MIN_WIDTH = 300
+const MIN_HEIGHT = 200
 const MAX_HEIGHT = 600
 
 /**
@@ -205,18 +206,35 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
     }
   }, [nodeData.title, id, effectiveHeight, updateNodeDimensions, updateNodeInternals, startNodeResize, commitNodeResize])
 
-  // Merge top-level status/priority/complexity into properties for unified badge rendering
+  // Merge top-level priority/complexity into properties for unified badge rendering
+  // NOTE: status is NOT merged here — it's already rendered by TaskStatusBadge in the header
   const mergedProperties = useMemo(() => ({
     ...nodeData.properties,
-    status: nodeData.status,
     ...(nodeData.priority && { priority: nodeData.priority }),
     ...(nodeData.complexity && { complexity: nodeData.complexity })
-  }), [nodeData.properties, nodeData.status, nodeData.priority, nodeData.complexity])
+  }), [nodeData.properties, nodeData.priority, nodeData.complexity])
 
   // Handle property cycling from badges
   const handlePropertyChange = useCallback((propertyId: string, newValue: string) => {
     updateNode(id, { [propertyId]: newValue })
   }, [id, updateNode])
+
+  // Inline fit-to-content button handler
+  const handleAutoFitInline = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    const { width, height } = calculateAutoFitDimensions(
+      nodeData.title || '',
+      nodeData.description || '',
+      40, // task header height
+      36  // footer height
+    )
+    const finalW = Math.max(300, width)
+    const finalH = Math.max(200, height)
+    startNodeResize(id)
+    updateNodeDimensions(id, finalW, finalH)
+    updateNodeInternals(id)
+    commitNodeResize(id)
+  }, [id, nodeData.title, nodeData.description, startNodeResize, updateNodeDimensions, updateNodeInternals, commitNodeResize])
 
   // Content editing and overflow state
   const [isEditing, setIsEditing] = useState(false)
@@ -354,18 +372,7 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
           L1+ (far and above): Handles on all four sides
           Suppressed at L0 — no connection affordance at navigation level
           ================================================================ */}
-      {!isUltraFar && (
-        <>
-          <Handle type="target" position={Position.Top} id="top-target" />
-          <Handle type="source" position={Position.Top} id="top-source" />
-          <Handle type="target" position={Position.Bottom} id="bottom-target" />
-          <Handle type="source" position={Position.Bottom} id="bottom-source" />
-          <Handle type="target" position={Position.Left} id="left-target" />
-          <Handle type="source" position={Position.Left} id="left-source" />
-          <Handle type="target" position={Position.Right} id="right-target" />
-          <Handle type="source" position={Position.Right} id="right-source" />
-        </>
-      )}
+      <SpreadHandles hidden={isUltraFar} />
 
       {/* Numbered bookmark badge — visible at L1+ (navigation aid) */}
       {!isUltraFar && numberedBookmark && (
@@ -499,7 +506,7 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
                 enableLists={true}
                 enableFormatting={true}
                 enableHeadings={false}
-                showToolbar="on-focus"
+                showToolbar={nodeWidth < 280 ? 'off' : 'on-focus'}
                 minHeight={30}
               />
             ) : (
@@ -510,7 +517,7 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
                 enableLists={true}
                 enableFormatting={true}
                 enableHeadings={false}
-                showToolbar="on-focus"
+                showToolbar={nodeWidth < 280 ? 'off' : 'on-focus'}
                 minHeight={30}
                 editOnDoubleClick={true}
                 onEditingChange={setIsEditing}
@@ -531,6 +538,15 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
       {showFooter && showContent && (
         <div className="cognograph-node__footer">
           <NodePropertyControls nodeId={id} nodeType="task" data={data as Record<string, unknown>} />
+          <button
+            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] hover:bg-white/10 transition-colors"
+            style={{ color: 'var(--node-text-muted)' }}
+            title="Fit node to content"
+            onClick={handleAutoFitInline}
+          >
+            <Maximize2 className="w-2.5 h-2.5" />
+            <span>Fit</span>
+          </button>
           <PropertyBadges
             properties={mergedProperties}
             definitions={propertyDefinitions}
@@ -552,16 +568,7 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
       {/* ================================================================
           L4 (ultra-close): Artboard expansion hint
           ================================================================ */}
-      {showEmbeddedContent && (
-        <div
-          className="flex items-center justify-center gap-1 py-1 text-[10px] cursor-pointer rounded-b-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-          style={{ color: 'var(--node-text-muted)' }}
-          title="Expand to artboard (coming soon)"
-        >
-          <Maximize2 className="w-3 h-3" />
-          <span>Expand</span>
-        </div>
-      )}
+      {/* Artboard expansion removed — task nodes don't have artboard mode */}
 
       {/* Socket bars showing connections — L1+ */}
       {!isUltraFar && (

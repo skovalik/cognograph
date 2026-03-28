@@ -3,6 +3,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Renderer, Triangle, Program, Mesh } from 'ogl';
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
 
 type PrismProps = {
   height?: number;
@@ -20,6 +21,8 @@ type PrismProps = {
   bloom?: number;
   suspendWhenOffscreen?: boolean;
   timeScale?: number;
+  qualityRef?: React.RefObject<AdaptiveQualityState>;
+  reportFrame?: () => void;
 };
 
 const Prism: React.FC<PrismProps> = ({
@@ -37,7 +40,9 @@ const Prism: React.FC<PrismProps> = ({
   inertia = 0.05,
   bloom = 1,
   suspendWhenOffscreen = false,
-  timeScale = 0.5
+  timeScale = 0.5,
+  qualityRef,
+  reportFrame: reportFrameFn,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -64,7 +69,7 @@ const Prism: React.FC<PrismProps> = ({
     const HOVSTR = Math.max(0, hoverStrength || 1);
     const INERT = Math.max(0, Math.min(1, inertia || 0.12));
 
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = 1.0;
     const renderer = new Renderer({
       dpr,
       alpha: transparent,
@@ -350,7 +355,35 @@ const Prism: React.FC<PrismProps> = ({
       program.uniforms.uUseBaseWobble.value = 1;
     }
 
+    let frameCount = 0;
+    let currentScale = -1;
     const render = (t: number) => {
+      if (qualityRef?.current && !qualityRef.current.shouldRender) {
+        raf = requestAnimationFrame(render);
+        return;
+      }
+      if (reportFrameFn) reportFrameFn();
+      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) {
+        raf = requestAnimationFrame(render);
+        return;
+      }
+      if (qualityRef?.current) {
+        const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap;
+        if (scale !== currentScale) {
+          currentScale = scale;
+          const w = container.clientWidth || 1;
+          const h = container.clientHeight || 1;
+          renderer.setSize(w * scale, h * scale);
+          // OGL setSize also sets canvas CSS dimensions — force back to 100% so
+          // low-res content stretches to fill container (CSS upscaling, not shrinking)
+          const c = renderer.gl.canvas as HTMLCanvasElement;
+          c.style.width = '100%';
+          c.style.height = '100%';
+          iResBuf[0] = gl.drawingBufferWidth;
+          iResBuf[1] = gl.drawingBufferHeight;
+          program.uniforms.uPxScale.value = 1 / ((gl.drawingBufferHeight || 1) * 0.1 * SCALE);
+        }
+      }
       const time = (t - t0) * 0.001;
       program.uniforms.iTime.value = time;
 

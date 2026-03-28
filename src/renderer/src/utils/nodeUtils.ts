@@ -97,6 +97,9 @@ export const AUTO_FIT_CONSTRAINTS = {
   padding: 32 // 16px on each side
 }
 
+export const TYPE_BADGE_H = 20
+export const MIN_BODY_H = 48
+
 /**
  * Measures the dimensions needed to fit content within a node.
  * Uses DOM measurement for accurate text sizing.
@@ -147,15 +150,18 @@ export function measureContentDimensions(
  * @param content - The node's HTML content (optional)
  * @param headerHeight - Height of header section (default: 40px)
  * @param footerHeight - Height of footer section (default: 36px)
+ * @param nodeWidth - Optional node width to constrain content measurement
  * @returns The ideal width and height for the node
  */
 export function calculateAutoFitDimensions(
   title: string,
   content?: string,
   headerHeight: number = 40,
-  footerHeight: number = 36
+  footerHeight: number = 36,
+  nodeWidth?: number
 ): { width: number; height: number } {
   const constraints = AUTO_FIT_CONSTRAINTS
+  const effectiveWidth = Math.min(constraints.maxWidth, nodeWidth ?? constraints.maxWidth)
 
   // Measure title width
   const titleWidth = measureTextWidth(title, '600 14px Inter, sans-serif')
@@ -173,7 +179,7 @@ export function calculateAutoFitDimensions(
     if (plainContent.length > 0) {
       // Estimate content dimensions
       // Assume ~7.5px per character at 14px font size
-      const charsPerLine = Math.floor((constraints.maxWidth - constraints.padding) / 7.5)
+      const charsPerLine = Math.floor((effectiveWidth - constraints.padding) / 7.5)
       const lineCount = Math.ceil(plainContent.length / charsPerLine)
       const lineHeight = 20 // Approximate line height
 
@@ -183,7 +189,7 @@ export function calculateAutoFitDimensions(
 
       contentHeight = effectiveLines * lineHeight
       contentWidth = Math.min(
-        constraints.maxWidth,
+        effectiveWidth,
         Math.ceil(plainContent.length * 7.5) + constraints.padding
       )
     }
@@ -199,7 +205,7 @@ export function calculateAutoFitDimensions(
     constraints.minHeight,
     Math.min(
       constraints.maxHeight,
-      headerHeight + contentHeight + footerHeight + constraints.padding
+      TYPE_BADGE_H + headerHeight + Math.max(contentHeight, MIN_BODY_H) + footerHeight + constraints.padding
     )
   )
 

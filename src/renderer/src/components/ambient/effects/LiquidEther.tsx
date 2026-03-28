@@ -3,6 +3,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
 
 export interface LiquidEtherProps {
   mouseForce?: number;
@@ -25,6 +26,8 @@ export interface LiquidEtherProps {
   autoResumeDelay?: number;
   autoRampDuration?: number;
   isDark?: boolean;
+  qualityRef?: React.RefObject<AdaptiveQualityState>;
+  reportFrame?: () => void;
 }
 
 interface SimOptions {
@@ -78,7 +81,9 @@ export default function LiquidEther({
   takeoverDuration = 0.25,
   autoResumeDelay = 1000,
   autoRampDuration = 0.6,
-  isDark = true
+  isDark = true,
+  qualityRef,
+  reportFrame: reportFrameFn,
 }: LiquidEtherProps): React.ReactElement {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const webglRef = useRef<LiquidEtherWebGL | null>(null);
@@ -1060,6 +1065,11 @@ export default function LiquidEther({
       }
       loop() {
         if (!this.running) return;
+        if (qualityRef?.current && !qualityRef.current.shouldRender) {
+          rafRef.current = requestAnimationFrame(this._loop);
+          return;
+        }
+        if (reportFrameFn) reportFrameFn();
         this.render();
         rafRef.current = requestAnimationFrame(this._loop);
       }
@@ -1120,7 +1130,9 @@ export default function LiquidEther({
         iterations_poisson: iterationsPoisson,
         dt,
         BFECC,
-        resolution,
+        resolution: qualityRef?.current
+          ? resolution * qualityRef.current.resolutionScale
+          : resolution,
         isBounce
       });
       if (resolution !== prevRes) sim.resize();

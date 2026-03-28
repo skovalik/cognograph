@@ -1033,12 +1033,16 @@ function formatNodeForOutput(node: WorkspaceNode): Record<string, unknown> {
       if (data.description) {
         output.description = truncate(data.description as string, 200)
       }
+      if (data.folderPath) output.folderPath = data.folderPath
+      if (data.fileFilter) output.fileFilter = data.fileFilter
       break
     case 'artifact':
       output.contentType = data.contentType
       if (data.content) {
         output.contentPreview = truncate(data.content as string, 200)
       }
+      if (data.folderPath) output.folderPath = data.folderPath
+      if (data.fileFilter) output.fileFilter = data.fileFilter
       break
     case 'orchestrator':
       output.strategy = data.strategy

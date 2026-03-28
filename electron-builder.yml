@@ -35,6 +35,12 @@ files:
 # Pack into ASAR archive for faster loading and path length mitigation on Windows
 asar: true
 
+# MCP CLI binary — placed outside ASAR so Node.js can spawn it as a child process
+# Claude Code reads .mcp.json and launches this binary via stdio transport
+extraResources:
+  - from: "dist/cognograph-mcp.cjs"
+    to: "mcp/cognograph-mcp.cjs"
+
 # node-pty is a native module that must be unpacked from the ASAR archive
 # so that its .node bindings can be loaded by the OS at runtime.
 asarUnpack:

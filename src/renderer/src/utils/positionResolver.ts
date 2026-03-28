@@ -403,6 +403,17 @@ export function calculateOptimalHandles(
   const dx = targetCenterX - sourceCenterX
   const dy = targetCenterY - sourceCenterY
 
+  // Near-diagonal: only override for genuinely diagonal connections (±25% of true 45°)
+  const ratio = Math.abs(dy) / (Math.abs(dx) + 1)
+  if (ratio > 0.75 && ratio < 1.33 && Math.abs(dx) >= Math.abs(dy)) {
+    // Near-diagonal AND more horizontal — use left/right handles
+    if (dx > 0) {
+      return { sourceHandle: 'right-source', targetHandle: 'left-target' }
+    } else {
+      return { sourceHandle: 'left-source', targetHandle: 'right-target' }
+    }
+  }
+
   // Determine primary direction and select handles accordingly
   if (Math.abs(dy) > Math.abs(dx)) {
     // Vertical arrangement
@@ -425,30 +436,129 @@ export function calculateOptimalHandles(
   }
 }
 
+// Must match SpreadHandles.tsx
+const SPREAD_POSITIONS = [15, 35, 65, 85]
+
+const SLOT_TABLES: Record<number, (number | 'c')[]> = {
+  1: ['c'],
+  2: [1, 4],
+  3: [1, 'c', 4],
+  4: [1, 2, 3, 4],
+  5: [1, 2, 'c', 3, 4],
+}
+
+/**
+ * Assign spread handles to edges based on spatial distribution.
+ * Groups edges by node+side+type, sorts by far-end position,
+ * and assigns slot indices so edges fan out instead of stacking.
+ */
+export function assignSpreadHandles(
+  edges: Array<{ id: string; source: string; target: string; sourceHandle?: string | null; targetHandle?: string | null; data?: Record<string, unknown> }>,
+  nodePositions: Map<string, { x: number; y: number; width: number; height: number }>
+): Map<string, { sourceHandle: string; targetHandle: string }> {
+  const result = new Map<string, { sourceHandle: string; targetHandle: string }>()
+
+  // Step 1: Calculate optimal sides per edge, skip user-assigned handles
+  const edgeSides: Array<{ id: string; source: string; target: string; sourceSide: string; targetSide: string }> = []
+  for (const edge of edges) {
+    if (edge.data?.userAssignedHandle) {
+      // Preserve user-assigned handles
+      result.set(edge.id, {
+        sourceHandle: edge.sourceHandle || 'bottom-source',
+        targetHandle: edge.targetHandle || 'top-target'
+      })
+      continue
+    }
+    const sourcePos = nodePositions.get(edge.source)
+    const targetPos = nodePositions.get(edge.target)
+    if (!sourcePos || !targetPos) continue
+
+    const { sourceHandle, targetHandle } = calculateOptimalHandles(
+      sourcePos, sourcePos, targetPos, targetPos
+    )
+    // Extract side from handle ID: "bottom-source" → "bottom"
+    const sourceSide = sourceHandle.split('-')[0]!
+    const targetSide = targetHandle.split('-')[0]!
+    edgeSides.push({ id: edge.id, source: edge.source, target: edge.target, sourceSide, targetSide })
+  }
+
+  // Step 2: Group into buckets keyed by "nodeId:side:type"
+  type BucketEntry = { edgeId: string; farEndCenter: number }
+  const buckets = new Map<string, BucketEntry[]>()
+  for (const es of edgeSides) {
+    const sourcePos = nodePositions.get(es.source)!
+    const targetPos = nodePositions.get(es.target)!
+    const targetCx = targetPos.x + targetPos.width / 2
+    const targetCy = targetPos.y + targetPos.height / 2
+    const sourceCx = sourcePos.x + sourcePos.width / 2
+    const sourceCy = sourcePos.y + sourcePos.height / 2
+
+    // Source bucket: sort key depends on side orientation
+    const sourceKey = `${es.source}:${es.sourceSide}:source`
+    const sourceFarEnd = (es.sourceSide === 'top' || es.sourceSide === 'bottom') ? targetCx : targetCy
+    if (!buckets.has(sourceKey)) buckets.set(sourceKey, [])
+    buckets.get(sourceKey)!.push({ edgeId: es.id, farEndCenter: sourceFarEnd })
+
+    // Target bucket
+    const targetKey = `${es.target}:${es.targetSide}:target`
+    const targetFarEnd = (es.targetSide === 'top' || es.targetSide === 'bottom') ? sourceCx : sourceCy
+    if (!buckets.has(targetKey)) buckets.set(targetKey, [])
+    buckets.get(targetKey)!.push({ edgeId: es.id, farEndCenter: targetFarEnd })
+  }
+
+  // Step 3: Sort each bucket and assign slots
+  for (const [key, entries] of buckets) {
+    entries.sort((a, b) => a.farEndCenter - b.farEndCenter)
+    const parts = key.split(':')
+    const side = parts[1]!
+    const type = parts[2]! // 'source' or 'target'
+
+    const slotCount = Math.min(entries.length, 5)
+    const slots = SLOT_TABLES[slotCount] || SLOT_TABLES[5]!
+
+    for (let i = 0; i < entries.length; i++) {
+      const slot = slots[i % slots.length]!
+      const handleId = slot === 'c' ? `${side}-${type}` : `${side}-${type}-${slot}`
+      const entry = entries[i]!
+      const existing = result.get(entry.edgeId)
+      if (type === 'source') {
+        result.set(entry.edgeId, { sourceHandle: handleId, targetHandle: existing?.targetHandle || `${side}-target` })
+      } else {
+        result.set(entry.edgeId, { sourceHandle: existing?.sourceHandle || `${side}-source`, targetHandle: handleId })
+      }
+    }
+  }
+
+  return result
+}
+
 /**
  * Get the position of a handle on a node.
  * Returns the center point of the handle based on its ID.
+ * Supports spread handle indices (e.g. "bottom-source-2" → 35% position).
  */
 export function getHandlePosition(
   nodePos: { x: number; y: number },
   nodeDim: { width: number; height: number },
   handleId: string
 ): { x: number; y: number } {
-  const centerX = nodePos.x + nodeDim.width / 2
-  const centerY = nodePos.y + nodeDim.height / 2
+  // Parse spread index: "bottom-source-2" → index 2 → SPREAD_POSITIONS[1] = 35%
+  const spreadMatch = handleId.match(/-(\d+)$/)
+  const spreadPct = spreadMatch
+    ? (SPREAD_POSITIONS[parseInt(spreadMatch[1]!) - 1] ?? 50) / 100
+    : 0.5
 
   if (handleId.includes('top')) {
-    return { x: centerX, y: nodePos.y }
+    return { x: nodePos.x + nodeDim.width * spreadPct, y: nodePos.y }
   }
   if (handleId.includes('bottom')) {
-    return { x: centerX, y: nodePos.y + nodeDim.height }
+    return { x: nodePos.x + nodeDim.width * spreadPct, y: nodePos.y + nodeDim.height }
   }
   if (handleId.includes('left')) {
-    return { x: nodePos.x, y: centerY }
+    return { x: nodePos.x, y: nodePos.y + nodeDim.height * spreadPct }
   }
   if (handleId.includes('right')) {
-    return { x: nodePos.x + nodeDim.width, y: centerY }
+    return { x: nodePos.x + nodeDim.width, y: nodePos.y + nodeDim.height * spreadPct }
   }
-  // Default: return center
-  return { x: centerX, y: centerY }
+  return { x: nodePos.x + nodeDim.width / 2, y: nodePos.y + nodeDim.height / 2 }
 }

@@ -43,12 +43,12 @@ describe('agentTools', () => {
 
       const tools = getToolsForAgent(settings)
 
-      // Query tools: get_context, find_nodes, get_selection, get_node_details
+      // Query tools: get_context, search_nodes, get_selection, get_node
       expect(tools.length).toBeGreaterThanOrEqual(4)
-      expect(tools.some((t) => t.name === 'get_context')).toBe(true)
-      expect(tools.some((t) => t.name === 'find_nodes')).toBe(true)
+      expect(tools.some((t) => t.name === 'get_context_chain')).toBe(true)
+      expect(tools.some((t) => t.name === 'search_nodes')).toBe(true)
       expect(tools.some((t) => t.name === 'get_selection')).toBe(true)
-      expect(tools.some((t) => t.name === 'get_node_details')).toBe(true)
+      expect(tools.some((t) => t.name === 'get_node')).toBe(true)
     })
 
     it('should include create_node tool when canCreateNodes is true', () => {
@@ -59,12 +59,12 @@ describe('agentTools', () => {
       expect(tools.some((t) => t.name === 'create_node')).toBe(true)
     })
 
-    it('should include create_edge tool when canCreateEdges is true', () => {
+    it('should include link_nodes tool when canCreateEdges is true', () => {
       const settings: AgentSettings = { ...defaultSettings, canCreateEdges: true }
 
       const tools = getToolsForAgent(settings)
 
-      expect(tools.some((t) => t.name === 'create_edge')).toBe(true)
+      expect(tools.some((t) => t.name === 'link_nodes')).toBe(true)
     })
 
     it('should include update_node and move_node tools when canModifyNodes is true', () => {
@@ -84,12 +84,12 @@ describe('agentTools', () => {
       expect(tools.some((t) => t.name === 'delete_node')).toBe(true)
     })
 
-    it('should include delete_edge tool when canDeleteEdges is true', () => {
+    it('should include unlink_nodes tool when canDeleteEdges is true', () => {
       const settings: AgentSettings = { ...defaultSettings, canDeleteEdges: true }
 
       const tools = getToolsForAgent(settings)
 
-      expect(tools.some((t) => t.name === 'delete_edge')).toBe(true)
+      expect(tools.some((t) => t.name === 'unlink_nodes')).toBe(true)
     })
 
     it('should include all tools when all permissions are granted', () => {
@@ -104,16 +104,16 @@ describe('agentTools', () => {
 
       const tools = getToolsForAgent(settings)
 
-      expect(tools.some((t) => t.name === 'get_context')).toBe(true)
-      expect(tools.some((t) => t.name === 'find_nodes')).toBe(true)
+      expect(tools.some((t) => t.name === 'get_context_chain')).toBe(true)
+      expect(tools.some((t) => t.name === 'search_nodes')).toBe(true)
       expect(tools.some((t) => t.name === 'get_selection')).toBe(true)
-      expect(tools.some((t) => t.name === 'get_node_details')).toBe(true)
+      expect(tools.some((t) => t.name === 'get_node')).toBe(true)
       expect(tools.some((t) => t.name === 'create_node')).toBe(true)
-      expect(tools.some((t) => t.name === 'create_edge')).toBe(true)
+      expect(tools.some((t) => t.name === 'link_nodes')).toBe(true)
       expect(tools.some((t) => t.name === 'update_node')).toBe(true)
       expect(tools.some((t) => t.name === 'move_node')).toBe(true)
       expect(tools.some((t) => t.name === 'delete_node')).toBe(true)
-      expect(tools.some((t) => t.name === 'delete_edge')).toBe(true)
+      expect(tools.some((t) => t.name === 'unlink_nodes')).toBe(true)
     })
   })
 
@@ -121,13 +121,13 @@ describe('agentTools', () => {
   type AnyResult = Record<string, unknown>
 
   describe('executeTool', () => {
-    describe('find_nodes', () => {
+    describe('search_nodes', () => {
       it('should find all nodes when no filters provided', async () => {
         const note1 = createNoteNode('Note 1', { id: 'note-1' })
         const note2 = createNoteNode('Note 2', { id: 'note-2' })
         seedNodes([note1, note2])
 
-        const result = await executeTool('find_nodes', {}, 'agent-conv-id')
+        const result = await executeTool('search_nodes', {}, 'agent-conv-id')
         const data = result.result as AnyResult
 
         expect(result.success).toBe(true)
@@ -140,7 +140,7 @@ describe('agentTools', () => {
         const task = createTaskNode('todo', { id: 'task-1' })
         seedNodes([note, task])
 
-        const result = await executeTool('find_nodes', { type: 'task' }, 'agent-conv-id')
+        const result = await executeTool('search_nodes', { type: 'task' }, 'agent-conv-id')
         const data = result.result as AnyResult
 
         expect(result.success).toBe(true)
@@ -155,7 +155,7 @@ describe('agentTools', () => {
         note2.data.title = 'Todo List'
         seedNodes([note1, note2])
 
-        const result = await executeTool('find_nodes', { titleContains: 'Meeting' }, 'agent-conv-id')
+        const result = await executeTool('search_nodes', { titleContains: 'Meeting' }, 'agent-conv-id')
         const data = result.result as AnyResult
 
         expect(result.success).toBe(true)
@@ -169,7 +169,7 @@ describe('agentTools', () => {
         )
         seedNodes(notes)
 
-        const result = await executeTool('find_nodes', { limit: 5 }, 'agent-conv-id')
+        const result = await executeTool('search_nodes', { limit: 5 }, 'agent-conv-id')
         const data = result.result as AnyResult
 
         expect(result.success).toBe(true)
@@ -207,13 +207,13 @@ describe('agentTools', () => {
       })
     })
 
-    describe('get_node_details', () => {
+    describe('get_node', () => {
       it('should return node details', async () => {
         const note = createNoteNode('Test content', { id: 'note-1', position: { x: 100, y: 200 } })
         note.data.title = 'Test Title'
         seedNode(note)
 
-        const result = await executeTool('get_node_details', { nodeId: 'note-1' }, 'agent-conv-id')
+        const result = await executeTool('get_node', { nodeId: 'note-1' }, 'agent-conv-id')
         const data = result.result as AnyResult
         const node = data.node as AnyResult
 
@@ -225,7 +225,7 @@ describe('agentTools', () => {
       })
 
       it('should return error for non-existent node', async () => {
-        const result = await executeTool('get_node_details', { nodeId: 'non-existent' }, 'agent-conv-id')
+        const result = await executeTool('get_node', { nodeId: 'non-existent' }, 'agent-conv-id')
 
         expect(result.success).toBe(false)
         expect(result.error).toContain('Node not found')
@@ -280,14 +280,14 @@ describe('agentTools', () => {
       })
     })
 
-    describe('create_edge', () => {
+    describe('link_nodes', () => {
       it('should create an edge between nodes', async () => {
         const note1 = createNoteNode('Note 1', { id: 'note-1' })
         const note2 = createNoteNode('Note 2', { id: 'note-2' })
         seedNodes([note1, note2])
 
         const result = await executeTool(
-          'create_edge',
+          'link_nodes',
           { source: 'note-1', target: 'note-2' },
           'agent-conv-id'
         )
@@ -386,7 +386,7 @@ describe('agentTools', () => {
       })
     })
 
-    describe('delete_edge', () => {
+    describe('unlink_nodes', () => {
       it('should delete an edge', async () => {
         const note1 = createNoteNode('Note 1', { id: 'note-1' })
         const note2 = createNoteNode('Note 2', { id: 'note-2' })
@@ -395,9 +395,7 @@ describe('agentTools', () => {
         const { onConnect } = getWorkspaceState()
         onConnect({ source: 'note-1', target: 'note-2', sourceHandle: null, targetHandle: null })
 
-        const edgeId = getWorkspaceState().edges[0]!.id
-
-        const result = await executeTool('delete_edge', { edgeId }, 'agent-conv-id')
+        const result = await executeTool('unlink_nodes', { sourceId: 'note-1', targetId: 'note-2' }, 'agent-conv-id')
 
         expect(result.success).toBe(true)
 

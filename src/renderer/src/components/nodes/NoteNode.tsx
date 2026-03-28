@@ -2,7 +2,8 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import { memo, useMemo, useCallback, useState, useEffect } from 'react'
-import { Handle, Position, NodeResizer, useUpdateNodeInternals, useReactFlow, type NodeProps, type ResizeParams } from '@xyflow/react'
+import { NodeResizer, useUpdateNodeInternals, useReactFlow, type NodeProps, type ResizeParams } from '@xyflow/react'
+import { SpreadHandles } from './SpreadHandles'
 import { Link2, Bot, BookOpen, Code2, Layers, Palette, FileText, Component, FileJson, Settings, Focus, Minimize2 } from 'lucide-react'
 import type { NoteNodeData, NoteMode } from '@shared/types'
 import { DEFAULT_THEME_SETTINGS } from '@shared/types'
@@ -19,7 +20,8 @@ import { CollaborativeEditor } from '../CollaborativeEditor'
 import { SelectionIndicator } from '../Presence/SelectionIndicators'
 import { useNodeRemoteSelectors } from '../../hooks/useOtherUserSelections'
 import { useWorkspaceStore as useWsStoreForSync } from '../../stores/workspaceStore'
-import { measureTextWidth } from '../../utils/nodeUtils'
+import { measureTextWidth, calculateAutoFitDimensions } from '../../utils/nodeUtils'
+import { Maximize2 } from 'lucide-react'
 import { ExtractionBadge, ExtractionControls } from '../extractions'
 import { AutoFitButton } from './AutoFitButton'
 import { FoldBadge } from './FoldBadge'
@@ -48,8 +50,8 @@ interface NodeStyleWithCustomProps extends React.CSSProperties {
 // Default dimensions
 const DEFAULT_WIDTH = 280
 const DEFAULT_HEIGHT = 140
-const MIN_WIDTH = 200
-const MIN_HEIGHT = 100
+const MIN_WIDTH = 300
+const MIN_HEIGHT = 180
 const MAX_HEIGHT = 600
 
 // Note mode presets — each maps to contextRole + contextPriority + visual badge
@@ -197,6 +199,20 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
     }
   }, [nodeData.title, id, effectiveHeight, updateNodeDimensions, updateNodeInternals, startNodeResize, commitNodeResize])
 
+  // Inline fit-to-content handler
+  const handleAutoFitInline = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    const { width, height } = calculateAutoFitDimensions(
+      nodeData.title || '',
+      nodeData.content || '',
+      44, 36
+    )
+    startNodeResize(id)
+    updateNodeDimensions(id, Math.max(300, width), Math.max(180, height))
+    updateNodeInternals(id)
+    commitNodeResize(id)
+  }, [id, nodeData.title, nodeData.content, startNodeResize, updateNodeDimensions, updateNodeInternals, commitNodeResize])
+
   // Mode dropdown options (transform NOTE_MODE_CONFIG)
   const modeOptions = useMemo(() =>
     Object.entries(NOTE_MODE_CONFIG).map(([key, cfg]) => ({
@@ -331,19 +347,8 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
       {/* Remote selection indicator */}
       <SelectionIndicator selectors={remoteSelectors} />
 
-      {/* Handles - hidden at far zoom */}
-      {zoomLevel !== 'far' && (
-        <>
-          <Handle type="target" position={Position.Top} id="top-target" />
-          <Handle type="source" position={Position.Top} id="top-source" />
-          <Handle type="target" position={Position.Bottom} id="bottom-target" />
-          <Handle type="source" position={Position.Bottom} id="bottom-source" />
-          <Handle type="target" position={Position.Left} id="left-target" />
-          <Handle type="source" position={Position.Left} id="left-source" />
-          <Handle type="target" position={Position.Right} id="right-target" />
-          <Handle type="source" position={Position.Right} id="right-source" />
-        </>
-      )}
+      {/* Handles - hidden at far + ultra-far zoom (NoteNode hides one level earlier) */}
+      <SpreadHandles hidden={zoomLevel === 'far' || zoomLevel === 'ultra-far'} />
 
       {/* PFD Phase 6B: Landmark badge — visible at all zoom levels */}
       {nodeData.isLandmark && (
@@ -485,7 +490,7 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
                 enableLists={true}
                 enableFormatting={true}
                 enableHeadings={false}
-                showToolbar="on-focus"
+                showToolbar={nodeWidth < 280 ? 'off' : 'on-focus'}
                 minHeight={40}
               />
             ) : (
@@ -496,7 +501,7 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
                 enableLists={true}
                 enableFormatting={true}
                 enableHeadings={false}
-                showToolbar="on-focus"
+                showToolbar={nodeWidth < 280 ? 'off' : 'on-focus'}
                 minHeight={40}
                 editOnDoubleClick={true}
                 onEditingChange={setIsEditing}
@@ -527,7 +532,18 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
 
         {/* Inline property controls - only at close */}
         {showContent && (
-          <NodePropertyControls nodeId={id} nodeType="note" data={data as Record<string, unknown>} />
+          <div className="flex items-center gap-1">
+            <NodePropertyControls nodeId={id} nodeType="note" data={data as Record<string, unknown>} />
+            <button
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] hover:bg-white/10 transition-colors"
+              style={{ color: 'var(--node-text-muted)' }}
+              title="Fit node to content"
+              onClick={handleAutoFitInline}
+            >
+              <Maximize2 className="w-2.5 h-2.5" />
+              <span>Fit</span>
+            </button>
+          </div>
         )}
         {/* Property Badges - only at close */}
         {showContent && (

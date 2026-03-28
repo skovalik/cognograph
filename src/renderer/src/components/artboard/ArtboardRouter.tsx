@@ -165,8 +165,11 @@ function ConversationArtboard({
             <TerminalPanel
               nodeId={nodeId}
               sessionId={nodeData.terminal.sessionId}
+              shell={nodeData.terminal.shell}
               accentColor={nodeData.terminal.accentColor}
               className="h-full"
+              nodeTitle={nodeData.title || 'Terminal'}
+              cwd={nodeData.terminal.workingDirectory}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-4 p-8">

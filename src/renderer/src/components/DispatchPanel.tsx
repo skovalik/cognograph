@@ -375,6 +375,7 @@ function DispatchPanelComponent({ sidebarWidth = 260 }: DispatchPanelProps): JSX
                   ? `Server running on port ${serverPort} (click to stop)`
                   : 'Start dispatch server'
               }
+              aria-label={serverPort ? 'Stop dispatch server' : 'Start dispatch server'}
             >
               <Server className="w-3 h-3" />
               {serverPort && !isCompact && <span>:{serverPort}</span>}
@@ -385,6 +386,7 @@ function DispatchPanelComponent({ sidebarWidth = 260 }: DispatchPanelProps): JSX
                 onClick={handleClearCompleted}
                 className="text-xs gui-text-secondary hover:text-red-400 p-1 rounded hover:bg-[var(--surface-hover)]"
                 title="Clear completed dispatches"
+                aria-label="Clear completed dispatches"
               >
                 <Trash2 className="w-3 h-3" />
               </button>

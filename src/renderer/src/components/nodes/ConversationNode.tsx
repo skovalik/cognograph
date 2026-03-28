@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useCallback, useMemo, useState, useEffect, useRef } from 'react'
-import { Handle, Position, NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
+import React, { memo, useCallback, useMemo, useState, useEffect, useRef } from 'react'
+import { NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
 import { Sparkles, Wand2, ChevronDown, ChevronUp, Link2, Play, Pause, Square, Bot, MessageSquare, RotateCcw, Terminal, Maximize2, Minimize2 } from 'lucide-react'
 import type { ConversationNodeData, AgentStatus } from '@shared/types'
 import { formatCost } from '../../utils/tokenEstimator'
@@ -35,6 +35,14 @@ import { AgentActivityBadge } from '../bridge/AgentActivityBadge'
 import { InlineErrorBoundary } from '../ErrorBoundary'
 import { SessionStatusIndicator } from '../SessionStatusIndicator'
 import { ChatPanel } from '../ChatPanel'
+import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
+import { requestFitView } from '../../utils/layoutEvents'
+import { SpreadHandles } from './SpreadHandles'
+
+// Lazy-load TerminalPanel — xterm.js is heavy, only load when a terminal node is expanded
+const LazyTerminalPanel = React.lazy(() =>
+  import('../artboard/TerminalPanel').then(m => ({ default: m.TerminalPanel }))
+)
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -89,6 +97,13 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
   const updateNodeDimensions = useWorkspaceStore((state) => state.updateNodeDimensions)
   const startNodeResize = useWorkspaceStore((state) => state.startNodeResize)
   const commitNodeResize = useWorkspaceStore((state) => state.commitNodeResize)
+
+  // Derive parent project's folderPath as terminal cwd fallback
+  const parentFolderPath = useWorkspaceStore((state) => {
+    if (!nodeData.parentId) return undefined
+    const parent = state.nodes.find((n) => n.id === nodeData.parentId)
+    return parent?.data.type === 'project' ? (parent.data.folderPath as string | undefined) : undefined
+  })
 
   // Visual feedback state
   const isStreaming = useIsStreaming(id)
@@ -198,17 +213,12 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
     }
   }, [preExpandSize, id, startNodeResize, updateNodeDimensions, updateNodeInternals, commitNodeResize])
 
-  // Escape key to collapse expanded chat
+  // Escape key to collapse expanded chat (via EscapeManager)
   useEffect(() => {
     if (!isExpanded || !selected) return
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        handleCollapseChat()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isExpanded, selected, handleCollapseChat])
+    escapeManager.register(`canvas-conversation-collapse-${id}`, EscapePriority.CANVAS, handleCollapseChat)
+    return () => escapeManager.unregister(`canvas-conversation-collapse-${id}`)
+  }, [isExpanded, selected, handleCollapseChat, id])
 
   const showTokenEstimates = useWorkspaceStore(
     (state) => state.workspacePreferences.showTokenEstimates
@@ -232,6 +242,8 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
     updateNodeDimensions(id, expandedWidth, expandedHeight)
     updateNodeInternals(id)
     commitNodeResize(id)
+    // Center viewport on the expanded node so user sees the full chat, not just the top-left corner
+    requestAnimationFrame(() => requestFitView([id], 0.15, 200))
   }, [isTouch, nodeWidth, nodeHeight, id, startNodeResize, updateNodeDimensions, updateNodeInternals, commitNodeResize])
 
   const handleDoubleClick = useCallback((e: React.MouseEvent): void => {
@@ -363,6 +375,8 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
           sessionId: crypto.randomUUID(),
           origin: 'embedded',
           workingDirectory: '',
+          shell: 'claude-code',
+          source: 'local',
           terminalState: 'idle',
           startedAt: Date.now(),
           lastActivityAt: Date.now(),
@@ -441,8 +455,8 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
     <div
       ref={nodeRef}
       className={nodeClassName}
-      style={nodeStyle}
-      data-transparent={transparent}
+      style={isTerminal && isExpanded ? { ...nodeStyle, background: '#1a1a2e', opacity: 1 } : nodeStyle}
+      data-transparent={isTerminal && isExpanded ? false : transparent}
       data-lod={zoomLevel}
       onDoubleClick={handleDoubleClick}
     >
@@ -475,18 +489,7 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
           L1+ (far and above): Handles on all four sides
           Suppressed at L0 — no connection affordance at navigation level
           ================================================================ */}
-      {!isUltraFar && (
-        <>
-          <Handle type="target" position={Position.Top} id="top-target" />
-          <Handle type="source" position={Position.Top} id="top-source" />
-          <Handle type="target" position={Position.Bottom} id="bottom-target" />
-          <Handle type="source" position={Position.Bottom} id="bottom-source" />
-          <Handle type="target" position={Position.Left} id="left-target" />
-          <Handle type="source" position={Position.Left} id="left-source" />
-          <Handle type="target" position={Position.Right} id="right-target" />
-          <Handle type="source" position={Position.Right} id="right-source" />
-        </>
-      )}
+      <SpreadHandles hidden={isUltraFar} />
 
       {/* Extraction particles effect — L3+ only */}
       {showContent && showParticles && (
@@ -794,25 +797,56 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
           ================================================================ */}
       {showContent && (
         isExpanded ? (
-          /* Expanded in-node chat (works for both chat and terminal nodes) */
-          <div
-            className="flex-1 overflow-hidden rounded-b-lg"
-            style={{ minHeight: 0 }}
-            onWheelCapture={isTouch ? undefined : (e) => {
-              // Let Ctrl+wheel (zoom) pass through to React Flow; capture plain scroll for chat
-              if (!e.ctrlKey) e.stopPropagation()
-            }}
-            onPointerDownCapture={(e) => {
-              // Prevent React Flow panning when interacting with chat input — but allow pinch-zoom on touch
-              if (isTouch) return
-              const target = e.target as HTMLElement
-              if (target.closest('textarea') || target.closest('button') || target.closest('select') || target.closest('.overflow-y-auto') || target.closest('.chat-bubble')) {
+          isTerminal && nodeData.terminal ? (
+            /* Expanded terminal — render xterm.js via TerminalPanel.
+               nodrag + nowheel: prevent React Flow from intercepting mouse events
+               so xterm.js can handle text selection, scrolling, and mouse input. */
+            <div
+              className="flex-1 overflow-hidden rounded-b-lg nodrag nowheel nopan"
+              style={{ minHeight: 0, cursor: 'default', backgroundColor: 'var(--terminal-bg, #1a1a2e)', opacity: 1 }}
+              onWheelCapture={(e) => e.stopPropagation()}
+              onPointerDownCapture={(e) => {
+                if (isTouch || e.button === 1) return // let middle mouse through for canvas pan
                 e.stopPropagation()
-              }
-            }}
-          >
-            <ChatPanel nodeId={id} isFocused embedded />
-          </div>
+              }}
+              onMouseDownCapture={(e) => { if (e.button !== 1) e.stopPropagation() }}
+              onClick={(e) => {
+                // Focus xterm's hidden textarea so keyboard input reaches the PTY
+                const xtermTextarea = (e.currentTarget as HTMLElement).querySelector('.xterm-helper-textarea') as HTMLTextAreaElement | null
+                if (xtermTextarea) xtermTextarea.focus()
+              }}
+            >
+              {hasTerminalAccess() ? (
+                <React.Suspense fallback={
+                  <div className="flex items-center justify-center h-full" style={{ backgroundColor: 'var(--terminal-bg)', color: 'var(--terminal-text-muted)' }}>
+                    <span className="text-xs">Loading terminal...</span>
+                  </div>
+                }>
+                  <LazyTerminalPanel
+                    nodeId={id}
+                    sessionId={nodeData.terminal.sessionId}
+                    shell={nodeData.terminal.shell}
+                    accentColor={nodeData.terminal.accentColor}
+                    cwd={nodeData.terminal.workingDirectory || parentFolderPath || undefined}
+                    className="h-full"
+                  />
+                </React.Suspense>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full gap-2 p-4" style={{ backgroundColor: 'var(--terminal-bg)', color: 'var(--terminal-text-muted)' }}>
+                  <span className="text-xs">Terminal requires local agent or Pro plan</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Expanded in-node chat — nodrag/nowheel prevent React Flow from
+               intercepting mouse events so text selection and scrolling work. */
+            <div
+              className="flex-1 overflow-hidden rounded-b-lg nodrag nowheel"
+              style={{ minHeight: 0 }}
+            >
+              <ChatPanel nodeId={id} isFocused embedded />
+            </div>
+          )
         ) : isTerminal ? (
           <div className="cognograph-node__body" style={demoMode ? { overflow: 'visible', minHeight: 'unset', flex: 'none' } : undefined}>
             <div
@@ -948,7 +982,11 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
         <div
           className="flex items-center justify-center gap-1 py-1 text-[10px] cursor-pointer rounded-b-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
           style={{ color: 'var(--node-text-muted)' }}
-          title="Expand to artboard (coming soon)"
+          title="Expand conversation"
+          onClick={(e) => {
+            e.stopPropagation()
+            handleExpandChat()
+          }}
         >
           <Maximize2 className="w-3 h-3" />
           <span>Expand</span>

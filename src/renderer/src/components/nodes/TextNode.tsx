@@ -2,7 +2,8 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import { memo, useMemo, useCallback, useEffect } from 'react'
-import { Handle, Position, NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
+import { NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
+import { SpreadHandles } from './SpreadHandles'
 import type { TextNodeData } from '@shared/types'
 import { DEFAULT_THEME_SETTINGS } from '@shared/types'
 import { useWorkspaceStore, useIsSpawning, useNodeWarmth, useIsNodePinned } from '../../stores/workspaceStore'
@@ -189,14 +190,7 @@ function TextNodeComponent({ id, data, selected, width, height }: NodeProps): JS
           />
 
           {/* Handles */}
-          <Handle type="target" position={Position.Top} id="top-target" className="text-node-handle" />
-          <Handle type="source" position={Position.Top} id="top-source" className="text-node-handle" />
-          <Handle type="target" position={Position.Bottom} id="bottom-target" className="text-node-handle" />
-          <Handle type="source" position={Position.Bottom} id="bottom-source" className="text-node-handle" />
-          <Handle type="target" position={Position.Left} id="left-target" className="text-node-handle" />
-          <Handle type="source" position={Position.Left} id="left-source" className="text-node-handle" />
-          <Handle type="target" position={Position.Right} id="right-target" className="text-node-handle" />
-          <Handle type="source" position={Position.Right} id="right-source" className="text-node-handle" />
+          <SpreadHandles hidden={lodLevel === 0} />
 
           {/* Extraction badge for spatial extraction system */}
           <ExtractionBadge nodeId={id} nodeColor={nodeColor} />

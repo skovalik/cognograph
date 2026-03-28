@@ -17,6 +17,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
+import { escapeManager, EscapePriority } from '../utils/EscapeManager'
 
 export interface ShiftDragState {
   isActive: boolean
@@ -222,10 +223,7 @@ export function useShiftDragEdgeCreation({
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cancel on Escape
-      if (e.key === 'Escape' && stateRef.current.isActive) {
-        reset()
-      }
+      // Escape handled by EscapeManager (see separate useEffect)
       // Track Shift key state for cursor feedback
       if (e.key === 'Shift' && !stateRef.current.isShiftHeld) {
         setState((s) => ({ ...s, isShiftHeld: true }))
@@ -259,6 +257,13 @@ export function useShiftDragEdgeCreation({
       window.removeEventListener('keyup', handleKeyUp)
     }
   }, [startDrag, updateDrag, endDrag, reset])
+
+  // Escape cancels active edge drag (via EscapeManager)
+  useEffect(() => {
+    if (!state.isActive) return
+    escapeManager.register('canvas-shift-drag-cancel', EscapePriority.CANVAS, reset)
+    return () => escapeManager.unregister('canvas-shift-drag-cancel')
+  }, [state.isActive, reset])
 
   // No longer need handleNodeMouseDown since we use global event listener
   return {

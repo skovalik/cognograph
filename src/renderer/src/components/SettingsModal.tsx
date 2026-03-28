@@ -15,6 +15,7 @@ import { UsageStats } from './UsageStats'
 import { Switch } from './ui/switch'
 import { Slider } from './ui/slider'
 import { createFocusTrap } from '../utils/accessibility'
+import { escapeManager, EscapePriority } from '../utils/EscapeManager'
 import { performThemeTransition } from '../utils/themeTransition'
 import type { PropertiesDisplayMode, ChatDisplayMode, ExtractionSettings, GlassSettings } from '@shared/types'
 import { DEFAULT_EXTRACTION_SETTINGS, DEFAULT_GLASS_SETTINGS, CONNECTOR_PROVIDER_INFO, type ConnectorProvider } from '@shared/types'
@@ -181,15 +182,9 @@ function SettingsModalComponent({ isOpen, onClose }: SettingsModalProps): JSX.El
   }, [isOpen])
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
-    }
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown)
-      return () => document.removeEventListener('keydown', handleKeyDown)
-    }
+    if (!isOpen) return
+    escapeManager.register('modal-settings', EscapePriority.MODAL, onClose)
+    return () => escapeManager.unregister('modal-settings')
   }, [isOpen, onClose])
 
   if (!isOpen) return null

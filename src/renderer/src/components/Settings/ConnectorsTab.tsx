@@ -2,7 +2,8 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import { memo, useState, useCallback, useEffect } from 'react'
-import { Plus, Plug, Server, Trash2, Edit2, Play, Circle, Loader2, CheckCircle, AlertTriangle, X, Database, Link } from 'lucide-react'
+import { toast } from 'react-hot-toast'
+import { Plus, Plug, Server, Trash2, Edit2, Play, Circle, Loader2, CheckCircle, AlertTriangle, X, Database, Link, Zap } from 'lucide-react'
 import { useConnectorStore } from '../../stores/connectorStore'
 import { LLMConnectorCard } from './LLMConnectorCard'
 import { AddLLMModal } from './AddLLMModal'
@@ -12,6 +13,37 @@ function ConnectorsTabComponent(): JSX.Element {
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [editingConnector, setEditingConnector] = useState<LLMConnector | null>(null)
   const [testingId, setTestingId] = useState<string | null>(null)
+
+  // Claude Pro account (Agent SDK local mode)
+  const [useClaudeProAccount, setUseClaudeProAccount] = useState(false)
+  const isElectron = !!(window as any).__ELECTRON__
+
+  // Load Pro setting on mount
+  useEffect(() => {
+    if (!isElectron) return
+    window.api.settings.get<boolean>('useClaudeProAccount').then((val) => {
+      if (val) setUseClaudeProAccount(true)
+    })
+  }, [isElectron])
+
+  const handleProToggle = useCallback(async (checked: boolean) => {
+    if (checked && isElectron) {
+      const cliCheck = await (window as any).api.agent.checkCli()
+      if (!cliCheck.installed) {
+        toast.error('Claude CLI not found. Install from claude.ai/code')
+        return
+      }
+      if (!cliCheck.loggedIn) {
+        const loginResult = await (window as any).api.agent.login()
+        if (!loginResult.success) {
+          toast.error('Claude login failed or was cancelled')
+          return
+        }
+      }
+    }
+    await window.api.settings.set('useClaudeProAccount', checked)
+    setUseClaudeProAccount(checked)
+  }, [isElectron])
 
   const connectors = useConnectorStore((s) => s.connectors)
   const removeConnector = useConnectorStore((s) => s.removeConnector)
@@ -69,6 +101,30 @@ function ConnectorsTabComponent(): JSX.Element {
           Manage your LLM providers and API keys in one place.
         </p>
       </div>
+
+      {/* Claude Pro Account (Electron only) */}
+      {isElectron && (
+        <div className="flex items-center justify-between py-3 border-b gui-border">
+          <div className="flex items-center gap-3">
+            <Zap className="w-4 h-4" style={{ color: 'var(--gui-accent-primary)' }} />
+            <div>
+              <div className="text-sm font-medium gui-text">Use Claude Pro account</div>
+              <div className="text-xs mt-0.5 gui-text-secondary">
+                No rate limits. Uses your Claude subscription instead of API key.
+              </div>
+            </div>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={useClaudeProAccount}
+              onChange={(e) => handleProToggle(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+      )}
 
       {/* LLM Providers Section */}
       <div>

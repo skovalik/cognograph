@@ -290,6 +290,12 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
   const dragStartPos = useRef<Position>({ x: 0, y: 0 })
   const dragStartCorner = useRef<Position>({ x: 0, y: 0 })
 
+  // Fix 2.5: Save position/corner before collapse so we can restore on expand
+  const savedPositionRef = useRef<{ corner: Corner; customPosition: Position | null }>({
+    corner: defaultCorner,
+    customPosition: null
+  })
+
   // Memoize streaming set for className callback stability
   const streamingSet = useMemo(
     () => new Set(streamingConversations),
@@ -394,11 +400,21 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
     }
   }, [isDragging, customPosition])
 
-  // Toggle collapsed state
+  // Toggle collapsed state — save position before collapse, restore on expand (Fix 2.5)
   const toggleCollapsed = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
-    setIsCollapsed((prev) => !prev)
-  }, [])
+    setIsCollapsed((prev) => {
+      if (!prev) {
+        // About to collapse — save current position
+        savedPositionRef.current = { corner, customPosition }
+      } else {
+        // About to expand — restore saved position
+        setCorner(savedPositionRef.current.corner)
+        setCustomPosition(savedPositionRef.current.customPosition)
+      }
+      return !prev
+    })
+  }, [corner, customPosition])
 
   // Theme-aware styling using GUI theme CSS variables
   const isLightMode = themeSettings.mode === 'light'

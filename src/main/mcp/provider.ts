@@ -305,7 +305,11 @@ export class FileSyncProvider implements MCPSyncProvider {
       this.watcher = fsWatch(this.filePath, async (eventType) => {
         if (eventType !== 'change') return
 
-        // Ignore changes we caused
+        // Never reload from disk when in-memory changes are pending or persisting.
+        // Windows fsWatch fires late/multiple times, so time-based guards alone are insufficient.
+        if (this.dirty || this.debounceTimer || this.persisting) return
+
+        // Ignore changes we caused (backup guard for timing edge cases)
         if (Date.now() - this.lastWriteTime < SELF_WRITE_GRACE_MS) return
 
         try {

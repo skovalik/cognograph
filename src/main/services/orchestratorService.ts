@@ -15,6 +15,7 @@
 import { BrowserWindow } from 'electron'
 import { execLogWriter } from './notionExecLog'
 import { emitPluginEvent } from '@plugins/registry'
+import { runAgentForOrchestrator } from '../agent/claudeAgent'
 import type {
   OrchestratorNodeData,
   OrchestratorRun,
@@ -425,13 +426,26 @@ async function executeSequential(state: ActiveRunState): Promise<void> {
       continue
     }
 
-    // Run agent (placeholder — actual execution requires claudeAgent integration)
-    const result = await runAgent(state, agent, previousOutput)
+    // Run agent with retry support
+    let result = await runAgent(state, agent, previousOutput)
 
-    // Apply failure policy
-    if (result.status === 'failed') {
+    // Apply failure policy — if agent fails, applyFailurePolicy may set status to 'retrying'
+    while (result.status === 'failed') {
       const shouldAbort = await applyFailurePolicy(state, agent, result)
       if (shouldAbort) break
+
+      // If applyFailurePolicy set agent to 'retrying', actually re-run the agent
+      if (agent.status === 'retrying') {
+        emitStatus({
+          orchestratorId: state.orchestratorId,
+          runId: state.run.id,
+          type: 'agent-retrying',
+          agentNodeId: agent.nodeId,
+        })
+        result = await runAgent(state, agent, previousOutput)
+      } else {
+        break
+      }
     }
 
     if (result.status === 'completed' && result.output) {
@@ -578,11 +592,11 @@ async function executeConditional(state: ActiveRunState): Promise<void> {
   }
 }
 
-// Run a single agent (placeholder — real implementation needs claudeAgent bridge)
+// Run a single agent via the real claudeAgent bridge
 async function runAgent(
   state: ActiveRunState,
   agent: ConnectedAgent,
-  _previousOutput: string | undefined
+  previousOutput: string | undefined
 ): Promise<OrchestratorAgentResult> {
   const startTime = Date.now()
 
@@ -594,18 +608,36 @@ async function runAgent(
     agentNodeId: agent.nodeId,
   })
 
-  // Placeholder: In the full implementation, this calls runAgentForOrchestrator()
-  // from claudeAgent.ts. For now, we create a stub result.
-  // The actual integration requires the main-process agent execution bridge.
+  // Estimate cost per 1K tokens (Claude Sonnet pricing approx)
+  const COST_PER_1K_INPUT = 0.003
+  const COST_PER_1K_OUTPUT = 0.015
+
+  // Call the real agent via claudeAgent bridge
+  const agentResult = await runAgentForOrchestrator({
+    agentNodeId: agent.nodeId,
+    context: '',  // Context is injected by the agent system prompt builder
+    prompt: agent.promptOverride || `You are agent "${agent.nodeId}" in an orchestrated pipeline. Complete your assigned task.`,
+    model: state.run.model,
+    maxTokens: state.budget?.maxTokensPerAgent,
+    previousOutput,
+  })
+
+  const costUSD =
+    (agentResult.inputTokens / 1000) * COST_PER_1K_INPUT +
+    (agentResult.outputTokens / 1000) * COST_PER_1K_OUTPUT
+
   const result: OrchestratorAgentResult = {
     agentNodeId: agent.nodeId,
-    status: 'completed',
-    output: `[Agent ${agent.nodeId} completed - orchestrator bridge pending implementation]`,
-    inputTokens: 0,
-    outputTokens: 0,
-    costUSD: 0,
+    status: agentResult.status,
+    output: agentResult.output,
+    error: agentResult.error,
+    inputTokens: agentResult.inputTokens,
+    outputTokens: agentResult.outputTokens,
+    cacheCreationTokens: agentResult.cacheCreationTokens,
+    cacheReadTokens: agentResult.cacheReadTokens,
+    costUSD,
     durationMs: Date.now() - startTime,
-    toolCallCount: 0,
+    toolCallCount: agentResult.toolCallCount,
     startedAt: startTime,
     completedAt: Date.now(),
   }

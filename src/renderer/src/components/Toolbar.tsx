@@ -29,8 +29,10 @@ import {
   Layers,
   Activity,
   Share2,
-  User
+  User,
+  HelpCircle
 } from 'lucide-react'
+import { useShortcutHelpStore } from './KeyboardShortcutsHelp'
 import {
   Tooltip,
   TooltipTrigger,
@@ -262,21 +264,25 @@ function ToolbarComponent({ onSave, onSaveAs, onNew, onOpen, onToggleAISidebar, 
           border: '1px solid rgba(200, 150, 62, 0.12)', boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)',
         }}>
           <button onClick={() => { setMobileMenuOpen(!mobileMenuOpen); setMoreMenuOpen(false) }}
-            style={mobileMenuOpen ? btnActive : btn}>
+            style={mobileMenuOpen ? btnActive : btn}
+            aria-label={mobileMenuOpen ? 'Close add node menu' : 'Add node'}
+            aria-expanded={mobileMenuOpen}>
             {mobileMenuOpen ? <X size={20} /> : <Plus size={20} />}
             <span>Add</span>
           </button>
-          <button onClick={onToggleAISidebar} style={btn}>
+          <button onClick={onToggleAISidebar} style={btn} aria-label="Toggle AI sidebar">
             <Wand2 size={20} /><span>AI</span>
           </button>
-          <button onClick={() => window.dispatchEvent(new CustomEvent('toggle-canvas-toc'))} style={btn}>
+          <button onClick={() => window.dispatchEvent(new CustomEvent('toggle-canvas-toc'))} style={btn} aria-label="Toggle outline panel">
             <Layers size={20} /><span>Outline</span>
           </button>
-          <button onClick={() => window.dispatchEvent(new CustomEvent('toggle-activity'))} style={btn}>
+          <button onClick={() => window.dispatchEvent(new CustomEvent('toggle-activity'))} style={btn} aria-label="Toggle activity panel">
             <Activity size={20} /><span>Activity</span>
           </button>
           <button onClick={() => { setMoreMenuOpen(!moreMenuOpen); setMobileMenuOpen(false) }}
-            style={moreMenuOpen ? btnActive : btn}>
+            style={moreMenuOpen ? btnActive : btn}
+            aria-label={moreMenuOpen ? 'Close more menu' : 'More options'}
+            aria-expanded={moreMenuOpen}>
             {moreMenuOpen ? <X size={20} /> : <ChevronDown size={20} style={{ transform: 'rotate(180deg)' }} />}
             <span>More</span>
           </button>
@@ -459,6 +465,16 @@ function ToolbarComponent({ onSave, onSaveAs, onNew, onOpen, onToggleAISidebar, 
               </button>
             </TooltipTrigger>
             <TooltipContent>Theme Settings</TooltipContent>
+          </Tooltip>
+
+          {/* 11. Keyboard shortcuts help */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={() => useShortcutHelpStore.getState().toggle()} aria-label="Keyboard shortcuts">
+                <HelpCircle className="w-5 h-5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Keyboard shortcuts (?)</TooltipContent>
           </Tooltip>
 
         </div>

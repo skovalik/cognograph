@@ -22,6 +22,7 @@ import { memo, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useEdges, useNodes, useViewport } from '@xyflow/react'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 import { useProgramStore, selectReduceMotion } from '../stores/programStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -245,9 +246,24 @@ function ParticleDriftComponent(): JSX.Element | null {
       return
     }
 
-    // Throttle to ~30fps
+    // Zoom performance tier — read from store (no React subscription needed)
+    const tier = useWorkspaceStore.getState().zoomPerfTier ?? 'full'
+
+    // At minimal tier: clear canvas but keep RAF alive
+    if (tier === 'minimal') {
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        const dpr = window.devicePixelRatio || 1
+        ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr)
+      }
+      rafRef.current = requestAnimationFrame(animate)
+      return
+    }
+
+    // Tier-aware frame throttle: 15fps at reduced, 30fps at full
+    const effectiveInterval = tier === 'reduced' ? 66 : FRAME_INTERVAL_MS
     const elapsed = timestamp - lastFrameRef.current
-    if (elapsed < FRAME_INTERVAL_MS) {
+    if (elapsed < effectiveInterval) {
       rafRef.current = requestAnimationFrame(animate)
       return
     }
@@ -286,9 +302,10 @@ function ParticleDriftComponent(): JSX.Element | null {
       return
     }
 
-    // Reconcile particle count
+    // Reconcile particle count — cap at 20 in reduced tier
     const particles = particlesRef.current
-    const targetCount = Math.min(eps.length, maxP)
+    const effectiveMax = tier === 'reduced' ? Math.min(20, maxP) : maxP
+    const targetCount = Math.min(eps.length, effectiveMax)
 
     // Add particles if needed
     while (particles.length < targetCount) {

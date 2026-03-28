@@ -1,6 +1,6 @@
 # Features
 
-> Complete feature documentation for Cognograph. For architecture details, see [ARCHITECTURE.md](./ARCHITECTURE.md). For the design philosophy behind these features, see the README.
+> Complete feature documentation for Cognograph. For architecture details, see [ARCHITECTURE.md](./ARCHITECTURE.md). For the design philosophy behind these features, see [docs/strategy/VISION.md](./docs/strategy/VISION.md).
 
 ---
 
@@ -304,4 +304,4 @@ Living Grid, Topography, Aurora, Starfield, Fireflies, Rain, Particles, Iridesce
 
 ---
 
-*For architecture details, see [ARCHITECTURE.md](./ARCHITECTURE.md). For the design philosophy, see the README.*
+*For architecture details, see [ARCHITECTURE.md](./ARCHITECTURE.md). For the design philosophy, see [docs/strategy/VISION.md](./docs/strategy/VISION.md).*

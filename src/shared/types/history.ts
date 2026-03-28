@@ -89,7 +89,7 @@ export const DEFAULT_CONNECTOR_STATE: ConnectorState = {
 }
 
 export const CONNECTOR_PROVIDER_INFO: Record<ConnectorProvider, { label: string; defaultModel: string; requiresBaseUrl: boolean }> = {
-  anthropic: { label: 'Anthropic', defaultModel: 'claude-sonnet-4-20250514', requiresBaseUrl: false },
+  anthropic: { label: 'Anthropic', defaultModel: 'claude-sonnet-4-6', requiresBaseUrl: false },
   openai: { label: 'OpenAI', defaultModel: 'gpt-4-turbo-preview', requiresBaseUrl: false },
   gemini: { label: 'Google Gemini', defaultModel: 'gemini-1.5-flash', requiresBaseUrl: false },
   ollama: { label: 'Ollama (Local)', defaultModel: 'llama3', requiresBaseUrl: true },

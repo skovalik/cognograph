@@ -71,9 +71,7 @@ function EmptyCanvasHintComponent({ onDismiss }: EmptyCanvasHintProps): JSX.Elem
     onDismiss?.()
   }, [onDismiss])
 
-  // Only show on Electron — web visitors should see the demo or start working
-  const isWeb = !(window as any).__ELECTRON__
-  if (dismissed || !isEmpty || !isNewWorkspace || isWeb) return null
+  if (dismissed || !isEmpty || !isNewWorkspace) return null
 
   return (
     <AnimatePresence>

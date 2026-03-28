@@ -61,7 +61,7 @@ function getMainWindow(): BrowserWindow | null {
 
 const QUERY_TOOLS: Anthropic.Tool[] = [
   {
-    name: 'find_nodes',
+    name: 'search_nodes',
     description: 'Search for nodes in the workspace by type, title, or tags. Use this to discover nodes that might be relevant to the task.',
     input_schema: {
       type: 'object' as const,
@@ -87,7 +87,7 @@ const QUERY_TOOLS: Anthropic.Tool[] = [
     }
   },
   {
-    name: 'get_node_details',
+    name: 'get_node',
     description: 'Get full details of a specific node including all its data. Use this to inspect a node more closely.',
     input_schema: {
       type: 'object' as const,
@@ -148,7 +148,7 @@ async function executeQueryTool(
 ): Promise<unknown> {
   // Execute tools locally using the context we already have
   switch (toolName) {
-    case 'find_nodes': {
+    case 'search_nodes': {
       const { type, titleContains, hasTag, limit = 20 } = input
       let results = [...context.selectedNodes, ...context.visibleNodes]
 
@@ -177,7 +177,7 @@ async function executeQueryTool(
       }
     }
 
-    case 'get_node_details': {
+    case 'get_node': {
       const { nodeId } = input
       const allNodes = [...context.selectedNodes, ...context.visibleNodes]
       const node = allNodes.find((n) => n.id === nodeId)
@@ -567,7 +567,7 @@ async function generatePlanWithAnthropic(context: AIEditorContext): Promise<IPCR
     console.log('[AIEditor] Prompt:', context.prompt.substring(0, 100))
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       temperature: 0.3,
       system: systemPrompt,
@@ -747,7 +747,7 @@ Only use query tools if you need specific node content/details not shown here.`
       console.log(`[AIEditor:Agent] Iteration ${iterations}`)
 
       const response = await client.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 4096,
         temperature: 0.3,
         system: systemPrompt,
@@ -915,7 +915,7 @@ async function generatePlanWithStreaming(context: AIEditorContext): Promise<void
 
     // Stream the response
     const stream = await client.messages.stream({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       temperature: 0.3,
       system: systemPrompt,
@@ -1117,7 +1117,7 @@ Please provide the refined plan as a JSON object.`
     console.log('[AIEditor:Refine] Refinement:', request.refinementPrompt.substring(0, 100))
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       temperature: 0.3,
       system: systemPrompt,

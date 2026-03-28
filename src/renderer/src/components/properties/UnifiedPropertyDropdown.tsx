@@ -35,6 +35,7 @@ import {
 } from 'lucide-react'
 import type { PropertyOption } from '@shared/types'
 import { ICON_MAP } from '../IconPicker'
+import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 
 // Quick icon selection for edit mode
 const QUICK_ICONS: { name: string; icon: LucideIcon }[] = [
@@ -136,18 +137,15 @@ function UnifiedPropertyDropdownComponent({
   // Close on escape
   useEffect(() => {
     if (mode === 'closed') return
-
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        if (mode === 'editing') {
-          handleBackToSelection()
-        } else {
-          handleClose()
-        }
+    const handleEscape = () => {
+      if (mode === 'editing') {
+        handleBackToSelection()
+      } else {
+        handleClose()
       }
     }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    escapeManager.register('popover-unified-property', EscapePriority.POPOVER, handleEscape)
+    return () => escapeManager.unregister('popover-unified-property')
   }, [mode])
 
   // Focus search input when opening selection mode

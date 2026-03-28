@@ -2,7 +2,8 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import { memo, useMemo, useCallback, useEffect, useState, useRef } from 'react'
-import { Handle, Position, NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
+import { NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
+import { SpreadHandles } from './SpreadHandles'
 import {
   Code,
   FileText,
@@ -54,6 +55,8 @@ import {
 import { ArtifactVideoRenderer } from './ArtifactVideoRenderer'
 import { ArtifactAudioRenderer } from './ArtifactAudioRenderer'
 import { Artifact3DRenderer } from './Artifact3DRenderer'
+import { FilePreviewSection } from '../FilePreviewSection'
+import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -64,8 +67,8 @@ interface NodeStyleWithCustomProps extends React.CSSProperties {
 // Default dimensions
 const DEFAULT_WIDTH = 320
 const DEFAULT_HEIGHT = 220
-const MIN_WIDTH = 280
-const MIN_HEIGHT = 150
+const MIN_WIDTH = 300
+const MIN_HEIGHT = 220
 
 // Preview mode enforces larger minimums (LP-T16)
 const PREVIEW_MIN_WIDTH = 400
@@ -209,6 +212,61 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // ---- Inline HTML rendering state ----
+  const [htmlInteractionMode, setHtmlInteractionMode] = useState(false)
+  const [htmlRenderMode, setHtmlRenderMode] = useState<'render' | 'source'>('render')
+  // NOTE: These are ephemeral — viewport and scale reset to defaults on
+  // component remount (node collapse/expand, sidebar toggle, etc.).
+  const [htmlViewport, setHtmlViewport] = useState<PreviewViewport>('desktop')
+  const [htmlScale, setHtmlScale] = useState(1.0)
+  const htmlIframeRef = useRef<HTMLIFrameElement>(null)
+  const htmlIframeAutoSizedRef = useRef(false)
+
+  // Auto-size node to match rendered HTML content after iframe loads
+  useEffect(() => {
+    if (nodeData.contentType !== 'html' || !nodeData.content || htmlIframeAutoSizedRef.current) return
+    const iframe = htmlIframeRef.current
+    if (!iframe) return
+
+    const measure = (): void => {
+      try {
+        const doc = iframe.contentDocument
+        const body = doc?.body
+        if (!body || body.scrollHeight < 50) return
+        const chromeH = 88 // header ~48px + footer ~36px + borders
+        const scrollH = body.scrollHeight
+        const neededH = Math.round(scrollH * htmlScale) + chromeH
+        const currentH = propsHeight || nodeData.height || 180
+        // Resize to match content — both grow and shrink (within reason)
+        if (Math.abs(neededH - currentH) > 30) {
+          const finalH = Math.max(200, neededH) // floor at 200px
+          updateNodeDimensions(id, propsWidth || nodeData.width || 680, finalH)
+          htmlIframeAutoSizedRef.current = true
+        }
+      } catch { /* sandbox restriction */ }
+    }
+
+    // Measure after iframe loads + CSS applies
+    const timeouts: ReturnType<typeof setTimeout>[] = []
+    const handleLoad = (): void => { timeouts.push(setTimeout(measure, 100)) }
+    iframe.addEventListener('load', handleLoad, { once: true })
+    // Also try measuring now in case load already fired — and retry a few times
+    // (iframe may not have content dimensions ready immediately)
+    timeouts.push(setTimeout(measure, 200))
+    timeouts.push(setTimeout(measure, 600))
+    timeouts.push(setTimeout(measure, 1200))
+
+    return () => {
+      iframe.removeEventListener('load', handleLoad)
+      timeouts.forEach(clearTimeout)
+    }
+  }, [id, htmlScale, propsHeight, propsWidth, nodeData.height, nodeData.width, nodeData.contentType, nodeData.content, updateNodeDimensions])
+
+  // Reset auto-size flag when content changes
+  useEffect(() => {
+    htmlIframeAutoSizedRef.current = false
+  }, [nodeData.content])
+
   // Calculate dynamic node color
   const nodeColor = nodeData.color || themeSettings.nodeColors.artifact || DEFAULT_THEME_SETTINGS.nodeColors.artifact
 
@@ -304,17 +362,10 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   // ---- Preview: Escape key exits interaction mode (LP-E07) ----
   useEffect(() => {
     if (!interactionMode) return
-
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        setInteractionMode(false)
-      }
-    }
-
-    // Listener on document because focus may be inside the iframe
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [interactionMode])
+    const exitInteraction = () => setInteractionMode(false)
+    escapeManager.register(`canvas-artifact-interaction-${id}`, EscapePriority.CANVAS, exitInteraction)
+    return () => escapeManager.unregister(`canvas-artifact-interaction-${id}`)
+  }, [interactionMode, id])
 
   // ---- Preview: iframe load timeout (LP-E01) ----
   useEffect(() => {
@@ -432,6 +483,27 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   const files = nodeData.files || []
   const firstFile = files[0]
   const activeFileId = nodeData.activeFileId || (firstFile ? firstFile.id : undefined)
+
+  // Detect HTML content by contentType or fallback to language
+  const isHtmlContent = activeContent.contentType === 'html' ||
+    (activeContent.contentType === 'code' && activeContent.language === 'html')
+
+  // Sanitize HTML content for safe srcdoc rendering
+  const sanitizedHtmlContent = useMemo(() => {
+    if (!isHtmlContent || !activeContent.content) return ''
+    // Strip <base> tags (prevents resource redirection/exfiltration)
+    let safe = activeContent.content.replace(/<base\b[^>]*>/gi, '')
+    // Inject meta CSP to block outbound network (kills crypto mining, CDN script loading, exfil)
+    // Allow: inline scripts/styles, Google Fonts, data URIs. Block: connect-src (XHR/fetch/WS)
+    const cspMeta = '<meta http-equiv="Content-Security-Policy" content="default-src \'unsafe-inline\' \'unsafe-eval\' data: blob:; script-src \'unsafe-inline\' \'unsafe-eval\'; style-src \'unsafe-inline\' https://fonts.googleapis.com; font-src data: https://fonts.gstatic.com; img-src data: blob: https:; connect-src \'none\';">'
+    // Inject CSP as first element in <head>, or prepend if no <head>
+    if (safe.includes('<head>')) {
+      safe = safe.replace('<head>', '<head>' + cspMeta)
+    } else {
+      safe = cspMeta + safe
+    }
+    return safe
+  }, [isHtmlContent, activeContent.content])
 
   // Get preview content (truncated)
   const getPreviewContent = (): string => {
@@ -595,18 +667,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
       {/* ================================================================
           Handles — hidden at L0 (ultra-far), shown L1+
           ================================================================ */}
-      {showHeader && (
-        <>
-          <Handle type="target" position={Position.Top} id="top-target" />
-          <Handle type="source" position={Position.Top} id="top-source" />
-          <Handle type="target" position={Position.Bottom} id="bottom-target" />
-          <Handle type="source" position={Position.Bottom} id="bottom-source" />
-          <Handle type="target" position={Position.Left} id="left-target" />
-          <Handle type="source" position={Position.Left} id="left-source" />
-          <Handle type="target" position={Position.Right} id="right-target" />
-          <Handle type="source" position={Position.Right} id="right-source" />
-        </>
-      )}
+      <SpreadHandles hidden={isUltraFar} />
 
       {/* Numbered bookmark badge */}
       {numberedBookmark && (
@@ -739,15 +800,22 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                   <Download className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
                 </button>
               )}
-              {showInteractiveControls && (
+              {isHtmlContent && showInteractiveControls && (
                 <button
-                  onClick={handleOpenProperties}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setHtmlRenderMode(m => m === 'render' ? 'source' : 'render')
+                  }}
                   className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
-                  title="Open properties"
+                  title={htmlRenderMode === 'render' ? 'View source' : 'View rendered'}
                 >
-                  <Settings2 className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
+                  {htmlRenderMode === 'render'
+                    ? <Code className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
+                    : <Eye className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
+                  }
                 </button>
               )}
+              {/* Properties button removed — access via right-click context menu */}
               <button
                 onClick={toggleCollapsed}
                 className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
@@ -824,6 +892,29 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                 onRefresh={handlePreviewRefresh}
                 onInteractionModeToggle={handleInteractionModeToggle}
                 onPreviewToggle={handlePreviewToggle}
+              />
+            </div>
+          )}
+
+          {/* Preview toolbar — for inline HTML artifacts (slimmed down) */}
+          {!isPreviewMode && isHtmlContent && htmlRenderMode === 'render' && showContent && showInteractiveControls && !nodeData.collapsed && (
+            <div className="node-chrome--hover">
+              <PreviewToolbar
+                viewport={htmlViewport}
+                scale={htmlScale}
+                autoRefresh={false}
+                interactionMode={htmlInteractionMode}
+                previewUrl=""
+                onViewportChange={setHtmlViewport}
+                onScaleChange={setHtmlScale}
+                onAutoRefreshToggle={() => {}}
+                onRefresh={() => {}}
+                onInteractionModeToggle={() => setHtmlInteractionMode(m => !m)}
+                onPreviewToggle={() => setHtmlRenderMode('source')}
+                showRefresh={false}
+                showAutoRefresh={false}
+                showOpenInBrowser={false}
+                showCodeToggle={true}
               />
             </div>
           )}
@@ -985,22 +1076,71 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                         className="max-h-32 max-w-full rounded object-contain"
                       />
                     </div>
-                  ) : activeContent.contentType === 'html' && activeContent.content ? (
-                    <div className="rounded overflow-hidden">
-                      <iframe
-                        srcDoc={activeContent.content}
-                        sandbox="allow-scripts"
-                        style={{
-                          width: '100%',
-                          height: '320px',
-                          border: 'none',
-                          borderRadius: '4px',
-                          pointerEvents: 'none',
-                          overflow: 'hidden',
-                        }}
-                        scrolling="no"
-                        title={nodeData.title}
-                      />
+                  ) : isHtmlContent && activeContent.content && htmlRenderMode === 'render' ? (
+                    <div
+                      className="relative flex-1"
+                      style={{ minHeight: 0 }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape' && htmlInteractionMode) {
+                          e.stopPropagation()
+                          setHtmlInteractionMode(false)
+                        }
+                      }}
+                      tabIndex={-1}
+                    >
+                      {/* Outer overflow wrapper — matches existing preview mode pattern */}
+                      <div style={{ overflow: 'hidden', height: '100%' }}>
+                        {/* Viewport-scaled container — same pattern as preview mode */}
+                        <div
+                          style={{
+                            width: PREVIEW_VIEWPORT_WIDTHS[htmlViewport] || '100%',
+                            transform: `scale(${htmlScale})`,
+                            transformOrigin: 'top left',
+                            height: '100%',
+                          }}
+                        >
+                          <iframe
+                            ref={htmlIframeRef}
+                            key={sanitizedHtmlContent.length}
+                            srcDoc={sanitizedHtmlContent}
+                            // SECURITY NOTE (S-121): allow-same-origin is required for
+                            // contentDocument.body.scrollHeight measurement (auto-sizing).
+                            // CSP meta tag (connect-src 'none') blocks outbound network.
+                            // Trade-off accepted for MVP — artifact HTML is AI-generated, not user-uploaded.
+                            sandbox="allow-scripts allow-same-origin"
+                            style={{
+                              width: '100%',
+                              height: htmlScale < 1 ? `${100 / htmlScale}%` : '100%',
+                              minHeight: '320px',
+                              border: 'none',
+                              borderRadius: '4px',
+                              backgroundColor: 'transparent',
+                              pointerEvents: htmlInteractionMode ? 'auto' : 'none',
+                            }}
+                            title={nodeData.title}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Interaction overlay — only at usable zoom levels */}
+                      {!htmlInteractionMode && showInteractiveControls && (
+                        <div
+                          className="absolute inset-0 z-10 cursor-pointer"
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => { e.stopPropagation(); setHtmlInteractionMode(true) }}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setHtmlInteractionMode(true) } }}
+                          title="Click to interact with HTML preview"
+                        />
+                      )}
+                      {htmlInteractionMode && (
+                        <button
+                          className="absolute top-2 right-2 z-20 px-2 py-1 text-xs rounded bg-black/60 text-white hover:bg-black/80 transition-colors"
+                          onClick={(e) => { e.stopPropagation(); setHtmlInteractionMode(false) }}
+                        >
+                          Exit interaction
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <pre
@@ -1010,7 +1150,10 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                         color: 'var(--node-text-secondary)'
                       }}
                     >
-                      {getPreviewContent() || <span className="italic" style={{ color: 'var(--node-text-muted)' }}>Empty artifact</span>}
+                      {isHtmlContent && htmlRenderMode === 'source'
+                        ? activeContent.content
+                        : (getPreviewContent() || <span className="italic" style={{ color: 'var(--node-text-muted)' }}>Empty artifact</span>)
+                      }
                     </pre>
                   )}
 
@@ -1028,6 +1171,17 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
             </>
           )}
         </>
+      )}
+
+      {/* File listing preview — only when folderPath is set and at L3+ */}
+      {showContent && nodeData.folderPath && (
+        <FilePreviewSection
+          folderPath={nodeData.folderPath}
+          fileFilter={nodeData.fileFilter}
+          fileListVisible={nodeData.fileListVisible ?? false}
+          onToggleVisible={() => updateNode(id, { fileListVisible: !nodeData.fileListVisible })}
+          compact
+        />
       )}
 
       {/* Footer — shown at L2+ (mid and above) */}

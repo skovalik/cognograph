@@ -20,6 +20,8 @@ interface SettingsSchema {
   notionWorkflowsDbId?: string
   notionExecLogDbId?: string
   notionSyncEnabled?: boolean
+  // Agent SDK local mode
+  useClaudeProAccount?: boolean
 }
 
 const store = new Store<SettingsSchema>({
@@ -89,4 +91,8 @@ export function registerSettingsHandlers(): void {
       return { success: false, error: errorMessage }
     }
   })
+}
+
+export function getSetting<K extends keyof SettingsSchema>(key: K): SettingsSchema[K] | undefined {
+  return store.get(key)
 }

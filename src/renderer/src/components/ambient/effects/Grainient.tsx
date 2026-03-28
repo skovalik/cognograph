@@ -3,6 +3,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Renderer, Program, Mesh, Triangle } from 'ogl';
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
 
 interface GrainientProps {
   timeSpeed?: number;
@@ -29,6 +30,8 @@ interface GrainientProps {
   color3?: string;
   opacity?: number;
   className?: string;
+  qualityRef?: React.RefObject<AdaptiveQualityState>;
+  reportFrame?: () => void;
 }
 
 const hexToRgb = (hex: string): [number, number, number] => {
@@ -152,7 +155,9 @@ const Grainient: React.FC<GrainientProps> = ({
   color2 = '#5227FF',
   color3 = '#B19EEF',
   opacity = 1,
-  className = ''
+  className = '',
+  qualityRef,
+  reportFrame,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -163,7 +168,7 @@ const Grainient: React.FC<GrainientProps> = ({
       webgl: 2,
       alpha: true,
       antialias: false,
-      dpr: Math.min(window.devicePixelRatio || 1, 2)
+      dpr: 1.0,
     });
 
     const gl = renderer.gl;
@@ -223,11 +228,34 @@ const Grainient: React.FC<GrainientProps> = ({
     setSize();
 
     let raf = 0;
+    let frameCount = 0;
+    let currentScale = -1;
     const t0 = performance.now();
     const loop = (t: number) => {
+      raf = requestAnimationFrame(loop);
+      if (qualityRef?.current && !qualityRef.current.shouldRender) return;
+      if (reportFrame) reportFrame();
+      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
+      if (qualityRef?.current) {
+        const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap;
+        if (scale !== currentScale) {
+          currentScale = scale;
+          const rect = container.getBoundingClientRect();
+          const w = Math.max(1, Math.floor(rect.width * scale));
+          const h = Math.max(1, Math.floor(rect.height * scale));
+          renderer.setSize(w, h);
+          // OGL setSize also sets canvas CSS dimensions — force back to 100% so
+          // low-res content stretches to fill container (CSS upscaling, not shrinking)
+          const c = renderer.gl.canvas as HTMLCanvasElement;
+          c.style.width = '100%';
+          c.style.height = '100%';
+          const res = program.uniforms.iResolution.value as Float32Array;
+          res[0] = gl.drawingBufferWidth;
+          res[1] = gl.drawingBufferHeight;
+        }
+      }
       (program.uniforms.iTime as any).value = (t - t0) * 0.001;
       renderer.render({ scene: mesh });
-      raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
 

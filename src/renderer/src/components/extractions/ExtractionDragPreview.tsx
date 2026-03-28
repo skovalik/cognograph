@@ -5,6 +5,7 @@ import { memo, useEffect, useCallback } from 'react'
 import { FileText, CheckSquare } from 'lucide-react'
 import { useReactFlow } from '@xyflow/react'
 import { useExtractionDrag, useWorkspaceStore } from '../../stores/workspaceStore'
+import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 
 function ExtractionDragPreviewComponent(): JSX.Element | null {
   const drag = useExtractionDrag()
@@ -36,20 +37,15 @@ function ExtractionDragPreviewComponent(): JSX.Element | null {
       }
     }
 
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        cancelExtractionDrag()
-      }
-    }
+    escapeManager.register('canvas-extraction-drag-cancel', EscapePriority.CANVAS, cancelExtractionDrag)
 
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
-    document.addEventListener('keydown', handleKeyDown)
 
     return () => {
+      escapeManager.unregister('canvas-extraction-drag-cancel')
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
-      document.removeEventListener('keydown', handleKeyDown)
     }
   }, [drag, updateExtractionDragPosition, dropExtraction, cancelExtractionDrag, screenToFlowPosition])
 

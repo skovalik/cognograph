@@ -12,6 +12,7 @@ import { memo, useState, useCallback, useRef, useEffect } from 'react'
 import { Filter, Eye, EyeOff, ChevronDown } from 'lucide-react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import type { NodeData } from '@shared/types'
+import { escapeManager, EscapePriority } from '../utils/EscapeManager'
 
 // Node type display info
 const NODE_TYPES: Array<{ type: NodeData['type']; label: string; color: string }> = [
@@ -63,15 +64,9 @@ function FilterViewDropdownComponent(): JSX.Element {
   // Close on escape
   useEffect(() => {
     if (!isOpen) return
-
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        setIsOpen(false)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    const closeDropdown = () => setIsOpen(false)
+    escapeManager.register('popover-filter-view', EscapePriority.POPOVER, closeDropdown)
+    return () => escapeManager.unregister('popover-filter-view')
   }, [isOpen])
 
   const handleToggle = useCallback((type: NodeData['type']) => {

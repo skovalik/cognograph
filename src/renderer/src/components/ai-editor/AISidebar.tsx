@@ -96,7 +96,8 @@ function AISidebarComponent({ isOpen, onClose }: AISidebarProps): JSX.Element | 
         workspaceSettings: {
           defaultProvider: 'anthropic',
           themeMode: themeSettings.mode
-        }
+        },
+        includeEnhancedAnalysis: true
       })
 
       // Generate plan using AI

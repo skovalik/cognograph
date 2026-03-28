@@ -16,6 +16,7 @@
 import { useEffect, useCallback } from 'react'
 import { useUIStore } from '../stores/uiStore'
 import { useSelectionStore } from '../stores/selectionStore'
+import { escapeManager, EscapePriority } from '../utils/EscapeManager'
 
 export function useArtboardMode() {
   const artboardNodeId = useUIStore((s) => s.artboardNodeId)
@@ -35,17 +36,16 @@ export function useArtboardMode() {
     exitArtboard()
   }, [exitArtboard])
 
+  // Escape exits artboard mode (via EscapeManager)
+  useEffect(() => {
+    if (!isArtboardActive) return
+    escapeManager.register('artboard-mode', EscapePriority.ARTBOARD, handleExitArtboard)
+    return () => escapeManager.unregister('artboard-mode')
+  }, [isArtboardActive, handleExitArtboard])
+
+  // Cmd/Ctrl+Enter enters artboard mode on single selected node
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
-      // Escape exits artboard mode
-      if (e.key === 'Escape' && isArtboardActive) {
-        e.preventDefault()
-        e.stopPropagation()
-        handleExitArtboard()
-        return
-      }
-
-      // Cmd/Ctrl+Enter enters artboard mode on single selected node
       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
         // Don't activate if typing in an input
         const target = e.target as HTMLElement
@@ -65,10 +65,9 @@ export function useArtboardMode() {
       }
     }
 
-    // Use capture phase so artboard Escape takes priority
     window.addEventListener('keydown', handleKeyDown, true)
     return () => window.removeEventListener('keydown', handleKeyDown, true)
-  }, [isArtboardActive, handleEnterArtboard, handleExitArtboard])
+  }, [isArtboardActive, handleEnterArtboard])
 
   return {
     isArtboardActive,

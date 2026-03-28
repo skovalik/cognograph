@@ -23,6 +23,7 @@ import {
   Pipette
 } from 'lucide-react'
 import type { PropertyOption } from '@shared/types'
+import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 
 // Preset colors for quick selection (circles)
 const PRESET_COLORS = [
@@ -111,18 +112,15 @@ function TagsDropdownComponent({
   // Close on escape
   useEffect(() => {
     if (mode === 'closed') return
-
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        if (mode === 'editing' || mode === 'creating') {
-          handleBackToSelection()
-        } else {
-          handleClose()
-        }
+    const handleEscape = () => {
+      if (mode === 'editing' || mode === 'creating') {
+        handleBackToSelection()
+      } else {
+        handleClose()
       }
     }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    escapeManager.register('popover-tags-dropdown', EscapePriority.POPOVER, handleEscape)
+    return () => escapeManager.unregister('popover-tags-dropdown')
   }, [mode])
 
   // Focus search input when opening selection mode

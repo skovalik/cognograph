@@ -32,6 +32,7 @@ import {
   getQuickActionsForNode,
   GENERIC_QUICK_ACTIONS
 } from '../../constants/aiPropertyQuickActions'
+import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 import {
   extractNodeContent,
   buildPropertyPrompt,
@@ -367,15 +368,8 @@ function AIPropertyAssistComponent({
   // Keyboard handler
   useEffect(() => {
     if (!isOpen) return
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        handleClose()
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    escapeManager.register('dialog-ai-property-assist', EscapePriority.DIALOG, handleClose)
+    return () => escapeManager.unregister('dialog-ai-property-assist')
   }, [isOpen])
 
   // Cleanup abort controller on unmount

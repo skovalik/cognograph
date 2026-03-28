@@ -2,7 +2,8 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import { memo, useMemo, useCallback, useEffect } from 'react'
-import { Handle, Position, NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
+import { NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
+import { SpreadHandles } from './SpreadHandles'
 import {
   Eye,
   EyeOff,
@@ -211,18 +212,7 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
       )}
 
       {/* Handles - hidden at L0 (ultra-far) */}
-      {lodLevel >= 1 && (
-        <>
-          <Handle type="target" position={Position.Top} id="top-target" />
-          <Handle type="source" position={Position.Top} id="top-source" />
-          <Handle type="target" position={Position.Bottom} id="bottom-target" />
-          <Handle type="source" position={Position.Bottom} id="bottom-source" />
-          <Handle type="target" position={Position.Left} id="left-target" />
-          <Handle type="source" position={Position.Left} id="left-source" />
-          <Handle type="target" position={Position.Right} id="right-target" />
-          <Handle type="source" position={Position.Right} id="right-source" />
-        </>
-      )}
+      <SpreadHandles hidden={zoomLevel === 'ultra-far'} />
 
       {/* ── L0 (ultra-far): Workspace icon + member count badge ── */}
       {lodLevel === 0 && (

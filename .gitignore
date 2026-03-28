@@ -70,3 +70,13 @@ e2e/test-results/
 
 # Secrets vault
 .secrets/
+
+# Generated config (written by claudeConfigWriter per terminal session)
+.cognograph-context.md
+.mcp.json
+
+# Test screenshots and temp artifacts
+test-*.png
+screenshot-*.png
+*_b64.txt
+screenshot-test.mjs

@@ -42,6 +42,7 @@ export function ContextSettingsModal({ isOpen, onClose }: ContextSettingsModalPr
           <button
             onClick={onClose}
             className="p-1 hover:bg-[var(--surface-panel-secondary)] rounded transition-colors text-[var(--text-secondary)] hover:text-white"
+            aria-label="Close context settings"
           >
             <X className="w-5 h-5" />
           </button>

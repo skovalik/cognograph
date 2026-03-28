@@ -11,6 +11,8 @@ import { v4 as uuid } from 'uuid'
 import toast from 'react-hot-toast'
 import { logger } from '../utils/logger'
 import { estimateCost } from '../utils/tokenEstimator'
+import { IncrementalBatchParser } from '../utils/incrementalJsonParser'
+import { layoutEvents } from '../utils/layoutEvents'
 
 // -----------------------------------------------------------------------------
 // Agent State (per-agent Map, not singleton)
@@ -30,6 +32,7 @@ interface AgentState {
   historyActions: HistoryAction[] // Collect all actions for batch undo
   iterationResolve: ((value: { stopReason: string }) => void) | null // Per-agent (Fix 1)
   pauseRequested: boolean // Graceful pause flag (Fix 5)
+  streamingStarted: boolean // Whether first text_delta has been received (Fix 2 — thinking animation)
   iterationTimeout: ReturnType<typeof setTimeout> | null // 5 min timeout per iteration
   toolCallCount: number // Track across the run for run summary
   runStartedAt: number | null // For run summary timing
@@ -38,6 +41,16 @@ interface AgentState {
   totalOutputTokens: number
   totalCacheCreationTokens: number
   totalCacheReadTokens: number
+  // AbortController per run — allows cancellation of the current run and prevents
+  // state mutation during async operations if the run has been superseded (Fix 1.3-C)
+  abortController: AbortController | null
+  // Streaming batch_create — incremental node creation during tool_use_delta
+  streamingParser: IncrementalBatchParser | null
+  streamingTempIdMap: Map<string, string> | null
+  streamingDeferredEdges: Record<string, unknown>[] | null
+  streamingNodeCount: number
+  streamingExecuted: boolean
+  streamingToolResult: string | null
 }
 
 interface QueuedMessage {
@@ -52,19 +65,11 @@ const agentStates = new Map<string, AgentState>()
 let streamUnsubscribe: (() => void) | null = null
 let isServiceInitialized = false
 
-// External stream handlers for non-agent consumers (e.g., chatToolService)
-const externalStreamHandlers = new Map<string, { onChunk: (chunk: AgentStreamChunk) => void }>()
-
-export function registerExternalStreamHandler(
-  requestId: string,
-  handler: { onChunk: (chunk: AgentStreamChunk) => void }
-): void {
-  externalStreamHandlers.set(requestId, handler)
+// External stream handlers — used by chatToolService to piggyback on the stream listener
+interface ExternalStreamHandler {
+  onChunk(chunk: AgentStreamChunk): void
 }
-
-export function unregisterExternalStreamHandler(requestId: string): void {
-  externalStreamHandlers.delete(requestId)
-}
+const externalStreamHandlers = new Map<string, ExternalStreamHandler>()
 
 // Iteration timeout duration: 5 minutes
 const ITERATION_TIMEOUT_MS = 5 * 60 * 1000
@@ -85,13 +90,21 @@ function getOrCreateState(conversationId: string): AgentState {
       historyActions: [],
       iterationResolve: null,
       pauseRequested: false,
+      streamingStarted: false,
       iterationTimeout: null,
       toolCallCount: 0,
       runStartedAt: null,
       totalInputTokens: 0,
       totalOutputTokens: 0,
       totalCacheCreationTokens: 0,
-      totalCacheReadTokens: 0
+      totalCacheReadTokens: 0,
+      abortController: null,
+      streamingParser: null,
+      streamingTempIdMap: null,
+      streamingDeferredEdges: null,
+      streamingNodeCount: 0,
+      streamingExecuted: false,
+      streamingToolResult: null
     })
   }
   return agentStates.get(conversationId)!
@@ -109,6 +122,10 @@ function cleanupState(conversationId: string): void {
   if (state?.iterationTimeout) {
     clearTimeout(state.iterationTimeout)
   }
+  if (state?.abortController) {
+    state.abortController.abort()
+    state.abortController = null
+  }
   agentStates.delete(conversationId)
 }
 
@@ -120,6 +137,12 @@ function resetAgentState(conversationId: string): void {
     clearTimeout(state.iterationTimeout)
   }
 
+  // Abort any in-flight async operations for this run (Fix 1.3-C)
+  if (state.abortController) {
+    state.abortController.abort()
+    state.abortController = null
+  }
+
   state.isRunning = false
   state.currentRequestId = null
   state.accumulatedText = ''
@@ -127,9 +150,16 @@ function resetAgentState(conversationId: string): void {
   state.historyActions = []
   state.iterationResolve = null
   state.pauseRequested = false
+  state.streamingStarted = false
   state.iterationTimeout = null
   state.toolCallCount = 0
   state.runStartedAt = null
+  state.streamingParser = null
+  state.streamingTempIdMap = null
+  state.streamingDeferredEdges = null
+  state.streamingNodeCount = 0
+  state.streamingExecuted = false
+  state.streamingToolResult = null
 }
 
 // -----------------------------------------------------------------------------
@@ -229,7 +259,7 @@ function finalizeRunEntry(
     const outputTokens = agentState?.totalOutputTokens ?? 0
     const cacheCreationTokens = agentState?.totalCacheCreationTokens ?? 0
     const cacheReadTokens = agentState?.totalCacheReadTokens ?? 0
-    const model = convData.workspaceOverrides?.llm?.model || 'claude-sonnet-4-20250514'
+    const model = convData.workspaceOverrides?.llm?.model || 'claude-sonnet-4-6'
 
     const cost = estimateCost(
       inputTokens,
@@ -399,6 +429,12 @@ export function stopAgent(conversationId: string): void {
   const agentState = agentStates.get(conversationId)
   if (!agentState) return
 
+  // Signal abort to the run loop FIRST — this ensures any in-flight async
+  // operations see the abort before we tear down state (Fix 1.3-C).
+  if (agentState.abortController) {
+    agentState.abortController.abort()
+  }
+
   // Abort any active request
   if (agentState.currentRequestId && window.api?.agent) {
     window.api.agent.cancel(agentState.currentRequestId)
@@ -504,6 +540,23 @@ async function runAgentLoop(conversationId: string): Promise<void> {
   const settings = convData.agentSettings || DEFAULT_AGENT_SETTINGS
 
   const agentState = getOrCreateState(conversationId)
+
+  // Mutual exclusion: if a run is already in progress for this conversation,
+  // reject immediately to prevent concurrent state mutations (Fix 1.3-C).
+  if (agentState.isRunning && agentState.abortController && !agentState.abortController.signal.aborted) {
+    console.warn(`[AgentService] [${conversationId}] Rejecting concurrent run — agent already in progress`)
+    return
+  }
+
+  // Abort any leftover controller from a previous run
+  if (agentState.abortController) {
+    agentState.abortController.abort()
+  }
+
+  // Create a new AbortController for this run
+  const abortController = new AbortController()
+  agentState.abortController = abortController
+
   agentState.isRunning = true
   agentState.currentRequestId = uuid()
   agentState.accumulatedText = ''
@@ -529,12 +582,19 @@ async function runAgentLoop(conversationId: string): Promise<void> {
   const systemPromptPrefix = preset?.systemPromptPrefix
 
   try {
-    while (agentState.isRunning && toolCallCount < maxToolCalls) {
+    while (agentState.isRunning && toolCallCount <= maxToolCalls) {
       // Check pause before starting iteration
       if (agentState.pauseRequested) {
         agentState.pauseRequested = false
         agentState.isRunning = false
         finalizeRunEntry(conversationId, 'paused')
+        return
+      }
+
+      // Check if this run has been aborted (Fix 1.3-C) — another run may have
+      // superseded us, or stopAgent was called during an async gap.
+      if (abortController.signal.aborted) {
+        logger.log(`[AgentService] [${conversationId}] Run aborted, exiting loop`)
         return
       }
 
@@ -577,7 +637,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
         messages,
         context: context || '',
         tools,
-        model: convData.workspaceOverrides?.llm?.model || 'claude-sonnet-4-20250514',
+        model: convData.workspaceOverrides?.llm?.model || 'claude-sonnet-4-6',
         memory: memory || undefined,
         systemPromptPrefix: systemPromptPrefix || undefined
       })
@@ -621,6 +681,84 @@ async function runAgentLoop(conversationId: string): Promise<void> {
         toolCallCount++
         agentState.toolCallCount = toolCallCount
 
+        // Streaming batch_create was already executed during tool_use_delta/tool_use_end —
+        // skip executeTool and use the cached result for conversation history.
+        if (agentState.streamingExecuted && agentState.streamingToolResult) {
+          const toolUseMsg: Message = {
+            id: uuid(),
+            role: 'tool_use',
+            content: `Calling ${toolUse.name}`,
+            timestamp: Date.now(),
+            toolName: toolUse.name,
+            toolInput: JSON.parse(toolUse.inputJson || '{}'),
+            toolUseId: toolUse.id
+          }
+          store.addToolMessage(conversationId, toolUseMsg)
+
+          const toolResultMsg: Message = {
+            id: uuid(),
+            role: 'tool_result',
+            content: agentState.streamingToolResult,
+            timestamp: Date.now(),
+            toolResultFor: toolUse.id,
+            isError: false
+          }
+          store.addToolMessage(conversationId, toolResultMsg)
+
+          // Clean up streaming state
+          agentState.streamingExecuted = false
+          agentState.streamingToolResult = null
+
+          // Reset for next iteration
+          agentState.currentToolUse = null
+          agentState.accumulatedText = ''
+          const newRequestId = uuid()
+          logger.log(`[AgentService] [${conversationId}] Streaming batch_create complete, new requestId: ${newRequestId}`)
+          agentState.currentRequestId = newRequestId
+          store.addMessage(conversationId, 'assistant', '')
+          continue
+        }
+
+        // Parse tool input once with error handling — malformed JSON from the
+        // stream must not crash the agent loop (Fix 1.3-B).
+        let parsedToolInput: Record<string, unknown>
+        try {
+          parsedToolInput = JSON.parse(toolUse.inputJson || '{}')
+        } catch (parseError) {
+          console.error(`[AgentService] [${conversationId}] Failed to parse tool input JSON for ${toolUse.name}:`, parseError)
+          logger.log(`[AgentService] [${conversationId}] Raw inputJson: ${toolUse.inputJson}`)
+
+          // Add an error tool_result so Claude sees the failure and can recover
+          const errorToolUseMsg: Message = {
+            id: uuid(),
+            role: 'tool_use',
+            content: `Calling ${toolUse.name}`,
+            timestamp: Date.now(),
+            toolName: toolUse.name,
+            toolInput: {},
+            toolUseId: toolUse.id
+          }
+          store.addToolMessage(conversationId, errorToolUseMsg)
+
+          const errorToolResultMsg: Message = {
+            id: uuid(),
+            role: 'tool_result',
+            content: `Error: Malformed tool input JSON — could not parse arguments for ${toolUse.name}`,
+            timestamp: Date.now(),
+            toolResultFor: toolUse.id,
+            isError: true
+          }
+          store.addToolMessage(conversationId, errorToolResultMsg)
+
+          // Reset for next iteration and let the loop continue
+          agentState.currentToolUse = null
+          agentState.accumulatedText = ''
+          const newRequestId = uuid()
+          agentState.currentRequestId = newRequestId
+          store.addMessage(conversationId, 'assistant', '')
+          continue
+        }
+
         // Add tool_use message
         const toolUseMsg: Message = {
           id: uuid(),
@@ -628,7 +766,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
           content: `Calling ${toolUse.name}`,
           timestamp: Date.now(),
           toolName: toolUse.name,
-          toolInput: JSON.parse(toolUse.inputJson || '{}'),
+          toolInput: parsedToolInput,
           toolUseId: toolUse.id
         }
         store.addToolMessage(conversationId, toolUseMsg)
@@ -637,7 +775,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
         logger.log(`[AgentService] [${conversationId}] Executing tool: ${toolUse.name}`)
         const result = await executeTool(
           toolUse.name,
-          JSON.parse(toolUse.inputJson || '{}'),
+          parsedToolInput,
           conversationId
         )
 
@@ -655,6 +793,12 @@ async function runAgentLoop(conversationId: string): Promise<void> {
         // Show error toast for tool failures
         if (!result.success) {
           toast.error(`Tool error: ${result.error}`)
+        }
+
+        // Check abort after tool execution — async gap where state may have changed (Fix 1.3-C)
+        if (abortController.signal.aborted) {
+          logger.log(`[AgentService] [${conversationId}] Run aborted after tool execution, exiting loop`)
+          return
         }
 
         // Check pause after tool execution (Fix 5)
@@ -677,7 +821,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
         store.addMessage(conversationId, 'assistant', '')
 
         // Continue loop to let Claude see the result
-        if (toolCallCount < maxToolCalls && agentState.isRunning) {
+        if (toolCallCount <= maxToolCalls && agentState.isRunning) {
           continue
         }
         break
@@ -704,7 +848,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
       break
     }
 
-    if (toolCallCount >= maxToolCalls) {
+    if (toolCallCount > maxToolCalls) {
       store.addMessage(
         conversationId,
         'assistant',
@@ -753,16 +897,17 @@ function waitForIterationComplete(conversationId: string): Promise<{ stopReason:
 function handleStreamChunk(chunk: AgentStreamChunk): void {
   logger.log('[AgentService] Received chunk:', chunk.type, 'for request:', chunk.requestId)
 
+  // Check external handlers first (chatToolService piggybacks here)
+  const externalHandler = externalStreamHandlers.get(chunk.requestId)
+  if (externalHandler) {
+    externalHandler.onChunk(chunk)
+    return
+  }
+
   // Find which agent this chunk belongs to by requestId
   const agentState = findStateByRequestId(chunk.requestId)
   if (!agentState) {
-    // Check external handlers (e.g., chatToolService)
-    const externalHandler = externalStreamHandlers.get(chunk.requestId)
-    if (externalHandler) {
-      externalHandler.onChunk(chunk)
-      return
-    }
-    console.warn('[AgentService] Ignoring chunk - no agent or external handler found for requestId:', chunk.requestId)
+    console.warn('[AgentService] Ignoring chunk - no agent found for requestId:', chunk.requestId)
     return
   }
 
@@ -771,27 +916,156 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
 
   switch (chunk.type) {
     case 'text_delta':
+      if (!agentState.streamingStarted) {
+        agentState.streamingStarted = true
+        store.setStreaming(conversationId, true)
+      }
       agentState.accumulatedText += chunk.content || ''
       logger.log(`[AgentService] [${conversationId}] text_delta - accumulated length:`, agentState.accumulatedText.length)
       store.updateLastMessage(conversationId, agentState.accumulatedText)
       break
 
     case 'tool_use_start':
+      if (!chunk.toolUseId || !chunk.toolName) {
+        console.error(`[AgentService] [${conversationId}] tool_use_start chunk missing toolUseId or toolName, skipping`, {
+          toolUseId: chunk.toolUseId,
+          toolName: chunk.toolName
+        })
+        break
+      }
       agentState.currentToolUse = {
-        id: chunk.toolUseId!,
-        name: chunk.toolName!,
+        id: chunk.toolUseId,
+        name: chunk.toolName,
         inputJson: ''
+      }
+      // Streaming execution for batch_create — create nodes incrementally
+      if (chunk.toolName === 'batch_create') {
+        agentState.streamingParser = new IncrementalBatchParser()
+        agentState.streamingTempIdMap = new Map<string, string>()
+        agentState.streamingDeferredEdges = []
+        agentState.streamingNodeCount = 0
       }
       break
 
     case 'tool_use_delta':
       if (agentState.currentToolUse) {
         agentState.currentToolUse.inputJson += chunk.toolInput || ''
+
+        // Streaming batch_create — parse and create nodes incrementally
+        if (agentState.streamingParser && agentState.streamingTempIdMap && agentState.streamingDeferredEdges) {
+          const events = agentState.streamingParser.feed(chunk.toolInput || '')
+          for (const event of events) {
+            if (event.type === 'node') {
+              const nodeData = event.data as Record<string, unknown>
+              const tempId = (nodeData.temp_id as string) || `streaming-${agentState.streamingNodeCount}`
+              const nodeType = (nodeData.type as string) || 'note'
+
+              // Position in a rough grid relative to conversation node
+              const convNode = store.nodes.find(n => n.id === conversationId)
+              const baseX = convNode?.position?.x ?? 0
+              const baseY = convNode?.position?.y ?? 0
+              const col = agentState.streamingNodeCount % 4
+              const row = Math.floor(agentState.streamingNodeCount / 4)
+              const pos = { x: baseX + col * 350, y: baseY + 200 + row * 300 }
+
+              const realId = store.addNode(nodeType as Parameters<typeof store.addNode>[0], pos)
+              const updateData: Record<string, unknown> = {}
+              if (nodeData.title) updateData.title = nodeData.title
+              if (nodeData.content) updateData.content = nodeData.content
+              if (nodeData.description) updateData.description = nodeData.description
+              if (nodeData.contentType) updateData.contentType = nodeData.contentType
+              if (nodeData.status) updateData.status = nodeData.status
+              if (nodeData.priority) updateData.priority = nodeData.priority
+              store.updateNode(realId, updateData)
+
+              agentState.streamingTempIdMap.set(tempId, realId)
+              agentState.streamingNodeCount++
+            } else if (event.type === 'edge') {
+              agentState.streamingDeferredEdges.push(event.data)
+            }
+            // error events are logged but don't stop streaming
+            if (event.type === 'error') {
+              console.warn(`[AgentService] [${conversationId}] Streaming parse error:`, event.message)
+            }
+          }
+        }
       }
       break
 
     case 'tool_use_end':
-      // Tool use is complete, will be processed in the loop
+      // Streaming batch_create — create deferred edges and dispatch layout
+      if (agentState.streamingParser && agentState.currentToolUse?.name === 'batch_create') {
+        const tempIdMap = agentState.streamingTempIdMap!
+        const deferredEdges = agentState.streamingDeferredEdges!
+
+        // Create all deferred edges now that all nodes exist
+        const createdEdgeIds: string[] = []
+        for (const edgeData of deferredEdges) {
+          const sourceId = tempIdMap.get(edgeData.source as string) || (edgeData.source as string)
+          const targetId = tempIdMap.get(edgeData.target as string) || (edgeData.target as string)
+          store.addEdge({ source: sourceId, target: targetId, sourceHandle: null, targetHandle: null })
+          const edgeId = `${sourceId}-${targetId}`
+          createdEdgeIds.push(edgeId)
+          if (edgeData.label) {
+            store.updateEdge(edgeId, { label: edgeData.label as string })
+          }
+        }
+
+        // Dispatch layout pipeline via EventTarget (avoids circular dependency with chatToolService)
+        const createdNodeIds = Array.from(tempIdMap.values())
+        layoutEvents.dispatchEvent(new CustomEvent('run-layout', {
+          detail: { nodeIds: createdNodeIds, edgeIds: createdEdgeIds, conversationId }
+        }))
+
+        // Mark tool as already executed — skip executeTool in the done/loop handler
+        agentState.streamingExecuted = true
+        agentState.streamingToolResult = JSON.stringify({
+          success: true,
+          nodesCreated: tempIdMap.size,
+          edgesCreated: deferredEdges.length,
+          nodeMap: Object.fromEntries(tempIdMap)
+        })
+
+        // Cleanup parser state
+        agentState.streamingParser = null
+        agentState.streamingTempIdMap = null
+        agentState.streamingDeferredEdges = null
+        agentState.streamingNodeCount = 0
+      }
+      break
+
+    case 'run_layout' as any:
+      // Agent SDK path: tools executed in-process, no streaming parser.
+      // Collect ALL nodes reachable from the conversation node (BFS traversal),
+      // not just direct neighbors — the demo graph is multi-level deep.
+      {
+        const layoutStore = useWorkspaceStore.getState()
+        const connectedNodeIds = new Set<string>()
+        const queue = [conversationId]
+        const visited = new Set<string>([conversationId])
+        while (queue.length > 0) {
+          const current = queue.shift()!
+          const edges = layoutStore.edges.filter(e => e.source === current || e.target === current)
+          for (const e of edges) {
+            const neighbor = e.source === current ? e.target : e.source
+            if (!visited.has(neighbor)) {
+              visited.add(neighbor)
+              connectedNodeIds.add(neighbor)
+              queue.push(neighbor)
+            }
+          }
+        }
+        if (connectedNodeIds.size > 0) {
+          // layoutEvents already imported at top of file
+          layoutEvents.dispatchEvent(new CustomEvent('run-layout', {
+            detail: {
+              nodeIds: Array.from(connectedNodeIds),
+              edgeIds: [],
+              conversationId
+            }
+          }))
+        }
+      }
       break
 
     case 'done':
@@ -810,7 +1084,7 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
 
       // Show toast for critical errors
       if (chunk.error?.includes('authentication') || chunk.error?.includes('API key')) {
-        toast.error('API authentication failed. Please check your API key.')
+        toast.error('Set up your API key in Settings → AI to use this feature.')
       } else if (chunk.error?.includes('rate') || chunk.error?.includes('429')) {
         toast.error('Rate limit exceeded. Please wait and try again.')
       } else if (chunk.error?.includes('network')) {
@@ -828,6 +1102,14 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
 // -----------------------------------------------------------------------------
 // Helpers
 // -----------------------------------------------------------------------------
+
+export function registerExternalStreamHandler(requestId: string, handler: ExternalStreamHandler): void {
+  externalStreamHandlers.set(requestId, handler)
+}
+
+export function unregisterExternalStreamHandler(requestId: string): void {
+  externalStreamHandlers.delete(requestId)
+}
 
 export function buildMessagesForAPI(conversationId: string): Array<{ role: string; content: unknown }> {
   const store = useWorkspaceStore.getState()

@@ -12,7 +12,10 @@
  * Electron version via electron-rebuild. Until then, tests mock the module entirely.
  */
 
-import { buildContextForNode, writeContextFile, getContextFilePath } from './contextWriter'
+import { buildContextForNode, writeContextFile, getContextFilePath, getWorkspaceFilePath } from './contextWriter'
+import { writeClaudeConfig, cleanupClaudeConfig } from './claudeConfigWriter'
+import { existsSync } from 'fs'
+import type { TerminalShell } from '../../shared/types/nodes'
 
 // node-pty is a native C++ addon. We lazy-load it so the app doesn't crash
 // on startup if it's not installed. The import only fires when spawnTerminal()
@@ -41,6 +44,8 @@ export interface TerminalSession {
   scrollbackBuffer: string[]
   status: 'running' | 'idle' | 'exited'
   idleTimeout: ReturnType<typeof setTimeout> | null
+  /** CWD where .mcp.json + CLAUDE.md were written (for cleanup on exit) */
+  claudeConfigCwd: string | null
 }
 
 export interface SpawnConfig {
@@ -50,6 +55,11 @@ export interface SpawnConfig {
   cols?: number
   rows?: number
   env?: Record<string, string>
+  shell?: TerminalShell
+  /** Node title for Claude Code context injection */
+  nodeTitle?: string
+  /** Active workspace ID from renderer — used to construct workspace path for MCP */
+  workspaceId?: string
 }
 
 /** Callback signature for forwarding PTY data events (e.g. to renderer via IPC). */
@@ -64,6 +74,69 @@ export type TerminalExitForwarder = (nodeId: string, exitCode: number) => void
 
 const SCROLLBACK_LIMIT = 5000
 const IDLE_TIMEOUT_MS = 30_000
+// ---------------------------------------------------------------------------
+// Shell resolution
+// ---------------------------------------------------------------------------
+
+interface ShellResolution {
+  executable: string
+  args: string[]
+  /** Whether to inject Cognograph context env vars + write context file. */
+  injectContext: boolean
+}
+
+/**
+ * Resolve the shell executable and arguments for a given TerminalShell value.
+ * Falls back to claude-code if the requested shell is not available.
+ */
+function resolveShell(shell: TerminalShell | undefined, isWindows: boolean): ShellResolution {
+  switch (shell) {
+    case 'git-bash': {
+      // Try common Git Bash paths on Windows; on Unix just use bash
+      if (isWindows) {
+        const candidates = [
+          'C:\\Program Files\\Git\\bin\\bash.exe',
+          'C:\\Program Files (x86)\\Git\\bin\\bash.exe',
+        ]
+        // existsSync imported at top of file — this runs once at spawn time
+        const found = candidates.find(p => existsSync(p))
+        if (!found) {
+          console.warn('[TerminalManager] Git Bash not found at standard paths, falling back to Claude Code')
+          return resolveShell('claude-code', isWindows)
+        }
+        return { executable: found, args: ['--login'], injectContext: false }
+      }
+      return { executable: '/bin/bash', args: ['--login'], injectContext: false }
+    }
+
+    case 'powershell': {
+      if (isWindows) {
+        // Prefer PowerShell 7+ (pwsh) over Windows PowerShell 5.1
+        return { executable: 'pwsh.exe', args: ['-NoLogo'], injectContext: false }
+      }
+      // pwsh on macOS/Linux (if installed)
+      return { executable: 'pwsh', args: ['-NoLogo'], injectContext: false }
+    }
+
+    case 'cmd': {
+      if (isWindows) {
+        return { executable: 'cmd.exe', args: [], injectContext: false }
+      }
+      // cmd doesn't exist on Unix; fall back
+      console.warn('[TerminalManager] cmd.exe not available on Unix, falling back to Claude Code')
+      return resolveShell('claude-code', isWindows)
+    }
+
+    case 'claude-code':
+    default: {
+      // Current behavior — launch Claude Code via shell
+      if (isWindows) {
+        return { executable: 'cmd.exe', args: ['/c', 'claude'], injectContext: true }
+      }
+      return { executable: '/bin/bash', args: ['-lc', 'claude'], injectContext: true }
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Session map + event forwarders
@@ -108,32 +181,82 @@ export async function spawnTerminal(config: SpawnConfig): Promise<TerminalSessio
     cols = 80,
     rows = 24,
     env = {},
+    shell: requestedShell,
+    nodeTitle,
+    workspaceId: passedWorkspaceId,
   } = config
 
-  // Evaluated at call time so tests can override process.platform
   const isWindows = process.platform === 'win32'
-  const shell = isWindows ? 'cmd.exe' : '/bin/bash'
-  const args = isWindows ? ['/c', 'claude'] : ['-lc', 'claude']
+  const { executable, args, injectContext } = resolveShell(requestedShell, isWindows)
 
-  // --- Context injection pipeline (fire-and-forget) ---
-  // Build + write the context file in the background. The env var is set
-  // synchronously (we know the path ahead of time), so the spawned process
-  // can read the file once it's ready. The primary context path is via the
-  // MCP `get_initial_context` tool; the file is a fallback.
-  buildContextForNode(nodeId)
-    .then(ctx => writeContextFile(ctx))
-    .catch(err => console.warn('[TerminalManager] Context write failed (non-fatal):', err))
+  // Resolve workspace ID — prefer the one passed from renderer (always current),
+  // fall back to settings.json (may be stale if workspace was switched).
+  // Must resolve BEFORE the context/config promise so writeClaudeConfig gets the ID.
+  let workspaceId = passedWorkspaceId || ''
+  if (!workspaceId) {
+    try {
+      const wsPath = await getWorkspaceFilePath()
+      if (wsPath) {
+        workspaceId = wsPath.split(/[/\\]/).pop()?.replace('.json', '') ?? ''
+      }
+    } catch {
+      // Non-fatal
+    }
+  }
+
+  // --- Context injection + Claude Code MCP config (fire-and-forget) ---
+  // Only inject Cognograph context for Claude Code shells.
+  // Other shells get a plain spawn with no context file or env vars.
+  // Build context and write .mcp.json + CLAUDE.md so Claude Code auto-connects
+  // to Cognograph's MCP server on startup. The context file is a fallback;
+  // the primary context path is via the MCP `get_initial_context` tool.
+  // Always write MCP config so `claude` typed manually in any shell picks up Cognograph tools.
+  // Full context/CLAUDE.md injection is only for dedicated Claude Code shells,
+  // but .mcp.json is written for ALL shells so MCP tools are always available.
+  let contextAndConfigPromise: Promise<string | null> = Promise.resolve(null)
+  {
+    contextAndConfigPromise = buildContextForNode(nodeId)
+      .then(async (ctx) => {
+        await writeContextFile(ctx)
+        // Write .mcp.json + CLAUDE.md in the terminal's working directory
+        const configResult = await writeClaudeConfig({
+          nodeId,
+          cwd,
+          nodeTitle: nodeTitle || `Terminal ${nodeId.slice(0, 8)}`,
+          contextMarkdown: ctx.markdown,
+          workspaceId,
+        })
+        if (!configResult.success) {
+          console.warn('[TerminalManager] Claude config write failed (non-fatal):', configResult.error)
+        }
+        return configResult.success ? cwd : null
+      })
+      .catch(err => {
+        console.warn('[TerminalManager] Context/config write failed (non-fatal):', err)
+        return null
+      })
+  }
 
   const mergedEnv: Record<string, string> = {
     ...process.env as Record<string, string>,
-    CLAUDE_SESSION_ID: sessionId,
-    COGNOGRAPH_NODE_ID: nodeId,
-    COGNOGRAPH_CONTEXT_FILE: getContextFilePath(nodeId),
     ...env,
   }
 
+  // Signal 24-bit color support to TUI frameworks (Claude Code, htop, etc.)
+  mergedEnv.COLORTERM = 'truecolor'
+
+  // Set Cognograph env vars for all terminals — user may type `claude` in any shell
+  mergedEnv.CLAUDE_SESSION_ID = sessionId
+  mergedEnv.COGNOGRAPH_NODE_ID = nodeId
+  mergedEnv.COGNOGRAPH_CONTEXT_FILE = getContextFilePath(nodeId)
+  mergedEnv.COGNOGRAPH_WORKSPACE_ID = workspaceId
+
+  // Wait for .mcp.json to be written BEFORE spawning PTY.
+  // Claude Code reads .mcp.json on startup — if we spawn first, it misses the config.
+  await contextAndConfigPromise
+
   const pty = await loadPty()
-  const ptyProcess = pty.spawn(shell, args, {
+  const ptyProcess = pty.spawn(executable, args, {
     name: 'xterm-256color',
     cols,
     rows,
@@ -152,7 +275,15 @@ export async function spawnTerminal(config: SpawnConfig): Promise<TerminalSessio
     scrollbackBuffer: [],
     status: 'running',
     idleTimeout: null,
+    claudeConfigCwd: null,
   }
+
+  // Track the config directory for cleanup (resolves after PTY is already running)
+  contextAndConfigPromise.then(configCwd => {
+    session.claudeConfigCwd = configCwd
+  }).catch(() => {
+    // contextAndConfigPromise already catches internally and returns null -- this is belt-and-suspenders
+  })
 
   // --- Idle timeout ---
   resetIdleTimer(session)
@@ -172,10 +303,20 @@ export async function spawnTerminal(config: SpawnConfig): Promise<TerminalSessio
     dataForwarder?.(nodeId, data)
   })
 
-  // --- onExit: mark exited, clean up timer + forward to renderer ---
+  // --- onExit: mark exited, clean up timer + config files + forward to renderer ---
   ptyProcess.onExit(({ exitCode }) => {
     session.status = 'exited'
     clearIdleTimer(session)
+
+    // Clean up generated .mcp.json + CLAUDE.md
+    // Clear claudeConfigCwd first to prevent duplicate cleanup if killTerminal is also called
+    if (session.claudeConfigCwd) {
+      const configCwd = session.claudeConfigCwd
+      session.claudeConfigCwd = null
+      cleanupClaudeConfig(configCwd).catch(err => {
+        console.warn('[TerminalManager] Config cleanup failed (non-fatal):', err)
+      })
+    }
 
     // Forward to renderer (if IPC forwarder is registered)
     exitForwarder?.(nodeId, exitCode)
@@ -215,6 +356,19 @@ export function killTerminal(nodeId: string): void {
   if (!session) return
 
   clearIdleTimer(session)
+
+  // Clean up generated config files (only if not already cleaned up by onExit)
+  // Note: if the process exits naturally before killTerminal is called,
+  // onExit already ran cleanup. Double-calling cleanupClaudeConfig is safe
+  // (it checks file contents before deleting), but we clear claudeConfigCwd
+  // to prevent duplicate cleanup.
+  if (session.claudeConfigCwd) {
+    const configCwd = session.claudeConfigCwd
+    session.claudeConfigCwd = null
+    cleanupClaudeConfig(configCwd).catch(err => {
+      console.warn('[TerminalManager] Config cleanup failed (non-fatal):', err)
+    })
+  }
 
   // Only send kill if the process hasn't already exited
   if (session.status !== 'exited') {

@@ -3,6 +3,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Renderer, Camera, Geometry, Program, Mesh } from 'ogl';
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
 
 interface ParticlesProps {
   particleCount?: number;
@@ -18,6 +19,8 @@ interface ParticlesProps {
   disableRotation?: boolean;
   pixelRatio?: number;
   className?: string;
+  qualityRef?: React.RefObject<AdaptiveQualityState>;
+  reportFrame?: () => void;
 }
 
 const defaultColors: string[] = ['#ffffff', '#ffffff', '#ffffff'];
@@ -116,7 +119,9 @@ const Particles: React.FC<ParticlesProps> = ({
   cameraDistance = 20,
   disableRotation = false,
   pixelRatio = 1,
-  className
+  className,
+  qualityRef,
+  reportFrame,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mouseRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -125,7 +130,7 @@ const Particles: React.FC<ParticlesProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
-    const renderer = new Renderer({ dpr: pixelRatio, depth: false, alpha: true });
+    const renderer = new Renderer({ dpr: 1.0, depth: false, alpha: true });
     const gl = renderer.gl;
     container.appendChild(gl.canvas);
     gl.clearColor(0, 0, 0, 0);
@@ -200,8 +205,26 @@ const Particles: React.FC<ParticlesProps> = ({
     let lastTime = performance.now();
     let elapsed = 0;
 
+    let frameCount = 0;
+    let currentScale = -1;
     const update = (t: number) => {
       animationFrameId = requestAnimationFrame(update);
+      if (qualityRef?.current && !qualityRef.current.shouldRender) return;
+      if (reportFrame) reportFrame();
+      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
+      if (qualityRef?.current) {
+        const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap;
+        if (scale !== currentScale) {
+          currentScale = scale;
+          renderer.setSize(container.clientWidth * scale, container.clientHeight * scale);
+          // OGL setSize also sets canvas CSS dimensions — force back to 100% so
+          // low-res content stretches to fill container (CSS upscaling, not shrinking)
+          const c = renderer.gl.canvas as HTMLCanvasElement;
+          c.style.width = '100%';
+          c.style.height = '100%';
+          camera.perspective({ aspect: (container.clientWidth * scale) / (container.clientHeight * scale) });
+        }
+      }
       const delta = t - lastTime;
       lastTime = t;
       elapsed += delta * speed;
