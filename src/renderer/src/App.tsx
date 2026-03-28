@@ -309,6 +309,7 @@ function Canvas(): JSX.Element {
   const [isDraggingNode, setIsDraggingNode] = useState(false)
   const [showThemeModal, setShowThemeModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [settingsCategory, setSettingsCategory] = useState<string | undefined>(undefined)
   const [showCanvasTOC, setShowCanvasTOC] = useState(false)
   const [showEdgeLegend, setShowEdgeLegend] = useState(false)
   const [isReady, setIsReady] = useState(false)
@@ -3290,7 +3291,7 @@ function Canvas(): JSX.Element {
         <CommandPalette isOpen={isCommandPaletteOpen} onClose={closePalette} />
 
         {/* Settings Modal */}
-        <SettingsModal isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
+        <SettingsModal isOpen={showSettingsModal} onClose={() => { setShowSettingsModal(false); setSettingsCategory(undefined) }} defaultCategory={settingsCategory as any} />
 
         {/* Export Dialog (Electron only — uses native file dialog) */}
         {(window as any).__ELECTRON__ && (
@@ -3309,7 +3310,7 @@ function Canvas(): JSX.Element {
         )}
 
         {/* Welcome Overlay - shown on first launch only (desktop only — web has WebWelcomeModal) */}
-        {!isWeb && <WelcomeOverlay onOpenSettings={() => setShowSettingsModal(true)} />}
+        {!isWeb && <WelcomeOverlay onOpenSettings={() => { setSettingsCategory('ai'); setShowSettingsModal(true) }} />}
 
         {/* Command Bar (Phase 4) - TEMPORARILY DISABLED FOR DEBUGGING */}
         {/* <CommandBar /> */}

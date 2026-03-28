@@ -38,9 +38,10 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
 
   const handleConfigureProvider = useCallback(() => {
     onOpenSettings()
-    // Advance to step 2 — user can come back after configuring
-    setStep(2)
-  }, [onOpenSettings])
+    // Dismiss overlay — user is now in Settings and knows where to find it
+    completeOnboarding()
+    setDismissed(true)
+  }, [onOpenSettings, completeOnboarding])
 
   const handleCreateConversation = useCallback(() => {
     // Create a conversation node at the center of the viewport
