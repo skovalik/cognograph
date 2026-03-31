@@ -166,7 +166,7 @@ function FloatingPropertiesModalComponent({ nodeId, index }: FloatingPropertiesM
   return (
     <div
       ref={modalRef}
-      className="fixed z-[100] bg-[var(--surface-panel)]/95 backdrop-blur-xl border border-[var(--border-subtle)] rounded-lg shadow-2xl"
+      className="fixed z-[100] glass-soft border border-[var(--border-subtle)] rounded-lg shadow-2xl"
       style={{
         left: position.x,
         top: position.y,

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useMemo, useCallback, useEffect } from 'react'
+import { memo, useMemo, useCallback, useEffect, useState } from 'react'
 import { NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
 import { SpreadHandles } from './SpreadHandles'
 import { Zap, Play, Power } from 'lucide-react'
@@ -16,11 +16,16 @@ import { useNodeResize } from '../../hooks/useNodeResize'
 import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
 import { NodePropertyControls } from './NodePropertyControls'
+import { CONIC_PALETTES } from '../../constants/conicPalettes'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
   '--node-accent'?: string
   '--ring-color'?: string
+  '--conic-color-1'?: string
+  '--conic-color-2'?: string
+  '--conic-color-3'?: string
+  '--conic-color-4'?: string
 }
 
 // Default dimensions
@@ -89,6 +94,20 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
   const startNodeResize = useWorkspaceStore((state) => state.startNodeResize)
   const commitNodeResize = useWorkspaceStore((state) => state.commitNodeResize)
 
+  // Rename trigger (F2 / context menu Rename)
+  const [renameTriggered, setRenameTriggered] = useState(false)
+  useEffect(() => {
+    function handleRename(e: Event) {
+      const detail = (e as CustomEvent).detail
+      if (detail?.nodeId === id) {
+        setRenameTriggered(true)
+        requestAnimationFrame(() => setRenameTriggered(false))
+      }
+    }
+    window.addEventListener('rename-node', handleRename)
+    return () => window.removeEventListener('rename-node', handleRename)
+  }, [id])
+
   // Calculate dynamic node color
   const nodeColor = nodeData.color || themeSettings.nodeColors.action || DEFAULT_THEME_SETTINGS.nodeColors.action
 
@@ -106,10 +125,15 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
 
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.action ?? '#10b981'
+    const palette = CONIC_PALETTES['action'] || CONIC_PALETTES.default
 
     return {
       '--ring-color': safeNodeColor,
       '--node-accent': safeNodeColor,
+      '--conic-color-1': palette[0],
+      '--conic-color-2': palette[1],
+      '--conic-color-3': palette[2],
+      '--conic-color-4': palette[3],
       width: nodeWidth,
       height: effectiveHeight,
       // Grayscale + dim for disabled actions at ALL zoom levels
@@ -268,6 +292,7 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
               value={nodeData.title}
               onChange={(title) => updateNode(id, { title })}
               className="cognograph-node__title"
+              startEditing={renameTriggered}
             />
           )}
           {/* Trigger type badge at L1 — visible when not showing full content */}

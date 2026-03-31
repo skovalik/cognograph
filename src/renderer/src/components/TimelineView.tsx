@@ -164,9 +164,8 @@ function TimelineViewComponent({ isOpen, onClose }: TimelineViewProps): JSX.Elem
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="w-[700px] max-h-[80vh] rounded-lg overflow-hidden animate-scale-in"
+        className="w-[700px] max-h-[80vh] rounded-lg overflow-hidden animate-scale-in glass-soft"
         style={{
-          backgroundColor: 'var(--gui-bg-secondary)',
           border: '1px solid var(--gui-border-subtle)'
         }}
       >

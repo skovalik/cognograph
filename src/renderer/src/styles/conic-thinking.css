@@ -1,0 +1,59 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
+/* Copyright (C) 2026 Stefan Kovalik / Aurochs Digital */
+/* =============================================================================
+   CONIC GRADIENT THINKING ANIMATION
+   Replaces left-border sweep (nodes.css lines 174-184).
+   Uses border-box gradient trick — zero DOM changes, zero React Flow disruption.
+   ============================================================================= */
+
+@property --conic-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes conic-rotate {
+  from { --conic-angle: 0deg; }
+  to { --conic-angle: 360deg; }
+}
+
+/* Thinking state: conic gradient shows through transparent border */
+.cognograph-node.is-thinking {
+  background:
+    var(--surface-node) padding-box,
+    conic-gradient(
+      from var(--conic-angle),
+      var(--conic-color-1),
+      var(--conic-color-2),
+      var(--conic-color-3),
+      var(--conic-color-4),
+      var(--conic-color-1)
+    ) border-box;
+  animation: conic-rotate 3s linear infinite;
+}
+
+/* Per-node-type palettes (set inline via --conic-color-* on each node) */
+/* Default:       #C8963E, #E5B95C, #d4a056, #b8860b */
+/* Conversation:  #3b82f6, #6366f1, #a78bfa, #e879f9 */
+/* Note:          #f59e0b, #fbbf24, #f97316, #fb7185 */
+/* Task:          #6B9E84, #34d399, #2dd4bf, #38bdf8 */
+/* Artifact:      #5A8EAB, #38bdf8, #818cf8, #c084fc */
+/* Project:       #7C7CAB, #8b5cf6, #a78bfa, #c084fc */
+/* Action:        #C4845A, #f97316, #fb923c, #fbbf24 */
+/* Orchestrator:  #a855f7, #c084fc, #e879f9, #f472b6 */
+
+/* Reduced motion: static gradient, no rotation */
+@media (prefers-reduced-motion: reduce) {
+  .cognograph-node.is-thinking {
+    animation: none;
+  }
+}
+
+/* Low-zoom visibility scaling (2px = 0.6px at 0.3x, invisible) */
+[data-lod="ultra-far"] .cognograph-node.is-thinking {
+  border-width: 4px;
+  box-shadow: 0 0 8px 2px var(--conic-color-1);
+}
+[data-lod="far"] .cognograph-node.is-thinking {
+  border-width: 3px;
+}

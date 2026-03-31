@@ -1,0 +1,299 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
+/* Copyright (C) 2026 Stefan Kovalik / Aurochs Digital */
+/* =============================================================================
+   TOP BAR — V4 gradient-fade chrome (replaces IconRail + Toolbar desktop)
+   ============================================================================= */
+
+.top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  z-index: var(--z-panels);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--surface-canvas) 60%, transparent) 0%,
+    color-mix(in srgb, var(--surface-canvas) 30%, transparent) 60%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.top-bar > * {
+  pointer-events: auto;
+}
+
+/* Three-zone layout */
+.top-bar__left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.top-bar__center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.top-bar__right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Logo [Co] — adapted from icon-rail.css */
+.top-bar__logo {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-xl);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-right: 8px;
+  flex-shrink: 0;
+  transition: opacity var(--duration-fast) var(--ease-default);
+}
+
+.top-bar__logo:hover { opacity: 0.85; }
+
+/* Tab buttons — adapted from icon-rail.css */
+.top-bar__tab {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--duration-fast) var(--ease-default),
+              background-color var(--duration-fast) var(--ease-default);
+}
+
+.top-bar__tab:hover {
+  color: var(--text-primary);
+  background: var(--surface-panel-secondary);
+}
+
+.top-bar__tab--active {
+  color: var(--accent-glow);
+  background: var(--surface-panel-secondary);
+}
+
+.top-bar__tab:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.top-bar__tab svg {
+  width: 18px;
+  height: 18px;
+}
+
+.top-bar__tab:focus-visible {
+  outline: 2px solid var(--accent-glow);
+  outline-offset: 2px;
+}
+
+/* Divider — matches existing toolbar-divider from index.css */
+.top-bar__divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-default);
+  margin: 0 6px;
+  flex-shrink: 0;
+}
+
+/* Workspace name */
+.top-bar__workspace-name {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+}
+
+.top-bar__workspace-name:hover { color: var(--text-primary); }
+
+.top-bar__workspace-name-input {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--surface-input, var(--surface-panel-secondary));
+  border: 1px solid var(--accent-glow);
+  border-radius: var(--radius-md);
+  padding: 4px 8px;
+  outline: none;
+  width: 180px;
+}
+
+/* Left sidebar float positioning (used by LeftSidebar.tsx)
+   !important needed: glass.css fluid-glass mode sets position:relative on all
+   .glass-soft via html[data-glass-style="fluid-glass"] .glass-soft (higher specificity) */
+.left-sidebar-float {
+  position: absolute !important;
+  top: 72px;
+  left: 8px;
+  bottom: 56px;
+  z-index: var(--z-panels);
+  border-radius: var(--radius-lg);
+  overflow: hidden !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15) !important;
+}
+
+.left-sidebar-float[data-collapsed="true"] {
+  display: none;
+}
+
+/* Right properties panel float — mirrors left sidebar float */
+.right-panel-float {
+  position: absolute !important;
+  top: 72px;
+  right: 8px;
+  bottom: 56px;
+  z-index: var(--z-panels);
+  border-radius: var(--radius-lg);
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Save dirty indicator */
+.top-bar__dirty-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+}
+
+/* User avatar wrapper */
+.top-bar__user {
+  position: relative;
+}
+
+.top-bar__avatar-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.top-bar__avatar-btn:focus-visible {
+  outline: 2px solid var(--accent-glow);
+  outline-offset: 2px;
+}
+
+/* User dropdown — anchored below the avatar */
+.top-bar__user-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 200px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  padding: 4px 0;
+  z-index: calc(var(--z-panels) + 10);
+  animation: top-bar-menu-in 120ms var(--ease-default);
+}
+
+@keyframes top-bar-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.top-bar__user-menu-header {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.top-bar__user-menu-name {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top-bar__user-menu-email {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top-bar__user-menu-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
+}
+
+.top-bar__user-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-default),
+              background-color var(--duration-fast) var(--ease-default);
+}
+
+.top-bar__user-menu-item:hover {
+  color: var(--text-primary);
+  background: var(--surface-panel-secondary);
+}
+
+.top-bar__user-menu-item--danger {
+  color: #dc2626;
+}
+
+.top-bar__user-menu-item--danger:hover {
+  background: rgba(220, 38, 38, 0.08);
+  color: #ef4444;
+}

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useMemo, useCallback, useEffect } from 'react'
+import { memo, useMemo, useCallback, useEffect, useState } from 'react'
 import { NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
 import { SpreadHandles } from './SpreadHandles'
 import { Workflow, Play, Pause, Square, ChevronDown, ChevronRight } from 'lucide-react'
@@ -20,11 +20,16 @@ import { OrchestratorBadge } from '../bridge/OrchestratorBadge'
 import { ExecutionStatusBadge } from '../ExecutionStatusBadge'
 import { NodePropertyControls } from './NodePropertyControls'
 import { useExecutionStatusStore } from '../../stores/executionStatusStore'
+import { CONIC_PALETTES } from '../../constants/conicPalettes'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
   '--node-accent'?: string
   '--ring-color'?: string
+  '--conic-color-1'?: string
+  '--conic-color-2'?: string
+  '--conic-color-3'?: string
+  '--conic-color-4'?: string
 }
 
 // Default dimensions
@@ -99,6 +104,20 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
   const startNodeResize = useWorkspaceStore((state) => state.startNodeResize)
   const commitNodeResize = useWorkspaceStore((state) => state.commitNodeResize)
 
+  // Rename trigger (F2 / context menu Rename)
+  const [renameTriggered, setRenameTriggered] = useState(false)
+  useEffect(() => {
+    function handleRename(e: Event) {
+      const detail = (e as CustomEvent).detail
+      if (detail?.nodeId === id) {
+        setRenameTriggered(true)
+        requestAnimationFrame(() => setRenameTriggered(false))
+      }
+    }
+    window.addEventListener('rename-node', handleRename)
+    return () => window.removeEventListener('rename-node', handleRename)
+  }, [id])
+
   // Calculate dynamic node color
   const nodeColor = nodeData.color || themeSettings.nodeColors.orchestrator || DEFAULT_THEME_SETTINGS.nodeColors.orchestrator
 
@@ -113,10 +132,15 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
 
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.orchestrator ?? '#6366f1'
+    const palette = CONIC_PALETTES['orchestrator'] || CONIC_PALETTES.default
 
     return {
       '--ring-color': safeNodeColor,
       '--node-accent': safeNodeColor,
+      '--conic-color-1': palette[0],
+      '--conic-color-2': palette[1],
+      '--conic-color-3': palette[2],
+      '--conic-color-4': palette[3],
       width: nodeWidth,
       height: effectiveHeight,
     }
@@ -394,6 +418,7 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
             value={nodeData.title}
             onChange={(title) => updateNode(id, { title })}
             className="cognograph-node__title"
+            startEditing={renameTriggered}
           />
           {/* AI Property Assist — L3+ only */}
           {showInteractiveControls && (

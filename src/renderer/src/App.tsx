@@ -33,7 +33,12 @@ import { PropertiesPanel } from './components/PropertiesPanel'
 import { ConnectionPropertiesPanel } from './components/ConnectionPropertiesPanel'
 // ChatPanel import removed — chat is now rendered in-node (ConversationNode expanded mode)
 import { LeftSidebar } from './components/LeftSidebar'
-import { IconRail } from './components/IconRail'
+import { CommandResponsePanel } from './components/CommandResponsePanel'
+// IconRail removed — V4 chrome uses TopBar
+import { TopBar } from './components/TopBar'
+import { ContextualActionBar } from './components/ContextualActionBar'
+import { CanvasBadges } from './components/CanvasBadges'
+import { BottomCommandBar } from './components/BottomCommandBar'
 import { ExtractionPanel, ExtractionDragPreview } from './components/extractions'
 import { ErrorBoundary, InlineErrorBoundary } from './components/ErrorBoundary'
 import { OfflineIndicatorCompact } from './components/OfflineIndicator'
@@ -45,9 +50,9 @@ import { SettingsModal } from './components/SettingsModal'
 import { FloatingPropertiesModal } from './components/FloatingPropertiesModal'
 import { PinnedWindowsContainer } from './components/PinnedWindow'
 import { CollapsibleMinimap } from './components/CollapsibleMinimap'
-import { ZoomIndicator } from './components/ZoomIndicator'
+// ZoomIndicator removed — V4 chrome uses CanvasBadges ZoomBadge
 import { ClipboardIndicator } from './components/ClipboardIndicator'
-import { AIEditorModal, AIEditorPreview, InlinePrompt, SelectionActionBar, AISidebar } from './components/ai-editor'
+import { AIEditorModal, AIEditorPreview, SelectionActionBar, AISidebar } from './components/ai-editor'
 const AmbientEffectLayer = lazy(() => import('./components/ambient/AmbientEffectLayer'))
 import { LivingGrid } from './effects/LivingGrid'
 const ParticleDrift = lazy(() => import('./effects/ParticleDrift'))
@@ -63,6 +68,9 @@ import { OnboardingTooltip } from './components/onboarding/OnboardingTooltip'
 import { TutorialOverlay } from './components/onboarding/TutorialOverlay'
 import { ExportDialog } from './components/ExportDialog'
 import { TemplatePicker } from './components/TemplatePicker'
+import { getOnboardingTemplate } from './data/workspaceTemplates'
+import { v4 as uuidv4 } from 'uuid'
+import { DEFAULT_EDGE_DATA } from '@shared/types'
 import { FilterViewDropdown } from './components/FilterViewDropdown'
 import { ProgressIndicator } from './components/ProgressIndicator'
 import { SavedViewsPanel } from './components/SavedViewsPanel'
@@ -139,7 +147,6 @@ import { useNavigationHistory } from './hooks/useNavigationHistory'
 import { useSpacebarPan } from './hooks/useSpacebarPan'
 import { ZoomOverlay } from './components/canvas/ZoomOverlay'
 import { ClusterOverlay } from './components/canvas/ClusterOverlay'
-import { KeyboardModeIndicator } from './components/canvas/KeyboardModeIndicator'
 import { DirectionalGuides } from './components/DirectionalGuides'
 import { KeyboardLegend } from './components/KeyboardLegend'
 import { useContextSelectionStore } from './stores/contextSelectionStore'
@@ -392,9 +399,7 @@ function Canvas(): JSX.Element {
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   // Workspace manager panel visibility (web only)
   const [showWorkspaceManager, setShowWorkspaceManager] = useState(false)
-  // InlinePrompt visibility and position (toggled with / key)
-  const [inlinePromptOpen, setInlinePromptOpen] = useState(false)
-  const [inlinePromptPosition, setInlinePromptPosition] = useState({ x: 0, y: 0 })
+  // InlinePrompt state removed — V4 uses TopBar → BottomCommandBar
   // SelectionActionBar visibility and position (toggled with Tab when nodes selected)
   const [selectionActionBarOpen, setSelectionActionBarOpen] = useState(false)
   const [selectionActionBarPosition, setSelectionActionBarPosition] = useState({ x: 0, y: 0 })
@@ -1090,9 +1095,114 @@ function Canvas(): JSX.Element {
     })
   }, [lastCreatedNodeId, clearLastCreatedNodeId])
 
-  // Load last workspace on mount
+  // Instantiate and load the default onboarding workspace
+  const loadOnboardingWorkspace = useCallback((): void => {
+    const template = getOnboardingTemplate()
+    if (!template) {
+      newWorkspace()
+      return
+    }
+
+    const now = Date.now()
+
+    // Map temp IDs to real UUIDs
+    const idMap = new Map<string, string>()
+    for (const tNode of template.nodes) {
+      idMap.set(tNode.tempId, uuidv4())
+    }
+
+    // Create nodes
+    const nodes = template.nodes.map(tNode => {
+      const realId = idMap.get(tNode.tempId)!
+      const dims = tNode.dimensions || { width: 280, height: 140 }
+
+      const nodeData = {
+        ...tNode.data,
+        createdAt: now,
+        updatedAt: now
+      } as any
+
+      // Resolve parentId from tempId to real UUID (for project children)
+      if (nodeData.parentId && idMap.has(nodeData.parentId)) {
+        nodeData.parentId = idMap.get(nodeData.parentId)
+      }
+
+      // For project nodes, populate childNodeIds from children that reference this project
+      if (nodeData.type === 'project') {
+        const explicitChildIds: string[] = []
+        for (const otherNode of template.nodes) {
+          if (otherNode.tempId === tNode.tempId) continue
+          if ((otherNode.data as any).parentId === tNode.tempId) {
+            const childRealId = idMap.get(otherNode.tempId)
+            if (childRealId) explicitChildIds.push(childRealId)
+          }
+        }
+        if (explicitChildIds.length > 0) {
+          nodeData.childNodeIds = explicitChildIds
+        }
+      }
+
+      // For conversation nodes, refresh message timestamps and IDs to feel recent
+      if (nodeData.type === 'conversation' && Array.isArray(nodeData.messages)) {
+        nodeData.messages = nodeData.messages.map((msg: any, idx: number) => ({
+          ...msg,
+          id: uuidv4(), // Always generate fresh IDs
+          timestamp: now - (nodeData.messages.length - idx) * 60000 // Space messages 1 min apart, ending at now
+        }))
+      }
+
+      return {
+        id: realId,
+        type: tNode.type,
+        position: tNode.position,
+        data: nodeData,
+        width: dims.width,
+        height: dims.height
+      }
+    })
+
+    // Create edges
+    const edges = template.edges.map(tEdge => ({
+      id: uuidv4(),
+      source: idMap.get(tEdge.sourceTempId) || '',
+      target: idMap.get(tEdge.targetTempId) || '',
+      type: 'custom',
+      data: {
+        ...DEFAULT_EDGE_DATA,
+        label: tEdge.label || undefined,
+        ...(tEdge.data || {})
+      }
+    })).filter((e: any) => e.source && e.target)
+
+    // Load as workspace (WorkspaceData uses `id`, not `workspaceId`)
+    loadWorkspace({
+      id: uuidv4(),
+      name: 'Welcome Workspace',
+      nodes,
+      edges,
+      viewport: { x: -200, y: 0, zoom: 0.75 },
+      createdAt: now,
+      updatedAt: now,
+      version: 1
+    } as any)
+
+  }, [newWorkspace, loadWorkspace])
+
+  // Load last workspace on mount — or load onboarding template for new users
   useEffect(() => {
     const loadLastWorkspace = async (): Promise<void> => {
+      const loadOnboardingOrBlank = (): void => {
+        const programState = useProgramStore.getState()
+        if (!programState.hasLoadedDefaultWorkspace) {
+          // First-time user: load the onboarding template
+          loadOnboardingWorkspace()
+          programState.markDefaultWorkspaceLoaded()
+          programState.completeOnboarding() // Skip old popup-based onboarding
+        } else {
+          newWorkspace()
+        }
+      }
+
       try {
         const lastId = await window.api.workspace.getLastWorkspaceId()
         if (lastId) {
@@ -1100,14 +1210,14 @@ function Canvas(): JSX.Element {
           if (result.success && result.data) {
             loadWorkspace(result.data as Parameters<typeof loadWorkspace>[0])
           } else {
-            newWorkspace()
+            loadOnboardingOrBlank()
           }
         } else {
-          newWorkspace()
+          loadOnboardingOrBlank()
         }
       } catch (error) {
         console.error('Failed to load workspace:', error)
-        newWorkspace()
+        loadOnboardingOrBlank()
       }
       setIsReady(true)
     }
@@ -1856,9 +1966,12 @@ function Canvas(): JSX.Element {
         collapseInPlaceExpansion()
       }
 
-      // Close theme modal on left click only (not middle-click for panning)
+      // Close theme modal on left click only — but not if clicking inside a Radix dialog/sheet
       if (event.button === 0 && showThemeModal) {
-        setShowThemeModal(false)
+        const target = event.target as HTMLElement
+        if (!target.closest('[data-radix-dialog-content], [role="dialog"]')) {
+          setShowThemeModal(false)
+        }
       }
 
       const flowPosition = screenToFlowPosition({
@@ -2085,6 +2198,27 @@ function Canvas(): JSX.Element {
         e.preventDefault()
         cutNodes(selectedNodeIds)
       }
+      // F2 — Rename selected node (triggers EditableTitle inline edit)
+      if (e.key === 'F2' && selectedNodeIds.length === 1 && !isInputFocused) {
+        e.preventDefault()
+        window.dispatchEvent(new CustomEvent('rename-node', { detail: { nodeId: selectedNodeIds[0] } }))
+      }
+      // Ctrl+D — Duplicate selected node(s), save/restore clipboard
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd' && !isInputFocused && selectedNodeIds.length > 0) {
+        e.preventDefault()
+        const store = useWorkspaceStore.getState()
+        const savedClipboardNodes = store.clipboardNodes
+        const savedClipboardEdges = store.clipboardEdges
+        const savedClipboardState = store.clipboardState
+        store.copyNodes(selectedNodeIds)
+        const selectedNodes = store.nodes.filter(n => selectedNodeIds.includes(n.id))
+        if (selectedNodes.length > 0) {
+          const avgX = selectedNodes.reduce((sum, n) => sum + n.position.x, 0) / selectedNodes.length
+          const avgY = selectedNodes.reduce((sum, n) => sum + n.position.y, 0) / selectedNodes.length
+          store.pasteNodes({ x: avgX + 40, y: avgY + 40 })
+        }
+        useWorkspaceStore.setState({ clipboardNodes: savedClipboardNodes, clipboardEdges: savedClipboardEdges, clipboardState: savedClipboardState })
+      }
       // Paste is handled by the 'paste' event listener below (handlePaste),
       // NOT here in keydown. This allows ClipboardEvent.clipboardData access
       // for image detection. See Task 1, Step 2.
@@ -2181,6 +2315,30 @@ function Canvas(): JSX.Element {
               content = (nodeData.content as string) || ''
               break
             case 'artifact': {
+              const artifactContentType = nodeData.contentType as string
+              if (artifactContentType === 'html') {
+                // Direct iframe measurement — bypasses text estimation entirely
+                const nodeEl = document.querySelector(`[data-id="${nodeId}"]`)
+                const iframe = nodeEl?.querySelector('iframe') as HTMLIFrameElement | null
+                if (iframe?.contentDocument?.body) {
+                  const body = iframe.contentDocument.body
+                  const scrollH = body.scrollHeight
+                  const scrollW = body.scrollWidth
+                  // Read current scale from the viewport container's CSS transform
+                  const viewportDiv = nodeEl?.querySelector<HTMLElement>('[style*="scale"]')
+                  const scaleMatch = viewportDiv?.style.transform?.match(/scale\(([\d.]+)\)/)
+                  const scale = scaleMatch ? parseFloat(scaleMatch[1]) : 1.0
+                  const chromeH = 88  // header + footer + borders
+                  const chromeW = 24  // padding + borders
+                  items.push({
+                    nodeId,
+                    width: Math.max(300, Math.round(scrollW * scale) + chromeW),
+                    height: Math.max(200, Math.round(scrollH * scale) + chromeH),
+                  })
+                  continue  // skip calculateAutoFitDimensions
+                }
+              }
+              // Fallback: text estimation (non-HTML or iframe not ready)
               const files = nodeData.files as Array<{ id: string; content: string }> | undefined
               const activeFileId = nodeData.activeFileId as string | undefined
               if (files && files.length > 0) {
@@ -2583,11 +2741,7 @@ function Canvas(): JSX.Element {
       }
       if (m('inlinePrompt') && !isInputFocused) {
         e.preventDefault()
-        setInlinePromptPosition({
-          x: mousePositionRef.current.x,
-          y: mousePositionRef.current.y
-        })
-        setInlinePromptOpen(true)
+        // V4: Will route to BottomCommandBar in Task 12
       }
 
       // Canvas keyboard navigation — Arrow keys + Tab handled by useSpatialNavigation hook.
@@ -2818,16 +2972,13 @@ function Canvas(): JSX.Element {
         />
       )} */}
 
-      {/* Icon rail + Left sidebar */}
-      <IconRail
-        onOpenSettings={() => setShowSettingsModal(true)}
-      />
-      <LeftSidebar />
+      {/* IconRail removed — V4 chrome */}
+      {/* LeftSidebar moved inside canvas container as floating overlay */}
 
       {/* Main canvas area */}
       <div
         ref={canvasContainerRef}
-        className="flex-1 relative"
+        className="flex-1 relative overflow-hidden"
         data-zoom-tier="full"
         onMouseMove={(e) => {
           // Track mouse position for InlinePrompt positioning
@@ -2848,6 +2999,34 @@ function Canvas(): JSX.Element {
             </div>
           </div>
         )}
+
+        {/* Left sidebar — floating overlay inside canvas (V4) */}
+        <LeftSidebar />
+
+        {/* Command response panel — floating left panel for AI responses + agent log (V4.1) */}
+        {!isMobile && <CommandResponsePanel />}
+
+        {/* Top bar — file ops, theme, AI sidebar toggle (V4) */}
+        <TopBar
+          onSave={handleSave}
+          onSaveAs={handleSaveAs}
+          onNew={handleNew}
+          onOpen={handleOpen}
+          onOpenThemeSettings={() => setShowThemeModal(true)}
+          onToggleAISidebar={() => setAiSidebarOpen(prev => !prev)}
+          onOpenInlinePrompt={() => {
+            // Will route to BottomCommandBar in Task 12
+          }}
+        />
+
+        {/* Contextual action bar — Generate/Modify/Preview for selected nodes (V4.1) */}
+        {!isMobile && <ContextualActionBar />}
+
+        {/* Canvas status badges — zoom, selection, performance (V4) */}
+        {!isMobile && <CanvasBadges />}
+
+        {/* Bottom Command Bar — V4 workspace-level natural language input */}
+        {!isMobile && <BottomCommandBar />}
 
         {/* Living Grid — cursor-responsive dot glow with magnetic attraction */}
         {(themeSettings.livingGridEnabled ?? true) && <LivingGrid />}
@@ -2906,6 +3085,7 @@ function Canvas(): JSX.Element {
           onViewportChange={(viewport) => {
             const prevZoom = viewportRef.current.zoom
             viewportRef.current = viewport
+            ;(window as any).__cognograph_viewport = viewport
             const newZoom = viewport.zoom
             if (Math.abs(newZoom - lastIndicatorZoomRef.current) > 0.01) {
               lastIndicatorZoomRef.current = newZoom
@@ -2962,16 +3142,7 @@ function Canvas(): JSX.Element {
         {/* Controls (zoom +/-) removed — DS v3 chrome cleanup */}
         <EmptyCanvasHint />
         {!isMobile && minimapVisible && <CollapsibleMinimap />}
-        {!isMobile && <ZoomIndicator zoom={indicatorZoom} />}
-        {indicatorZoom > 1.5 && (
-          <button
-            className="fixed bottom-4 right-4 z-50 px-2 py-1 rounded bg-[var(--surface-panel)]/80 text-xs backdrop-blur hover:bg-[var(--surface-panel)]"
-            onClick={() => fitView({ padding: 0.15, duration: 300, minZoom: 0.35 })}
-            title="Fit all nodes (Ctrl+0)"
-          >
-            Fit View
-          </button>
-        )}
+        {/* ZoomIndicator + Fit View removed — V4 uses CanvasBadges ZoomBadge */}
         <CanvasDistrictOverlay />
         <SpatialRegionOverlay />
         <ExecutionStatusOverlay />
@@ -2979,7 +3150,7 @@ function Canvas(): JSX.Element {
         <NodeHoverPreview />
         {/* SessionReEntryPrompt disabled — removed per Stefan's request */}
         {showCanvasTOC && <CanvasTableOfContents onClose={() => setShowCanvasTOC(false)} />}
-        <CognitiveLoadMeter />
+        {/* CognitiveLoadMeter hidden per Stefan's request */}
         {!isMobile && showEdgeLegend && <EdgeGrammarLegend onClose={() => setShowEdgeLegend(false)} />}
 
         {/* Snap alignment guide lines */}
@@ -3078,9 +3249,6 @@ function Canvas(): JSX.Element {
         {/* PFD Phase 5B: Z-key zoom overlay */}
         <ZoomOverlay />
 
-        {/* PFD Phase 5B: Keyboard mode indicator HUD */}
-        <KeyboardModeIndicator />
-
         {/* Task 27: Directional guide lines for keyboard navigation targets */}
         {!isMobile && <DirectionalGuides />}
 
@@ -3138,11 +3306,7 @@ function Canvas(): JSX.Element {
           onOpen={handleOpen}
           onToggleAISidebar={() => setAiSidebarOpen(prev => !prev)}
           onOpenInlinePrompt={() => {
-            setInlinePromptPosition({
-              x: Math.round(window.innerWidth / 2 - 200),
-              y: Math.round(window.innerHeight / 3)
-            })
-            setInlinePromptOpen(true)
+            // V4: Will route to BottomCommandBar in Task 12
           }}
           onOpenThemeSettings={() => setShowThemeModal(true)}
         />
@@ -3160,16 +3324,7 @@ function Canvas(): JSX.Element {
         <ExtractionPanel />
         <ExtractionDragPreview />
 
-        {/* Bottom-left controls - filter & automation suggestions (desktop only) */}
-        {!isMobile && (
-          <div
-            className="absolute bottom-4 gui-z-panels flex items-center gap-2 transition-all duration-200"
-            style={{ left: '16px' }}
-          >
-            <FilterViewDropdown />
-            {/* SuggestedAutomations disabled — too intrusive during normal use */}
-          </div>
-        )}
+        {/* Bottom-left controls removed — FilterViewDropdown moved to CanvasBadges FilterBadge (V4) */}
 
         {/* Focus mode indicator - shows when in focus mode */}
         {!isMobile && <FocusModeIndicator />}
@@ -3201,20 +3356,22 @@ function Canvas(): JSX.Element {
           propertiesPanelWidth={workspacePreferences.propertiesSidebarWidth}
         /> */}
 
-        {/* Side panels container — hidden on mobile (PFD R1) */}
+        {/* Side panels container — floating glass overlay (V4) */}
         {!isMobile && (
-          <div className="absolute top-0 right-0 h-full flex pointer-events-none">
-            {/* Node Properties panel - show when nodes selected AND in sidebar mode */}
+          <>
+            {/* Node Properties panel - float like left sidebar */}
             {selectedNodeIds.length > 0 && selectedEdgeIds.length === 0 && workspacePreferences.propertiesDisplayMode === 'sidebar' && (
-              <ResizablePropertiesPanel
-                width={workspacePreferences.propertiesSidebarWidth}
-                onWidthChange={setPropertiesSidebarWidth}
-              />
+              <div className="right-panel-float glass-soft pointer-events-auto">
+                <ResizablePropertiesPanel
+                  width={workspacePreferences.propertiesSidebarWidth}
+                  onWidthChange={setPropertiesSidebarWidth}
+                />
+              </div>
             )}
 
-            {/* Connection Properties panel - show when edge selected (and no nodes) */}
+            {/* Connection Properties panel */}
             {selectedEdgeIds.length > 0 && selectedNodeIds.length === 0 && selectedEdgeIds[0] && (
-              <div className="pointer-events-auto">
+              <div className="right-panel-float glass-soft pointer-events-auto">
                 <ConnectionPropertiesPanel
                   edgeId={selectedEdgeIds[0]}
                   onClose={clearSelection}
@@ -3227,9 +3384,7 @@ function Canvas(): JSX.Element {
               open={showThemeModal}
               onOpenChange={setShowThemeModal}
             />
-
-            {/* Chat is now rendered in-node — see ConversationNode expanded mode */}
-          </div>
+          </>
         )}
 
         <Toaster
@@ -3264,13 +3419,7 @@ function Canvas(): JSX.Element {
 
         <WorkflowProgress />
 
-        {/* AI Editor InlinePrompt (/ key) */}
-        {inlinePromptOpen && (
-          <InlinePrompt
-            position={inlinePromptPosition}
-            onClose={() => setInlinePromptOpen(false)}
-          />
-        )}
+        {/* InlinePrompt removed — V4 uses BottomCommandBar */}
 
         {/* AI Editor SelectionActionBar (Tab with multiple nodes selected) */}
         {!demoMode && selectionActionBarOpen && selectedNodeIds.length > 1 && (
@@ -3309,8 +3458,8 @@ function Canvas(): JSX.Element {
           />
         )}
 
-        {/* Welcome Overlay - shown on first launch only (desktop only — web has WebWelcomeModal) */}
-        {!isWeb && <WelcomeOverlay onOpenSettings={() => { setSettingsCategory('ai'); setShowSettingsModal(true) }} />}
+        {/* Welcome Overlay - DISABLED: replaced by default onboarding workspace (spec 2026-03-27) */}
+        {/* {!isWeb && <WelcomeOverlay onOpenSettings={() => { setSettingsCategory('ai'); setShowSettingsModal(true) }} />} */}
 
         {/* Command Bar (Phase 4) - TEMPORARILY DISABLED FOR DEBUGGING */}
         {/* <CommandBar /> */}

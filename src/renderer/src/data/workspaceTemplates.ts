@@ -14,7 +14,7 @@
  * context injection, multi-agent orchestration, and key workflows.
  */
 
-import type { NodeData } from '@shared/types'
+import type { NodeData, EdgeData } from '@shared/types'
 
 export interface WorkspaceTemplateNode {
   /** Temporary ID used for edge references (replaced with uuid on instantiation) */
@@ -29,6 +29,8 @@ export interface WorkspaceTemplateEdge {
   sourceTempId: string
   targetTempId: string
   label?: string
+  /** Optional edge data overrides (strength, semanticType, lineStyle, etc.) */
+  data?: Partial<EdgeData>
 }
 
 export interface WorkspaceTemplate {
@@ -49,7 +51,320 @@ export interface WorkspaceTemplate {
 // Built-in Templates (10 production-ready templates)
 // =============================================================================
 
+// =============================================================================
+// SVG Data URI for N8 color palette swatch (5 colors, 380x80px)
+// =============================================================================
+const PALETTE_SVG_DATA_URI = `data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="380" height="80" viewBox="0 0 380 80">` +
+  `<rect x="2" y="2" width="68" height="48" rx="4" fill="#0A0A0B" stroke="#333" stroke-width="1"/>` +
+  `<rect x="78" y="2" width="68" height="48" rx="4" fill="#C8963E"/>` +
+  `<rect x="154" y="2" width="68" height="48" rx="4" fill="#F5F5F5" stroke="#CCC" stroke-width="1"/>` +
+  `<rect x="230" y="2" width="68" height="48" rx="4" fill="#1A1A1B" stroke="#333" stroke-width="1"/>` +
+  `<rect x="306" y="2" width="68" height="48" rx="4" fill="#6366F1"/>` +
+  `<text x="36" y="68" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#999">#0A0A0B</text>` +
+  `<text x="112" y="68" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#999">#C8963E</text>` +
+  `<text x="188" y="68" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#999">#F5F5F5</text>` +
+  `<text x="264" y="68" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#999">#1A1A1B</text>` +
+  `<text x="340" y="68" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#999">#6366F1</text>` +
+  `</svg>`
+)}`
+
+// =============================================================================
+// Edge style map for the onboarding template (applied post-instantiation)
+// =============================================================================
+export const ONBOARDING_EDGE_STYLES: Record<string, Partial<EdgeData>> = {
+  'start-here->chat': {
+    strength: 'light', semanticType: 'provides-context',
+    lineStyle: 'solid', strokePreset: 'thin', arrowStyle: 'filled'
+  },
+  'brief->chat': {
+    strength: 'strong', semanticType: 'provides-context',
+    lineStyle: 'solid', strokePreset: 'bold', arrowStyle: 'filled'
+  },
+  'prefs->chat': {
+    strength: 'normal', semanticType: 'provides-context',
+    lineStyle: 'solid', strokePreset: 'normal', arrowStyle: 'filled'
+  },
+  'start-here->next': {
+    strength: 'light', semanticType: 'references',
+    lineStyle: 'dotted', strokePreset: 'thin', arrowStyle: 'outline'
+  },
+  'chat->hero-artifact': {
+    strength: 'normal', semanticType: 'derives-from',
+    lineStyle: 'solid', strokePreset: 'normal', arrowStyle: 'filled'
+  },
+  'chat->palette-artifact': {
+    strength: 'light', semanticType: 'derives-from',
+    lineStyle: 'solid', strokePreset: 'thin', arrowStyle: 'filled'
+  }
+}
+
 export const WORKSPACE_TEMPLATES: WorkspaceTemplate[] = [
+  // ============================================================================
+  // DEFAULT ONBOARDING WORKSPACE — loaded for new users on first launch
+  // ============================================================================
+  {
+    id: 'default-onboarding',
+    name: 'Welcome Workspace',
+    description: 'Learn Cognograph by exploring a pre-built workspace. No popups, no walkthroughs — the workspace is the tutorial.',
+    icon: 'Compass',
+    color: '#C8963E',
+    category: 'tutorial',
+    difficulty: 'beginner',
+    estimatedTime: '2 minutes',
+    featured: true,
+    nodes: [
+      // N1: Start Here (text node — no title field on TextNodeData, title used for gallery only)
+      {
+        tempId: 'start-here',
+        type: 'text',
+        position: { x: -257, y: 26 },
+        data: {
+          type: 'text',
+          title: 'Start Here',
+          content: '<h2>This is your workspace.</h2><p>Everything you see here is a real node. You can move them, edit them, delete them, or keep them.</p><p>The conversation below is live. The notes above it are feeding context into it. That is how Cognograph works — <strong>arrange information spatially, and the AI sees it.</strong></p><p>Start by clicking the chat node below and saying something.</p>',
+          contentFormat: 'html',
+          color: '#C8963E',
+          isLandmark: true,
+          icon: 'compass',
+          contextRole: 'instruction',
+          contextPriority: 'high'
+        } as Partial<NodeData> & { title: string },
+        dimensions: { width: 400, height: 180 }
+      },
+      // N2: Project Brief (note node)
+      {
+        tempId: 'brief',
+        type: 'note',
+        position: { x: 343, y: -29 },
+        data: {
+          type: 'note',
+          title: 'Project Brief',
+          content: 'I am building a personal portfolio site. The audience is potential clients — small business owners and startup founders who need a designer who understands both code and strategy.\n\nKey constraints:\n- Must load in under 2 seconds\n- Mobile-first (70% of traffic is mobile)\n- No stock photography — real work samples only\n- Clear call-to-action on every page',
+          contextRole: 'background',
+          contextPriority: 'high'
+        } as Partial<NodeData> & { title: string },
+        dimensions: { width: 320, height: 200 }
+      },
+      // N3: Design Preferences (note node)
+      {
+        tempId: 'prefs',
+        type: 'note',
+        position: { x: 882, y: 99 },
+        data: {
+          type: 'note',
+          title: 'Design Preferences',
+          content: 'Visual direction for the portfolio:\n\n- Clean, minimal layout. Generous whitespace.\n- Typography-driven. Large headings, readable body text.\n- Dark mode default, light mode available.\n- Accent color: warm gold (#C8963E) — confident but not aggressive.\n- No animations that serve only decoration. Every motion should communicate state or guide attention.\n- Inspired by: Stripe\'s documentation, Linear\'s interface, Vercel\'s landing pages.',
+          contextRole: 'reference',
+          contextPriority: 'medium'
+        } as Partial<NodeData> & { title: string },
+        dimensions: { width: 320, height: 220 }
+      },
+      // N4: How This Works (note node, NOT connected to chat — proves disconnection)
+      {
+        tempId: 'meta',
+        type: 'note',
+        position: { x: 862, y: 494 },
+        data: {
+          type: 'note',
+          title: 'How This Works',
+          content: 'What you are looking at:\n\nThe lines connecting these notes to the chat are edges. Edges control what the AI can see.\n\nWhen you send a message in the chat node, Cognograph collects content from every connected note and includes it in the prompt. The AI does not see disconnected nodes.\n\nThis means spatial arrangement is functional. Connecting a note to a conversation is not just organization — it changes what the AI knows.\n\nTry it: disconnect one of the notes from the chat (click the edge, press Delete). Then ask the AI about that topic. It will not know.\n\nTo create a new edge: drag from one node\'s edge handle to another.\nTo change edge strength: click an edge, then adjust in the properties panel. Stronger edges = deeper context injection.',
+          color: '#6366F1',
+          contextRole: 'instruction',
+          contextPriority: 'low',
+          includeInContext: false
+        } as Partial<NodeData> & { title: string },
+        dimensions: { width: 340, height: 320 }
+      },
+      // N5: Chat (conversation node with pre-populated exchange)
+      {
+        tempId: 'chat',
+        type: 'conversation',
+        position: { x: 10, y: 457 },
+        data: {
+          type: 'conversation',
+          title: 'Chat',
+          messages: [
+            {
+              id: 'onboarding-msg-user-001',
+              role: 'user',
+              content: 'Based on the project brief and design preferences, what would you recommend for the homepage hero section?',
+              timestamp: Date.now() - 120000
+            },
+            {
+              id: 'onboarding-msg-asst-001',
+              role: 'assistant',
+              content: 'Based on your brief and preferences, here is what I would recommend for the hero section:\n\n**Layout:** Full-viewport hero with a single headline, one supporting sentence, and a primary CTA button. No hero image — let the typography do the work, consistent with your Stripe/Linear/Vercel references.\n\n**Headline approach:** Lead with what you do for clients, not what you are. Something like "I design products that convert" rather than "Full-Stack Designer & Developer." Your audience (small business owners, startup founders) cares about outcomes.\n\n**Technical notes:**\n- Dark background (#0A0A0B or similar near-black) with your gold accent (#C8963E) on the CTA\n- System font stack for body (fast load), a single display font for the headline\n- Hero loads in a single render pass — no layout shift, no progressive reveal\n- The 2-second load budget means no hero video, no heavy WebGL. Static or CSS-only motion.\n\n**CTA:** "See my work" pointing to a portfolio grid immediately below the fold. One button. One action.\n\nWant me to draft the HTML/CSS structure?',
+              timestamp: Date.now() - 60000
+            }
+          ],
+          provider: 'anthropic',
+          mode: 'chat',
+          contextRole: 'scope',
+          contextPriority: 'high'
+        } as Partial<NodeData> & { title: string },
+        dimensions: { width: 520, height: 680 }
+      },
+      // N6: Next Steps (text node)
+      {
+        tempId: 'next',
+        type: 'text',
+        position: { x: -628, y: 584 },
+        data: {
+          type: 'text',
+          title: 'Next Steps',
+          content: '<h3>What to try next</h3><ul><li><strong>Create a note</strong> — Right-click the canvas, or press <kbd>N</kbd></li><li><strong>Connect it to the chat</strong> — Drag from the note\'s edge handle to the chat node</li><li><strong>Switch to agent mode</strong> — Click the chat node\'s mode selector (top-right). Agent mode lets AI create and modify nodes on the canvas. It will ask before making changes.</li><li><strong>Try terminal mode</strong> — Same mode selector. Opens a CLI session inside the node. On desktop: choose Claude Code, Git Bash, PowerShell, or CMD. On web: terminal mode requires the desktop app.</li><li><strong>Start fresh</strong> — Select all (<kbd>Ctrl+A</kbd>), delete, and build your own workspace from scratch.</li></ul><p style="opacity: 0.6; margin-top: 1rem; font-size: 0.85em;">Keyboard shortcuts: <kbd>C</kbd> conversation &middot; <kbd>N</kbd> note &middot; <kbd>T</kbd> task &middot; <kbd>A</kbd> artifact &middot; <kbd>P</kbd> project &middot; <kbd>Ctrl+Z</kbd> undo</p>',
+          contentFormat: 'html',
+          includeInContext: false
+        } as Partial<NodeData> & { title: string },
+        dimensions: { width: 420, height: 260 }
+      },
+      // N7: HTML Artifact — Hero Section Draft
+      {
+        tempId: 'hero-artifact',
+        type: 'artifact',
+        position: { x: 1097, y: 949 },
+        data: {
+          type: 'artifact',
+          title: 'Hero Section Draft',
+          contentType: 'html',
+          content: '<div style="background: #0A0A0B; color: #F5F5F5; font-family: system-ui, -apple-system, sans-serif; padding: 3rem 2rem; border-radius: 8px; text-align: center;"><h1 style="font-size: 2rem; font-weight: 700; margin: 0 0 0.75rem 0; line-height: 1.2;">I design products that convert.</h1><p style="font-size: 1rem; opacity: 0.7; margin: 0 0 1.5rem 0;">Strategy-driven design for founders who measure results.</p><a href="#" style="display: inline-block; background: #C8963E; color: #0A0A0B; padding: 0.75rem 2rem; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.95rem;">See my work</a></div>',
+          source: { type: 'created', method: 'manual' },
+          version: 1,
+          versionHistory: [],
+          versioningMode: 'update',
+          injectionFormat: 'reference-only',
+          collapsed: false,
+          previewLines: 10,
+          contextRole: 'reference',
+          contextPriority: 'low',
+          includeInContext: false
+        } as Partial<NodeData> & { title: string },
+        dimensions: { width: 1038, height: 323 }
+      },
+      // N8: Image Artifact — Color Palette Reference (SVG data URI)
+      {
+        tempId: 'palette-artifact',
+        type: 'artifact',
+        position: { x: 478, y: 1377 },
+        data: {
+          type: 'artifact',
+          title: 'Color Palette Reference',
+          contentType: 'image',
+          content: PALETTE_SVG_DATA_URI,
+          source: { type: 'created', method: 'manual' },
+          version: 1,
+          versionHistory: [],
+          versioningMode: 'update',
+          injectionFormat: 'reference-only',
+          collapsed: false,
+          previewLines: 5,
+          contextRole: 'reference',
+          contextPriority: 'low',
+          includeInContext: false
+        } as Partial<NodeData> & { title: string },
+        dimensions: { width: 520, height: 210 }
+      },
+      // N9: Project Node — Portfolio Site Build (collapsed by default)
+      {
+        tempId: 'project-portfolio',
+        type: 'project',
+        position: { x: 1350, y: 666 },
+        data: {
+          type: 'project',
+          title: 'Portfolio Site Build',
+          description: 'This is a project node. It organizes related work into a collapsible group.\n\nExpand me to see what is inside.',
+          color: '#C8963E',
+          collapsed: true,
+          childNodeIds: [] // Populated during instantiation with real UUIDs of N9a-c
+        } as Partial<NodeData> & { title: string },
+        dimensions: { width: 360, height: 120 }
+      },
+      // N9a: Site Architecture Notes (project child — note)
+      {
+        tempId: 'project-child-notes',
+        type: 'note',
+        position: { x: -154, y: 1260 },
+        data: {
+          type: 'note',
+          title: 'Site Architecture Notes',
+          content: 'Pages planned:\n1. Homepage (hero + portfolio grid + about teaser + CTA)\n2. Portfolio (filterable grid, case study detail pages)\n3. About (story + process + credentials)\n4. Contact (form + Cal.com embed for booking)\n\nNavigation: sticky header, 4 links, no hamburger on desktop.\nMobile: bottom nav or minimal hamburger.',
+          parentId: 'project-portfolio' // Resolved to real UUID on instantiation
+        } as Partial<NodeData> & { title: string },
+        dimensions: { width: 402, height: 341 }
+      },
+      // N9b: Homepage Build (project child — task)
+      {
+        tempId: 'project-child-task',
+        type: 'task',
+        position: { x: 1350, y: 367 },
+        data: {
+          type: 'task',
+          title: 'Homepage Build',
+          description: 'Build the homepage based on the hero section draft.\n\nSubtasks:\n- [ ] Finalize hero copy and CTA\n- [ ] Build portfolio grid component\n- [ ] Add about teaser section\n- [ ] Mobile responsive pass\n- [ ] Performance audit (target: < 2s load)',
+          status: 'in-progress',
+          priority: 'medium',
+          parentId: 'project-portfolio' // Resolved to real UUID on instantiation
+        } as Partial<NodeData> & { title: string },
+        dimensions: { width: 300, height: 200 }
+      },
+      // N9c: Performance Budget Check (project child — code artifact)
+      {
+        tempId: 'project-child-code',
+        type: 'artifact',
+        position: { x: 1069, y: 1424 },
+        data: {
+          type: 'artifact',
+          title: 'Performance Budget Check',
+          contentType: 'code',
+          language: 'javascript',
+          content: '// Performance budget enforcement\nconst BUDGET = {\n  fcp: 1200,   // First Contentful Paint (ms)\n  lcp: 2000,   // Largest Contentful Paint (ms)\n  cls: 0.1,    // Cumulative Layout Shift\n  tbt: 200     // Total Blocking Time (ms)\n};\n\nexport function checkBudget(metrics) {\n  return Object.entries(BUDGET).every(\n    ([key, limit]) => metrics[key] <= limit\n  );\n}',
+          source: { type: 'created', method: 'manual' },
+          version: 1,
+          versionHistory: [],
+          versioningMode: 'update',
+          injectionFormat: 'full',
+          collapsed: false,
+          previewLines: 15,
+          parentId: 'project-portfolio' // Resolved to real UUID on instantiation
+        } as Partial<NodeData> & { title: string },
+        dimensions: { width: 300, height: 240 }
+      }
+    ],
+    edges: [
+      // E1: Start Here -> Chat (light, instructional guide)
+      {
+        sourceTempId: 'start-here', targetTempId: 'chat', label: 'start here',
+        data: { strength: 'light', semanticType: 'provides-context', lineStyle: 'solid', strokePreset: 'thin', arrowStyle: 'filled' }
+      },
+      // E2: Project Brief -> Chat (strong context)
+      {
+        sourceTempId: 'brief', targetTempId: 'chat', label: 'provides context',
+        data: { strength: 'strong', semanticType: 'provides-context', lineStyle: 'solid', strokePreset: 'bold', arrowStyle: 'filled' }
+      },
+      // E3: Design Preferences -> Chat (normal context)
+      {
+        sourceTempId: 'prefs', targetTempId: 'chat', label: 'provides context',
+        data: { strength: 'normal', semanticType: 'provides-context', lineStyle: 'solid', strokePreset: 'normal', arrowStyle: 'filled' }
+      },
+      // E4: Start Here -> Next Steps (reference, dotted)
+      {
+        sourceTempId: 'start-here', targetTempId: 'next', label: 'then try',
+        data: { strength: 'light', semanticType: 'references', lineStyle: 'dotted', strokePreset: 'thin', arrowStyle: 'outline' }
+      },
+      // E5: Chat -> HTML Artifact (output, "created this")
+      {
+        sourceTempId: 'chat', targetTempId: 'hero-artifact', label: 'created this',
+        data: { strength: 'normal', semanticType: 'derives-from', lineStyle: 'solid', strokePreset: 'normal', arrowStyle: 'filled' }
+      },
+      // E6: Chat -> Image Artifact (output, "created this")
+      {
+        sourceTempId: 'chat', targetTempId: 'palette-artifact', label: 'created this',
+        data: { strength: 'light', semanticType: 'derives-from', lineStyle: 'solid', strokePreset: 'thin', arrowStyle: 'filled' }
+      }
+    ]
+  },
+
   // ============================================================================
   // TEMPLATE 1: AI Research Assistant (HERO TEMPLATE)
   // ============================================================================
@@ -999,3 +1314,14 @@ export const WORKSPACE_TEMPLATES: WorkspaceTemplate[] = [
     edges: [{ sourceTempId: 'note-example', targetTempId: 'conversation-tutorial', label: 'context' }]
   }
 ]
+
+// =============================================================================
+// Onboarding Template Helpers
+// =============================================================================
+
+/**
+ * Get the default onboarding template.
+ */
+export function getOnboardingTemplate(): WorkspaceTemplate | undefined {
+  return WORKSPACE_TEMPLATES.find(t => t.id === 'default-onboarding')
+}

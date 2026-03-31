@@ -112,9 +112,8 @@ function FilterViewDropdownComponent(): JSX.Element {
       {/* Dropdown menu - opens ABOVE since button is at bottom of screen */}
       {isOpen && (
         <div
-          className="absolute bottom-full left-0 mb-1 w-52 glass-fluid rounded-lg overflow-hidden shadow-xl animate-fade-in gui-z-dropdowns"
+          className="absolute bottom-full left-0 mb-1 w-52 glass-soft rounded-lg overflow-hidden shadow-xl animate-fade-in gui-z-dropdowns"
           style={{
-            backgroundColor: 'var(--gui-bg-secondary)',
             border: '1px solid var(--gui-border-subtle)'
           }}
         >

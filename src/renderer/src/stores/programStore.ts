@@ -61,6 +61,8 @@ export interface ProgramState {
   recentThemePresets: string[]
   /** Whether user has seen the theme menu tooltip */
   hasSeenThemeMenuTooltip: boolean
+  /** Whether the default onboarding workspace has been loaded (prevents re-loading) */
+  hasLoadedDefaultWorkspace: boolean
 }
 
 export interface ProgramActions {
@@ -83,6 +85,7 @@ export interface ProgramActions {
   cancelTutorial: () => void
   addRecentThemePreset: (presetId: string) => void
   markThemeMenuTooltipSeen: () => void
+  markDefaultWorkspaceLoaded: () => void
 }
 
 export type ProgramStore = ProgramState & ProgramActions
@@ -121,7 +124,8 @@ const initialState: ProgramState = {
   tutorialActive: false,
   tutorialStep: 'create-note',
   recentThemePresets: [],
-  hasSeenThemeMenuTooltip: false
+  hasSeenThemeMenuTooltip: false,
+  hasLoadedDefaultWorkspace: false
 }
 
 // =============================================================================
@@ -243,11 +247,15 @@ export const useProgramStore = create<ProgramStore>()(
 
         markThemeMenuTooltipSeen: () => {
           set({ hasSeenThemeMenuTooltip: true })
+        },
+
+        markDefaultWorkspaceLoaded: () => {
+          set({ hasLoadedDefaultWorkspace: true })
         }
       }),
       {
         name: 'cognograph-program-settings',
-        version: 7, // Bumped for new theme fields
+        version: 8, // Bumped for hasLoadedDefaultWorkspace
         partialize: (state) => ({
           accessibility: state.accessibility,
           autoSave: state.autoSave,
@@ -256,7 +264,8 @@ export const useProgramStore = create<ProgramStore>()(
           keyboardOverrides: state.keyboardOverrides,
           dismissedTooltips: state.dismissedTooltips,
           recentThemePresets: state.recentThemePresets,
-          hasSeenThemeMenuTooltip: state.hasSeenThemeMenuTooltip
+          hasSeenThemeMenuTooltip: state.hasSeenThemeMenuTooltip,
+          hasLoadedDefaultWorkspace: state.hasLoadedDefaultWorkspace
         }),
         migrate: (persisted: unknown, version: number) => {
           const data = persisted as Record<string, unknown>
@@ -274,6 +283,9 @@ export const useProgramStore = create<ProgramStore>()(
           }
           if (version < 6) {
             data.hasCompletedTutorial = false
+          }
+          if (version < 8) {
+            data.hasLoadedDefaultWorkspace = false
           }
           return data as ProgramState
         },
@@ -334,6 +346,7 @@ export const selectHighContrastFocus = (state: ProgramStore) => state.accessibil
 export const selectAnnounceActions = (state: ProgramStore) => state.accessibility.announceActions
 export const selectHasCompletedOnboarding = (state: ProgramStore) => state.hasCompletedOnboarding
 export const selectHasCompletedTutorial = (state: ProgramStore) => state.hasCompletedTutorial
+export const selectHasLoadedDefaultWorkspace = (state: ProgramStore) => state.hasLoadedDefaultWorkspace
 export const selectTutorialActive = (state: ProgramStore) => state.tutorialActive
 export const selectTutorialStep = (state: ProgramStore) => state.tutorialStep
 export const selectKeyboardOverrides = (state: ProgramStore) => state.keyboardOverrides

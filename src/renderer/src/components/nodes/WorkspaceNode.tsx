@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useMemo, useCallback, useEffect } from 'react'
+import { memo, useMemo, useCallback, useEffect, useState } from 'react'
 import { NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
 import { SpreadHandles } from './SpreadHandles'
 import {
@@ -57,6 +57,20 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
   const startNodeResize = useWorkspaceStore((state) => state.startNodeResize)
   const commitNodeResize = useWorkspaceStore((state) => state.commitNodeResize)
   const updateNode = useWorkspaceStore((state) => state.updateNode)
+
+  // Rename trigger (F2 / context menu Rename)
+  const [renameTriggered, setRenameTriggered] = useState(false)
+  useEffect(() => {
+    function handleRename(e: Event) {
+      const detail = (e as CustomEvent).detail
+      if (detail?.nodeId === id) {
+        setRenameTriggered(true)
+        requestAnimationFrame(() => setRenameTriggered(false))
+      }
+    }
+    window.addEventListener('rename-node', handleRename)
+    return () => window.removeEventListener('rename-node', handleRename)
+  }, [id])
 
   // Calculate dynamic node color - workspace uses red by default
   const nodeColor = nodeData.color || themeSettings.nodeColors.workspace || '#ef4444' // Red
@@ -250,6 +264,7 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
             onChange={(newTitle) => updateNode(id, { title: newTitle })}
             className="cognograph-node__title flex-1 truncate"
             placeholder="Untitled Workspace"
+            startEditing={renameTriggered}
           />
 
           {/* L1: Direction indicator + member count */}

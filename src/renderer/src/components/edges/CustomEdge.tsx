@@ -751,8 +751,8 @@ function CustomEdgeComponent({
           ? baseStrokeWidth + 0.15
           : baseStrokeWidth
 
-  const zoomFactor = 1 / Math.max(zoom, 0.5)
-  const strokeWidth = weightedStroke * Math.min(zoomFactor, 2)
+  const zoomFactor = 1 / Math.max(zoom, 0.25)
+  const strokeWidth = weightedStroke * Math.min(zoomFactor, 4)
   // Arrow size proportional to stroke width (not independent zoom scaling)
   // This keeps arrows visually balanced with the edge thickness
   const markerSize = Math.max(3, Math.min(6, strokeWidth * 2))
@@ -1297,23 +1297,34 @@ function CustomEdgeComponent({
   // Selected, workspace-link, and context-highlighted edges always visible.
   // ==========================================================================
 
-  const edgeLodHidden = useMemo(() => {
+  // EDGE LOD — skeleton mode at far zoom instead of hiding
+  // Far zoom: simplified single-stroke render (no defs, markers, labels, waypoints)
+  // Mid zoom: all edges visible, light edges included
+  // Close zoom: full render
+  const edgeLodSkeleton = useMemo(() => {
     if (selected || isWorkspaceLink || isContextProviderHighlighted || showContextFlow) return false
-    const strength = edgeData.strength || 'normal'
-    if (zoom < 0.25) {
-      // Far zoom: only strong edges
-      return strength !== 'strong'
-    }
-    if (zoom < 0.5) {
-      // Mid zoom: strong + normal edges
-      return strength === 'light'
-    }
-    // Close zoom: all edges
-    return false
-  }, [zoom, edgeData.strength, selected, isWorkspaceLink, isContextProviderHighlighted, showContextFlow])
+    return zoom < 0.25
+  }, [zoom, selected, isWorkspaceLink, isContextProviderHighlighted, showContextFlow])
 
-  if (edgeLodHidden) {
-    return <g />
+  if (edgeLodSkeleton) {
+    const strength = edgeData.strength || 'normal'
+    const skeletonScreenPx: Record<string, number> = { light: 0.8, normal: 1.2, strong: 1.8 }
+    const skeletonStroke = Math.max(1.5, (skeletonScreenPx[strength] || 1.2) / zoom)
+    const skeletonOpacity: Record<string, number> = { light: 0.4, normal: 0.7, strong: 1.0 }
+    return (
+      <g>
+        <path
+          d={edgePath}
+          fill="none"
+          style={{
+            stroke: edgeColor,
+            strokeWidth: skeletonStroke,
+            strokeLinecap: 'round',
+            opacity: skeletonOpacity[strength] ?? 0.7,
+          }}
+        />
+      </g>
+    )
   }
 
   // ==========================================================================

@@ -129,7 +129,7 @@ export interface UIState {
   // Left sidebar
   leftSidebarOpen: boolean
   leftSidebarWidth: number
-  leftSidebarTab: 'layers' | 'extractions' | 'activity' | 'dispatch' | 'bridge-log' | 'console'
+  leftSidebarTab: 'layers' | 'extractions' | 'activity' | 'dispatch' | 'cc-bridge' | 'agent-log' | 'console'
   expandedNodeIds: Set<string>
   layersSortMode: 'hierarchy' | 'type' | 'recent' | 'manual'
   manualLayerOrder: string[] | null
@@ -166,6 +166,12 @@ export interface UIState {
   // Theme and preferences
   themeSettings: ThemeSettings
   workspacePreferences: WorkspacePreferences
+
+  // Command response panel
+  responsePanelOpen: boolean
+  activeCommandId: string | null
+  promptCollapsed: boolean
+  agentLogExpanded: boolean
 }
 
 // =============================================================================

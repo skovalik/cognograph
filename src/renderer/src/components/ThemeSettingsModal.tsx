@@ -924,6 +924,8 @@ Output ONLY the JSON object with nodeColors, canvas colors, guiColors, and linkC
         side="right"
         className="w-[600px] max-w-[calc(100vw-32px)] overflow-y-auto text-sm"
         noOverlay
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
       >
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">

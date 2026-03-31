@@ -38,6 +38,7 @@ import { ChatPanel } from '../ChatPanel'
 import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 import { requestFitView } from '../../utils/layoutEvents'
 import { SpreadHandles } from './SpreadHandles'
+import { CONIC_PALETTES } from '../../constants/conicPalettes'
 
 // Lazy-load TerminalPanel — xterm.js is heavy, only load when a terminal node is expanded
 const LazyTerminalPanel = React.lazy(() =>
@@ -48,6 +49,10 @@ const LazyTerminalPanel = React.lazy(() =>
 interface NodeStyleWithCustomProps extends React.CSSProperties {
   '--node-accent'?: string
   '--ring-color'?: string
+  '--conic-color-1'?: string
+  '--conic-color-2'?: string
+  '--conic-color-3'?: string
+  '--conic-color-4'?: string
 }
 
 // Default dimensions
@@ -97,6 +102,20 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
   const updateNodeDimensions = useWorkspaceStore((state) => state.updateNodeDimensions)
   const startNodeResize = useWorkspaceStore((state) => state.startNodeResize)
   const commitNodeResize = useWorkspaceStore((state) => state.commitNodeResize)
+
+  // Rename trigger (F2 / context menu Rename)
+  const [renameTriggered, setRenameTriggered] = useState(false)
+  useEffect(() => {
+    function handleRename(e: Event) {
+      const detail = (e as CustomEvent).detail
+      if (detail?.nodeId === id) {
+        setRenameTriggered(true)
+        requestAnimationFrame(() => setRenameTriggered(false))
+      }
+    }
+    window.addEventListener('rename-node', handleRename)
+    return () => window.removeEventListener('rename-node', handleRename)
+  }, [id])
 
   // Derive parent project's folderPath as terminal cwd fallback
   const parentFolderPath = useWorkspaceStore((state) => {
@@ -169,11 +188,16 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
 
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.conversation ?? '#3b82f6' // blue-500
+    const palette = CONIC_PALETTES['conversation'] || CONIC_PALETTES.default
 
     return {
       '--ring-color': safeNodeColor,
       '--node-accent': safeNodeColor,
       '--pulse-color': terminalAccentColor || '#22d3ee',
+      '--conic-color-1': palette[0],
+      '--conic-color-2': palette[1],
+      '--conic-color-3': palette[2],
+      '--conic-color-4': palette[3],
       width: nodeWidth,
       height: demoMode && isTerminal ? undefined : nodeHeight,
     }
@@ -556,6 +580,7 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
               onChange={(newTitle) => updateNode(id, { title: newTitle })}
               className="cognograph-node__title flex-1 truncate"
               placeholder="Untitled Conversation"
+              startEditing={renameTriggered}
             />
           )}
           {/* Terminal: Status indicator (L2+ mid zoom) */}

@@ -157,6 +157,7 @@ export type {
   ProjectType,
   EncryptedCredential,
   WorkspacePreferences,
+  CommandLogEntry,
 } from './workspace'
 
 export {

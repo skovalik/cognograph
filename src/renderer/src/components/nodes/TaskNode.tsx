@@ -31,11 +31,16 @@ import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
 import { StructuredContentPreview } from './StructuredContentPreview'
 import { NodePropertyControls } from './NodePropertyControls'
+import { CONIC_PALETTES } from '../../constants/conicPalettes'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
   '--node-accent'?: string
   '--ring-color'?: string
+  '--conic-color-1'?: string
+  '--conic-color-2'?: string
+  '--conic-color-3'?: string
+  '--conic-color-4'?: string
 }
 
 // Default dimensions
@@ -121,6 +126,20 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   const startNodeResize = useWorkspaceStore((state) => state.startNodeResize)
   const commitNodeResize = useWorkspaceStore((state) => state.commitNodeResize)
 
+  // Rename trigger (F2 / context menu Rename)
+  const [renameTriggered, setRenameTriggered] = useState(false)
+  useEffect(() => {
+    function handleRename(e: Event) {
+      const detail = (e as CustomEvent).detail
+      if (detail?.nodeId === id) {
+        setRenameTriggered(true)
+        requestAnimationFrame(() => setRenameTriggered(false))
+      }
+    }
+    window.addEventListener('rename-node', handleRename)
+    return () => window.removeEventListener('rename-node', handleRename)
+  }, [id])
+
   // Calculate dynamic node color
   const nodeColor = nodeData.color || themeSettings.nodeColors.task || DEFAULT_THEME_SETTINGS.nodeColors.task
 
@@ -161,10 +180,15 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
 
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.task ?? '#10b981'
+    const palette = CONIC_PALETTES['task'] || CONIC_PALETTES.default
 
     return {
       '--ring-color': safeNodeColor,
       '--node-accent': safeNodeColor,
+      '--conic-color-1': palette[0],
+      '--conic-color-2': palette[1],
+      '--conic-color-3': palette[2],
+      '--conic-color-4': palette[3],
       width: nodeWidth,
       height: effectiveHeight,
     }
@@ -404,6 +428,7 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
               onChange={(newTitle) => updateNode(id, { title: newTitle })}
               className="cognograph-node__title"
               placeholder="Untitled Task"
+              startEditing={renameTriggered}
             />
           )}
           {!!nodeData.properties?.url && (

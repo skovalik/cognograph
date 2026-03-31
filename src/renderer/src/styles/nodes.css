@@ -79,7 +79,7 @@
 .cognograph-node {
   /* Content-first: minimal container */
   background: var(--surface-node);
-  border: 1px solid transparent; /* transparent at rest, visible on hover */
+  border: 2px solid transparent; /* 2px provides gradient gap for conic thinking */
   border-radius: var(--radius-md);
   box-shadow: none;
   /* PRESERVED layout properties — nodes depend on these */
@@ -153,8 +153,7 @@
 }
 
 /* Shared base for activity indicators */
-.cognograph-node.is-active::after,
-.cognograph-node.is-thinking::after {
+.cognograph-node.is-active::after {
   content: '';
   position: absolute;
   left: -4px;
@@ -171,28 +170,6 @@
   background: linear-gradient(to top, transparent, var(--ring-color, var(--accent-glow)), transparent);
 }
 
-.cognograph-node.is-thinking::after {
-  background: linear-gradient(
-    to top,
-    transparent 0%,
-    var(--ring-color, var(--accent-glow)) 30%,
-    var(--ring-color, var(--accent-glow)) 50%,
-    transparent 100%
-  );
-  background-size: 100% 200%;
-  background-position: 0 100%;
-  animation: thinking-sweep 3.5s ease-in-out infinite;
-}
-
-/* Respect reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .cognograph-node.is-thinking::after {
-    animation: none;
-    background-size: 100% 100%;
-    background-position: 0 0;
-    background: linear-gradient(to top, transparent, var(--ring-color, var(--accent-glow)), transparent);
-  }
-}
 
 /* Dragging: lift off canvas */
 .react-flow__node.dragging .cognograph-node {
@@ -355,6 +332,7 @@
   /* Allow clicks to pass through to children */
   cursor: default;
 }
+
 
 /* Node body content - description text */
 .cognograph-node__body > p {

@@ -57,11 +57,16 @@ import { ArtifactAudioRenderer } from './ArtifactAudioRenderer'
 import { Artifact3DRenderer } from './Artifact3DRenderer'
 import { FilePreviewSection } from '../FilePreviewSection'
 import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
+import { CONIC_PALETTES } from '../../constants/conicPalettes'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
   '--node-accent'?: string
   '--ring-color'?: string
+  '--conic-color-1'?: string
+  '--conic-color-2'?: string
+  '--conic-color-3'?: string
+  '--conic-color-4'?: string
 }
 
 // Default dimensions
@@ -204,6 +209,20 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   const startNodeResize = useWorkspaceStore((state) => state.startNodeResize)
   const commitNodeResize = useWorkspaceStore((state) => state.commitNodeResize)
 
+  // Rename trigger (F2 / context menu Rename)
+  const [renameTriggered, setRenameTriggered] = useState(false)
+  useEffect(() => {
+    function handleRename(e: Event) {
+      const detail = (e as CustomEvent).detail
+      if (detail?.nodeId === id) {
+        setRenameTriggered(true)
+        requestAnimationFrame(() => setRenameTriggered(false))
+      }
+    }
+    window.addEventListener('rename-node', handleRename)
+    return () => window.removeEventListener('rename-node', handleRename)
+  }, [id])
+
   // ---- Preview state ----
   const isPreviewMode = nodeData.previewEnabled === true && !!nodeData.previewUrl
   const [interactionMode, setInteractionMode] = useState(false)
@@ -235,12 +254,17 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
         if (!body || body.scrollHeight < 50) return
         const chromeH = 88 // header ~48px + footer ~36px + borders
         const scrollH = body.scrollHeight
+        const scrollW = body.scrollWidth
         const neededH = Math.round(scrollH * htmlScale) + chromeH
         const currentH = propsHeight || nodeData.height || 180
+        const chromeW = 24 // padding left + right + borders
+        const neededW = Math.round(scrollW * htmlScale) + chromeW
+        const currentW = propsWidth || nodeData.width || 680
+        const finalH = Math.max(200, neededH) // floor at 200px
+        const finalW = Math.abs(neededW - currentW) > 30 ? Math.max(300, neededW) : currentW
         // Resize to match content — both grow and shrink (within reason)
-        if (Math.abs(neededH - currentH) > 30) {
-          const finalH = Math.max(200, neededH) // floor at 200px
-          updateNodeDimensions(id, propsWidth || nodeData.width || 680, finalH)
+        if (Math.abs(neededH - currentH) > 30 || Math.abs(neededW - currentW) > 30) {
+          updateNodeDimensions(id, finalW, finalH)
           htmlIframeAutoSizedRef.current = true
         }
       } catch { /* sandbox restriction */ }
@@ -290,10 +314,15 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
 
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.artifact ?? '#8b5cf7'
+    const palette = CONIC_PALETTES['artifact'] || CONIC_PALETTES.default
 
     return {
       '--ring-color': safeNodeColor,
       '--node-accent': safeNodeColor,
+      '--conic-color-1': palette[0],
+      '--conic-color-2': palette[1],
+      '--conic-color-3': palette[2],
+      '--conic-color-4': palette[3],
       width: nodeWidth,
       ...(hasExplicitHeight ? { height: nodeHeight } : { minHeight: nodeHeight }),
     }
@@ -754,6 +783,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                 onChange={(newTitle) => updateNode(id, { title: newTitle })}
                 className="cognograph-node__title flex-1 truncate"
                 placeholder="Untitled Artifact"
+                startEditing={renameTriggered}
               />
               {showInteractiveControls && (
                 <NodeAIErrorBoundary compact>
@@ -781,6 +811,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                 onChange={(newTitle) => updateNode(id, { title: newTitle })}
                 className="cognograph-node__title flex-1 truncate"
                 placeholder="Untitled Artifact"
+                startEditing={renameTriggered}
               />
               {showInteractiveControls && (
                 <NodeAIErrorBoundary compact>

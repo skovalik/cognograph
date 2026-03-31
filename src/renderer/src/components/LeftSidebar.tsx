@@ -14,6 +14,51 @@ import { BridgeLogPanel } from './bridge/BridgeLogPanel'
 import { ConsolePanel } from './ConsolePanel'
 import { hasTerminalAccess } from '../utils/terminalAccess'
 
+function AgentLogSidebarContent(): JSX.Element {
+  const commandLog = useWorkspaceStore(s => s.commandLog)
+  const activeCommandId = useUIStore(s => s.activeCommandId)
+  const setActiveCommandId = useUIStore(s => s.setActiveCommandId)
+  const setResponsePanelOpen = useUIStore(s => s.setResponsePanelOpen)
+
+  return (
+    <div className="flex flex-col h-full overflow-y-auto">
+      {commandLog.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center" style={{ color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
+          No commands yet
+        </div>
+      ) : (
+        <div className="flex flex-col gap-1 p-3">
+          {commandLog.slice().reverse().map(entry => (
+            <button
+              key={entry.id}
+              className={`flex items-center gap-2 px-3 py-2 rounded text-left text-xs transition-colors ${
+                entry.id === activeCommandId
+                  ? 'bg-[var(--accent-glow-subtle)]'
+                  : 'hover:bg-[var(--surface-panel-secondary)]'
+              }`}
+              style={{ color: entry.id === activeCommandId ? 'var(--accent-glow)' : 'var(--text-secondary)' }}
+              onClick={() => {
+                setActiveCommandId(entry.id)
+                setResponsePanelOpen(true)
+              }}
+            >
+              <span className="flex-1 truncate">{entry.input}</span>
+              <span className="flex-shrink-0 text-[10px]" style={{
+                color: entry.status === 'done' ? 'var(--accent-glow)'
+                  : entry.status === 'running' ? 'var(--text-secondary)'
+                  : entry.status === 'error' ? '#ef4444'
+                  : 'var(--text-muted)'
+              }}>
+                {entry.status === 'done' ? 'done' : entry.status === 'running' ? 'running' : entry.status}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function LeftSidebarComponent(): JSX.Element | null {
   const isMobile = useIsMobile()
   const leftSidebarOpen = useWorkspaceStore((state) => state.leftSidebarOpen)
@@ -49,29 +94,22 @@ function LeftSidebarComponent(): JSX.Element | null {
   // Hidden on mobile — PFD R1: canvas-only default
   if (isMobile) return null
 
-  // Collapsed state
-  if (!leftSidebarOpen) {
-    return null
-  }
-
   // Section header label
   const tabLabels: Record<string, string> = {
     'layers': 'Outline',
     'extractions': 'Outline',
     'activity': 'Activity',
     'dispatch': 'Dispatch',
-    'bridge-log': 'Bridge Log',
+    'cc-bridge': 'CC Bridge',
+    'agent-log': 'Agent Log',
     'console': 'Console',
   }
 
   return (
     <div
-      className="relative h-full flex flex-col gui-panel gui-border gui-sidebar"
-      style={{
-        width: leftSidebarWidth,
-        borderRight: '1px solid var(--glass-border)',
-        transition: 'width 150ms var(--ease-default)',
-      }}
+      className="left-sidebar-float glass-soft flex flex-col"
+      style={{ width: leftSidebarWidth, transition: 'width 150ms var(--ease-default)' }}
+      data-collapsed={!leftSidebarOpen}
     >
       {/* Panel header — display font, italic, accent-glow */}
       <div style={{
@@ -105,9 +143,14 @@ function LeftSidebarComponent(): JSX.Element | null {
             <DispatchPanel sidebarWidth={leftSidebarWidth} />
           </AnimatedContent>
         )}
-        {hasTerminalAccess() && activeTab === 'bridge-log' && (
+        {hasTerminalAccess() && activeTab === 'cc-bridge' && (
           <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
             <BridgeLogPanel sidebarWidth={leftSidebarWidth} />
+          </AnimatedContent>
+        )}
+        {activeTab === 'agent-log' && (
+          <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
+            <AgentLogSidebarContent />
           </AnimatedContent>
         )}
         {hasTerminalAccess() && activeTab === 'console' && (

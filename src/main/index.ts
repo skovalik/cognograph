@@ -55,6 +55,7 @@ process.on('unhandledRejection', (reason) => {
 // Check for MCP mode flags
 const isMCPStandalone = process.argv.includes('--mcp-standalone')
 const isMCPEmbedded = process.argv.includes('--mcp-server')
+const isTestMode = process.env.NODE_ENV === 'test'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -234,7 +235,8 @@ async function startMCPMode(): Promise<void> {
 registerDeepLinkProtocol()
 
 // Ensure single instance for deep link handling on Windows/Linux
-if (!app.requestSingleInstanceLock()) {
+// Skip in test mode — E2E tests launch a separate instance while the dev app may be running
+if (!isTestMode && !app.requestSingleInstanceLock()) {
   logger.log('[Main] Another instance is running. Quitting.')
   app.quit()
 }
@@ -422,8 +424,8 @@ app.whenReady().then(async () => {
       }
     }
 
-    // Start diagnostic server (dev mode only)
-    if (is.dev && mainWindow) {
+    // Start diagnostic server (dev mode only, not in test)
+    if (is.dev && mainWindow && !isTestMode) {
       import('./diagnosticServer').then(({ startDiagnosticServer }) => {
         startDiagnosticServer(mainWindow!)
       }).catch(err => {
@@ -474,15 +476,18 @@ app.whenReady().then(async () => {
     }
 
     // Start Claude Code activity watcher (observes .cognograph-activity/events.jsonl)
-    // Uses the project root (cwd) as the directory to watch
-    try {
-      startActivityWatcher(process.cwd())
-    } catch (err) {
-      console.error('[ActivityWatcher] Failed to start:', err)
+    // Skip in test mode — file watchers hang shutdown
+    if (!isTestMode) {
+      try {
+        startActivityWatcher(process.cwd())
+      } catch (err) {
+        console.error('[ActivityWatcher] Failed to start:', err)
+      }
     }
 
     // Load plugins and emit app:ready event
-    if (mainWindow) {
+    // Skip in test mode — async plugin destroy hangs quit
+    if (mainWindow && !isTestMode) {
       setMainWindow(mainWindow)
       await loadPlugins()
       emitPluginEvent('app:ready', {})
@@ -515,8 +520,10 @@ app.on('before-quit', () => {
 // Plugin destroy needs async cleanup, so we use 'will-quit' (fires after 'before-quit' and windows close).
 // Lifecycle: before-quit → windows close → will-quit → quit
 // The guard flag prevents will-quit from re-firing when we call app.quit().
+// Skip in test mode — plugins weren't loaded, so nothing to destroy.
 let pluginsDestroyed = false
 app.on('will-quit', (e) => {
+  if (isTestMode) return // No plugins to clean up
   if (!pluginsDestroyed) {
     e.preventDefault()
     emitPluginEvent('app:quit', {})  // Fire before destroy — plugins can do last-second work

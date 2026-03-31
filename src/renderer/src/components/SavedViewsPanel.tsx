@@ -98,9 +98,8 @@ function SavedViewsPanelComponent({ isOpen, onClose }: SavedViewsPanelProps): JS
 
   return (
     <div
-      className="absolute top-20 right-4 gui-z-panels w-72 rounded-lg overflow-hidden shadow-xl animate-fade-in"
+      className="absolute top-20 right-4 gui-z-panels w-72 rounded-lg overflow-hidden shadow-xl animate-fade-in glass-soft"
       style={{
-        backgroundColor: 'var(--gui-bg-secondary)',
         border: '1px solid var(--gui-border-subtle)'
       }}
     >

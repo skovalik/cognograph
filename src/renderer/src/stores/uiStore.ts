@@ -35,7 +35,7 @@ interface UIActions {
   // Left Sidebar
   toggleLeftSidebar: () => void
   setLeftSidebarWidth: (width: number) => void
-  setLeftSidebarTab: (tab: 'layers' | 'extractions' | 'activity' | 'dispatch' | 'bridge-log' | 'console') => void
+  setLeftSidebarTab: (tab: 'layers' | 'extractions' | 'activity' | 'dispatch' | 'cc-bridge' | 'agent-log' | 'console') => void
   toggleNodeExpanded: (nodeId: string) => void
   setLayersSortMode: (mode: 'hierarchy' | 'type' | 'recent' | 'manual') => void
   setManualLayerOrder: (order: string[] | null) => void
@@ -72,6 +72,13 @@ interface UIActions {
   // Theme
   setThemeSettings: (settings: Partial<ThemeSettings>) => void
   setWorkspacePreferences: (preferences: Partial<WorkspacePreferences>) => void
+
+  // Command response panel
+  setResponsePanelOpen: (open: boolean) => void
+  toggleResponsePanel: () => void
+  setActiveCommandId: (id: string | null) => void
+  setPromptCollapsed: (collapsed: boolean) => void
+  setAgentLogExpanded: (expanded: boolean) => void
 }
 
 // =============================================================================
@@ -134,7 +141,13 @@ const initialUIState: UIState = {
     chatDisplayMode: 'panel',
     showNodePreviews: true,
     autoSaveInterval: 30000
-  }
+  },
+
+  // Command response panel
+  responsePanelOpen: false,
+  activeCommandId: null,
+  promptCollapsed: false,
+  agentLogExpanded: false,
 }
 
 // =============================================================================
@@ -417,7 +430,37 @@ export const useUIStore = create<UIStore>()(
         set((state) => {
           state.workspacePreferences = { ...state.workspacePreferences, ...preferences }
         })
-      }
+      },
+
+      // -------------------------------------------------------------------------
+      // Command Response Panel
+      // -------------------------------------------------------------------------
+
+      setResponsePanelOpen: (open) => {
+        set((state) => {
+          state.responsePanelOpen = open
+        })
+      },
+      toggleResponsePanel: () => {
+        set((state) => {
+          state.responsePanelOpen = !state.responsePanelOpen
+        })
+      },
+      setActiveCommandId: (id) => {
+        set((state) => {
+          state.activeCommandId = id
+        })
+      },
+      setPromptCollapsed: (collapsed) => {
+        set((state) => {
+          state.promptCollapsed = collapsed
+        })
+      },
+      setAgentLogExpanded: (expanded) => {
+        set((state) => {
+          state.agentLogExpanded = expanded
+        })
+      },
     }))
   )
 )

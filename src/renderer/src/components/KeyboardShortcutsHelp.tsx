@@ -167,9 +167,8 @@ function KeyboardShortcutsHelpComponent(): JSX.Element | null {
       onClick={handleBackdropClick}
     >
       <div
-        className="w-[600px] max-w-[calc(100vw-32px)] max-h-[80vh] rounded-lg overflow-hidden animate-scale-in"
+        className="w-[600px] max-w-[calc(100vw-32px)] max-h-[80vh] rounded-lg overflow-hidden animate-scale-in glass-soft"
         style={{
-          backgroundColor: 'var(--gui-bg-secondary)',
           border: '1px solid var(--gui-border-subtle)'
         }}
       >

@@ -78,27 +78,44 @@ function TemplatePickerComponent({ isOpen, onClose }: TemplatePickerProps): JSX.
         updatedAt: now
       } as NodeData
 
+      // Resolve parentId from tempId to real UUID (for project children)
+      if ((nodeData as any).parentId && idMap.has((nodeData as any).parentId)) {
+        ;(nodeData as any).parentId = idMap.get((nodeData as any).parentId)
+      }
+
       // For project nodes, map childNodeIds from temp IDs
       if (nodeData.type === 'project') {
         const projectData = nodeData as { childNodeIds?: string[] }
-        // Find which template nodes are inside this project's bounds
-        const projectPos = tNode.position
-        const projectDims = dims
-        const childIds: string[] = []
+        // First: collect children that have explicit parentId pointing to this project
+        const explicitChildIds: string[] = []
         for (const otherNode of template.nodes) {
           if (otherNode.tempId === tNode.tempId) continue
-          // Check if other node is positioned inside this project
-          if (
-            otherNode.position.x >= projectPos.x &&
-            otherNode.position.y >= projectPos.y &&
-            otherNode.position.x < projectPos.x + projectDims.width &&
-            otherNode.position.y < projectPos.y + projectDims.height
-          ) {
+          if ((otherNode.data as any).parentId === tNode.tempId) {
             const childRealId = idMap.get(otherNode.tempId)
-            if (childRealId) childIds.push(childRealId)
+            if (childRealId) explicitChildIds.push(childRealId)
           }
         }
-        projectData.childNodeIds = childIds
+        // If explicit children found, use those; otherwise fall back to spatial bounds detection
+        if (explicitChildIds.length > 0) {
+          projectData.childNodeIds = explicitChildIds
+        } else {
+          const projectPos = tNode.position
+          const projectDims = dims
+          const childIds: string[] = []
+          for (const otherNode of template.nodes) {
+            if (otherNode.tempId === tNode.tempId) continue
+            if (
+              otherNode.position.x >= projectPos.x &&
+              otherNode.position.y >= projectPos.y &&
+              otherNode.position.x < projectPos.x + projectDims.width &&
+              otherNode.position.y < projectPos.y + projectDims.height
+            ) {
+              const childRealId = idMap.get(otherNode.tempId)
+              if (childRealId) childIds.push(childRealId)
+            }
+          }
+          projectData.childNodeIds = childIds
+        }
       }
 
       return {
@@ -123,7 +140,7 @@ function TemplatePickerComponent({ isOpen, onClose }: TemplatePickerProps): JSX.
       data: {
         ...DEFAULT_EDGE_DATA,
         label: tEdge.label || undefined,
-        bidirectional: tEdge.bidirectional ?? false
+        ...(tEdge.data || {})
       }
     })).filter(e => e.source && e.target)
 

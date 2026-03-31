@@ -216,7 +216,7 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
   const currentPropertyIds = propertySchema.nodeTypeProperties[nodeData.type] || []
 
   return (
-    <div className={`h-full w-full gui-panel ${hideHeader ? '' : 'border-l gui-border'} gui-z-panels flex flex-col`}>
+    <div className={`h-full w-full ${hideHeader ? 'gui-panel' : ''} gui-z-panels flex flex-col`}>
       {/* Header - hidden when embedded in floating modal */}
       {!hideHeader && (
         <div className="gui-panel-header--minimal">

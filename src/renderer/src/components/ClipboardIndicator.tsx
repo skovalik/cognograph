@@ -25,10 +25,10 @@ function ClipboardIndicatorComponent(): JSX.Element | null {
 
   return (
     <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
-      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full shadow-lg border text-xs font-medium ${
+      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full shadow-lg border text-xs font-medium glass-soft ${
         isCut
-          ? 'bg-yellow-900/80 border-yellow-600/50 text-yellow-200'
-          : 'bg-blue-900/80 border-blue-600/50 text-blue-200'
+          ? 'border-yellow-600/50 text-yellow-200'
+          : 'border-blue-600/50 text-blue-200'
       }`}>
         <Icon className="w-3.5 h-3.5" />
         <span>{label} {count} node{count !== 1 ? 's' : ''}</span>

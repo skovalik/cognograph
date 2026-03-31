@@ -1,0 +1,49 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
+/* Copyright (C) 2026 Stefan Kovalik / Aurochs Digital */
+.contextual-bar {
+  position: absolute !important;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: calc(var(--z-panels) - 1);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  border-radius: var(--radius-lg);
+  pointer-events: auto;
+}
+
+.contextual-bar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--duration-fast) var(--ease-default),
+              background-color var(--duration-fast) var(--ease-default);
+}
+
+.contextual-bar__btn:hover {
+  color: var(--text-primary);
+  background: var(--surface-panel-secondary);
+}
+
+.contextual-bar__btn--primary { color: #22c55e; }
+.contextual-bar__btn--primary:hover { color: #4ade80; }
+.contextual-bar__btn svg { width: 14px; height: 14px; }
+
+.contextual-bar__divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-default);
+  margin: 0 4px;
+}

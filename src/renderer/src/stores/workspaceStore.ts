@@ -42,7 +42,8 @@ import type {
   PropertiesDisplayMode,
   ChatDisplayMode,
   ContextMetadata,
-  Message
+  Message,
+  CommandLogEntry,
 } from '@shared/types'
 import { createActionData } from '@shared/actionTypes'
 import { DEFAULT_EDGE_DATA, DEFAULT_CONTEXT_SETTINGS, DEFAULT_EXTRACTION_SETTINGS, DEFAULT_THEME_SETTINGS, DEFAULT_WORKSPACE_PREFERENCES, DEFAULT_WORKSPACE_LLM_SETTINGS, DEFAULT_WORKSPACE_CONTEXT_RULES, migrateEdgeStrength } from '@shared/types'
@@ -86,6 +87,8 @@ import {
 
 // Re-export for backwards compatibility
 export type { TrashedItem, PinnedWindow }
+// Re-export CommandLogEntry for consumers that import from this module
+export type { CommandLogEntry }
 
 // -----------------------------------------------------------------------------
 // Store Interface
@@ -466,6 +469,16 @@ interface WorkspaceState {
   getEffectiveContextRules: (nodeId: string) => WorkspaceContextRules | null
   updateWorkspaceLLMSettings: (workspaceNodeId: string, settings: Partial<WorkspaceLLMSettings>) => void
   updateWorkspaceContextRules: (workspaceNodeId: string, rules: Partial<WorkspaceContextRules>) => void
+
+  // State - Command Bar
+  commandLog: CommandLogEntry[]
+  workspaceConversation: { id: string; messages: Message[] }
+
+  // Actions - Command Bar
+  appendCommandLog: (entry: CommandLogEntry) => void
+  updateCommandLogEntry: (id: string, updates: Partial<CommandLogEntry>) => void
+  addWorkspaceMessage: (role: Message['role'], content: string) => void
+  clearWorkspaceConversation: () => void
 }
 
 // -----------------------------------------------------------------------------
@@ -805,6 +818,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       trash: [],
       demoMode: false,
       setDemoMode: (enabled: boolean) => set((state) => { state.demoMode = enabled }),
+
+      // Command bar
+      commandLog: [] as CommandLogEntry[],
+      workspaceConversation: {
+        id: 'workspace-command-conversation',
+        messages: [] as Message[],
+      },
 
       // ---------------------------------------------------------------------
       // Node Actions
@@ -3658,6 +3678,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           // Restore hidden node types (Issue 14 fix: Set serialized as array)
           state.hiddenNodeTypes = new Set((data as Record<string, unknown>).hiddenNodeTypes as string[] || [])
 
+          // Command bar persistence
+          state.commandLog = data.commandLog || []
+          state.workspaceConversation = data.workspaceConversation || {
+            id: 'workspace-command-conversation',
+            messages: [],
+          }
+
           state.selectedEdgeIds = []
           state.activePanel = 'none'
           state.activeChatNodeId = null
@@ -3711,7 +3738,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           hiddenNodeTypes: state.hiddenNodeTypes.size > 0 ? Array.from(state.hiddenNodeTypes) : undefined,
           createdAt: state.createdAt || Date.now(),
           updatedAt: Date.now(),
-          version: 1
+          version: 1,
+          // Command bar persistence
+          commandLog: state.commandLog.length > 0 ? state.commandLog : undefined,
+          workspaceConversation: state.workspaceConversation.messages.length > 0 ? state.workspaceConversation : undefined,
         }
       },
 
@@ -5910,7 +5940,50 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           wsData.updatedAt = Date.now()
           state.isDirty = true
         })
-      }
+      },
+
+      // ---------------------------------------------------------------------
+      // Command Bar Actions
+      // ---------------------------------------------------------------------
+
+      appendCommandLog: (entry) => {
+        set((state) => {
+          state.commandLog.push(entry)
+          if (state.commandLog.length > 100) {
+            state.commandLog.shift()
+          }
+        })
+      },
+
+      updateCommandLogEntry: (id, updates) => {
+        set((state) => {
+          const entry = state.commandLog.find((e) => e.id === id)
+          if (entry) {
+            Object.assign(entry, updates)
+          }
+        })
+      },
+
+      addWorkspaceMessage: (role, content) => {
+        set((state) => {
+          const newMsg: Message = {
+            id: crypto.randomUUID(),
+            role,
+            content,
+            timestamp: Date.now(),
+          }
+          state.workspaceConversation.messages.push(newMsg)
+        })
+      },
+
+      clearWorkspaceConversation: () => {
+        set((state) => {
+          state.workspaceConversation = {
+            id: 'workspace-command-conversation',
+            messages: [],
+          }
+        })
+      },
     }))
   )
 )

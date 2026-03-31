@@ -20,13 +20,15 @@ interface EditableTitleProps {
   onChange: (newValue: string) => void
   className?: string
   placeholder?: string
+  startEditing?: boolean
 }
 
 function EditableTitleComponent({
   value,
   onChange,
   className = '',
-  placeholder = 'Untitled'
+  placeholder = 'Untitled',
+  startEditing
 }: EditableTitleProps): JSX.Element {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(value)
@@ -38,6 +40,14 @@ function EditableTitleComponent({
       setEditValue(value)
     }
   }, [value, isEditing])
+
+  // External trigger: enter edit mode when startEditing flips true
+  useEffect(() => {
+    if (startEditing) {
+      setIsEditing(true)
+      setEditValue(value)
+    }
+  }, [startEditing, value])
 
   // Focus input when entering edit mode
   useEffect(() => {

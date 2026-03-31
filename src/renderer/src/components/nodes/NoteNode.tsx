@@ -28,6 +28,7 @@ import { FoldBadge } from './FoldBadge'
 import { NodeModeDropdown } from './NodeModeDropdown'
 import { useNodeResize } from '../../hooks/useNodeResize'
 import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
+import { CONIC_PALETTES } from '../../constants/conicPalettes'
 import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
 import { DesignTokenEditor } from './DesignTokenEditor'
@@ -45,6 +46,10 @@ interface NodeStyleWithCustomProps extends React.CSSProperties {
   '--node-accent'?: string
   '--ring-color'?: string
   '--density-accent'?: string
+  '--conic-color-1'?: string
+  '--conic-color-2'?: string
+  '--conic-color-3'?: string
+  '--conic-color-4'?: string
 }
 
 // Default dimensions
@@ -92,6 +97,20 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   const expandNodeInPlace = useWorkspaceStore((state) => state.expandNodeInPlace)
   const { getViewport } = useReactFlow()
   const commitNodeResize = useWorkspaceStore((state) => state.commitNodeResize)
+
+  // Rename trigger (F2 / context menu Rename)
+  const [renameTriggered, setRenameTriggered] = useState(false)
+  useEffect(() => {
+    function handleRename(e: Event) {
+      const detail = (e as CustomEvent).detail
+      if (detail?.nodeId === id) {
+        setRenameTriggered(true)
+        requestAnimationFrame(() => setRenameTriggered(false))
+      }
+    }
+    window.addEventListener('rename-node', handleRename)
+    return () => window.removeEventListener('rename-node', handleRename)
+  }, [id])
 
   // Strip HTML tags for word count
   const plainContent = nodeData.content
@@ -150,11 +169,16 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     // Fallback chain for undefined nodeColor
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.note ?? '#f59e0b' // amber-500
+    const palette = CONIC_PALETTES['note'] || CONIC_PALETTES.default
 
     return {
       '--ring-color': safeNodeColor,
       '--node-accent': safeNodeColor,
       '--density-accent': modeConfig.badgeColor || safeNodeColor,
+      '--conic-color-1': palette[0],
+      '--conic-color-2': palette[1],
+      '--conic-color-3': palette[2],
+      '--conic-color-4': palette[3],
       width: effectiveWidth,
       height: effectiveHeight,
     }
@@ -385,6 +409,7 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
           onChange={(newTitle) => updateNode(id, { title: newTitle })}
           className="cognograph-node__title"
           placeholder="Untitled Note"
+          startEditing={renameTriggered}
         />
         {!!nodeData.properties?.url && (
           <span title={nodeData.properties.url as string}>

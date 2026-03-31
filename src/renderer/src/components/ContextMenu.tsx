@@ -64,6 +64,7 @@ import { Separator } from './ui'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useTemplateStore } from '../stores/templateStore'
 import { useAIEditorStore } from '../stores/aiEditorStore'
+import { useUIStore } from '../stores/uiStore'
 import { suggestTemplateName } from '../utils/templateUtils'
 import { useUpdateNodeInternals, type Node as FlowNode } from '@xyflow/react'
 import { logger } from '../utils/logger'
@@ -384,10 +385,28 @@ function ContextMenuComponent(): JSX.Element | null {
 
   // Handle duplicate nodes
   const handleDuplicate = useCallback(() => {
-    // For now, just log - full duplicate implementation would need more work
-    logger.log('[ContextMenu] Duplicate not yet implemented')
+    const store = useWorkspaceStore.getState()
+    const savedClipboardNodes = store.clipboardNodes
+    const savedClipboardEdges = store.clipboardEdges
+    const savedClipboardState = store.clipboardState
+    if (target?.type === 'node') {
+      const node = store.nodes.find(n => n.id === target.nodeId)
+      if (node) {
+        store.copyNodes([target.nodeId])
+        store.pasteNodes({ x: node.position.x + 40, y: node.position.y + 40 })
+      }
+    } else if (target?.type === 'nodes') {
+      store.copyNodes(target.nodeIds)
+      const selectedNodes = store.nodes.filter(n => target.nodeIds.includes(n.id))
+      if (selectedNodes.length > 0) {
+        const avgX = selectedNodes.reduce((sum, n) => sum + n.position.x, 0) / selectedNodes.length
+        const avgY = selectedNodes.reduce((sum, n) => sum + n.position.y, 0) / selectedNodes.length
+        store.pasteNodes({ x: avgX + 40, y: avgY + 40 })
+      }
+    }
+    useWorkspaceStore.setState({ clipboardNodes: savedClipboardNodes, clipboardEdges: savedClipboardEdges, clipboardState: savedClipboardState })
     close()
-  }, [close])
+  }, [target, close])
 
   // Handle fit to content
   const handleFitToContent = useCallback(() => {
@@ -457,11 +476,13 @@ function ContextMenuComponent(): JSX.Element | null {
 
   if (!isOpen || !target) return null
 
-  // Calculate menu position (keep within viewport)
+  // Calculate menu position — pinned below top nav, follows cursor horizontally
   const menuStyle: React.CSSProperties = {
     position: 'fixed',
     left: Math.min(position.x, window.innerWidth - 200),
-    top: Math.min(position.y, window.innerHeight - 300),
+    top: 72,
+    maxHeight: 'calc(100vh - 88px)',
+    overflowY: 'auto',
   }
 
   // Render different menus based on target type
@@ -771,6 +792,15 @@ function ContextMenuComponent(): JSX.Element | null {
               }}
             />
             <MenuItem
+              icon={<Type className="w-4 h-4" />}
+              label="Rename"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('rename-node', { detail: { nodeId: target.nodeId } }))
+                close()
+              }}
+              shortcut="F2"
+            />
+            <MenuItem
               icon={(() => {
                 const isPinned = useWorkspaceStore.getState().pinnedWindows.some(w => w.nodeId === target.nodeId)
                 return isPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />
@@ -826,6 +856,46 @@ function ContextMenuComponent(): JSX.Element | null {
                 close()
               }}
             />
+            {/* Connected nodes */}
+            {(() => {
+              const store = useWorkspaceStore.getState()
+              const connected = store.getConnectedNodes(target.nodeId)
+              if (connected.length === 0) return null
+              return (
+                <>
+                  <MenuSeparator />
+                  <div className="px-3 py-1 text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                    Connected
+                  </div>
+                  {connected.slice(0, 6).map(cn => (
+                    <MenuItem
+                      key={cn.id}
+                      icon={<Link2 className="w-4 h-4" />}
+                      label={(cn.data as any).title || 'Untitled'}
+                      onClick={() => {
+                        store.setSelectedNodes([cn.id])
+                        close()
+                      }}
+                    />
+                  ))}
+                  {connected.length > 6 && (
+                    <div className="px-3 py-1 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                      +{connected.length - 6} more
+                    </div>
+                  )}
+                </>
+              )
+            })()}
+            <MenuItem
+              icon={<ExternalLink className="w-4 h-4" />}
+              label="Copy Link"
+              onClick={() => {
+                const link = `cognograph://node/${target.nodeId}`
+                navigator.clipboard.writeText(link)
+                toast.success('Link copied')
+                close()
+              }}
+            />
             <MenuItem
               icon={<Save className="w-4 h-4" />}
               label="Save as Template..."
@@ -836,7 +906,7 @@ function ContextMenuComponent(): JSX.Element | null {
               icon={<Copy className="w-4 h-4" />}
               label="Duplicate"
               onClick={handleDuplicate}
-              disabled
+              shortcut="Ctrl+D"
             />
             <MenuItem
               icon={<Archive className="w-4 h-4" />}
@@ -883,6 +953,24 @@ function ContextMenuComponent(): JSX.Element | null {
               }}
               shortcut="Ctrl+K"
             />
+            {/* Show generation prompt — from commandLog if this node was created by a command */}
+            {(() => {
+              const log = useWorkspaceStore.getState().commandLog
+              const entry = log.find(e => e.affectedNodeIds.includes(target.nodeId))
+              if (!entry) return null
+              return (
+                <MenuItem
+                  icon={<MessageSquare className="w-4 h-4" />}
+                  label="Show Prompt"
+                  onClick={() => {
+                    useUIStore.getState().setActiveCommandId(entry.id)
+                    useUIStore.getState().setResponsePanelOpen(true)
+                    useUIStore.getState().setPromptCollapsed(false)
+                    close()
+                  }}
+                />
+              )
+            })()}
             {/* CC Bridge: Send to Claude Code (append-only, Phase 3 dispatch) */}
             <MenuItem
               icon={<Send className="w-4 h-4" />}
@@ -1016,7 +1104,7 @@ function ContextMenuComponent(): JSX.Element | null {
               icon={<Copy className="w-4 h-4" />}
               label="Duplicate All"
               onClick={handleDuplicate}
-              disabled
+              shortcut="Ctrl+D"
             />
             <MenuItem
               icon={<Archive className="w-4 h-4" />}
@@ -1309,7 +1397,7 @@ function ContextMenuComponent(): JSX.Element | null {
     <div
       ref={menuRef}
       style={menuStyle}
-      className="min-w-[180px] gui-z-dropdowns bg-[var(--surface-panel)] border border-[var(--border-subtle)] rounded-lg shadow-xl py-1"
+      className="min-w-[180px] gui-z-dropdowns glass-soft border border-[var(--border-subtle)] rounded-lg shadow-xl py-1"
     >
       {renderMenuItems()}
     </div>

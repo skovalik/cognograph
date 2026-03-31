@@ -14,7 +14,7 @@
  */
 
 import { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import { MiniMap, useStore as useRFStore } from '@xyflow/react'
+import { MiniMap, useStore as useRFStore, useReactFlow, useViewport } from '@xyflow/react'
 import { ChevronDown, ChevronUp, GripHorizontal, Map } from 'lucide-react'
 import { useUIStore, selectThemeSettings, useCanvasStore } from '../stores'
 import { useSpatialRegionStore, selectDistricts } from '../stores/spatialRegionStore'
@@ -274,6 +274,10 @@ interface CollapsibleMinimapProps {
 }
 
 function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: CollapsibleMinimapProps): JSX.Element {
+  const { fitView } = useReactFlow()
+  const { zoom } = useViewport()
+  const zoomPercent = Math.round(zoom * 100)
+
   const themeSettings = useUIStore(selectThemeSettings)
   const districts = useSpatialRegionStore(selectDistricts)
   const streamingConversations = useCanvasStore((s) => s.streamingConversations)
@@ -323,7 +327,7 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
         return { left: offset, bottom: offset }
       case 'bottom-right':
       default:
-        return { right: offset, bottom: offset }
+        return { right: offset, bottom: 56 } // 56px clears badge row (36px badges + 12px gap + 8px padding)
     }
   }, [corner, customPosition])
 
@@ -465,18 +469,28 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
             <Map className="w-3.5 h-3.5 gui-text-secondary" />
             <span className="text-xs gui-text-secondary">Map</span>
           </div>
-          <button
-            onClick={toggleCollapsed}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="p-0.5 gui-button rounded transition-colors"
-            title={isCollapsed ? 'Expand minimap' : 'Collapse minimap'}
-          >
-            {isCollapsed ? (
-              <ChevronUp className="w-3.5 h-3.5 gui-text-secondary" />
-            ) : (
-              <ChevronDown className="w-3.5 h-3.5 gui-text-secondary" />
-            )}
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => fitView({ duration: 300, padding: 0.1 })}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="text-xs gui-text-secondary hover:text-[var(--gui-text-primary)] transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--gui-bg-hover)]"
+              title="Fit to view"
+            >
+              {zoomPercent}%
+            </button>
+            <button
+              onClick={toggleCollapsed}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="p-0.5 gui-button rounded transition-colors"
+              title={isCollapsed ? 'Expand minimap' : 'Collapse minimap'}
+            >
+              {isCollapsed ? (
+                <ChevronUp className="w-3.5 h-3.5 gui-text-secondary" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 gui-text-secondary" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Minimap content */}

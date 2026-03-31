@@ -9,11 +9,30 @@
 // =============================================================================
 
 import type { Node, Edge } from '@xyflow/react'
-import type { NodeData } from './nodes'
+import type { NodeData, Message } from './nodes'
 import type { EdgeData } from './edges'
 import type { PropertySchema } from './common'
 import type { ThemeSettings } from './theme'
 import type { SpatialRegion } from '../actionTypes'
+
+// -----------------------------------------------------------------------------
+// Command Bar Types
+// -----------------------------------------------------------------------------
+
+export interface CommandLogEntry {
+  id: string
+  input: string
+  tier: 1 | 2 | 3
+  status: 'running' | 'done' | 'error' | 'cancelled'
+  narration: string
+  affectedNodeIds: string[]
+  affectedEdgeIds?: string[]
+  agentNodeId?: string
+  timestamp: number
+  duration?: number
+  model?: string
+  tokenUsage?: { input: number; output: number; cost: number }
+}
 
 // -----------------------------------------------------------------------------
 // Workspace Types
@@ -46,6 +65,10 @@ export interface WorkspaceData {
     leftSidebarTab?: 'layers' | 'extractions'
     expandedNodeIds?: string[]
   }
+
+  // Command bar persistence
+  commandLog?: CommandLogEntry[]
+  workspaceConversation?: { id: string; messages: Message[] }
 }
 
 export interface WorkspaceInfo {

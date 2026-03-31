@@ -1,0 +1,255 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
+/* Copyright (C) 2026 Stefan Kovalik / Aurochs Digital */
+/* =============================================================================
+   COMMAND RESPONSE PANEL — Floating left panel for AI response output
+   Threaded conversation view: stacked prompt + response entries
+   ============================================================================= */
+
+.cmd-response-panel {
+  position: absolute !important;
+  top: 72px;
+  left: 8px;
+  bottom: 56px;
+  width: min(320px, calc(100vw - 600px)); /* Shrink on narrow viewports to avoid command bar overlap */
+  z-index: var(--z-panels);
+  border-radius: var(--radius-lg);
+  overflow: hidden !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15) !important;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+}
+
+/* ── Collapsed state: just the toggle button ── */
+.cmd-response-toggle {
+  position: absolute !important;
+  top: 76px;
+  left: 12px;
+  z-index: var(--z-panels);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  color: var(--text-secondary);
+  pointer-events: auto;
+  overflow: hidden !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15) !important;
+}
+
+.cmd-response-toggle:hover {
+  color: var(--text-primary);
+}
+
+/* ── Panel header ── */
+.cmd-response-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 8px;
+  flex-shrink: 0;
+}
+
+/* ═══ Threaded conversation view ═══ */
+.cmd-response-panel__thread {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.cmd-response-panel__entry {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-subtle, rgba(240,237,232,0.06));
+}
+
+.cmd-response-panel__entry:last-child {
+  border-bottom: none;
+}
+
+.cmd-response-panel__entry-prompt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.cmd-response-panel__entry-response {
+  padding-left: 22px; /* Indent under status icon */
+  font-size: 13px;
+}
+
+.cmd-response-panel__entry-thinking {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0 4px 22px;
+}
+
+/* Thinking entry gets subtle accent border-left */
+.cmd-response-panel__entry.is-thinking {
+  border-left: 2px solid var(--accent-glow);
+  padding-left: 14px;
+}
+
+.cmd-response-panel__icon-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.cmd-response-panel__icon-btn:hover {
+  color: var(--text-secondary);
+}
+
+/* Affected nodes link pills */
+.cmd-response-panel__node-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  background: var(--accent-glow-subtle, rgba(200,150,62,0.1));
+  color: var(--accent-glow);
+  cursor: pointer;
+  border: none;
+  margin: 2px 2px;
+}
+
+.cmd-response-panel__node-link:hover {
+  background: color-mix(in srgb, var(--accent-glow) 20%, transparent);
+}
+
+/* Empty state */
+.cmd-response-panel__empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Cancel/stop button in header during execution */
+.cmd-response-panel__stop {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.cmd-response-panel__stop:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+
+/* ═══ Thinking state: conic gradient on running entry's prompt line ═══ */
+.cmd-response-panel__entry.is-thinking .cmd-response-panel__entry-prompt {
+  background:
+    color-mix(in srgb, var(--surface-panel) 85%, transparent) padding-box,
+    conic-gradient(from var(--conic-angle), #C8963E, #E5B95C, #d4a056, #b8860b, #C8963E) border-box;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 6px 8px;
+  animation: conic-rotate 3s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cmd-response-panel__entry.is-thinking .cmd-response-panel__entry-prompt {
+    animation: none;
+  }
+}
+
+/* ═══ Agent Log — collapsible navigation index at bottom ═══ */
+.cmd-response-panel__log {
+  border-top: 1px solid var(--border-subtle, rgba(240,237,232,0.06));
+  flex-shrink: 0;
+}
+
+.cmd-response-panel__log-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.cmd-response-panel__log-toggle:hover {
+  color: var(--text-primary);
+}
+
+.cmd-response-panel__log-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.cmd-response-panel__log-list {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 0 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cmd-response-panel__log-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.cmd-response-panel__log-entry:hover {
+  background: var(--surface-panel-secondary);
+}
+
+.cmd-response-panel__log-entry--active {
+  background: var(--accent-glow-subtle, rgba(200,150,62,0.1));
+  color: var(--accent-glow);
+}
+
+.cmd-response-panel__log-entry svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.cmd-response-panel__log-entry span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

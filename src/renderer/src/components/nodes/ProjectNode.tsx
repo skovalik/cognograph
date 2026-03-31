@@ -28,11 +28,16 @@ import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
 import { StructuredContentPreview } from './StructuredContentPreview'
 import { NodePropertyControls } from './NodePropertyControls'
+import { CONIC_PALETTES } from '../../constants/conicPalettes'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
   '--node-accent'?: string
   '--ring-color'?: string
+  '--conic-color-1'?: string
+  '--conic-color-2'?: string
+  '--conic-color-3'?: string
+  '--conic-color-4'?: string
 }
 
 function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps): JSX.Element {
@@ -50,6 +55,20 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
   const { screenToFlowPosition } = useReactFlow()
   const [isDragOver, setIsDragOver] = useState(false)
 
+  // Rename trigger (F2 / context menu Rename)
+  const [renameTriggered, setRenameTriggered] = useState(false)
+  useEffect(() => {
+    function handleRename(e: Event) {
+      const detail = (e as CustomEvent).detail
+      if (detail?.nodeId === id) {
+        setRenameTriggered(true)
+        requestAnimationFrame(() => setRenameTriggered(false))
+      }
+    }
+    window.addEventListener('rename-node', handleRename)
+    return () => window.removeEventListener('rename-node', handleRename)
+  }, [id])
+
   const onNodesChange = useWorkspaceStore((state) => state.onNodesChange)
 
   // Block single-click selection — require double-click to select project nodes
@@ -66,10 +85,15 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
 
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.project ?? '#0ea5e9'
+    const palette = CONIC_PALETTES['project'] || CONIC_PALETTES.default
 
     return {
       '--ring-color': safeNodeColor,
       '--node-accent': safeNodeColor,
+      '--conic-color-1': palette[0],
+      '--conic-color-2': palette[1],
+      '--conic-color-3': palette[2],
+      '--conic-color-4': palette[3],
       width: '100%',
       height: '100%',
     }
@@ -324,6 +348,7 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
             onChange={(newTitle) => updateNode(id, { title: newTitle })}
             className="cognograph-node__title"
             placeholder="Untitled Project"
+            startEditing={renameTriggered}
           />
           {nodeData.folderPath && (
             <span

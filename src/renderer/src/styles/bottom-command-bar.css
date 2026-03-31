@@ -1,0 +1,271 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
+/* Copyright (C) 2026 Stefan Kovalik / Aurochs Digital */
+/* =============================================================================
+   BOTTOM COMMAND BAR — V4 workspace command interface
+   Single unified glass container: narration + input + toolbar
+   ============================================================================= */
+
+.bottom-command-bar {
+  position: absolute;
+  bottom: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 560px;
+  z-index: var(--z-panels);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+/* ═══ Unified bar — single glass container ═══ */
+.bottom-command-bar__bar {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-xl, 12px);
+  border: 2px solid transparent;
+  transition: border-color var(--duration-fast) var(--ease-default);
+}
+
+.bottom-command-bar__bar:focus-within {
+  border-color: color-mix(in srgb, var(--accent-glow) 30%, transparent);
+}
+
+/* Thinking state — conic border on the whole bar */
+.bottom-command-bar__bar.is-thinking {
+  background:
+    color-mix(in srgb, var(--surface-panel) 85%, transparent) padding-box,
+    conic-gradient(from var(--conic-angle), #C8963E, #E5B95C, #d4a056, #b8860b, #C8963E) border-box;
+  border: 2px solid transparent;
+  animation: conic-rotate 3s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottom-command-bar__bar.is-thinking {
+    animation: none;
+  }
+}
+
+/* ═══ Input row — inside bar ═══ */
+.bottom-command-bar__input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+}
+
+.bottom-command-bar__input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.bottom-command-bar__input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Send button */
+.bottom-command-bar__send {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md, 6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cg-accent, var(--accent-glow));
+  color: var(--surface-canvas);
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--duration-fast) var(--ease-default);
+}
+
+.bottom-command-bar__send:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.bottom-command-bar__send:not(:disabled):hover {
+  background: var(--accent-glow);
+}
+
+/* ═══ Toolbar row — inside bar, below input ═══ */
+.bottom-command-bar__toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-subtle, rgba(240,237,232,0.06));
+}
+
+.bottom-command-bar__toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.bottom-command-bar__toolbar-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.bottom-command-bar__toolbar-btn:hover {
+  color: var(--text-secondary);
+}
+
+.bottom-command-bar__divider {
+  width: 1px;
+  height: 12px;
+  background: var(--border-default);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Model pill */
+.bottom-command-bar__model {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm, 4px);
+  background: color-mix(in srgb, var(--surface-panel-secondary) 60%, transparent);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  border: none;
+  cursor: pointer;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bottom-command-bar__model:hover {
+  color: var(--text-primary);
+}
+
+/* Context label */
+.bottom-command-bar__context {
+  margin-left: auto;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+/* Context subject pill — shows selected node with type icon */
+.bottom-command-bar__subject {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px 3px 8px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--surface-panel-secondary) 80%, transparent);
+  border: 1px solid var(--border-subtle);
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  max-width: 180px;
+}
+
+.bottom-command-bar__subject-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bottom-command-bar__subject-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.bottom-command-bar__subject-close:hover {
+  color: var(--text-primary);
+}
+
+/* Attachment pill */
+.bottom-command-bar__attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px 3px 8px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--surface-panel-secondary) 80%, transparent);
+  border: 1px solid var(--border-subtle);
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  max-width: 120px;
+}
+
+.bottom-command-bar__attachment-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Model dropdown */
+.bottom-command-bar__model-dropdown {
+  position: absolute !important;
+  bottom: calc(100% + 8px);
+  left: 0;
+  min-width: 180px;
+  max-height: 240px;
+  overflow-y: auto;
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  z-index: 60;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+}
+
+.bottom-command-bar__model-option {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bottom-command-bar__model-option:hover {
+  background: var(--surface-panel-secondary);
+}
+
+.bottom-command-bar__model-option--active {
+  color: var(--accent-glow);
+}
+
+/* Drag highlight */
+.bottom-command-bar__bar.is-dragging {
+  border-color: var(--accent-glow);
+}

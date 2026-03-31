@@ -1,0 +1,83 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
+/* Copyright (C) 2026 Stefan Kovalik / Aurochs Digital */
+/* =============================================================================
+   CANVAS BADGES — Floating glass pill indicators at canvas bottom edge
+   ============================================================================= */
+
+.canvas-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-family: var(--font-sans);
+  color: var(--text-secondary);
+  cursor: pointer;
+  border: 1px solid var(--border-default);
+  transition: color var(--duration-fast) var(--ease-default),
+              border-color var(--duration-fast) var(--ease-default);
+  white-space: nowrap;
+}
+
+.canvas-badge:hover {
+  color: var(--text-primary);
+  border-color: var(--border-hover, var(--border-default));
+}
+
+.canvas-badge:focus-visible {
+  outline: 2px solid var(--accent-glow);
+  outline-offset: 2px;
+}
+
+/* ═══ Agent Log Popover — command history flyout ═══ */
+.agent-log-popover {
+  position: absolute !important;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 280px;
+  max-height: 320px;
+  overflow-y: auto;
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  z-index: 60;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+}
+
+.agent-log-popover__entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.agent-log-popover__entry:hover {
+  background: var(--surface-panel-secondary);
+}
+
+.agent-log-popover__entry--active {
+  background: var(--accent-glow-subtle, rgba(200,150,62,0.1));
+  color: var(--accent-glow);
+}
+
+.agent-log-popover__status {
+  flex-shrink: 0;
+  font-size: 10px;
+  width: 14px;
+  text-align: center;
+}
+
+.agent-log-popover__text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

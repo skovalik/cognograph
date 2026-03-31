@@ -64,6 +64,7 @@ const LetterGlitch = React.lazy(() => import('./effects/LetterGlitch'))
 const Iridescence  = React.lazy(() => import('./effects/Iridescence'))
 const Threads      = React.lazy(() => import('./effects/Threads'))
 const DotGrid      = React.lazy(() => import('./effects/DotGrid'))
+const StaticGrid   = React.lazy(() => import('./effects/StaticGrid'))
 const Dither       = React.lazy(() => import('./effects/Dither'))
 const PrismaticBurst = React.lazy(() => import('./effects/PrismaticBurst'))
 const PixelSnow    = React.lazy(() => import('./effects/PixelSnow'))
@@ -146,6 +147,32 @@ const ENTRIES: EffectRegistryEntry[] = [
       { key: 'returnDuration', label: 'Return Duration', controlType: 'slider', min: 0.01, max: 4, step: 0.01 },
     ],
     themeColorProps: ['activeColor'],
+  },
+  {
+    id: 'static-grid',
+    name: 'Static Grid',
+    category: 'Patterns',
+    icon: '⋅⋅⋅',
+    component: StaticGrid,
+    defaultProps: {
+      dotSize: 1,
+      gap: 20,
+      color: '#9e978d',
+      opacity: 0.12,
+      glowColor: '#ffffff',
+      glowOpacity: 0.7,
+      glowRadius: 100,
+    },
+    propSchema: [
+      { key: 'dotSize', label: 'Dot Size', controlType: 'slider', min: 0.5, max: 4, step: 0.5 },
+      { key: 'gap', label: 'Gap', controlType: 'slider', min: 10, max: 40, step: 2 },
+      { key: 'color', label: 'Dot Color', controlType: 'color', isThemeLinked: false, colorFormat: 'hex' },
+      { key: 'opacity', label: 'Opacity', controlType: 'slider', min: 0.01, max: 0.2, step: 0.01 },
+      { key: 'glowColor', label: 'Glow Color', controlType: 'color', isThemeLinked: true, colorFormat: 'hex' },
+      { key: 'glowOpacity', label: 'Glow Intensity', controlType: 'slider', min: 0.1, max: 0.8, step: 0.05 },
+      { key: 'glowRadius', label: 'Glow Radius', controlType: 'slider', min: 50, max: 250, step: 10 },
+    ],
+    themeColorProps: ['glowColor'],
   },
   {
     id: 'dither',

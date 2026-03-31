@@ -170,7 +170,7 @@ function PinnedWindowComponent({ window: win, node }: PinnedWindowProps): JSX.El
 
   return (
     <div
-      className="fixed bg-[var(--surface-panel)] border border-[var(--border-subtle)] rounded-lg shadow-2xl overflow-hidden flex flex-col"
+      className="fixed glass-soft border border-[var(--border-subtle)] rounded-lg shadow-2xl overflow-hidden flex flex-col"
       style={{
         left: position.x,
         top: position.y,

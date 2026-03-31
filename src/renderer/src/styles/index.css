@@ -4,6 +4,18 @@
 @import './animations.css';
 /* Three-tier glassmorphism system */
 @import './glass.css';
+/* Conic gradient thinking animation */
+@import './conic-thinking.css';
+/* V4 gradient-fade top bar chrome */
+@import './top-bar.css';
+/* V4 floating glass badge indicators */
+@import './canvas-badges.css';
+/* V4 workspace-level natural language command input */
+@import './bottom-command-bar.css';
+/* V4.1 floating left response panel */
+@import './command-response-panel.css';
+/* V4 contextual action bar — Generate/Modify/Preview for selected nodes */
+@import './contextual-action-bar.css';
 
 @tailwind base;
 @tailwind components;
