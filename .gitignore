@@ -68,6 +68,29 @@ e2e/test-results/
 .env.test
 .worktrees/
 
+# === SANITIZATION: NEVER TRACK THESE IN PUBLIC REPO ===
+PATENTS
+DECISIONS.md
+FEATURES.md
+SECURITY.md
+NORTH_STAR.md
+CHANGELOG.md
+docs/archive/
+docs/bugs/
+docs/design/
+docs/notes/
+docs/plans/
+docs/strategy/
+docs/specs/
+docs/guides/PATENT_FILING_GUIDE.md
+docs/guides/CODE_SIGNING_SETUP.md
+docs/guides/RELEASE_PROCESS.md
+docs/guides/SYNC_PROTOCOL.md
+docs/guides/diagnostic-server.md
+src/web/
+public/sitemap.xml
+public/llms.txt
+
 # Secrets vault
 .secrets/
 
