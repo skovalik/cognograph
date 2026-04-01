@@ -103,3 +103,4 @@ test-*.png
 screenshot-*.png
 *_b64.txt
 screenshot-test.mjs
+SYNC_RULES.md
