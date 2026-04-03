@@ -20,7 +20,7 @@ import { CollaborativeEditor } from '../CollaborativeEditor'
 import { SelectionIndicator } from '../Presence/SelectionIndicators'
 import { useNodeRemoteSelectors } from '../../hooks/useOtherUserSelections'
 import { useWorkspaceStore as useWsStoreForSync } from '../../stores/workspaceStore'
-import { measureTextWidth, calculateAutoFitDimensions } from '../../utils/nodeUtils'
+import { measureTextWidth, calculateAutoFitDimensions } from '../../utils/textMeasure'
 import { Maximize2 } from 'lucide-react'
 import { ExtractionBadge, ExtractionControls } from '../extractions'
 import { AutoFitButton } from './AutoFitButton'
@@ -474,7 +474,7 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
             className={zoomLevel === 'ultra-far' && !isInPlaceExpanded ? 'note-node__body-hidden' : undefined}
             style={
               isInPlaceExpanded ? undefined :
-              zoomLevel === 'mid' && !isEditing ? { overflow: 'hidden' } : undefined
+              zoomLevel === 'mid' && !isEditing ? { overflow: 'auto' } : undefined
             }
             aria-hidden={zoomLevel === 'ultra-far' && !isInPlaceExpanded}
           >

@@ -15,7 +15,7 @@ import { logger } from '../utils/logger'
 const API_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ORCHESTRATOR_URL)
   || 'https://api.cognograph.app'
 
-export type Plan = 'free' | 'pro'
+export type Plan = 'free' | 'pro' | null
 
 export interface Entitlement {
   enabled: boolean
@@ -51,6 +51,7 @@ export interface EntitlementsState {
 export const FEATURE_REQUIREMENTS: Record<string, Plan[]> = {
   cloud_sync: ['pro'],
   cloud_terminal_unlimited: ['pro'],
+  cloud_terminal_free: ['free', 'pro'],
   orchestrator_node: ['pro'],
   full_context_injection: ['pro'],
 }
@@ -61,12 +62,13 @@ const PLAN_ORDER: Plan[] = ['free', 'pro']
 export const useEntitlementsStore = create<EntitlementsState>()(
   persist(
     (set, get) => ({
-      // Initial state (free tier)
-      plan: 'free',
+      // Initial state (null = unauthenticated / unknown)
+      plan: null,
       status: 'active',
       entitlements: {
         cloud_sync: { enabled: false },
         cloud_terminal_unlimited: { enabled: false },
+        cloud_terminal_free: { enabled: true, limit: 30 },
         unlimited_workspaces: { enabled: true },
         spatial_triggers: { enabled: true },
         orchestrator_node: { enabled: false },
@@ -171,11 +173,12 @@ export const useEntitlementsStore = create<EntitlementsState>()(
        */
       clearEntitlements: () => {
         set({
-          plan: 'free',
+          plan: null,
           status: 'active',
           entitlements: {
             cloud_sync: { enabled: false },
             cloud_terminal_unlimited: { enabled: false },
+            cloud_terminal_free: { enabled: true, limit: 30 },
             unlimited_workspaces: { enabled: true },
             spatial_triggers: { enabled: true },
             orchestrator_node: { enabled: false },
@@ -237,6 +240,7 @@ export function getRequiredPlan(feature: string): Plan {
  * Check if a plan has access to a feature.
  */
 export function planHasFeature(plan: Plan, feature: string): boolean {
+  if (!plan) return false // Unauthenticated users have no plan-gated features
   const requiredPlans = FEATURE_REQUIREMENTS[feature]
   if (!requiredPlans) return true // No requirements = everyone has access
   return requiredPlans.includes(plan)
@@ -246,6 +250,7 @@ export function planHasFeature(plan: Plan, feature: string): boolean {
  * Get the next plan upgrade from current plan.
  */
 export function getUpgradePlan(currentPlan: Plan): Plan | null {
+  if (!currentPlan) return 'free' // Unauthenticated -> suggest free plan first
   const currentIndex = PLAN_ORDER.indexOf(currentPlan)
   if (currentIndex >= PLAN_ORDER.length - 1) return null
   return PLAN_ORDER[currentIndex + 1] as Plan

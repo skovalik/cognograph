@@ -18,14 +18,10 @@ import {
   RotateCw,
   MousePointer,
   ExternalLink,
-  Eye,
   EyeOff,
 } from 'lucide-react'
 import type { PreviewViewport } from '@shared/types'
-import {
-  clampPreviewScale,
-  PREVIEW_VIEWPORT_WIDTHS,
-} from '../../utils/previewUrlValidation'
+import { clampPreviewScale, PREVIEW_VIEWPORT_WIDTHS } from '../../utils/previewUrlValidation'
 
 interface PreviewToolbarProps {
   /** Current viewport preset */
@@ -62,7 +58,12 @@ interface PreviewToolbarProps {
   showCodeToggle?: boolean
 }
 
-const VIEWPORT_PRESETS: { key: PreviewViewport; label: string; icon: typeof Monitor; width: number }[] = [
+const VIEWPORT_PRESETS: {
+  key: PreviewViewport
+  label: string
+  icon: typeof Monitor
+  width: number
+}[] = [
   { key: 'mobile', label: 'Mobile', icon: Smartphone, width: PREVIEW_VIEWPORT_WIDTHS.mobile },
   { key: 'tablet', label: 'Tablet', icon: Tablet, width: PREVIEW_VIEWPORT_WIDTHS.tablet },
   { key: 'desktop', label: 'Desktop', icon: Monitor, width: PREVIEW_VIEWPORT_WIDTHS.desktop },
@@ -92,7 +93,7 @@ function PreviewToolbarComponent({
       const value = parseFloat(e.target.value)
       onScaleChange(clampPreviewScale(value))
     },
-    [onScaleChange]
+    [onScaleChange],
   )
 
   const handleOpenInBrowser = useCallback(
@@ -104,7 +105,7 @@ function PreviewToolbarComponent({
         window.open(previewUrl, '_blank')
       }
     },
-    [previewUrl]
+    [previewUrl],
   )
 
   return (
@@ -126,16 +127,11 @@ function PreviewToolbarComponent({
             onViewportChange(key)
           }}
           className={`p-1 rounded transition-colors ${
-            viewport === key
-              ? 'bg-cyan-600/30'
-              : 'hover:bg-black/10 dark:hover:bg-white/10'
+            viewport === key ? 'bg-cyan-600/30' : 'hover:bg-black/10 dark:hover:bg-white/10'
           }`}
           title={`${label} (${width}px)`}
           style={{
-            color:
-              viewport === key
-                ? 'var(--node-text-primary)'
-                : 'var(--node-text-secondary)',
+            color: viewport === key ? 'var(--node-text-primary)' : 'var(--node-text-secondary)',
           }}
         >
           <Icon className="w-3.5 h-3.5" />
@@ -196,44 +192,46 @@ function PreviewToolbarComponent({
             onAutoRefreshToggle()
           }}
           className={`p-1 rounded transition-colors ${
-            autoRefresh
-              ? 'bg-cyan-600/30'
-              : 'hover:bg-black/10 dark:hover:bg-white/10'
+            autoRefresh ? 'bg-cyan-600/30' : 'hover:bg-black/10 dark:hover:bg-white/10'
           }`}
           title={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
         >
           <RotateCw
             className="w-3.5 h-3.5"
             style={{
-              color: autoRefresh
-                ? 'var(--node-text-primary)'
-                : 'var(--node-text-secondary)',
+              color: autoRefresh ? 'var(--node-text-primary)' : 'var(--node-text-secondary)',
             }}
           />
         </button>
       )}
 
-      {/* Interaction mode toggle */}
+      {/* Interaction mode toggle — expands to labeled button when active */}
       <button
         onClick={(e) => {
           e.stopPropagation()
           onInteractionModeToggle()
         }}
-        className={`p-1 rounded transition-colors ${
+        className={`flex items-center gap-1 rounded transition-colors ${
           interactionMode
-            ? 'bg-cyan-600/30'
-            : 'hover:bg-black/10 dark:hover:bg-white/10'
+            ? 'bg-cyan-600/30 px-2 py-1'
+            : 'p-1 hover:bg-black/10 dark:hover:bg-white/10'
         }`}
         title={interactionMode ? 'Exit interaction mode (Escape)' : 'Enter interaction mode'}
       >
         <MousePointer
           className="w-3.5 h-3.5"
           style={{
-            color: interactionMode
-              ? 'var(--node-text-primary)'
-              : 'var(--node-text-secondary)',
+            color: interactionMode ? 'var(--node-text-primary)' : 'var(--node-text-secondary)',
           }}
         />
+        {interactionMode && (
+          <span
+            className="text-[10px] font-medium whitespace-nowrap"
+            style={{ color: 'var(--node-text-primary)' }}
+          >
+            Exit Interact
+          </span>
+        )}
       </button>
 
       {/* Open in browser */}

@@ -37,6 +37,18 @@ export default defineConfig({
     plugins: [react()],
     css: {
       postcss: './postcss.config.js'
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'react-vendor': ['react', 'react-dom', 'react-dom/client'],
+            'zustand-vendor': ['zustand', 'zustand/middleware', 'immer'],
+            'reactflow-vendor': ['@xyflow/react'],
+            'utility-vendor': ['framer-motion', 'react-markdown', 'react-syntax-highlighter', 'uuid']
+          }
+        }
+      }
     }
   }
 })

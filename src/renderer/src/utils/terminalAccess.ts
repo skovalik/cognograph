@@ -7,7 +7,10 @@
  * Returns true if:
  * 1. Running in Electron (local PTY always available), OR
  * 2. Local agent is connected (cognograph-agent running on localhost), OR
- * 3. User has cloud terminal entitlement (pro or free-tier 30min/day)
+ * 3. User is authenticated (plan is 'free' or 'pro', not null)
+ *    - Free tier: 30min/day cloud terminal
+ *    - Pro tier: unlimited cloud terminal
+ *    - The real security boundary is the server-side JWT check in terminalRelay.ts
  */
 
 import { useEntitlementsStore } from '../stores/entitlementsStore'
@@ -20,7 +23,7 @@ export function hasTerminalAccess(): boolean {
   const agentConnected = localStorage.getItem('cognograph:localAgentConnected') === 'true'
   if (agentConnected) return true
 
-  // Cloud terminal entitlement (free gets 30min/day, pro unlimited)
+  // Cloud terminal: any authenticated user (plan !== null means entitlements were fetched)
   const { plan } = useEntitlementsStore.getState()
-  return plan === 'pro'
+  return plan !== null
 }

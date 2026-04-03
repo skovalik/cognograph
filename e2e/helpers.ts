@@ -21,12 +21,26 @@ export async function focusCanvas(window: Page): Promise<void> {
 export async function waitForStores(window: Page, timeout = 5000): Promise<boolean> {
   try {
     await window.waitForFunction(
-      () => !!(window as any).__workspaceStore && !!(window as any).__uiStore,
+      () =>
+        !!(window as any).__workspaceStore &&
+        !!(window as any).__uiStore &&
+        !!(window as any).__permissionStore &&
+        !!(window as any).__orchestratorStore &&
+        !!(window as any).__notificationStore,
       { timeout }
     )
     return true
   } catch {
-    return false
+    // Fallback: at minimum workspaceStore + uiStore must be present
+    try {
+      await window.waitForFunction(
+        () => !!(window as any).__workspaceStore && !!(window as any).__uiStore,
+        { timeout: 2000 }
+      )
+      return true
+    } catch {
+      return false
+    }
   }
 }
 

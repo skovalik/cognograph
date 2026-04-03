@@ -8,12 +8,15 @@ import {
   Undo2, Redo2, Plus, ChevronDown,
   MessageSquare, Bot, Folder, FileText, CheckSquare, Code, Boxes, Type, Workflow,
   Wand2, Palette, Settings, Share2, HelpCircle,
-  User, LayoutDashboard, LogOut
+  User, LayoutDashboard, LogOut,
+  Menu, MoreHorizontal,
 } from 'lucide-react'
 import { useWorkspaceStore, getHistoryActionLabel } from '../stores/workspaceStore'
 import { useUIStore, selectLeftSidebarTab } from '../stores/uiStore'
 import { useMultiplayer } from '../hooks/useMultiplayer'
 import { hasTerminalAccess } from '../utils/terminalAccess'
+import { useIsMobile } from '../hooks/useIsMobile'
+import { getFlag } from '@shared/featureFlags'
 import {
   Tooltip, TooltipTrigger, TooltipContent,
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -36,9 +39,9 @@ const RAIL_TABS: Array<{ id: SidebarTab; label: string; icon: typeof Layers; ele
   { id: 'layers', label: 'Outline', icon: Layers },
   { id: 'activity', label: 'Activity', icon: Activity },
   { id: 'agent-log', label: 'Agent Log', icon: Sparkles },
-  { id: 'dispatch', label: 'Dispatch', icon: Zap, electronOnly: true },
+  { id: 'dispatch', label: 'Dispatch', icon: Zap },
   { id: 'cc-bridge', label: 'CC Bridge', icon: Terminal, electronOnly: true },
-  { id: 'console', icon: ScrollText, label: 'Console', electronOnly: true },
+  { id: 'console', icon: ScrollText, label: 'Console' },
 ]
 
 /* ── Divider ── */
@@ -69,6 +72,10 @@ function TopBarComponent({
   onSave, onSaveAs, onNew, onOpen,
   onOpenThemeSettings, onToggleAISidebar, onOpenInlinePrompt,
 }: TopBarProps): JSX.Element {
+
+  /* ── Mobile detection ── */
+  const isMobile = useIsMobile()
+  const mobileResponsive = isMobile && getFlag('MOBILE_RESPONSIVE')
 
   /* ── Sidebar tab state (from IconRail) ── */
   const leftSidebarOpen = useWorkspaceStore((s) => s.leftSidebarOpen)
@@ -281,6 +288,17 @@ function TopBarComponent({
 
         {/* ── LEFT ZONE ── */}
         <div className="top-bar__left">
+          {/* Hamburger — mobile only, opens sidebar drawer */}
+          {mobileResponsive && (
+            <button
+              className="top-bar__tab touch-target"
+              onClick={() => toggleLeftSidebar()}
+              aria-label="Open sidebar"
+            >
+              <Menu size={20} />
+            </button>
+          )}
+
           {/* [Co] logo */}
           <a
             href={dashboardHref}
@@ -293,8 +311,8 @@ function TopBarComponent({
             <span style={{ fontWeight: 300, color: 'var(--accent-glow)' }}>]</span>
           </a>
 
-          {/* Sidebar tab buttons */}
-          {visibleTabs.map(({ id, label, icon: Icon }) => (
+          {/* Sidebar tab buttons — hidden on mobile (use hamburger + drawer) */}
+          {!mobileResponsive && visibleTabs.map(({ id, label, icon: Icon }) => (
             <Tooltip key={id}>
               <TooltipTrigger asChild>
                 <button
@@ -310,7 +328,7 @@ function TopBarComponent({
             </Tooltip>
           ))}
 
-          <Divider />
+          {!mobileResponsive && <Divider />}
 
           {/* Workspace name — double-click to rename */}
           {isEditingName ? (
@@ -345,7 +363,9 @@ function TopBarComponent({
 
         {/* ── CENTER ZONE ── */}
         <div className="top-bar__center">
-          {/* File ops */}
+          {/* File ops — hidden on mobile (in overflow menu) */}
+          {!mobileResponsive && (
+            <>
           <Tooltip>
             <TooltipTrigger asChild>
               <button className="top-bar__tab" onClick={onNew} aria-label="New Workspace">
@@ -421,6 +441,8 @@ function TopBarComponent({
           </Tooltip>
 
           <Divider />
+            </>
+          )}
 
           {/* Node creation dropdown */}
           <DropdownMenu>
@@ -502,6 +524,48 @@ function TopBarComponent({
 
         {/* ── RIGHT ZONE ── */}
         <div className="top-bar__right">
+          {mobileResponsive ? (
+            /* Mobile overflow menu — collapses all right-zone actions */
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="top-bar__tab touch-target" aria-label="More actions">
+                  <MoreHorizontal size={20} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[180px]">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onNew}>
+                  <FilePlus className="w-4 h-4 mr-2" /> New Workspace
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onOpen}>
+                  <FolderOpen className="w-4 h-4 mr-2" /> Open
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onSave}>
+                  <Save className="w-4 h-4 mr-2" /> Save
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => { undo(); const a = history[historyIndex]; if (a) toast(`Undo: ${getHistoryActionLabel(a)}`, { duration: 1500 }) }} disabled={!canUndoValue}>
+                  <Undo2 className="w-4 h-4 mr-2" /> Undo
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { redo(); const a = history[historyIndex + 1]; if (a) toast(`Redo: ${getHistoryActionLabel(a)}`, { duration: 1500 }) }} disabled={!canRedoValue}>
+                  <Redo2 className="w-4 h-4 mr-2" /> Redo
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleShare}>
+                  <Share2 className="w-4 h-4 mr-2" /> Share
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onOpenThemeSettings}>
+                  <Palette className="w-4 h-4 mr-2" /> Theme
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new Event('open-settings'))}>
+                  <Settings className="w-4 h-4 mr-2" /> Settings
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            /* Desktop: full action buttons */
+            <>
           {/* Share */}
           <Tooltip>
             <TooltipTrigger asChild>
@@ -557,6 +621,8 @@ function TopBarComponent({
             </TooltipTrigger>
             <TooltipContent side="bottom">Keyboard shortcuts (?)</TooltipContent>
           </Tooltip>
+            </>
+          )}
 
           {/* User avatar + dropdown — web auth only */}
           {userInfo && (

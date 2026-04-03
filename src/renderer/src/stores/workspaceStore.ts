@@ -91,6 +91,81 @@ export type { TrashedItem, PinnedWindow }
 export type { CommandLogEntry }
 
 // -----------------------------------------------------------------------------
+// Index Helpers (STORE-INDEX task — Phase 1)
+// -----------------------------------------------------------------------------
+
+/**
+ * Rebuild nodeIndex from scratch.
+ * nodeIndex: Map<nodeId, index in nodes array> for O(1) lookup.
+ *
+ * Called at the END of every action that modifies state.nodes.
+ * This is the SAFE approach — O(n) per mutation but always correct.
+ *
+ * TODO: Future optimization can replace rebuild-from-scratch with
+ * incremental updates at each of the 42+ mutation sites.
+ */
+function rebuildNodeIndex(state: { nodes: Array<{ id: string }>; nodeIndex: Map<string, number> }): void {
+  state.nodeIndex.clear()
+  for (let i = 0; i < state.nodes.length; i++) {
+    state.nodeIndex.set(state.nodes[i]!.id, i)
+  }
+}
+
+/**
+ * Rebuild edgesByTarget from scratch.
+ * edgesByTarget: Map<targetNodeId, edgeId[]> for O(1) incoming-edge lookup.
+ *
+ * Called at the END of every action that modifies state.edges.
+ *
+ * TODO: Future optimization can replace rebuild-from-scratch with
+ * incremental updates at each edge mutation site.
+ */
+function rebuildEdgesByTarget(state: { edges: Array<{ id: string; target: string }>; edgesByTarget: Map<string, string[]> }): void {
+  state.edgesByTarget.clear()
+  for (const edge of state.edges) {
+    const existing = state.edgesByTarget.get(edge.target)
+    if (existing) {
+      existing.push(edge.id)
+    } else {
+      state.edgesByTarget.set(edge.target, [edge.id])
+    }
+  }
+}
+
+/**
+ * O(1) node lookup via nodeIndex.
+ * Falls back to linear scan if index is stale (defensive).
+ */
+function getNodeById<T extends { id: string }>(
+  state: { nodes: T[]; nodeIndex: Map<string, number> },
+  id: string
+): T | undefined {
+  const idx = state.nodeIndex.get(id)
+  if (idx !== undefined && idx < state.nodes.length) {
+    const node = state.nodes[idx]
+    if (node && node.id === id) return node
+  }
+  // Fallback: linear scan (index may be stale during immer draft)
+  return state.nodes.find((n) => n.id === id)
+}
+
+/**
+ * Wrap a selector with performance profiling.
+ * Logs a warning if the selector exceeds 16ms (one frame budget).
+ */
+function profileSelector<T>(name: string, selector: (state: WorkspaceState) => T): (state: WorkspaceState) => T {
+  return (state: WorkspaceState): T => {
+    const start = performance.now()
+    const result = selector(state)
+    const elapsed = performance.now() - start
+    if (elapsed > 16) {
+      console.warn(`[PERF] Selector "${name}" took ${elapsed.toFixed(1)}ms (>16ms frame budget)`)
+    }
+    return result
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Store Interface
 // -----------------------------------------------------------------------------
 
@@ -101,6 +176,10 @@ interface WorkspaceState {
   nodes: Node<NodeData>[]
   edges: Edge<EdgeData>[]
   viewport: { x: number; y: number; zoom: number }
+
+  // Indexes (STORE-INDEX — Phase 1)
+  nodeIndex: Map<string, number>    // nodeId -> index in nodes array (O(1) lookup)
+  edgesByTarget: Map<string, string[]>  // targetNodeId -> [edgeIds] (O(1) incoming edges)
   propertySchema: PropertySchema
   contextSettings: ContextSettings
   themeSettings: ThemeSettings
@@ -758,6 +837,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       nodes: [],
       edges: [],
       viewport: { x: 0, y: 0, zoom: 1 },
+      // Indexes (STORE-INDEX — Phase 1)
+      nodeIndex: new Map<string, number>(),
+      edgesByTarget: new Map<string, string[]>(),
       propertySchema: { ...DEFAULT_PROPERTY_SCHEMA },
       contextSettings: { ...DEFAULT_CONTEXT_SETTINGS },
       themeSettings: { ...DEFAULT_THEME_SETTINGS },
@@ -2419,6 +2501,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           if (changes.some((c) => c.type === 'position' || c.type === 'dimensions')) {
             state.isDirty = true
           }
+          // STORE-INDEX: rebuild after applyNodeChanges (may add/remove nodes)
+          rebuildNodeIndex(state)
         })
       },
 
@@ -2431,6 +2515,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           if (selectionChanges.length > 0) {
             state.selectedEdgeIds = state.edges.filter((e) => e.selected).map((e) => e.id)
           }
+          // STORE-INDEX: rebuild after applyEdgeChanges
+          rebuildEdgesByTarget(state)
         })
       },
 
@@ -3387,6 +3473,15 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               timestamp: Date.now()
             }
             convData.messages.push(newMessage)
+
+            // Persist to JSONL sidecar (fire-and-forget — queue handles ordering)
+            const wsId = state.workspaceId
+            if (wsId && window.api?.conversation?.appendMessage) {
+              window.api.conversation.appendMessage(wsId, nodeId, newMessage).catch(err => {
+                console.warn('[WorkspaceStore] Failed to persist message to JSONL:', err)
+              })
+            }
+
             convData.updatedAt = Date.now()
 
             // Auto-title from first user message
@@ -3516,6 +3611,15 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           if (node && node.data.type === 'conversation') {
             const convData = node.data as ConversationNodeData
             convData.messages.push(message)
+
+            // Persist to JSONL sidecar — same path as addMessage
+            const wsId = state.workspaceId
+            if (wsId && window.api?.conversation?.appendMessage) {
+              window.api.conversation.appendMessage(wsId, nodeId, message).catch((err: unknown) => {
+                console.warn('[WorkspaceStore] Failed to persist tool message to JSONL:', err)
+              })
+            }
+
             convData.updatedAt = Date.now()
             state.isDirty = true
           }
@@ -3550,6 +3654,51 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           state.isDirty = false
           state.createdAt = Date.now()
           state.lastSaved = null
+          state.saveStatus = 'saved'
+
+          // Reset transient state that should not persist across workspace switches
+          // Extraction state
+          state.pendingExtractions = []
+          state.extractionDrag = null
+          state.extractionSourceFilter = null
+          state.openExtractionPanelNodeId = null
+          state.lastAcceptedExtraction = null
+          state.isExtracting = null
+          // Streaming/animation state
+          state.streamingConversations = new Set()
+          state.recentlySpawnedNodes = new Set()
+          state.spawningNodeIds = []
+          state.nodeUpdatedAt = new Map()
+          // Drag/resize state
+          state.dragStartPositions = new Map()
+          state.resizeStartDimensions = new Map()
+          // UI state that should reset
+          state.floatingPropertiesNodeIds = []
+          state.focusModeNodeId = null
+          state.inPlaceExpandedNodeId = null
+          state.showMembersProjectId = null
+          state.layersFilter = ''
+          state.lastCanvasClick = null
+          state.lastCreatedNodeId = null
+          state.bookmarkedNodeId = null
+          state.numberedBookmarks = { 1: null, 2: null, 3: null, 4: null, 5: null, 6: null, 7: null, 8: null, 9: null }
+          // Multiplayer state — reset connection config on workspace switch
+          state.multiplayerConfig = null
+          state._syncSource = 'local'
+          // Session state
+          state.expandedNodeIds = new Set()
+          state.sessionInteractions = []
+          state.lastSessionNodeId = null
+          state.layersSortMode = 'hierarchy'
+          state.manualLayerOrder = null
+          state.leftSidebarOpen = false
+          state.leftSidebarTab = 'layers'
+          state.commandLog = []
+          state.workspaceConversation = { id: 'workspace-command-conversation', messages: [] }
+
+          // STORE-INDEX: rebuild indexes for empty workspace
+          rebuildNodeIndex(state)
+          rebuildEdgesByTarget(state)
         })
       },
 
@@ -3697,7 +3846,80 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           state.createdAt = data.createdAt || data.updatedAt || Date.now()
           state.lastSaved = data.updatedAt
           state.isLoading = false
+          state.saveStatus = 'saved'
+
+          // Reset transient state that should not persist across workspace switches
+          // Extraction state
+          state.pendingExtractions = []
+          state.extractionDrag = null
+          state.extractionSourceFilter = null
+          state.openExtractionPanelNodeId = null
+          state.lastAcceptedExtraction = null
+          state.isExtracting = null
+          // Streaming/animation state
+          state.streamingConversations = new Set()
+          state.recentlySpawnedNodes = new Set()
+          state.spawningNodeIds = []
+          state.nodeUpdatedAt = new Map()
+          // Drag/resize state
+          state.dragStartPositions = new Map()
+          state.resizeStartDimensions = new Map()
+          // UI state that should reset
+          state.floatingPropertiesNodeIds = []
+          state.focusModeNodeId = null
+          state.inPlaceExpandedNodeId = null
+          state.showMembersProjectId = null
+          state.layersFilter = ''
+          state.lastCanvasClick = null
+          state.lastCreatedNodeId = null
+          state.bookmarkedNodeId = null
+          state.numberedBookmarks = { 1: null, 2: null, 3: null, 4: null, 5: null, 6: null, 7: null, 8: null, 9: null }
+          // Multiplayer state — reset connection config on workspace switch
+          state.multiplayerConfig = null
+          state._syncSource = 'local'
+
+          // STORE-INDEX: rebuild indexes after workspace load
+          rebuildNodeIndex(state)
+          rebuildEdgesByTarget(state)
         })
+
+        // Migrate inline messages to JSONL then load from JSONL
+        // Migration is idempotent — safe to call every load
+        if (data.id && window.api?.conversation) {
+          window.api.conversation.migrate(data.id).then(() => {
+            return window.api.conversation!.loadAllMessages(data.id)
+          }).then((result) => {
+            if (!result?.success || !result.data || result.data.length === 0) return
+            const allMessages = result.data as Array<{ conversationId?: string; [key: string]: unknown }>
+
+            // Group messages by conversationId
+            const byConversation = new Map<string, any[]>()
+            for (const msg of allMessages) {
+              const convId = msg.conversationId
+              if (!convId) continue
+              const existing = byConversation.get(convId) || []
+              existing.push(msg)
+              byConversation.set(convId, existing)
+            }
+
+            // Merge into conversation nodes — only replace if JSONL has more messages
+            // (prevents data loss if JSONL has partial data)
+            set((state) => {
+              for (const [convId, messages] of byConversation) {
+                const idx = state.nodeIndex.get(convId)
+                const node = idx !== undefined ? state.nodes[idx] : undefined
+                if (node && node.data.type === 'conversation') {
+                  const convData = node.data as ConversationNodeData
+                  if (messages.length >= (convData.messages?.length || 0)) {
+                    convData.messages = messages
+                  }
+                }
+              }
+            })
+          }).catch(err => {
+            console.warn('[WorkspaceStore] JSONL migration/load failed (non-fatal):', err)
+          })
+        }
 
         // Invalidate BFS context cache on workspace load (Optimization #9)
         invalidateContextCache()
@@ -3934,6 +4156,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           applyUndo(action)
           state.historyIndex--
           state.isDirty = true
+          // STORE-INDEX: rebuild after undo (may add/remove nodes/edges)
+          rebuildNodeIndex(state)
+          rebuildEdgesByTarget(state)
         })
       },
 
@@ -4061,6 +4286,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           applyRedo(action)
           state.historyIndex++
           state.isDirty = true
+          // STORE-INDEX: rebuild after redo (may add/remove nodes/edges)
+          rebuildNodeIndex(state)
+          rebuildEdgesByTarget(state)
         })
       },
 
@@ -5987,6 +6215,84 @@ export const useWorkspaceStore = create<WorkspaceState>()(
     }))
   )
 )
+
+// -----------------------------------------------------------------------------
+// Index Auto-Rebuild Subscriptions (STORE-INDEX — Phase 1)
+// -----------------------------------------------------------------------------
+// Subscribe to nodes/edges array changes and rebuild indexes automatically.
+// This fires synchronously after each setState, ensuring indexes are always
+// consistent before React re-renders or external consumers read state.
+//
+// TODO: Future optimization can replace rebuild-from-scratch with incremental
+// updates at each of the 42+ mutation sites for sub-O(n) index maintenance.
+
+let _prevNodesRef: unknown = null
+useWorkspaceStore.subscribe(
+  (state) => state.nodes,
+  (nodes) => {
+    // Only rebuild if nodes array reference actually changed
+    if (nodes !== _prevNodesRef) {
+      _prevNodesRef = nodes
+      const state = useWorkspaceStore.getState()
+      const newIndex = new Map<string, number>()
+      for (let i = 0; i < nodes.length; i++) {
+        newIndex.set(nodes[i]!.id, i)
+      }
+      // Avoid infinite loop: only set if actually different
+      if (newIndex.size !== state.nodeIndex.size || !mapsEqual(newIndex, state.nodeIndex)) {
+        useWorkspaceStore.setState({ nodeIndex: newIndex })
+      }
+    }
+  }
+)
+
+let _prevEdgesRef: unknown = null
+useWorkspaceStore.subscribe(
+  (state) => state.edges,
+  (edges) => {
+    if (edges !== _prevEdgesRef) {
+      _prevEdgesRef = edges
+      const state = useWorkspaceStore.getState()
+      const newIndex = new Map<string, string[]>()
+      for (const edge of edges) {
+        const existing = newIndex.get(edge.target)
+        if (existing) {
+          existing.push(edge.id)
+        } else {
+          newIndex.set(edge.target, [edge.id])
+        }
+      }
+      if (!edgesMapsEqual(newIndex, state.edgesByTarget)) {
+        useWorkspaceStore.setState({ edgesByTarget: newIndex })
+      }
+    }
+  }
+)
+
+/** Shallow Map equality check for nodeIndex */
+function mapsEqual(a: Map<string, number>, b: Map<string, number>): boolean {
+  if (a.size !== b.size) return false
+  for (const [key, val] of a) {
+    if (b.get(key) !== val) return false
+  }
+  return true
+}
+
+/** Shallow Map equality check for edgesByTarget */
+function edgesMapsEqual(a: Map<string, string[]>, b: Map<string, string[]>): boolean {
+  if (a.size !== b.size) return false
+  for (const [key, arr] of a) {
+    const bArr = b.get(key)
+    if (!bArr || bArr.length !== arr.length) return false
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i] !== bArr[i]) return false
+    }
+  }
+  return true
+}
+
+// Export index helpers for use by storeSyncBridge and tests
+export { rebuildNodeIndex, rebuildEdgesByTarget, getNodeById, profileSelector }
 
 // -----------------------------------------------------------------------------
 // Selector Hooks (for performance)

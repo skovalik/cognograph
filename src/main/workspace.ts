@@ -9,12 +9,61 @@ import { backupManager } from './backupManager'
 import { validateWorkspaceData } from './workspaceValidation'
 import { workflowSync } from './services/notionSync'
 import { emitPluginEvent, updateWorkspaceCache } from '@plugins/registry'
+import { migrateInlineMessages } from './ipc/conversationPersistence'
+import {
+  WorkspaceLoadSchema,
+  WorkspaceSaveSchema,
+  WorkspaceSaveAsSchema,
+  WorkspaceDeleteSchema,
+  WorkspaceLoadFromPathSchema,
+  WorkspaceWatchSchema,
+} from './ipc/schemas'
 
 // File watcher state
 const activeWatchers = new Map<string, FSWatcher>()
 const activeDebounceTimers = new Map<string, NodeJS.Timeout>()
 let lastSaveTimestamp = 0
 const SELF_WRITE_GRACE_MS = 1000 // Ignore file changes within 1s of our own save
+
+// -----------------------------------------------------------------------------
+// Atomic Save + Single-Flight Queue (0.2b, 0.3h)
+// -----------------------------------------------------------------------------
+
+/** Per-workspace save queue state. Ensures at most one save runs at a time. */
+interface SaveQueueEntry {
+  inFlight: boolean
+  pending: WorkspaceData | null
+}
+const saveQueues = new Map<string, SaveQueueEntry>()
+
+/**
+ * Atomic write: write to a temp file on the same drive, then rename.
+ * On Windows, same-drive fs.rename() is guaranteed atomic (single NTFS MFT update).
+ * On Unix, rename(2) is POSIX-atomic.
+ */
+async function atomicWriteFile(filePath: string, content: string): Promise<void> {
+  const tmpPath = filePath + '.tmp'
+  await fs.writeFile(tmpPath, content, 'utf-8')
+  await fs.rename(tmpPath, filePath)
+}
+
+/**
+ * Drain the save queue for a workspace. If a pending save exists when the
+ * current one finishes, execute it immediately (single-flight pattern).
+ */
+async function drainSaveQueue(workspaceId: string, saveFn: (data: WorkspaceData) => Promise<void>): Promise<void> {
+  const entry = saveQueues.get(workspaceId)
+  if (!entry) return
+
+  // Keep draining as long as new saves were queued during execution
+  while (entry.pending) {
+    const nextData = entry.pending
+    entry.pending = null
+    await saveFn(nextData)
+  }
+
+  entry.inFlight = false
+}
 
 // Artifact download request type
 interface ArtifactDownloadRequest {
@@ -119,64 +168,100 @@ export function registerWorkspaceHandlers(): void {
   })
 
   ipcMain.handle('workspace:save', async (_event, data: WorkspaceData) => {
+    // Zod validation (SEC-0.1j)
+    const validated = WorkspaceSaveSchema.safeParse(data)
+    if (!validated.success) {
+      return { success: false, error: `Validation failed: ${validated.error.issues[0]?.message || 'Invalid input'}` }
+    }
+
     try {
       await ensureWorkspacesDir()
-      const filePath = join(WORKSPACES_DIR, `${data.id}.json`)
-      lastSaveTimestamp = Date.now()
-      await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
 
-      // Cancel any pending watcher debounce for this workspace to prevent
-      // our own save from triggering loadWorkspace in the renderer.
-      // The SELF_WRITE_GRACE_MS check handles most cases, but if the watcher
-      // debounce timer was already armed before this save, it would fire
-      // after the grace period and cause a spurious reload.
-      const pendingTimer = activeDebounceTimers.get(data.id)
-      if (pendingTimer) {
-        clearTimeout(pendingTimer)
-        activeDebounceTimers.delete(data.id)
+      // Single-flight save queue (0.3h): if a save is already in progress
+      // for this workspace, queue this one and return immediately.
+      let entry = saveQueues.get(data.id)
+      if (!entry) {
+        entry = { inFlight: false, pending: null }
+        saveQueues.set(data.id, entry)
       }
 
-      // Update last workspace ID
-      const settingsPath = join(app.getPath('userData'), 'settings.json')
-      try {
-        const settings = JSON.parse(await fs.readFile(settingsPath, 'utf-8'))
-        settings.lastWorkspaceId = data.id
-        await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8')
-      } catch {
-        await fs.writeFile(settingsPath, JSON.stringify({ lastWorkspaceId: data.id }, null, 2), 'utf-8')
+      if (entry.inFlight) {
+        // Replace any previously pending save — only the latest state matters
+        entry.pending = data
+        return { success: true, queued: true }
       }
 
-      // Emit workspace:saved event to all windows for Notion sync
-      try {
-        const windows = BrowserWindow.getAllWindows()
-        const eventData = {
-          filePath,
-          canvasId: data.id,
-          version: data.version
+      entry.inFlight = true
+
+      const executeSave = async (saveData: WorkspaceData): Promise<void> => {
+        const filePath = join(WORKSPACES_DIR, `${saveData.id}.json`)
+        lastSaveTimestamp = Date.now()
+
+        // Atomic save (0.2b): write to .tmp then rename
+        await atomicWriteFile(filePath, JSON.stringify(saveData, null, 2))
+
+        // Cancel any pending watcher debounce for this workspace to prevent
+        // our own save from triggering loadWorkspace in the renderer.
+        const pendingTimer = activeDebounceTimers.get(saveData.id)
+        if (pendingTimer) {
+          clearTimeout(pendingTimer)
+          activeDebounceTimers.delete(saveData.id)
         }
 
-        for (const win of windows) {
-          if (!win.isDestroyed()) {
-            win.webContents.send('workspace:saved', eventData)
+        // Update last workspace ID (also atomic)
+        const settingsPath = join(app.getPath('userData'), 'settings.json')
+        try {
+          const settings = JSON.parse(await fs.readFile(settingsPath, 'utf-8'))
+          settings.lastWorkspaceId = saveData.id
+          await atomicWriteFile(settingsPath, JSON.stringify(settings, null, 2))
+        } catch {
+          await atomicWriteFile(settingsPath, JSON.stringify({ lastWorkspaceId: saveData.id }, null, 2))
+        }
+
+        // Emit workspace:saved event to all windows for Notion sync
+        try {
+          const windows = BrowserWindow.getAllWindows()
+          const eventData = {
+            filePath,
+            canvasId: saveData.id,
+            version: saveData.version
           }
-        }
 
-        // Emit plugin event and update workspace cache for plugin workspace-read access
-        // Note: workflowSync is triggered via plugin event handler, not directly
-        emitPluginEvent('workspace:saved', eventData)
-        updateWorkspaceCache({ nodes: data.nodes, edges: data.edges })
-      } catch (eventError) {
-        // Event emission failure should not break the save
-        console.warn('[Workspace] Failed to emit workspace:saved event:', eventError)
+          for (const win of windows) {
+            if (!win.isDestroyed()) {
+              win.webContents.send('workspace:saved', eventData)
+            }
+          }
+
+          // Emit plugin event and update workspace cache for plugin workspace-read access
+          // Note: workflowSync is triggered via plugin event handler, not directly
+          emitPluginEvent('workspace:saved', eventData)
+          updateWorkspaceCache({ nodes: saveData.nodes, edges: saveData.edges })
+        } catch (eventError) {
+          // Event emission failure should not break the save
+          console.warn('[Workspace] Failed to emit workspace:saved event:', eventError)
+        }
       }
+
+      await executeSave(data)
+      await drainSaveQueue(data.id, executeSave)
 
       return { success: true }
     } catch (error) {
+      // Ensure queue is released on error so future saves aren't permanently blocked
+      const entry = saveQueues.get(data.id)
+      if (entry) entry.inFlight = false
       return { success: false, error: String(error) }
     }
   })
 
   ipcMain.handle('workspace:load', async (_event, id: string) => {
+    // Zod validation (SEC-0.1j)
+    const parsed = WorkspaceLoadSchema.safeParse({ id })
+    if (!parsed.success) {
+      return { success: false, error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}` }
+    }
+
     try {
       await ensureWorkspacesDir()
       const filePath = join(WORKSPACES_DIR, `${id}.json`)
@@ -184,6 +269,14 @@ export function registerWorkspaceHandlers(): void {
       const parsed = JSON.parse(content)
       const data = validateWorkspaceData(parsed) as unknown as WorkspaceData
       backupManager.start(id)
+
+      // Phase 4B: Migrate inline conversation messages to JSONL sidecar
+      try {
+        await migrateInlineMessages(id, filePath)
+      } catch (migrationError) {
+        // Non-fatal: migration failure should not block workspace load
+        console.warn('[Workspace] JSONL migration failed (non-fatal):', migrationError)
+      }
 
       // Populate plugin workspace cache and emit lifecycle event for NodeSyncEngine
       try {
@@ -231,6 +324,12 @@ export function registerWorkspaceHandlers(): void {
   })
 
   ipcMain.handle('workspace:delete', async (_event, id: string) => {
+    // Zod validation (SEC-0.1j)
+    const validated = WorkspaceDeleteSchema.safeParse({ id })
+    if (!validated.success) {
+      return { success: false, error: `Validation failed: ${validated.error.issues[0]?.message || 'Invalid input'}` }
+    }
+
     try {
       const filePath = join(WORKSPACES_DIR, `${id}.json`)
       await fs.unlink(filePath)
@@ -250,10 +349,16 @@ export function registerWorkspaceHandlers(): void {
     }
   })
 
-  // Save workspace to arbitrary file path (Save As)
+  // Save workspace to arbitrary file path (Save As) — also atomic (0.2b)
   ipcMain.handle('workspace:saveAs', async (_event, data: WorkspaceData, filePath: string) => {
+    // Zod validation (SEC-0.1j)
+    const parsed = WorkspaceSaveAsSchema.safeParse({ data, filePath })
+    if (!parsed.success) {
+      return { success: false, error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}` }
+    }
+
     try {
-      await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
+      await atomicWriteFile(filePath, JSON.stringify(data, null, 2))
       return { success: true, path: filePath }
     } catch (error) {
       return { success: false, error: String(error) }
@@ -262,6 +367,12 @@ export function registerWorkspaceHandlers(): void {
 
   // Load workspace from arbitrary file path
   ipcMain.handle('workspace:loadFromPath', async (_event, filePath: string) => {
+    // Zod validation (SEC-0.1j)
+    const validated = WorkspaceLoadFromPathSchema.safeParse({ filePath })
+    if (!validated.success) {
+      return { success: false, error: `Validation failed: ${validated.error.issues[0]?.message || 'Invalid input'}` }
+    }
+
     try {
       const content = await fs.readFile(filePath, 'utf-8')
       const parsed = JSON.parse(content)
@@ -274,6 +385,12 @@ export function registerWorkspaceHandlers(): void {
 
   // Watch a workspace file for external changes
   ipcMain.handle('workspace:watch', async (_event, id: string) => {
+    // Zod validation (SEC-0.1j)
+    const parsed = WorkspaceWatchSchema.safeParse({ id })
+    if (!parsed.success) {
+      return { success: false, error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}` }
+    }
+
     try {
       // Stop any existing watcher for this ID
       const existingTimer = activeDebounceTimers.get(id)

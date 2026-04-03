@@ -11,8 +11,7 @@
  */
 
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import { subscribeWithSelector } from 'zustand/middleware'
+import { persist, subscribeWithSelector } from 'zustand/middleware'
 
 // =============================================================================
 // Types
@@ -63,6 +62,8 @@ export interface ProgramState {
   hasSeenThemeMenuTooltip: boolean
   /** Whether the default onboarding workspace has been loaded (prevents re-loading) */
   hasLoadedDefaultWorkspace: boolean
+  /** Whether the user has passed the first-run API key setup gate (desktop only) */
+  hasPassedFirstRunGate: boolean
 }
 
 export interface ProgramActions {
@@ -86,6 +87,7 @@ export interface ProgramActions {
   addRecentThemePreset: (presetId: string) => void
   markThemeMenuTooltipSeen: () => void
   markDefaultWorkspaceLoaded: () => void
+  setFirstRunGatePassed: () => void
 }
 
 export type ProgramStore = ProgramState & ProgramActions
@@ -97,12 +99,12 @@ export type ProgramStore = ProgramState & ProgramActions
 const DEFAULT_ACCESSIBILITY: AccessibilitySettings = {
   reduceMotion: 'system',
   highContrastFocus: false,
-  announceActions: true
+  announceActions: true,
 }
 
 const DEFAULT_AUTO_SAVE: AutoSaveSettings = {
   enabled: true,
-  intervalMs: 2000
+  intervalMs: 2000,
 }
 
 const TUTORIAL_STEPS: TutorialStep[] = [
@@ -111,7 +113,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   'connect-them',
   'send-message',
   'see-context',
-  'complete'
+  'complete',
 ]
 
 const initialState: ProgramState = {
@@ -125,7 +127,8 @@ const initialState: ProgramState = {
   tutorialStep: 'create-note',
   recentThemePresets: [],
   hasSeenThemeMenuTooltip: false,
-  hasLoadedDefaultWorkspace: false
+  hasLoadedDefaultWorkspace: false,
+  hasPassedFirstRunGate: false,
 }
 
 // =============================================================================
@@ -140,7 +143,7 @@ export const useProgramStore = create<ProgramStore>()(
 
         setReduceMotion: (preference) => {
           set((state) => ({
-            accessibility: { ...state.accessibility, reduceMotion: preference }
+            accessibility: { ...state.accessibility, reduceMotion: preference },
           }))
           // Apply to document for CSS to pick up
           applyReduceMotionToDocument(preference)
@@ -148,7 +151,7 @@ export const useProgramStore = create<ProgramStore>()(
 
         setHighContrastFocus: (enabled) => {
           set((state) => ({
-            accessibility: { ...state.accessibility, highContrastFocus: enabled }
+            accessibility: { ...state.accessibility, highContrastFocus: enabled },
           }))
           // Apply to document for CSS to pick up
           applyHighContrastFocusToDocument(enabled)
@@ -156,19 +159,22 @@ export const useProgramStore = create<ProgramStore>()(
 
         setAnnounceActions: (enabled) => {
           set((state) => ({
-            accessibility: { ...state.accessibility, announceActions: enabled }
+            accessibility: { ...state.accessibility, announceActions: enabled },
           }))
         },
 
         setAutoSaveEnabled: (enabled) => {
           set((state) => ({
-            autoSave: { ...state.autoSave, enabled }
+            autoSave: { ...state.autoSave, enabled },
           }))
         },
 
         setAutoSaveInterval: (intervalMs) => {
           set((state) => ({
-            autoSave: { ...state.autoSave, intervalMs: Math.max(2000, Math.min(60000, intervalMs)) }
+            autoSave: {
+              ...state.autoSave,
+              intervalMs: Math.max(2000, Math.min(60000, intervalMs)),
+            },
           }))
         },
 
@@ -188,7 +194,7 @@ export const useProgramStore = create<ProgramStore>()(
 
         setKeyboardOverride: (shortcutId, combo) => {
           set((state) => ({
-            keyboardOverrides: { ...state.keyboardOverrides, [shortcutId]: combo }
+            keyboardOverrides: { ...state.keyboardOverrides, [shortcutId]: combo },
           }))
         },
 
@@ -239,7 +245,7 @@ export const useProgramStore = create<ProgramStore>()(
 
         addRecentThemePreset: (presetId) => {
           set((state) => {
-            const filtered = state.recentThemePresets.filter(id => id !== presetId)
+            const filtered = state.recentThemePresets.filter((id) => id !== presetId)
             const updated = [presetId, ...filtered].slice(0, 8) // Keep max 8
             return { recentThemePresets: updated }
           })
@@ -251,11 +257,15 @@ export const useProgramStore = create<ProgramStore>()(
 
         markDefaultWorkspaceLoaded: () => {
           set({ hasLoadedDefaultWorkspace: true })
-        }
+        },
+
+        setFirstRunGatePassed: () => {
+          set({ hasPassedFirstRunGate: true })
+        },
       }),
       {
         name: 'cognograph-program-settings',
-        version: 8, // Bumped for hasLoadedDefaultWorkspace
+        version: 9, // Bumped for hasPassedFirstRunGate
         partialize: (state) => ({
           accessibility: state.accessibility,
           autoSave: state.autoSave,
@@ -265,7 +275,8 @@ export const useProgramStore = create<ProgramStore>()(
           dismissedTooltips: state.dismissedTooltips,
           recentThemePresets: state.recentThemePresets,
           hasSeenThemeMenuTooltip: state.hasSeenThemeMenuTooltip,
-          hasLoadedDefaultWorkspace: state.hasLoadedDefaultWorkspace
+          hasLoadedDefaultWorkspace: state.hasLoadedDefaultWorkspace,
+          hasPassedFirstRunGate: state.hasPassedFirstRunGate,
         }),
         migrate: (persisted: unknown, version: number) => {
           const data = persisted as Record<string, unknown>
@@ -287,6 +298,9 @@ export const useProgramStore = create<ProgramStore>()(
           if (version < 8) {
             data.hasLoadedDefaultWorkspace = false
           }
+          if (version < 9) {
+            data.hasPassedFirstRunGate = false
+          }
           return data as ProgramState
         },
         onRehydrateStorage: () => (state) => {
@@ -295,10 +309,10 @@ export const useProgramStore = create<ProgramStore>()(
             applyReduceMotionToDocument(state.accessibility.reduceMotion)
             applyHighContrastFocusToDocument(state.accessibility.highContrastFocus)
           }
-        }
-      }
-    )
-  )
+        },
+      },
+    ),
+  ),
 )
 
 // =============================================================================
@@ -342,11 +356,13 @@ function applyHighContrastFocusToDocument(enabled: boolean): void {
 
 export const selectAccessibilitySettings = (state: ProgramStore) => state.accessibility
 export const selectReduceMotion = (state: ProgramStore) => state.accessibility.reduceMotion
-export const selectHighContrastFocus = (state: ProgramStore) => state.accessibility.highContrastFocus
+export const selectHighContrastFocus = (state: ProgramStore) =>
+  state.accessibility.highContrastFocus
 export const selectAnnounceActions = (state: ProgramStore) => state.accessibility.announceActions
 export const selectHasCompletedOnboarding = (state: ProgramStore) => state.hasCompletedOnboarding
 export const selectHasCompletedTutorial = (state: ProgramStore) => state.hasCompletedTutorial
-export const selectHasLoadedDefaultWorkspace = (state: ProgramStore) => state.hasLoadedDefaultWorkspace
+export const selectHasLoadedDefaultWorkspace = (state: ProgramStore) =>
+  state.hasLoadedDefaultWorkspace
 export const selectTutorialActive = (state: ProgramStore) => state.tutorialActive
 export const selectTutorialStep = (state: ProgramStore) => state.tutorialStep
 export const selectKeyboardOverrides = (state: ProgramStore) => state.keyboardOverrides

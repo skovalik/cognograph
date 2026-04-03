@@ -1,51 +1,171 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+// Sentry error tracking — init before anything else so crashes during startup are captured.
+// Requires: npm install @sentry/electron (already in package.json)
+import * as Sentry from '@sentry/electron/main'
+
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+  })
+}
+
 import './earlyInit'
-import { app, shell, BrowserWindow, ipcMain, session } from 'electron'
-import { join, resolve as pathResolve, relative as pathRelative, isAbsolute as pathIsAbsolute } from 'path'
+
+// ---------------------------------------------------------------------------
+// Startup Profiler (Phase 6A — MONITORING)
+// ---------------------------------------------------------------------------
+// Tracks timing for startup phases: app-ready → window-created →
+// workspace-loaded → plugins-loaded → ready.
+// Production: Sentry startSpan if available. Development: performance.mark/measure.
+// ---------------------------------------------------------------------------
+
+const startupMarks = new Map<string, number>()
+
+function markStartup(phase: string): void {
+  const now = performance.now()
+  startupMarks.set(phase, now)
+
+  if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
+    // Sentry transaction-based spans for production telemetry.
+    // Sentry.startSpan is available in @sentry/electron >=8 —
+    // wrap in try/catch so missing API doesn't break startup.
+    try {
+      const sentryAny = Sentry as Record<string, unknown>
+      if (typeof sentryAny.addBreadcrumb === 'function') {
+        Sentry.addBreadcrumb({
+          category: 'startup',
+          message: `startup:${phase}`,
+          level: 'info',
+          data: { ms: Math.round(now) },
+        })
+      }
+    } catch {
+      // Sentry API mismatch — silently continue
+    }
+  } else {
+    // Development: performance marks for DevTools timeline
+    try {
+      performance.mark(`startup:${phase}`)
+    } catch {
+      // performance.mark not available in all envs
+    }
+    console.log(`[Startup] ${phase}: ${Math.round(now)}ms`)
+  }
+}
+
+function measureStartup(name: string, from: string, to: string): void {
+  const fromMs = startupMarks.get(from)
+  const toMs = startupMarks.get(to)
+  if (fromMs == null || toMs == null) return
+
+  const duration = toMs - fromMs
+
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      performance.measure(`startup:${name}`, `startup:${from}`, `startup:${to}`)
+    } catch {
+      // marks may not exist if performance.mark failed earlier
+    }
+    console.log(`[Startup] ${name}: ${Math.round(duration)}ms (${from} → ${to})`)
+  }
+}
+
+import { electronApp, is, optimizer } from '@electron-toolkit/utils'
+import { destroyPlugins, emitPluginEvent, loadPlugins, setMainWindow } from '@plugins/registry'
+import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
 import { promises as fs } from 'fs'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { registerWorkspaceHandlers } from './workspace'
-import { registerSettingsHandlers } from './settings'
-import { registerLLMHandlers } from './llm'
-import { registerTemplateHandlers } from './templates'
-import { registerAIEditorHandlers } from './aiEditor'
-import { registerAgentHandlers } from './agent/claudeAgent'
+import {
+  join,
+  isAbsolute as pathIsAbsolute,
+  relative as pathRelative,
+  resolve as pathResolve,
+} from 'path'
+import { abortAllRequests, registerAgentHandlers } from './agent/claudeAgent'
 import { registerFilesystemHandlers } from './agent/filesystemTools'
-import { registerFolderHandlers } from './ipc/folderHandler'
+import { registerAIEditorHandlers } from './aiEditor'
 import { registerAttachmentHandlers } from './attachments'
-import { registerConnectorHandlers } from './connectors'
-import { registerMultiplayerHandlers, registerDeepLinkProtocol, setupDeepLinkListeners } from './multiplayer'
 import { registerBackupHandlers } from './backupManager'
+import { registerConnectorHandlers } from './connectors'
+import { registerConversationPersistenceHandlers } from './ipc/conversationPersistence'
+import { registerFolderHandlers } from './ipc/folderHandler'
+import {
+  CredentialsDeleteSchema,
+  CredentialsGetMaskedSchema,
+  CredentialsGetRealSchema,
+  CredentialsListSchema,
+  CredentialsSetSchema,
+} from './ipc/schemas'
+import { registerLLMHandlers } from './llm'
+import { createMCPServer, FileSyncProvider } from './mcp'
+import { disconnectAllMCPServers, registerMCPClientHandlers } from './mcp/mcpClient'
+import {
+  registerDeepLinkProtocol,
+  registerMultiplayerHandlers,
+  setupDeepLinkListeners,
+} from './multiplayer'
 import { registerOrchestratorHandlers } from './orchestratorHandlers'
-import { registerMCPClientHandlers, disconnectAllMCPServers } from './mcp/mcpClient'
+import {
+  getEventHistory,
+  startActivityWatcher,
+  stopActivityWatcher,
+} from './services/activityWatcher'
 import { registerAuditHandlers } from './services/auditService'
-import { registerGraphIntelligenceHandlers, registerSnapshotResponseHandler } from './services/graphIntelligence'
+import {
+  cancelDispatch,
+  getActivePort,
+  getDispatchQueue,
+  queueDispatch,
+  startDispatchServer,
+  stopDispatchServer,
+} from './services/ccBridgeService'
+import { getLogBuffer } from './services/consoleForwarder'
+import {
+  deleteCredential,
+  getMaskedCredential,
+  getRealCredential,
+  listCredentials,
+  setCredential,
+} from './services/credentialStore'
+import {
+  registerGraphIntelligenceHandlers,
+  registerSnapshotResponseHandler,
+} from './services/graphIntelligence'
+import { workflowSync } from './services/notionSync'
 import { registerNotionHandlers } from './services/registerNotionHandlers'
 import { registerTerminalHandlers } from './services/registerTerminalHandlers'
 import { killAll as killAllTerminals } from './services/terminalManager'
-import { workflowSync } from './services/notionSync'
-import { createMCPServer, FileSyncProvider } from './mcp'
-import { startActivityWatcher, stopActivityWatcher, getEventHistory } from './services/activityWatcher'
-import {
-  startDispatchServer,
-  stopDispatchServer,
-  queueDispatch,
-  getDispatchQueue,
-  cancelDispatch,
-  getActivePort,
-} from './services/ccBridgeService'
-import {
-  getRealCredential,
-  getMaskedCredential,
-  setCredential,
-  deleteCredential,
-  listCredentials,
-} from './services/credentialStore'
-import { getLogBuffer } from './services/consoleForwarder'
+import { registerSettingsHandlers } from './settings'
+import { registerTemplateHandlers } from './templates'
 import { logger } from './utils/logger'
-import { loadPlugins, destroyPlugins, setMainWindow, emitPluginEvent } from '@plugins/registry'
+import { registerWorkspaceHandlers } from './workspace'
+
+// -----------------------------------------------------------------------------
+// Active Workspace Tracking (SEC-0.1i)
+// -----------------------------------------------------------------------------
+
+/**
+ * The currently active workspace ID. Set when a workspace is loaded or saved.
+ * Used to validate that credential IPC requests target the active workspace only.
+ */
+let activeWorkspaceId: string | null = null
+
+/**
+ * Set the active workspace ID. Called from workspace load/save handlers.
+ * @internal Exported for testing only.
+ */
+export function setActiveWorkspaceId(workspaceId: string | null): void {
+  activeWorkspaceId = workspaceId
+}
+
+/**
+ * Get the active workspace ID.
+ * @internal Exported for testing only.
+ */
+export function getActiveWorkspaceId(): string | null {
+  return activeWorkspaceId
+}
 
 // Catch unhandled promise rejections to prevent silent crashes
 process.on('unhandledRejection', (reason) => {
@@ -74,8 +194,8 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
       webSecurity: true,
-      allowRunningInsecureContent: false
-    }
+      allowRunningInsecureContent: false,
+    },
   })
 
   // Content Security Policy (relaxed for development, strict in production)
@@ -103,8 +223,8 @@ function createWindow(): void {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': [cspPolicy]
-      }
+        'Content-Security-Policy': [cspPolicy],
+      },
     })
   })
 
@@ -242,6 +362,7 @@ if (!isTestMode && !app.requestSingleInstanceLock()) {
 }
 
 app.whenReady().then(async () => {
+  markStartup('app-ready')
   electronApp.setAppUserModelId('com.cognograph')
 
   app.on('browser-window-created', (_, window) => {
@@ -269,10 +390,11 @@ app.whenReady().then(async () => {
     registerSnapshotResponseHandler()
     registerNotionHandlers()
     registerTerminalHandlers()
+    registerConversationPersistenceHandlers()
     setupDeepLinkListeners()
 
     // Initialize Notion sync (replay queue from previous session)
-    workflowSync.initialize().catch(err => {
+    workflowSync.initialize().catch((err) => {
       console.error('[Main] Failed to initialize Notion sync:', err)
     })
 
@@ -333,50 +455,151 @@ app.whenReady().then(async () => {
       return { success: true }
     })
 
-    // Credential Store IPC handlers
+    // -------------------------------------------------------------------------
+    // Credential Store IPC handlers (SEC-0.1i: workspace validation)
+    // -------------------------------------------------------------------------
     // Block renderer access to plugin credentials (workspaceId starting with '__').
     // Plugin credentials are only accessible through plugin:call pathway.
-    ipcMain.handle('credentials:set', (_event, workspaceId: string, credentialKey: string, value: string, label: string, credentialType: string) => {
-      if (workspaceId.startsWith('__')) {
-        return { success: false, error: 'Reserved namespace' }
+    // SEC-0.1i: Validate that requested workspaceId matches the active workspace.
+
+    // Initialize active workspace ID from persisted settings on startup
+    try {
+      const settingsPath = join(app.getPath('userData'), 'settings.json')
+      const settingsContent = await fs.readFile(settingsPath, 'utf-8')
+      const settings = JSON.parse(settingsContent)
+      if (settings.lastWorkspaceId) {
+        setActiveWorkspaceId(settings.lastWorkspaceId)
+        console.log(`[Credentials] Active workspace initialized: ${settings.lastWorkspaceId}`)
       }
-      try {
-        setCredential(workspaceId, credentialKey, value, label, credentialType)
+    } catch {
+      // No settings yet — activeWorkspaceId stays null until workspace is loaded
+    }
+
+    // Allow renderer to notify main process of workspace changes
+    ipcMain.handle('credentials:setActiveWorkspace', (_event, workspaceId: string) => {
+      if (typeof workspaceId === 'string' && workspaceId.length > 0) {
+        setActiveWorkspaceId(workspaceId)
         return { success: true }
-      } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Failed to store credential' }
       }
+      return { success: false, error: 'Invalid workspace ID' }
     })
 
-    ipcMain.handle('credentials:getMasked', (_event, workspaceId: string, credentialKey: string) => {
-      if (workspaceId.startsWith('__')) return null  // Silent deny
-      return getMaskedCredential(workspaceId, credentialKey)
-    })
+    ipcMain.handle(
+      'credentials:set',
+      (
+        _event,
+        workspaceId: string,
+        credentialKey: string,
+        value: string,
+        label: string,
+        credentialType: string,
+      ) => {
+        // Zod validation (SEC-0.1j)
+        const parsed = CredentialsSetSchema.safeParse({
+          workspaceId,
+          credentialKey,
+          value,
+          label,
+          credentialType,
+        })
+        if (!parsed.success) {
+          return {
+            success: false,
+            error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}`,
+          }
+        }
+
+        if (workspaceId.startsWith('__')) {
+          return { success: false, error: 'Reserved namespace' }
+        }
+
+        // SEC-0.1i: Reject cross-workspace credential access
+        if (activeWorkspaceId && workspaceId !== activeWorkspaceId) {
+          return { success: false, error: 'Cross-workspace credential access denied' }
+        }
+
+        try {
+          setCredential(workspaceId, credentialKey, value, label, credentialType)
+          return { success: true }
+        } catch (err) {
+          return {
+            success: false,
+            error: err instanceof Error ? err.message : 'Failed to store credential',
+          }
+        }
+      },
+    )
+
+    ipcMain.handle(
+      'credentials:getMasked',
+      (_event, workspaceId: string, credentialKey: string) => {
+        // Zod validation (SEC-0.1j)
+        const parsed = CredentialsGetMaskedSchema.safeParse({ workspaceId, credentialKey })
+        if (!parsed.success) return null
+
+        if (workspaceId.startsWith('__')) return null // Silent deny
+        // SEC-0.1i: Reject cross-workspace credential access
+        if (activeWorkspaceId && workspaceId !== activeWorkspaceId) return null
+        return getMaskedCredential(workspaceId, credentialKey)
+      },
+    )
 
     ipcMain.handle('credentials:getReal', (_event, workspaceId: string, credentialKey: string) => {
-      if (workspaceId.startsWith('__')) return null  // Silent deny
+      // Zod validation (SEC-0.1j)
+      const parsed = CredentialsGetRealSchema.safeParse({ workspaceId, credentialKey })
+      if (!parsed.success) return null
+
+      if (workspaceId.startsWith('__')) return null // Silent deny
+
+      // SEC-0.1i: Reject cross-workspace credential access
+      if (activeWorkspaceId && workspaceId !== activeWorkspaceId) return null
+
       return getRealCredential(workspaceId, credentialKey)
     })
 
     ipcMain.handle('credentials:delete', (_event, workspaceId: string, credentialKey: string) => {
+      // Zod validation (SEC-0.1j)
+      const parsed = CredentialsDeleteSchema.safeParse({ workspaceId, credentialKey })
+      if (!parsed.success) {
+        return {
+          success: false,
+          error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}`,
+        }
+      }
+
       if (workspaceId.startsWith('__')) {
         return { success: false, error: 'Reserved namespace' }
+      }
+      // SEC-0.1i: Reject cross-workspace credential access
+      if (activeWorkspaceId && workspaceId !== activeWorkspaceId) {
+        return { success: false, error: 'Cross-workspace credential access denied' }
       }
       try {
         deleteCredential(workspaceId, credentialKey)
         return { success: true }
       } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : 'Failed to delete credential' }
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : 'Failed to delete credential',
+        }
       }
     })
 
     ipcMain.handle('credentials:list', (_event, workspaceId: string) => {
-      if (workspaceId.startsWith('__')) return []  // Silent deny
+      // Zod validation (SEC-0.1j)
+      const parsed = CredentialsListSchema.safeParse({ workspaceId })
+      if (!parsed.success) return []
+
+      if (workspaceId.startsWith('__')) return [] // Silent deny
+      // SEC-0.1i: Reject cross-workspace credential access
+      if (activeWorkspaceId && workspaceId !== activeWorkspaceId) return []
       return listCredentials(workspaceId)
     })
 
     // Main process console log buffer — renderer fetches on mount
     ipcMain.handle('main-process-log:getBuffer', () => getLogBuffer())
+
+    markStartup('workspace-loaded')
   }
 
   if (isMCPStandalone) {
@@ -390,55 +613,16 @@ app.whenReady().then(async () => {
   } else {
     // Normal app mode
     createWindow()
-
-    // Auto-updater (production only — safe init that handles "no updates" gracefully)
-    if (!is.dev && mainWindow) {
-      try {
-        const { autoUpdater } = await import('electron-updater')
-        autoUpdater.logger = logger as any
-        autoUpdater.autoDownload = false // Don't auto-download, just notify
-
-        autoUpdater.on('update-available', (info) => {
-          logger.log(`[AutoUpdate] Update available: ${info.version}`)
-          mainWindow?.webContents.send('auto-update:available', { version: info.version })
-        })
-        autoUpdater.on('update-downloaded', (info) => {
-          logger.log(`[AutoUpdate] Update downloaded: ${info.version}`)
-          mainWindow?.webContents.send('auto-update:downloaded', { version: info.version })
-        })
-        autoUpdater.on('error', (err) => {
-          // Don't crash on update errors — just log and continue
-          logger.log(`[AutoUpdate] Error: ${err.message}`)
-        })
-        autoUpdater.on('update-not-available', () => {
-          logger.log('[AutoUpdate] No updates available')
-        })
-
-        // Check for updates silently (won't throw if no publish config)
-        autoUpdater.checkForUpdatesAndNotify().catch((err) => {
-          logger.log(`[AutoUpdate] Check failed (expected if no publish config): ${err.message}`)
-        })
-      } catch (err) {
-        // electron-updater may not be available in all builds
-        logger.log(`[AutoUpdate] Init skipped: ${(err as Error).message}`)
-      }
-    }
-
-    // Start diagnostic server (dev mode only, not in test)
-    if (is.dev && mainWindow && !isTestMode) {
-      import('./diagnosticServer').then(({ startDiagnosticServer }) => {
-        startDiagnosticServer(mainWindow!)
-      }).catch(err => {
-        console.error('[DiagnosticServer] Failed to start:', err)
-      })
-    }
+    markStartup('window-created')
 
     // ------------------------------------------------------------------
+    // Synchronous setup (must complete before async work)
+    // ------------------------------------------------------------------
+
     // Preview iframe security filter (defense-in-depth)
     // Block navigation from preview iframes to non-localhost URLs.
     // Renderer-side validation is first line; this is the second line
     // that catches redirects after initial load.
-    // ------------------------------------------------------------------
     const ALLOWED_PREVIEW_HOSTS = new Set(['localhost', '127.0.0.1', '::1'])
 
     session.defaultSession.webRequest.onBeforeRequest(
@@ -463,17 +647,8 @@ app.whenReady().then(async () => {
           // Not an iframe request — allow it
           callback({ cancel: false })
         }
-      }
+      },
     )
-
-    // Start embedded MCP server if flag present
-    if (isMCPEmbedded) {
-      try {
-        await startMCPMode()
-      } catch (err) {
-        console.error('[MCP] Failed to start embedded MCP:', err)
-      }
-    }
 
     // Start Claude Code activity watcher (observes .cognograph-activity/events.jsonl)
     // Skip in test mode — file watchers hang shutdown
@@ -485,16 +660,99 @@ app.whenReady().then(async () => {
       }
     }
 
-    // Load plugins and emit app:ready event
-    // Skip in test mode — async plugin destroy hangs quit
+    // Start diagnostic server (dev mode only, not in test)
+    // Fire-and-forget — no need to await
+    if (is.dev && mainWindow && !isTestMode) {
+      import('./diagnosticServer')
+        .then(({ startDiagnosticServer }) => {
+          startDiagnosticServer(mainWindow!)
+        })
+        .catch((err) => {
+          console.error('[DiagnosticServer] Failed to start:', err)
+        })
+    }
+
+    // ------------------------------------------------------------------
+    // Parallel async startup (ARCH-FOUND 1.4a)
+    // These operations are independent — run them concurrently with
+    // Promise.allSettled so a failure in one doesn't block the others.
+    // ------------------------------------------------------------------
+    const startupTasks: Promise<unknown>[] = []
+
+    // Auto-updater (production only)
+    if (!is.dev && mainWindow) {
+      startupTasks.push(
+        import('electron-updater')
+          .then(({ autoUpdater }) => {
+            autoUpdater.logger = logger as any
+            autoUpdater.autoDownload = false // Don't auto-download, just notify
+
+            autoUpdater.on('update-available', (info) => {
+              logger.log(`[AutoUpdate] Update available: ${info.version}`)
+              mainWindow?.webContents.send('auto-update:available', { version: info.version })
+            })
+            autoUpdater.on('update-downloaded', (info) => {
+              logger.log(`[AutoUpdate] Update downloaded: ${info.version}`)
+              mainWindow?.webContents.send('auto-update:downloaded', { version: info.version })
+            })
+            autoUpdater.on('error', (err) => {
+              // Don't crash on update errors — just log and continue
+              logger.log(`[AutoUpdate] Error: ${err.message}`)
+            })
+            autoUpdater.on('update-not-available', () => {
+              logger.log('[AutoUpdate] No updates available')
+            })
+
+            // Check for updates silently (won't throw if no publish config)
+            return autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+              logger.log(
+                `[AutoUpdate] Check failed (expected if no publish config): ${err.message}`,
+              )
+            })
+          })
+          .catch((err) => {
+            // electron-updater may not be available in all builds
+            logger.log(`[AutoUpdate] Init skipped: ${(err as Error).message}`)
+          }),
+      )
+    }
+
+    // Embedded MCP server
+    if (isMCPEmbedded) {
+      startupTasks.push(
+        startMCPMode().catch((err) => {
+          console.error('[MCP] Failed to start embedded MCP:', err)
+        }),
+      )
+    }
+
+    // Plugin loading
     if (mainWindow && !isTestMode) {
       setMainWindow(mainWindow)
-      await loadPlugins()
-      emitPluginEvent('app:ready', {})
+      startupTasks.push(
+        loadPlugins().then(() => {
+          markStartup('plugins-loaded')
+          emitPluginEvent('app:ready', {})
+        }),
+      )
+    }
+
+    // Wait for all independent startup tasks to settle
+    if (startupTasks.length > 0) {
+      await Promise.allSettled(startupTasks)
+    }
+
+    // Final startup mark — all phases complete
+    markStartup('ready')
+    measureStartup('total', 'app-ready', 'ready')
+    measureStartup('window-creation', 'app-ready', 'window-created')
+    measureStartup('ipc-registration', 'window-created', 'workspace-loaded')
+    if (startupMarks.has('plugins-loaded')) {
+      measureStartup('plugin-loading', 'workspace-loaded', 'plugins-loaded')
     }
   }
 
-  app.on('activate', function () {
+  app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0 && !isMCPStandalone) createWindow()
   })
 })
@@ -509,6 +767,8 @@ app.on('window-all-closed', () => {
 
 // Clean up activity watcher, dispatch server, terminals, and MCP client connections on quit
 app.on('before-quit', () => {
+  // Abort all active agent requests (Phase B1 — Final-8)
+  abortAllRequests()
   stopActivityWatcher()
   stopDispatchServer()
   killAllTerminals()
@@ -526,10 +786,10 @@ app.on('will-quit', (e) => {
   if (isTestMode) return // No plugins to clean up
   if (!pluginsDestroyed) {
     e.preventDefault()
-    emitPluginEvent('app:quit', {})  // Fire before destroy — plugins can do last-second work
+    emitPluginEvent('app:quit', {}) // Fire before destroy — plugins can do last-second work
     destroyPlugins().finally(() => {
       pluginsDestroyed = true
-      app.quit()  // This re-fires before-quit + will-quit, but guard prevents re-entry
+      app.quit() // This re-fires before-quit + will-quit, but guard prevents re-entry
     })
   }
 })

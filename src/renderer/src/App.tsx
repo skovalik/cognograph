@@ -1,166 +1,243 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useCallback, useEffect, useRef, useState, useMemo, Suspense, lazy } from 'react'
 import {
-  ReactFlow,
-  ReactFlowProvider,
   Background,
   BackgroundVariant,
-  useReactFlow,
-  useUpdateNodeInternals,
+  type Connection,
   ConnectionLineType,
   ConnectionMode,
-  SelectionMode,
-  type OnConnectStart,
-  type OnConnectEnd,
-  type Connection,
   type Node,
-  type OnSelectionChangeFunc
+  type OnConnectEnd,
+  type OnConnectStart,
+  type OnSelectionChangeFunc,
+  ReactFlow,
+  ReactFlowProvider,
+  SelectionMode,
+  useReactFlow,
+  useUpdateNodeInternals,
 } from '@xyflow/react'
-import { Toaster, toast } from 'react-hot-toast'
 import { AnimatePresence } from 'framer-motion'
-import { SciFiToast, sciFiToast } from './components/ui/SciFiToast'
-import { TokenIndicator } from './components/TokenIndicator'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Toaster, toast } from 'react-hot-toast'
 import { SplashScreen } from './components/SplashScreen'
+import { TokenIndicator } from './components/TokenIndicator'
+import { SciFiToast, sciFiToast } from './components/ui/SciFiToast'
 import '@xyflow/react/dist/style.css'
 
-import { nodeTypes } from './components/nodes'
-import { edgeTypes } from './components/edges'
-import { Toolbar } from './components/Toolbar'
 import { AlignmentToolbar } from './components/AlignmentToolbar'
-import { PropertiesPanel } from './components/PropertiesPanel'
+import { BottomCommandBar } from './components/BottomCommandBar'
+import { CanvasBadges } from './components/CanvasBadges'
+import { CommandResponsePanel } from './components/CommandResponsePanel'
 import { ConnectionPropertiesPanel } from './components/ConnectionPropertiesPanel'
+import { ContextMenu } from './components/ContextMenu'
+import { ContextualActionBar } from './components/ContextualActionBar'
+import { ErrorBoundary, InlineErrorBoundary } from './components/ErrorBoundary'
+import { edgeTypes } from './components/edges'
+import { ExtractionDragPreview, ExtractionPanel } from './components/extractions'
 // ChatPanel import removed — chat is now rendered in-node (ConversationNode expanded mode)
 import { LeftSidebar } from './components/LeftSidebar'
-import { CommandResponsePanel } from './components/CommandResponsePanel'
+import { nodeTypes } from './components/nodes'
+import { OfflineIndicatorCompact } from './components/OfflineIndicator'
+import { FirstRunSetup } from './components/onboarding/FirstRunSetup'
+import { WelcomeScreen } from './components/onboarding/WelcomeScreen'
+import { PropertiesPanel } from './components/PropertiesPanel'
+import { Toolbar } from './components/Toolbar'
 // IconRail removed — V4 chrome uses TopBar
 import { TopBar } from './components/TopBar'
-import { ContextualActionBar } from './components/ContextualActionBar'
-import { CanvasBadges } from './components/CanvasBadges'
-import { BottomCommandBar } from './components/BottomCommandBar'
-import { ExtractionPanel, ExtractionDragPreview } from './components/extractions'
-import { ErrorBoundary, InlineErrorBoundary } from './components/ErrorBoundary'
-import { OfflineIndicatorCompact } from './components/OfflineIndicator'
 import { initOfflineListeners } from './stores/offlineStore'
-import { SaveTemplateModal, PasteTemplateModal, TemplateBrowser } from './components/templates'
-import { ContextMenu } from './components/ContextMenu'
-import { ThemeSettingsModal } from './components/ThemeSettingsModal'
-import { SettingsModal } from './components/SettingsModal'
-import { FloatingPropertiesModal } from './components/FloatingPropertiesModal'
-import { PinnedWindowsContainer } from './components/PinnedWindow'
-import { CollapsibleMinimap } from './components/CollapsibleMinimap'
+
+// Lazy-loaded modals — only loaded when user opens them (PERF-BUNDLE)
+const SaveTemplateModal = lazy(() =>
+  import('./components/templates/SaveTemplateModal').then((m) => ({
+    default: m.SaveTemplateModal,
+  })),
+)
+const PasteTemplateModal = lazy(() =>
+  import('./components/templates/PasteTemplateModal').then((m) => ({
+    default: m.PasteTemplateModal,
+  })),
+)
+const TemplateBrowser = lazy(() =>
+  import('./components/templates/TemplateBrowser').then((m) => ({ default: m.TemplateBrowser })),
+)
+const ThemeSettingsModal = lazy(() =>
+  import('./components/ThemeSettingsModal').then((m) => ({ default: m.ThemeSettingsModal })),
+)
+const SettingsModal = lazy(() =>
+  import('./components/SettingsModal').then((m) => ({ default: m.SettingsModal })),
+)
+const FloatingPropertiesModal = lazy(() =>
+  import('./components/FloatingPropertiesModal').then((m) => ({
+    default: m.FloatingPropertiesModal,
+  })),
+)
+
 // ZoomIndicator removed — V4 chrome uses CanvasBadges ZoomBadge
 import { ClipboardIndicator } from './components/ClipboardIndicator'
-import { AIEditorModal, AIEditorPreview, SelectionActionBar, AISidebar } from './components/ai-editor'
+import { CollapsibleMinimap } from './components/CollapsibleMinimap'
+import { PinnedWindowsContainer } from './components/PinnedWindow'
+
+const AIEditorModal = lazy(() => import('./components/ai-editor/AIEditorModal'))
+const AIEditorPreview = lazy(() => import('./components/ai-editor/AIEditorPreview'))
+const SelectionActionBar = lazy(() => import('./components/ai-editor/SelectionActionBar'))
+const AISidebar = lazy(() => import('./components/ai-editor/AISidebar'))
 const AmbientEffectLayer = lazy(() => import('./components/ambient/AmbientEffectLayer'))
+
 import { LivingGrid } from './effects/LivingGrid'
+
 const ParticleDrift = lazy(() => import('./effects/ParticleDrift'))
+
 import { ClickSpark } from './components/ui/react-bits'
-import WorkflowProgress from './components/ai-editor/WorkflowProgress'
-import { CommandPalette, useCommandPalette } from './components/CommandPalette'
-import { UndoHistoryPanel } from './components/UndoHistoryPanel'
-import { TrashPanel } from './components/TrashPanel'
-import { ArchivePanel } from './components/ArchivePanel'
-import { WelcomeOverlay } from './components/onboarding/WelcomeOverlay'
-import { OnboardingOverlay } from './components/onboarding/OnboardingOverlay'
-import { OnboardingTooltip } from './components/onboarding/OnboardingTooltip'
-import { TutorialOverlay } from './components/onboarding/TutorialOverlay'
-import { ExportDialog } from './components/ExportDialog'
-import { TemplatePicker } from './components/TemplatePicker'
-import { getOnboardingTemplate } from './data/workspaceTemplates'
-import { v4 as uuidv4 } from 'uuid'
+
+const WorkflowProgress = lazy(() => import('./components/ai-editor/WorkflowProgress'))
+
+import { useCommandPalette } from './components/CommandPalette'
+
+const CommandPalette = lazy(() =>
+  import('./components/CommandPalette').then((m) => ({ default: m.CommandPalette })),
+)
+const UndoHistoryPanel = lazy(() =>
+  import('./components/UndoHistoryPanel').then((m) => ({ default: m.UndoHistoryPanel })),
+)
+const TrashPanel = lazy(() =>
+  import('./components/TrashPanel').then((m) => ({ default: m.TrashPanel })),
+)
+const ArchivePanel = lazy(() =>
+  import('./components/ArchivePanel').then((m) => ({ default: m.ArchivePanel })),
+)
+const ExportDialog = lazy(() =>
+  import('./components/ExportDialog').then((m) => ({ default: m.ExportDialog })),
+)
+const TemplatePicker = lazy(() =>
+  import('./components/TemplatePicker').then((m) => ({ default: m.TemplatePicker })),
+)
+
 import { DEFAULT_EDGE_DATA } from '@shared/types'
+import { v4 as uuidv4 } from 'uuid'
 import { FilterViewDropdown } from './components/FilterViewDropdown'
 import { ProgressIndicator } from './components/ProgressIndicator'
-import { SavedViewsPanel } from './components/SavedViewsPanel'
-import { TimelineView } from './components/TimelineView'
-import { EmptyCanvasHint } from './components/EmptyCanvasHint'
-import { FocusModeIndicator } from './components/FocusModeIndicator'
+import { getOnboardingTemplate } from './data/workspaceTemplates'
+
+const SavedViewsPanel = lazy(() =>
+  import('./components/SavedViewsPanel').then((m) => ({ default: m.SavedViewsPanel })),
+)
+const TimelineView = lazy(() =>
+  import('./components/TimelineView').then((m) => ({ default: m.TimelineView })),
+)
+
 import { ArtboardOverlay, FocusModeHint } from './components/ArtboardOverlay'
+// EmptyCanvasHint removed — WelcomeScreen is the always-on empty-canvas state
+import { FocusModeIndicator } from './components/FocusModeIndicator'
+import { useShortcutHelpStore } from './components/KeyboardShortcutsHelp'
 import { useArtboardMode } from './hooks/useArtboardMode'
-import { KeyboardShortcutsHelp, useShortcutHelpStore } from './components/KeyboardShortcutsHelp'
-import { useWorkspaceStore, getHistoryActionLabel } from './stores/workspaceStore'
+
+const KeyboardShortcutsHelp = lazy(() =>
+  import('./components/KeyboardShortcutsHelp').then((m) => ({ default: m.KeyboardShortcutsHelp })),
+)
+
+import { useNodesStore } from './stores/nodesStore'
+import { getHistoryActionLabel, useWorkspaceStore } from './stores/workspaceStore'
 import './stores/storeSyncBridge' // Bidirectional sync: workspaceStore ↔ nodesStore/edgesStore
-import { initCCBridgeListener } from './stores/ccBridgeStore'
-import { initConsoleLogBridge } from './stores/consoleLogStore'
-import { initOrchestratorIPC } from './stores/orchestratorStore'
-import { initBridgeIPC, useBridgeStore } from './stores/bridgeStore'
-import { initSdkToolBridge } from './services/sdkToolBridge'
-import { useGraphIntelligenceStore } from './stores/graphIntelligenceStore'
-import { useProposalStore } from './stores/proposalStore'
+import type { EdgeData, FontTheme, GuiColors, NodeData, WorkspaceNodeData } from '@shared/types'
+import {
+  DEFAULT_AMBIENT_EFFECT,
+  DEFAULT_GLASS_SETTINGS,
+  FONT_LOAD_URLS,
+  FONT_THEMES,
+} from '@shared/types'
+import type { Edge } from '@xyflow/react'
+import { Boxes, CheckSquare, Code, FileText, Folder, Link2, MessageSquare } from 'lucide-react'
+import { DemoBanner } from '../../web/components/DemoBanner'
+import { StorageWarning } from '../../web/components/StorageWarning'
+import { WorkspaceManager } from '../../web/components/WorkspaceManager'
+import { SpatialRegionOverlay } from './components/action/SpatialRegionOverlay'
+import { SuggestedAutomations } from './components/action/SuggestedAutomations'
 // NOTE: ProposalCard, CommandBar, and bridge/BridgeStatusBar are deferred to v0.3.0.
 // See docs/TODO-BRIDGE.md. Uncomment these imports when re-enabling.
 // import { ProposalCard } from './components/bridge/ProposalCard'
 // import { CommandBar } from './components/bridge/CommandBar'
 // import { BridgeStatusBar as BridgeStatusBarOld } from './components/bridge/BridgeStatusBar'
 import { BridgeStatusBar } from './components/BridgeStatusBar'
-import { useUIStore } from './stores/uiStore'
-import { SyncProviderWrapper, useSyncProvider } from './sync'
-import { useTemplateStore } from './stores/templateStore'
-import { TooltipProvider } from './components/ui'
-import { useContextMenuStore } from './stores/contextMenuStore'
-import { useAIEditorStore } from './stores/aiEditorStore'
-import { suggestTemplateName } from './utils/templateUtils'
-import { useProgramStore, selectKeyboardOverrides } from './stores/programStore'
-import { matchesShortcut } from './utils/shortcuts'
-import { useActionSubscription } from './hooks/useActionSubscription'
-import { useScheduleService } from './hooks/useScheduleService'
-import { useOnboardingTooltips } from './hooks/useOnboardingTooltips'
-import { useAnalyticsTracking } from './hooks/useAnalyticsTracking'
-import { SpatialRegionOverlay } from './components/action/SpatialRegionOverlay'
-import { CanvasDistrictOverlay } from './components/canvas/CanvasDistrictOverlay'
-import { ContextScopeBadge } from './components/ContextScopeBadge'
-import { NodeHoverPreview } from './components/NodeHoverPreview'
-import { SessionReEntryPrompt } from './components/SessionReEntryPrompt'
 import { CanvasTableOfContents } from './components/CanvasTableOfContents'
 import { CognitiveLoadMeter } from './components/CognitiveLoadMeter'
+import { ContextScopeBadge } from './components/ContextScopeBadge'
+import { CanvasDistrictOverlay } from './components/canvas/CanvasDistrictOverlay'
 import { EdgeGrammarLegend } from './components/EdgeGrammarLegend'
 import { ExecutionStatusOverlay } from './components/ExecutionStatusOverlay'
-import { useContextVisualizationStore } from './stores/contextVisualizationStore'
-import { useContextVisualization } from './hooks/useContextVisualization'
-import { SuggestedAutomations } from './components/action/SuggestedAutomations'
-import { WorkspaceManager } from '../../web/components/WorkspaceManager'
-import { StorageWarning } from '../../web/components/StorageWarning'
-import { DemoBanner } from '../../web/components/DemoBanner'
-import { MessageSquare, FileText, CheckSquare, Folder, Code, Boxes, Link2 } from 'lucide-react'
-import { calculateSnapGuides, type SnapGuide } from './utils/snapGuides'
-import { calculateAutoFitDimensions, AUTO_FIT_CONSTRAINTS } from './utils/nodeUtils'
-import { filterParentProjects } from './utils/selectionUtils'
-import type { NodeData, WorkspaceNodeData, GuiColors, EdgeData } from '@shared/types'
-import { DEFAULT_AMBIENT_EFFECT, DEFAULT_GLASS_SETTINGS, FONT_THEMES, FONT_LOAD_URLS } from '@shared/types'
-import type { FontTheme } from '@shared/types'
+import { ConnectionStatus } from './components/Multiplayer'
+import { NodeHoverPreview } from './components/NodeHoverPreview'
+import { NotificationToast } from './components/NotificationToast'
+import { UserCursors } from './components/Presence/UserCursors'
+import { SessionReEntryPrompt } from './components/SessionReEntryPrompt'
+import { TooltipProvider } from './components/ui'
 import { DEFAULT_GUI_DARK, DEFAULT_GUI_LIGHT } from './constants/themePresets'
+import { useActionSubscription } from './hooks/useActionSubscription'
+import { useAnalyticsTracking } from './hooks/useAnalyticsTracking'
+import { useContextVisualization } from './hooks/useContextVisualization'
+import { useOnboardingTooltips } from './hooks/useOnboardingTooltips'
+import { useScheduleService } from './hooks/useScheduleService'
+import { computeZoomPerfTier } from './hooks/useZoomPerformanceTier'
+import { disposeAgentEventReceiver, initAgentEventReceiver } from './services/agentEventReceiver'
+import { useAIEditorStore } from './stores/aiEditorStore'
+import { initBridgeIPC, useBridgeStore } from './stores/bridgeStore'
+import { initCCBridgeListener } from './stores/ccBridgeStore'
+import { useConnectorStore } from './stores/connectorStore'
+import { initConsoleLogBridge } from './stores/consoleLogStore'
+import { useContextMenuStore } from './stores/contextMenuStore'
+import { useContextVisualizationStore } from './stores/contextVisualizationStore'
+import { useGraphIntelligenceStore } from './stores/graphIntelligenceStore'
+import { initOrchestratorIPC } from './stores/orchestratorStore'
+import { selectKeyboardOverrides, useProgramStore } from './stores/programStore'
+import { useProposalStore } from './stores/proposalStore'
+import { cleanupStoreSyncBridge } from './stores/storeSyncBridge'
+import { useTemplateStore } from './stores/templateStore'
+import { useUIStore } from './stores/uiStore'
+import { SyncProviderWrapper, useSyncProvider } from './sync'
+import { resolveGlassStyle } from './utils/glassUtils'
 import { getGPUTier } from './utils/gpuDetection'
 import { layoutEvents } from './utils/layoutEvents'
-import { calculateOptimalHandles, assignSpreadHandles } from './utils/positionResolver'
-import { resolveGlassStyle } from './utils/glassUtils'
-import { computeZoomPerfTier } from './hooks/useZoomPerformanceTier'
+import { assignSpreadHandles, calculateOptimalHandles } from './utils/positionResolver'
+import { filterParentProjects } from './utils/selectionUtils'
+// useWelcomeStore removed — welcome visibility is now derived from nodeCount + sessionDismissed
+import { matchesShortcut } from './utils/shortcuts'
+import { calculateSnapGuides, type SnapGuide } from './utils/snapGuides'
+import { suggestTemplateName } from './utils/templateUtils'
+import { AUTO_FIT_CONSTRAINTS, calculateAutoFitDimensions } from './utils/textMeasure'
 
-import type { Edge } from '@xyflow/react'
-import { UserCursors } from './components/Presence/UserCursors'
-import { ConnectionStatus, SessionExpiredModal } from './components/Multiplayer'
+const SessionExpiredModal = lazy(() =>
+  import('./components/Multiplayer/SessionExpiredModal').then((m) => ({
+    default: m.SessionExpiredModal,
+  })),
+)
+
 import { initRendererPlugins } from '@plugins/renderer-registry'
-import { usePresence } from './hooks/usePresence'
-import { useSemanticZoomClass } from './hooks/useSemanticZoom'
-import { useNavigationHistory } from './hooks/useNavigationHistory'
-import { useSpacebarPan } from './hooks/useSpacebarPan'
-import { ZoomOverlay } from './components/canvas/ZoomOverlay'
+import { getFlag } from '@shared/featureFlags'
 import { ClusterOverlay } from './components/canvas/ClusterOverlay'
+import { ZoomOverlay } from './components/canvas/ZoomOverlay'
 import { DirectionalGuides } from './components/DirectionalGuides'
 import { KeyboardLegend } from './components/KeyboardLegend'
-import { useContextSelectionStore } from './stores/contextSelectionStore'
-import { useSpatialRegionStore } from './stores/spatialRegionStore'
-import { tidyUpLayout } from './utils/tidyUpLayout'
-import type { LayoutNode, LayoutEdge } from './utils/tidyUpLayout'
 import { useIsMobile, useIsTouch } from './hooks/useIsMobile'
 import { useLongPress } from './hooks/useLongPress'
+import { useNavigationHistory } from './hooks/useNavigationHistory'
+import {
+  DEFAULT_PHYSICS_CONFIG,
+  getPhysicsConfigForStrength,
+  usePhysicsSimulation,
+} from './hooks/usePhysicsSimulation'
+import { usePresence } from './hooks/usePresence'
+import { useSemanticZoomClass } from './hooks/useSemanticZoom'
 import { useShiftDragEdgeCreation } from './hooks/useShiftDragEdgeCreation'
+import { useSpacebarPan } from './hooks/useSpacebarPan'
 import { useSpatialNavigation } from './hooks/useSpatialNavigation'
-import { usePhysicsSimulation, DEFAULT_PHYSICS_CONFIG, getPhysicsConfigForStrength } from './hooks/usePhysicsSimulation'
 import { playSound } from './services/audioService'
+import { executeCommand } from './services/WorkspaceCommandService'
+import { useContextSelectionStore } from './stores/contextSelectionStore'
+import { useSpatialRegionStore } from './stores/spatialRegionStore'
+import { EscapePriority, escapeManager } from './utils/EscapeManager'
 import { performThemeTransition } from './utils/themeTransition'
-import { escapeManager, EscapePriority } from './utils/EscapeManager'
+import type { LayoutEdge, LayoutNode } from './utils/tidyUpLayout'
+import { tidyUpLayout } from './utils/tidyUpLayout'
 import './styles/nodes.css'
 import './styles/token-estimator.css'
 import './styles/presence.css'
@@ -196,14 +273,9 @@ function ensureFontLoaded(fontTheme: FontTheme): void {
 // PFD Phase 5B: Rect overlap check for auto-grow (used in handleNodeDragStop)
 function rectsOverlap(
   a: { x: number; y: number; width: number; height: number },
-  b: { x: number; y: number; width: number; height: number }
+  b: { x: number; y: number; width: number; height: number },
 ): boolean {
-  return (
-    a.x < b.x + b.width &&
-    a.x + a.width > b.x &&
-    a.y < b.y + b.height &&
-    a.y + a.height > b.y
-  )
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 }
 
 // Resizable wrapper for the properties sidebar
@@ -213,33 +285,40 @@ interface ResizablePropertiesPanelProps {
   compact?: boolean
 }
 
-function ResizablePropertiesPanel({ width, onWidthChange, compact = false }: ResizablePropertiesPanelProps): JSX.Element {
+function ResizablePropertiesPanel({
+  width,
+  onWidthChange,
+  compact = false,
+}: ResizablePropertiesPanelProps): JSX.Element {
   const [isResizing, setIsResizing] = useState(false)
 
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
-    if (!onWidthChange) return
-    e.preventDefault()
-    setIsResizing(true)
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      if (!onWidthChange) return
+      e.preventDefault()
+      setIsResizing(true)
 
-    const startX = e.clientX
-    const startWidth = width
+      const startX = e.clientX
+      const startWidth = width
 
-    const handleMouseMove = (moveE: MouseEvent): void => {
-      // Dragging left edge means moving left = wider, moving right = narrower
-      const deltaX = startX - moveE.clientX
-      const newWidth = Math.max(280, Math.min(600, startWidth + deltaX))
-      onWidthChange(newWidth)
-    }
+      const handleMouseMove = (moveE: MouseEvent): void => {
+        // Dragging left edge means moving left = wider, moving right = narrower
+        const deltaX = startX - moveE.clientX
+        const newWidth = Math.max(280, Math.min(600, startWidth + deltaX))
+        onWidthChange(newWidth)
+      }
 
-    const handleMouseUp = (): void => {
-      setIsResizing(false)
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
+      const handleMouseUp = (): void => {
+        setIsResizing(false)
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
 
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-  }, [width, onWidthChange])
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+    },
+    [width, onWidthChange],
+  )
 
   return (
     <div
@@ -274,13 +353,48 @@ interface ConnectionTarget {
 }
 
 function Canvas(): JSX.Element {
-  const { getViewport, screenToFlowPosition, getInternalNode, setCenter, fitView, zoomTo } = useReactFlow()
+  const { getViewport, screenToFlowPosition, getInternalNode, setCenter, fitView, zoomTo } =
+    useReactFlow()
   const updateNodeInternals = useUpdateNodeInternals()
   const semanticZoomClass = useSemanticZoomClass()
   const { goBack, goForward, canGoBack, canGoForward } = useNavigationHistory()
   const demoMode = useWorkspaceStore((s) => s.demoMode)
   const isMobile = useIsMobile()
   const isTouch = useIsTouch()
+
+  // Welcome screen visibility — show when canvas is empty (always-on empty state)
+  const nodeCount = useNodesStore((s) => s.nodes.length)
+  const [sessionDismissed, setSessionDismissed] = useState(false)
+
+  // Reset sessionDismissed when workspace changes
+  const currentWorkspaceId = useWorkspaceStore((s) => s.workspaceId)
+  useEffect(() => {
+    setSessionDismissed(false)
+  }, [currentWorkspaceId])
+
+  const mobileResponsive = getFlag('MOBILE_RESPONSIVE')
+
+  // First-run setup gate: show on desktop when no connectors and gate not passed
+  const isElectron = !!(window as Window & { __ELECTRON__?: boolean }).__ELECTRON__
+  const connectorsForGate = useConnectorStore((s) => s.connectors)
+  const hasPassedFirstRunGate = useProgramStore((s) => s.hasPassedFirstRunGate)
+  const showFirstRunSetup = isElectron && connectorsForGate.length === 0 && !hasPassedFirstRunGate
+
+  const showWelcome =
+    nodeCount === 0 && !(isMobile && !mobileResponsive) && !sessionDismissed && !showFirstRunSetup
+
+  // iOS virtual keyboard avoidance — set CSS custom property for bottom offset
+  useEffect(() => {
+    if (!isMobile || typeof window === 'undefined') return
+    const vv = window.visualViewport
+    if (!vv) return
+    const handleResize = (): void => {
+      const offset = window.innerHeight - vv.height
+      document.documentElement.style.setProperty('--keyboard-offset', `${Math.max(0, offset)}px`)
+    }
+    vv.addEventListener('resize', handleResize)
+    return () => vv.removeEventListener('resize', handleResize)
+  }, [isMobile])
 
   // Layout pipeline event bridge — listen for fitView requests from chatToolService
   // Uses nodesRef declared below (line ~354) to avoid dependency on nodes array
@@ -346,7 +460,7 @@ function Canvas(): JSX.Element {
     // Only trigger re-render if guides actually changed (empty→empty is common)
     if (prev.length === 0 && guides.length === 0) return
     snapGuidesRef.current = guides
-    setSnapGuidesVersion(v => v + 1)
+    setSnapGuidesVersion((v) => v + 1)
   }, [])
   const snapResultRef = useRef<{ x: number; y: number } | null>(null)
   const viewportRef = useRef<{ x: number; y: number; zoom: number }>({ x: 0, y: 0, zoom: 1 })
@@ -368,10 +482,12 @@ function Canvas(): JSX.Element {
   const keyboardOverrides = useProgramStore(selectKeyboardOverrides)
 
   // Ghost node/edge elements from proposal store
-  const ghostNodes = useProposalStore(s => s.ghostNodes)
-  const ghostEdges = useProposalStore(s => s.ghostEdges)
-  const activeProposalId = useProposalStore(s => s.activeProposalId)
-  const _activeProposal = useProposalStore(s => activeProposalId ? s.proposals[activeProposalId] : null)
+  const ghostNodes = useProposalStore((s) => s.ghostNodes)
+  const ghostEdges = useProposalStore((s) => s.ghostEdges)
+  const activeProposalId = useProposalStore((s) => s.activeProposalId)
+  const _activeProposal = useProposalStore((s) =>
+    activeProposalId ? s.proposals[activeProposalId] : null,
+  )
 
   // Refs for nodes/edges to avoid recreating callbacks on every position change
   const nodesRef = useRef(nodes)
@@ -438,11 +554,11 @@ function Canvas(): JSX.Element {
   useEffect(() => {
     const unsub = useContextSelectionStore.subscribe((state) => {
       // Remove ring from all nodes first
-      document.querySelectorAll('.context-selection-ring').forEach(el => {
+      document.querySelectorAll('.context-selection-ring').forEach((el) => {
         el.classList.remove('context-selection-ring')
       })
       // Add ring to context-selected nodes
-      state.selectedNodeIds.forEach(nodeId => {
+      state.selectedNodeIds.forEach((nodeId) => {
         const el = document.querySelector(`.react-flow__node[data-id="${nodeId}"]`)
         if (el) el.classList.add('context-selection-ring')
       })
@@ -464,7 +580,7 @@ function Canvas(): JSX.Element {
 
   // Listen for mobile toolbar panel toggles
   useEffect(() => {
-    const tocHandler = () => setShowCanvasTOC(p => !p)
+    const tocHandler = () => setShowCanvasTOC((p) => !p)
     window.addEventListener('toggle-canvas-toc', tocHandler)
     return () => window.removeEventListener('toggle-canvas-toc', tocHandler)
   }, [])
@@ -476,13 +592,20 @@ function Canvas(): JSX.Element {
     return () => window.removeEventListener('open-template-picker', handler)
   }, [])
 
+  // Listen for open-workspace-manager events from Command Palette
+  useEffect(() => {
+    const handler = (): void => setShowWorkspaceManager(true)
+    window.addEventListener('open-workspace-manager', handler)
+    return () => window.removeEventListener('open-workspace-manager', handler)
+  }, [])
+
   // Initialize CC Bridge + Orchestrator + Spatial Bridge IPC listeners (Electron only)
   useEffect(() => {
     if (!(window as any).__ELECTRON__) return
     const cleanupCCBridge = initCCBridgeListener()
-    const cleanupOrch = initOrchestratorIPC()       // Must init BEFORE bridge
-    const cleanupSpatialBridge = initBridgeIPC()     // Bridge subscribes to orchestrator events
-    initSdkToolBridge()                              // Agent SDK in-process MCP tool bridge
+    const cleanupOrch = initOrchestratorIPC() // Must init BEFORE bridge
+    const cleanupSpatialBridge = initBridgeIPC() // Bridge subscribes to orchestrator events
+    initAgentEventReceiver() // Phase 2C: passive event receiver for transport events
 
     // Wire graph intelligence insights from main process
     let unsubInsights: (() => void) | undefined
@@ -533,8 +656,10 @@ function Canvas(): JSX.Element {
       cleanupSpatialBridge()
       cleanupCCBridge()
       cleanupOrch()
+      disposeAgentEventReceiver()
       unsubInsights?.()
       unsubSnapshot?.()
+      cleanupStoreSyncBridge()
     }
   }, [])
 
@@ -542,8 +667,12 @@ function Canvas(): JSX.Element {
   useEffect(() => {
     if (!(window as any).__ELECTRON__) return
     let cleanup: (() => void) | undefined
-    initConsoleLogBridge().then(fn => { cleanup = fn })
-    return () => { cleanup?.() }
+    initConsoleLogBridge().then((fn) => {
+      cleanup = fn
+    })
+    return () => {
+      cleanup?.()
+    }
   }, [])
 
   // Global terminal output tee — persists across artboard open/close so node cards
@@ -590,14 +719,15 @@ function Canvas(): JSX.Element {
       (_newId, _prevId) => {
         useBridgeStore.getState().resetBridgeState()
         useProposalStore.getState().clearAllProposals()
-      }
+      },
     )
     return unsub
   }, [])
 
   // Set GUI CSS variables when theme changes
   useEffect(() => {
-    const guiColors: GuiColors = themeSettings.guiColors ||
+    const guiColors: GuiColors =
+      themeSettings.guiColors ||
       (themeSettings.mode === 'light' ? DEFAULT_GUI_LIGHT : DEFAULT_GUI_DARK)
 
     const root = document.documentElement
@@ -630,7 +760,7 @@ function Canvas(): JSX.Element {
     const effectiveStyle = resolveGlassStyle(
       glassSettings.userPreference,
       gpuTier.tier,
-      ambientActive
+      ambientActive,
     )
 
     // Atomic batch update to prevent race conditions
@@ -651,7 +781,7 @@ function Canvas(): JSX.Element {
         'data-glass-modals': applyTo.modals,
         'data-glass-panels': applyTo.panels,
         'data-glass-overlays': applyTo.overlays,
-        'data-glass-toolbar': applyTo.toolbar
+        'data-glass-toolbar': applyTo.toolbar,
         // NOTE: data-glass-nodes removed — content-first: no glass on nodes
       }
 
@@ -675,12 +805,18 @@ function Canvas(): JSX.Element {
   useEffect(() => {
     const root = document.documentElement
     root.style.setProperty('--canvas-background', themeSettings.canvasBackground)
-    root.style.setProperty('--canvas-grid-color', themeSettings.canvasGridColor === '#transparent' ? 'transparent' : themeSettings.canvasGridColor)
+    root.style.setProperty(
+      '--canvas-grid-color',
+      themeSettings.canvasGridColor === '#transparent'
+        ? 'transparent'
+        : themeSettings.canvasGridColor,
+    )
   }, [themeSettings.canvasBackground, themeSettings.canvasGridColor])
 
   // Apply accent colors from theme's guiColors (accent is theme-driven, not separate)
   useEffect(() => {
-    const guiColors = themeSettings.guiColors ||
+    const guiColors =
+      themeSettings.guiColors ||
       (themeSettings.mode === 'light' ? DEFAULT_GUI_LIGHT : DEFAULT_GUI_DARK)
     const accent = guiColors.accentPrimary
     const glow = guiColors.accentSecondary
@@ -754,8 +890,12 @@ function Canvas(): JSX.Element {
   const historyIndex = useWorkspaceStore((state) => state.historyIndex)
   const historyRef = useRef(history)
   const historyIndexRef = useRef(historyIndex)
-  useEffect(() => { historyRef.current = history }, [history])
-  useEffect(() => { historyIndexRef.current = historyIndex }, [historyIndex])
+  useEffect(() => {
+    historyRef.current = history
+  }, [history])
+  useEffect(() => {
+    historyIndexRef.current = historyIndex
+  }, [historyIndex])
   const copyNodes = useWorkspaceStore((state) => state.copyNodes)
   const cutNodes = useWorkspaceStore((state) => state.cutNodes)
   const pasteNodes = useWorkspaceStore((state) => state.pasteNodes)
@@ -833,43 +973,50 @@ function Canvas(): JSX.Element {
   const handleShiftDragEdgeCreate = useCallback(
     (sourceId: string, targetId: string) => {
       addEdge({ source: sourceId, target: targetId, sourceHandle: null, targetHandle: null })
-      toast('Connection created', { duration: 1500, icon: <Link2 size={16} className="text-blue-400" /> })
+      toast('Connection created', {
+        duration: 1500,
+        icon: <Link2 size={16} className="text-blue-400" />,
+      })
     },
-    [addEdge]
+    [addEdge],
   )
 
   const { state: shiftDragState } = useShiftDragEdgeCreation({
     onEdgeCreate: handleShiftDragEdgeCreate,
-    existingEdges: edges
+    existingEdges: edges,
   })
 
   // Physics simulation for spring-based edge lengths
-  const physicsConfig = useMemo(() => ({
-    ...DEFAULT_PHYSICS_CONFIG,
-    ...getPhysicsConfigForStrength(themeSettings.physicsStrength ?? 'medium'),
-    enabled: themeSettings.physicsEnabled ?? false,
-    idealEdgeLength: themeSettings.physicsIdealEdgeLength ?? 120
-  }), [themeSettings.physicsEnabled, themeSettings.physicsIdealEdgeLength, themeSettings.physicsStrength])
-
-  const handlePhysicsPositionChange = useCallback((positions: Map<string, { x: number; y: number }>) => {
-    // Convert physics positions to React Flow node changes
-    const changes = Array.from(positions.entries()).map(([id, pos]) => ({
-      type: 'position' as const,
-      id,
-      position: pos
-    }))
-    if (changes.length > 0) {
-      onNodesChange(changes)
-    }
-  }, [onNodesChange])
-
-  usePhysicsSimulation(
-    nodes,
-    edges,
-    physicsConfig,
-    handlePhysicsPositionChange,
-    isDraggingNode
+  const physicsConfig = useMemo(
+    () => ({
+      ...DEFAULT_PHYSICS_CONFIG,
+      ...getPhysicsConfigForStrength(themeSettings.physicsStrength ?? 'medium'),
+      enabled: themeSettings.physicsEnabled ?? false,
+      idealEdgeLength: themeSettings.physicsIdealEdgeLength ?? 120,
+    }),
+    [
+      themeSettings.physicsEnabled,
+      themeSettings.physicsIdealEdgeLength,
+      themeSettings.physicsStrength,
+    ],
   )
+
+  const handlePhysicsPositionChange = useCallback(
+    (positions: Map<string, { x: number; y: number }>) => {
+      // Convert physics positions to React Flow node changes
+      const changes = Array.from(positions.entries()).map(([id, pos]) => ({
+        type: 'position' as const,
+        id,
+        position: pos,
+      }))
+      if (changes.length > 0) {
+        onNodesChange(changes)
+      }
+    },
+    [onNodesChange],
+  )
+
+  usePhysicsSimulation(nodes, edges, physicsConfig, handlePhysicsPositionChange, isDraggingNode)
 
   // Utility: apply creation pop animation to a newly created node
   const animateNodeCreation = useCallback((nodeId: string) => {
@@ -886,7 +1033,9 @@ function Canvas(): JSX.Element {
   // Utility: apply flash animation to a newly created edge
   const animateEdgeCreation = useCallback((edgeId: string) => {
     requestAnimationFrame(() => {
-      const edgePath = document.querySelector(`[data-testid="rf__edge-${edgeId}"] .react-flow__edge-path`)
+      const edgePath = document.querySelector(
+        `[data-testid="rf__edge-${edgeId}"] .react-flow__edge-path`,
+      )
       if (edgePath) {
         edgePath.classList.add('edge-just-connected')
         setTimeout(() => edgePath.classList.remove('edge-just-connected'), 800)
@@ -901,15 +1050,13 @@ function Canvas(): JSX.Element {
 
     // Find workspace nodes with showLinks enabled
     const workspaceNodesWithLinks = (nodes || []).filter(
-      (n) => n.data.type === 'workspace' && (n.data as WorkspaceNodeData).showLinks
+      (n) => n.data.type === 'workspace' && (n.data as WorkspaceNodeData).showLinks,
     )
 
     // Create edges from workspace to each member node
     for (const wsNode of workspaceNodesWithLinks) {
       const wsData = wsNode.data as WorkspaceNodeData
-      const memberIds = wsData.includedNodeIds.filter(
-        (id) => !wsData.excludedNodeIds.includes(id)
-      )
+      const memberIds = wsData.includedNodeIds.filter((id) => !wsData.excludedNodeIds.includes(id))
 
       const linkDirection = wsData.linkDirection || 'to-members'
       const isBidirectional = linkDirection === 'bidirectional'
@@ -945,21 +1092,21 @@ function Canvas(): JSX.Element {
             direction: isBidirectional ? 'bidirectional' : 'unidirectional',
             isWorkspaceLink: true,
             workspaceId: wsNode.id,
-            linkColor: wsData.linkColor || '#ef4444'
+            linkColor: wsData.linkColor || '#ef4444',
           },
           style: {
             strokeDasharray: '5 5',
             stroke: wsData.linkColor || '#ef4444',
             strokeWidth: 1.5,
-            opacity: 0.6
-          }
+            opacity: 0.6,
+          },
         })
       }
     }
 
     // Append ghost edges from proposal store (they have type: 'ghost')
     if (ghostEdges.length > 0) {
-      return [...allEdges, ...ghostEdges as unknown as typeof allEdges]
+      return [...allEdges, ...(ghostEdges as unknown as typeof allEdges)]
     }
 
     return allEdges
@@ -973,8 +1120,8 @@ function Canvas(): JSX.Element {
     // Find selected conversation nodes
     const selectedConversationIds = new Set(
       nodes
-        .filter(n => selectedNodeIds.includes(n.id) && n.data.type === 'conversation')
-        .map(n => n.id)
+        .filter((n) => selectedNodeIds.includes(n.id) && n.data.type === 'conversation')
+        .map((n) => n.id),
     )
     if (selectedConversationIds.size === 0) return providerIds
 
@@ -1001,12 +1148,12 @@ function Canvas(): JSX.Element {
 
   // Filter nodes based on hidden node types and archived status, plus ghost nodes
   // Use className cache to avoid creating new node references during drag (breaks React Flow diffing)
-  const classNameCacheRef = useRef(new Map<string, typeof nodes[0]>())
+  const classNameCacheRef = useRef(new Map<string, (typeof nodes)[0]>())
   const filteredNodes = useMemo(() => {
     const cache = classNameCacheRef.current
     const realNodes = (nodes || [])
-      .filter(node => !node.data.isArchived && !hiddenNodeTypes.has(node.data.type))
-      .map(node => {
+      .filter((node) => !node.data.isArchived && !hiddenNodeTypes.has(node.data.type))
+      .map((node) => {
         // Build className from multiple sources
         const classes: string[] = []
         if (contextProviderNodeIds.has(node.id)) {
@@ -1032,35 +1179,62 @@ function Canvas(): JSX.Element {
           }
         }
 
-        if (classes.length === 0) return node
+        // Phase 4B UX-A11Y: ARIA label for screen readers
+        const nodeTitle = (node.data as { title?: string }).title || 'Untitled'
+        const nodeType = (node.data as { type?: string }).type || 'node'
+        const ariaLabel = `${nodeType}: ${nodeTitle}`
 
-        const className = classes.join(' ')
+        // Always need a spread for ariaLabel; check if className also changed
+        const className = classes.length > 0 ? classes.join(' ') : undefined
+
         // Reuse cached spread if the underlying node reference hasn't changed
         const cached = cache.get(node.id)
-        if (cached && cached.id === node.id && cached.className === className && (cached as { _sourceRef?: unknown })._sourceRef === node) {
+        if (
+          cached &&
+          cached.id === node.id &&
+          cached.className === className &&
+          cached.ariaLabel === ariaLabel &&
+          (cached as { _sourceRef?: unknown })._sourceRef === node
+        ) {
           return cached
         }
-        const withClass = { ...node, className, _sourceRef: node } as typeof node
-        cache.set(node.id, withClass)
-        return withClass
+        const withAttrs = {
+          ...node,
+          ariaLabel,
+          ...(className ? { className } : {}),
+          _sourceRef: node,
+        } as typeof node
+        cache.set(node.id, withAttrs)
+        return withAttrs
       })
 
     // Append ghost nodes from proposal store (they have type: 'ghost')
     if (ghostNodes.length > 0) {
-      return [...realNodes, ...ghostNodes as unknown as typeof realNodes]
+      return [...realNodes, ...(ghostNodes as unknown as typeof realNodes)]
     }
 
     return realNodes
-  }, [nodes, hiddenNodeTypes, contextProviderNodeIds, ghostNodes, contextVizActive, contextVizTargetNodeId, contextVizNodeIds])
+  }, [
+    nodes,
+    hiddenNodeTypes,
+    contextProviderNodeIds,
+    ghostNodes,
+    contextVizActive,
+    contextVizTargetNodeId,
+    contextVizNodeIds,
+  ])
 
   // PFD Phase 4: Apply context edge classes for visualization
   // Terminal UX: Gold glow variant when target is a terminal node
   const vizEdges = useMemo(() => {
     if (!contextVizActive) return combinedEdges
     const ccClass = contextVizIsTerminal ? ' context-edge-terminal' : ''
-    return combinedEdges.map(edge => {
+    return combinedEdges.map((edge) => {
       if (contextVizEdgeIds.has(edge.id)) {
-        return { ...edge, className: `${edge.className || ''} context-edge-included${ccClass}`.trim() }
+        return {
+          ...edge,
+          className: `${edge.className || ''} context-edge-included${ccClass}`.trim(),
+        }
       }
       return edge
     })
@@ -1112,14 +1286,14 @@ function Canvas(): JSX.Element {
     }
 
     // Create nodes
-    const nodes = template.nodes.map(tNode => {
+    const nodes = template.nodes.map((tNode) => {
       const realId = idMap.get(tNode.tempId)!
       const dims = tNode.dimensions || { width: 280, height: 140 }
 
       const nodeData = {
         ...tNode.data,
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
       } as any
 
       // Resolve parentId from tempId to real UUID (for project children)
@@ -1147,7 +1321,7 @@ function Canvas(): JSX.Element {
         nodeData.messages = nodeData.messages.map((msg: any, idx: number) => ({
           ...msg,
           id: uuidv4(), // Always generate fresh IDs
-          timestamp: now - (nodeData.messages.length - idx) * 60000 // Space messages 1 min apart, ending at now
+          timestamp: now - (nodeData.messages.length - idx) * 60000, // Space messages 1 min apart, ending at now
         }))
       }
 
@@ -1157,22 +1331,24 @@ function Canvas(): JSX.Element {
         position: tNode.position,
         data: nodeData,
         width: dims.width,
-        height: dims.height
+        height: dims.height,
       }
     })
 
     // Create edges
-    const edges = template.edges.map(tEdge => ({
-      id: uuidv4(),
-      source: idMap.get(tEdge.sourceTempId) || '',
-      target: idMap.get(tEdge.targetTempId) || '',
-      type: 'custom',
-      data: {
-        ...DEFAULT_EDGE_DATA,
-        label: tEdge.label || undefined,
-        ...(tEdge.data || {})
-      }
-    })).filter((e: any) => e.source && e.target)
+    const edges = template.edges
+      .map((tEdge) => ({
+        id: uuidv4(),
+        source: idMap.get(tEdge.sourceTempId) || '',
+        target: idMap.get(tEdge.targetTempId) || '',
+        type: 'custom',
+        data: {
+          ...DEFAULT_EDGE_DATA,
+          label: tEdge.label || undefined,
+          ...(tEdge.data || {}),
+        },
+      }))
+      .filter((e: any) => e.source && e.target)
 
     // Load as workspace (WorkspaceData uses `id`, not `workspaceId`)
     loadWorkspace({
@@ -1183,9 +1359,8 @@ function Canvas(): JSX.Element {
       viewport: { x: -200, y: 0, zoom: 0.75 },
       createdAt: now,
       updatedAt: now,
-      version: 1
+      version: 1,
     } as any)
-
   }, [newWorkspace, loadWorkspace])
 
   // Load last workspace on mount — or load onboarding template for new users
@@ -1194,13 +1369,12 @@ function Canvas(): JSX.Element {
       const loadOnboardingOrBlank = (): void => {
         const programState = useProgramStore.getState()
         if (!programState.hasLoadedDefaultWorkspace) {
-          // First-time user: load the onboarding template
-          loadOnboardingWorkspace()
+          // First-time user — skip template, welcome screen handles onboarding
           programState.markDefaultWorkspaceLoaded()
-          programState.completeOnboarding() // Skip old popup-based onboarding
-        } else {
-          newWorkspace()
+          return
         }
+        // Returning user
+        newWorkspace()
       }
 
       try {
@@ -1241,7 +1415,12 @@ function Canvas(): JSX.Element {
     ) {
       openFloatingProperties(firstSelectedId)
     }
-  }, [selectedNodeIds, workspacePreferences.propertiesDisplayMode, openFloatingProperties, floatingPropertiesNodeIds])
+  }, [
+    selectedNodeIds,
+    workspacePreferences.propertiesDisplayMode,
+    openFloatingProperties,
+    floatingPropertiesNodeIds,
+  ])
 
   // Save handler - routes through sync provider to cancel any pending debounced save
   const handleSave = useCallback(async (): Promise<void> => {
@@ -1279,8 +1458,8 @@ function Canvas(): JSX.Element {
         title: 'Open Workspace',
         filters: [
           { name: 'Cognograph Workspace', extensions: ['json'] },
-          { name: 'All Files', extensions: ['*'] }
-        ]
+          { name: 'All Files', extensions: ['*'] },
+        ],
       })
 
       if (dialogResult.canceled || !dialogResult.filePaths || dialogResult.filePaths.length === 0) {
@@ -1311,8 +1490,8 @@ function Canvas(): JSX.Element {
         defaultPath: `${data.name || 'workspace'}.json`,
         filters: [
           { name: 'Cognograph Workspace', extensions: ['json'] },
-          { name: 'All Files', extensions: ['*'] }
-        ]
+          { name: 'All Files', extensions: ['*'] },
+        ],
       })
 
       if (dialogResult.canceled || !dialogResult.filePath) {
@@ -1359,48 +1538,55 @@ function Canvas(): JSX.Element {
       if (sourceNode && targetNode) {
         sciFiToast(
           `Connection: ${sourceNode.data.title || 'Untitled'} \u2192 ${targetNode.data.title || 'Untitled'}`,
-          'info', 2000
+          'info',
+          2000,
         )
       }
     },
-    []
+    [],
   )
 
   // Handle edge reconnection (dragging edge endpoints)
   const handleReconnect = useCallback(
-    (oldEdge: Edge, newConnection: { source: string | null; target: string | null; sourceHandle?: string | null; targetHandle?: string | null }): void => {
+    (
+      oldEdge: Edge,
+      newConnection: {
+        source: string | null
+        target: string | null
+        sourceHandle?: string | null
+        targetHandle?: string | null
+      },
+    ): void => {
       if (newConnection.source && newConnection.target) {
         reconnectEdge(oldEdge as Edge<EdgeData>, {
           source: newConnection.source,
           target: newConnection.target,
           sourceHandle: newConnection.sourceHandle ?? null,
-          targetHandle: newConnection.targetHandle ?? null
+          targetHandle: newConnection.targetHandle ?? null,
         })
       }
     },
-    [reconnectEdge]
+    [reconnectEdge],
   )
 
   // Connection start handler - track when user starts dragging a connection
-  const handleConnectStart: OnConnectStart = useCallback(
-    (_event, params) => {
-      if (params.nodeId) {
-        const conn = {
-          sourceNodeId: params.nodeId,
-          sourceHandleId: params.handleId
-        }
-        pendingConnectionRef.current = conn
-        setPendingConnection(conn)
+  const handleConnectStart: OnConnectStart = useCallback((_event, params) => {
+    if (params.nodeId) {
+      const conn = {
+        sourceNodeId: params.nodeId,
+        sourceHandleId: params.handleId,
       }
-    },
-    []
-  )
+      pendingConnectionRef.current = conn
+      setPendingConnection(conn)
+    }
+  }, [])
 
   // Connection end handler - show quick-connect popup if dropped on empty canvas or Ctrl held
   const handleConnectEnd: OnConnectEnd = useCallback(
     (event) => {
       const mouseEvent = event as MouseEvent | TouchEvent
-      const ctrlHeld = lastConnectionCtrlRef.current || ('ctrlKey' in mouseEvent && mouseEvent.ctrlKey)
+      const ctrlHeld =
+        lastConnectionCtrlRef.current || ('ctrlKey' in mouseEvent && mouseEvent.ctrlKey)
       const conn = pendingConnectionRef.current
 
       if (conn && lastConnectionMousePos.current && ctrlHeld) {
@@ -1411,7 +1597,7 @@ function Canvas(): JSX.Element {
           screenPosition: { x, y },
           flowPosition: flowPos,
           sourceNodeId: conn.sourceNodeId,
-          sourceHandleId: conn.sourceHandleId
+          sourceHandleId: conn.sourceHandleId,
         })
       }
       pendingConnectionRef.current = null
@@ -1421,7 +1607,7 @@ function Canvas(): JSX.Element {
       lastConnectionMousePos.current = null
       lastConnectionCtrlRef.current = false
     },
-    [screenToFlowPosition]
+    [screenToFlowPosition],
   )
 
   // Determine closest side when hovering over a node during connection.
@@ -1442,7 +1628,7 @@ function Canvas(): JSX.Element {
         { side: 'top', x: nodeX + nodeWidth / 2, y: nodeY },
         { side: 'bottom', x: nodeX + nodeWidth / 2, y: nodeY + nodeHeight },
         { side: 'left', x: nodeX, y: nodeY + nodeHeight / 2 },
-        { side: 'right', x: nodeX + nodeWidth, y: nodeY + nodeHeight / 2 }
+        { side: 'right', x: nodeX + nodeWidth, y: nodeY + nodeHeight / 2 },
       ]
 
       let closestSide = sides[0]!
@@ -1458,7 +1644,7 @@ function Canvas(): JSX.Element {
       }
       return { side: closestSide.side }
     },
-    [getInternalNode, screenToFlowPosition]
+    [getInternalNode, screenToFlowPosition],
   )
 
   // Track mouse movement during connection to update target handle
@@ -1490,11 +1676,12 @@ function Canvas(): JSX.Element {
         const result = calculateClosestSide(targetNodeId, e.clientX, e.clientY)
         if (result) {
           // Get the target node's color
-          const targetNode = nodesRef.current.find(n => n.id === targetNodeId)
+          const targetNode = nodesRef.current.find((n) => n.id === targetNodeId)
           const targetData = targetNode?.data as NodeData | undefined
           const nodeType = targetData?.type || 'conversation'
           // First check for custom node color, then fall back to theme color for that node type
-          const nodeColor = targetData?.color ||
+          const nodeColor =
+            targetData?.color ||
             themeSettings.nodeColors[nodeType as keyof typeof themeSettings.nodeColors] ||
             '#6366f1'
 
@@ -1516,30 +1703,35 @@ function Canvas(): JSX.Element {
   // Apply visual feedback class to target node's handle
   useEffect(() => {
     // Remove previous highlight and reset styles
-    document.querySelectorAll('.connection-target-highlight').forEach(el => {
+    document.querySelectorAll('.connection-target-highlight').forEach((el) => {
       el.classList.remove('connection-target-highlight')
     })
     // Also remove the CSS variable from any previously highlighted nodes
-    document.querySelectorAll('.react-flow__node').forEach(el => {
+    document.querySelectorAll('.react-flow__node').forEach((el) => {
       ;(el as HTMLElement).style.removeProperty('--target-highlight-color')
     })
 
     if (connectionTarget) {
       // Find the node element first
-      const nodeElement = document.querySelector(`.react-flow__node[data-id="${connectionTarget.nodeId}"]`) as HTMLElement | null
+      const nodeElement = document.querySelector(
+        `.react-flow__node[data-id="${connectionTarget.nodeId}"]`,
+      ) as HTMLElement | null
       if (nodeElement) {
         // Set the color variable on the node element so it cascades to children and animations
         nodeElement.style.setProperty('--target-highlight-color', connectionTarget.nodeColor)
 
         // Determine which position class to look for based on handle ID
-        const positionClass = connectionTarget.handleId.includes('top') ? 'react-flow__handle-top' :
-          connectionTarget.handleId.includes('bottom') ? 'react-flow__handle-bottom' :
-          connectionTarget.handleId.includes('left') ? 'react-flow__handle-left' :
-          'react-flow__handle-right'
+        const positionClass = connectionTarget.handleId.includes('top')
+          ? 'react-flow__handle-top'
+          : connectionTarget.handleId.includes('bottom')
+            ? 'react-flow__handle-bottom'
+            : connectionTarget.handleId.includes('left')
+              ? 'react-flow__handle-left'
+              : 'react-flow__handle-right'
 
         // Find all handles with that position (there may be source and target)
         const handles = nodeElement.querySelectorAll(`.${positionClass}`)
-        handles.forEach(handle => {
+        handles.forEach((handle) => {
           handle.classList.add('connection-target-highlight')
         })
       }
@@ -1562,7 +1754,7 @@ function Canvas(): JSX.Element {
         animateEdgeCreation(edgeId)
       }
     },
-    [onConnect, animateEdgeCreation]
+    [onConnect, animateEdgeCreation],
   )
 
   // Node drag start handler - capture initial positions for undo/redo
@@ -1572,54 +1764,68 @@ function Canvas(): JSX.Element {
       const nodesToTrack = selectedNodeIds.includes(node.id) ? selectedNodeIds : [node.id]
       startNodeDrag(nodesToTrack)
       snapResultRef.current = null
-      setIsDraggingNode(true)  // Pause physics during drag
+      setIsDraggingNode(true) // Pause physics during drag
       useUIStore.getState().setCanvasInteracting(true) // Throttle shader quality during drag
     },
-    [selectedNodeIds, startNodeDrag]
+    [selectedNodeIds, startNodeDrag],
   )
 
   // Node drag handler - calculate snap guides during drag
   const handleNodeDrag = useCallback(
-    (_event: React.MouseEvent, node: { id: string; position: { x: number; y: number }; measured?: { width?: number; height?: number }; width?: number; height?: number }): void => {
+    (
+      _event: React.MouseEvent,
+      node: {
+        id: string
+        position: { x: number; y: number }
+        measured?: { width?: number; height?: number }
+        width?: number
+        height?: number
+      },
+    ): void => {
       const currentNodes = nodesRef.current
       const draggedIds = selectedNodeIds.includes(node.id) ? selectedNodeIds : [node.id]
       const staticNodeRects = currentNodes
-        .filter(n => !draggedIds.includes(n.id))
-        .map(n => ({
+        .filter((n) => !draggedIds.includes(n.id))
+        .map((n) => ({
           position: n.position,
           width: (n.width as number) || n.measured?.width || 280,
-          height: (n.height as number) || n.measured?.height || 140
+          height: (n.height as number) || n.measured?.height || 140,
         }))
 
       const primaryRect = {
         position: node.position,
         width: (node.width as number) || node.measured?.width || 280,
-        height: (node.height as number) || node.measured?.height || 140
+        height: (node.height as number) || node.measured?.height || 140,
       }
 
       const result = calculateSnapGuides(
-        draggedIds.map(id => {
-          const n = currentNodes.find(nd => nd.id === id)
-          return n ? {
-            position: n.position,
-            width: (n.width as number) || n.measured?.width || 280,
-            height: (n.height as number) || n.measured?.height || 140
-          } : primaryRect
+        draggedIds.map((id) => {
+          const n = currentNodes.find((nd) => nd.id === id)
+          return n
+            ? {
+                position: n.position,
+                width: (n.width as number) || n.measured?.width || 280,
+                height: (n.height as number) || n.measured?.height || 140,
+              }
+            : primaryRect
         }),
         staticNodeRects,
         node.position,
-        primaryRect
+        primaryRect,
       )
 
       setSnapGuides(result.guides)
       snapResultRef.current = result.snappedPosition
     },
-    [selectedNodeIds]
+    [selectedNodeIds],
   )
 
   // Node drag stop handler - apply snap and check if dropped on a project
   const handleNodeDragStop = useCallback(
-    (_event: React.MouseEvent, node: { id: string; type?: string; position: { x: number; y: number } }): void => {
+    (
+      _event: React.MouseEvent,
+      node: { id: string; type?: string; position: { x: number; y: number } },
+    ): void => {
       // Apply snap if available
       if (snapResultRef.current) {
         const snapped = snapResultRef.current
@@ -1630,17 +1836,17 @@ function Canvas(): JSX.Element {
 
           // Apply snap offset to all dragged nodes
           onNodesChange(
-            draggedIds.map(id => {
-              const n = nodesRef.current.find(nd => nd.id === id)
+            draggedIds.map((id) => {
+              const n = nodesRef.current.find((nd) => nd.id === id)
               return {
                 type: 'position' as const,
                 id,
                 position: {
                   x: (n?.position.x || 0) + deltaX,
-                  y: (n?.position.y || 0) + deltaY
-                }
+                  y: (n?.position.y || 0) + deltaY,
+                },
               }
-            })
+            }),
           )
         }
         snapResultRef.current = null
@@ -1654,29 +1860,40 @@ function Canvas(): JSX.Element {
       // Recalculate edge handles via spread distribution for all edges connected to dragged nodes
       try {
         const draggedIds = new Set(nodesToCommit)
-        const affectedEdges = useWorkspaceStore.getState().edges.filter(
-          (e) => draggedIds.has(e.source) || draggedIds.has(e.target)
-        )
+        const affectedEdges = useWorkspaceStore
+          .getState()
+          .edges.filter((e) => draggedIds.has(e.source) || draggedIds.has(e.target))
 
         // Build nodePositions from FRESH store state (not stale closed-over `nodes`)
-        const nodePositions = new Map<string, { x: number; y: number; width: number; height: number }>()
+        const nodePositions = new Map<
+          string,
+          { x: number; y: number; width: number; height: number }
+        >()
         for (const n of useWorkspaceStore.getState().nodes) {
           nodePositions.set(n.id, {
-            x: n.position.x, y: n.position.y,
+            x: n.position.x,
+            y: n.position.y,
             width: n.measured?.width ?? (n.width as number) ?? 280,
-            height: n.measured?.height ?? (n.height as number) ?? 140
+            height: n.measured?.height ?? (n.height as number) ?? 140,
           })
         }
 
         const spreadAssignments = assignSpreadHandles(affectedEdges, nodePositions)
-        const handleUpdates: Array<{ edgeId: string; sourceHandle: string; targetHandle: string }> = []
+        const handleUpdates: Array<{ edgeId: string; sourceHandle: string; targetHandle: string }> =
+          []
         for (const [edgeId, handles] of spreadAssignments) {
-          handleUpdates.push({ edgeId, sourceHandle: handles.sourceHandle, targetHandle: handles.targetHandle })
+          handleUpdates.push({
+            edgeId,
+            sourceHandle: handles.sourceHandle,
+            targetHandle: handles.targetHandle,
+          })
         }
         if (handleUpdates.length > 0) {
           useWorkspaceStore.getState().updateEdgeHandlesBatch(handleUpdates)
         }
-      } catch { /* edge handle recalc non-critical */ }
+      } catch {
+        /* edge handle recalc non-critical */
+      }
 
       // Don't allow projects to be nested
       if (node.type === 'project') return
@@ -1690,7 +1907,7 @@ function Canvas(): JSX.Element {
       const draggedRect = draggedElement.getBoundingClientRect()
       const draggedCenter = {
         x: draggedRect.left + draggedRect.width / 2,
-        y: draggedRect.top + draggedRect.height / 2
+        y: draggedRect.top + draggedRect.height / 2,
       }
 
       let foundProject: string | null = null
@@ -1729,15 +1946,15 @@ function Canvas(): JSX.Element {
 
       // Auto-pin nodes when manually dragged (flexible positioning feature)
       const draggedIds = selectedNodeIds.includes(node.id) ? selectedNodeIds : [node.id]
-      draggedIds.forEach(id => {
-        const draggedNode = nodesRef.current.find(n => n.id === id)
+      draggedIds.forEach((id) => {
+        const draggedNode = nodesRef.current.find((n) => n.id === id)
         if (draggedNode && draggedNode.data?.layoutMode !== 'pinned') {
           updateNode(id, { layoutMode: 'pinned' })
         }
       })
 
       // Apply spring physics animation on drag end
-      draggedIds.forEach(id => {
+      draggedIds.forEach((id) => {
         const nodeEl = document.querySelector(`.react-flow__node[data-id="${id}"]`)
         if (nodeEl) {
           nodeEl.classList.add('node-drag-end')
@@ -1746,8 +1963,8 @@ function Canvas(): JSX.Element {
       })
 
       // PFD Phase 5B: Auto-grow spatial regions when nodes are dropped inside
-      draggedIds.forEach(id => {
-        const draggedNode = nodesRef.current.find(n => n.id === id)
+      draggedIds.forEach((id) => {
+        const draggedNode = nodesRef.current.find((n) => n.id === id)
         if (!draggedNode) return
         const nodeW = (draggedNode.width as number) || 280
         const nodeH = (draggedNode.height as number) || 140
@@ -1755,7 +1972,7 @@ function Canvas(): JSX.Element {
           x: draggedNode.position.x,
           y: draggedNode.position.y,
           width: nodeW,
-          height: nodeH
+          height: nodeH,
         }
         // Check all regions and auto-grow if the node overlaps
         for (const region of spatialRegions) {
@@ -1769,7 +1986,16 @@ function Canvas(): JSX.Element {
       setIsDraggingNode(false)
       useUIStore.getState().setCanvasInteracting(false) // Restore shader quality
     },
-    [addNodeToProject, removeNodeFromProject, selectedNodeIds, commitNodeDrag, onNodesChange, updateNode, spatialRegions, autoGrowRegion]
+    [
+      addNodeToProject,
+      removeNodeFromProject,
+      selectedNodeIds,
+      commitNodeDrag,
+      onNodesChange,
+      updateNode,
+      spatialRegions,
+      autoGrowRegion,
+    ],
   )
 
   // File drop handler - creates artifact nodes from dropped files
@@ -1788,13 +2014,15 @@ function Canvas(): JSX.Element {
       if (!files || files.length === 0) return
 
       if (files.length > MAX_FILES_PER_DROP) {
-        toast.error(`Too many files (${files.length}). Maximum ${MAX_FILES_PER_DROP} files per drop.`)
+        toast.error(
+          `Too many files (${files.length}). Maximum ${MAX_FILES_PER_DROP} files per drop.`,
+        )
         return
       }
 
       const position = screenToFlowPosition({
         x: event.clientX,
-        y: event.clientY
+        y: event.clientY,
       })
 
       let successCount = 0
@@ -1815,7 +2043,9 @@ function Canvas(): JSX.Element {
           const maxSize = isImage ? MAX_IMAGE_FILE_SIZE : MAX_TEXT_FILE_SIZE
           if (file.size > maxSize) {
             const maxMB = Math.round(maxSize / (1024 * 1024))
-            toast.error(`${file.name} too large (${(file.size / (1024 * 1024)).toFixed(1)}MB, max ${maxMB}MB)`)
+            toast.error(
+              `${file.name} too large (${(file.size / (1024 * 1024)).toFixed(1)}MB, max ${maxMB}MB)`,
+            )
             errorCount++
             continue
           }
@@ -1836,7 +2066,7 @@ function Canvas(): JSX.Element {
 
           const nodeId = createArtifactFromFile(
             { name: file.name, content, isBase64: isImage },
-            { x: position.x + offset.x, y: position.y + offset.y }
+            { x: position.x + offset.x, y: position.y + offset.y },
           )
           successCount++
 
@@ -1860,15 +2090,18 @@ function Canvas(): JSX.Element {
           successCount === 1
             ? `Created artifact: ${files[0]?.name ?? 'file'}`
             : `Created ${successCount} artifacts`,
-          'success'
+          'success',
         )
       } else if (successCount > 0 && errorCount > 0) {
-        sciFiToast(`Created ${successCount} artifact${successCount !== 1 ? 's' : ''}, ${errorCount} failed`, 'warning')
+        sciFiToast(
+          `Created ${successCount} artifact${successCount !== 1 ? 's' : ''}, ${errorCount} failed`,
+          'warning',
+        )
       } else if (errorCount > 0) {
         toast.error(`Failed to read ${errorCount} file${errorCount !== 1 ? 's' : ''}`)
       }
     },
-    [screenToFlowPosition, createArtifactFromFile]
+    [screenToFlowPosition, createArtifactFromFile],
   )
 
   // File drag handlers
@@ -1917,12 +2150,12 @@ function Canvas(): JSX.Element {
       const deselectChanges = projectsToDeselect.map((id) => ({
         type: 'select' as const,
         id,
-        selected: false
+        selected: false,
       }))
 
       onNodesChange(deselectChanges)
     },
-    [onNodesChange]
+    [onNodesChange],
   )
 
   // Node click handler - handles Ctrl/Cmd+click to toggle selection + context selection
@@ -1942,15 +2175,15 @@ function Canvas(): JSX.Element {
           {
             type: 'select',
             id: node.id,
-            selected: !node.selected
-          }
+            selected: !node.selected,
+          },
         ])
         // Prevent default behavior (which would clear selection and select only this node)
         event.stopPropagation()
       }
       // Otherwise, let React Flow handle normally (default click behavior)
     },
-    [onNodesChange, recordInteraction, toggleContextSelection]
+    [onNodesChange, recordInteraction, toggleContextSelection],
   )
 
   // Canvas click handler - records position for template paste
@@ -1976,7 +2209,7 @@ function Canvas(): JSX.Element {
 
       const flowPosition = screenToFlowPosition({
         x: event.clientX,
-        y: event.clientY
+        y: event.clientY,
       })
       recordCanvasClick(flowPosition)
 
@@ -1993,7 +2226,18 @@ function Canvas(): JSX.Element {
         sciFiToast('New conversation created', 'success', 1500)
       }
     },
-    [screenToFlowPosition, recordCanvasClick, closeContextMenu, showThemeModal, showSettingsModal, addNode, setSelectedNodes, animateNodeCreation, inPlaceExpandedNodeId, collapseInPlaceExpansion]
+    [
+      screenToFlowPosition,
+      recordCanvasClick,
+      closeContextMenu,
+      showThemeModal,
+      showSettingsModal,
+      addNode,
+      setSelectedNodes,
+      animateNodeCreation,
+      inPlaceExpandedNodeId,
+      collapseInPlaceExpansion,
+    ],
   )
 
   // Context menu handler
@@ -2027,7 +2271,7 @@ function Canvas(): JSX.Element {
           // Convert screen position to flow coordinates for waypoint placement
           const flowPosition = screenToFlowPosition({
             x: event.clientX,
-            y: event.clientY
+            y: event.clientY,
           })
           openContextMenu(screenPosition, { type: 'edge', edgeId, position: flowPosition })
           return
@@ -2037,11 +2281,11 @@ function Canvas(): JSX.Element {
       // Clicked on canvas
       const flowPosition = screenToFlowPosition({
         x: event.clientX,
-        y: event.clientY
+        y: event.clientY,
       })
       openContextMenu(screenPosition, { type: 'canvas', position: flowPosition })
     },
-    [screenToFlowPosition, openContextMenu, selectedNodeIds]
+    [screenToFlowPosition, openContextMenu, selectedNodeIds],
   )
 
   // Long-press handler for touch devices — mirrors handleContextMenu logic
@@ -2069,7 +2313,7 @@ function Canvas(): JSX.Element {
         if (edgeId) {
           const flowPosition = screenToFlowPosition({
             x: position.clientX,
-            y: position.clientY
+            y: position.clientY,
           })
           openContextMenu(screenPosition, { type: 'edge', edgeId, position: flowPosition })
           return
@@ -2079,17 +2323,17 @@ function Canvas(): JSX.Element {
       // Canvas long-press
       const flowPosition = screenToFlowPosition({
         x: position.clientX,
-        y: position.clientY
+        y: position.clientY,
       })
       openContextMenu(screenPosition, { type: 'canvas', position: flowPosition })
     },
-    [screenToFlowPosition, openContextMenu, selectedNodeIds]
+    [screenToFlowPosition, openContextMenu, selectedNodeIds],
   )
 
   const longPressHandlers = useLongPress(handleLongPress, {
     delay: 500,
     moveThreshold: 10,
-    enabled: isTouch && !demoMode
+    enabled: isTouch && !demoMode,
   })
 
   // Quick-connect: create node + edge when popup option is selected
@@ -2110,13 +2354,13 @@ function Canvas(): JSX.Element {
         source: quickConnectPopup.sourceNodeId,
         sourceHandle: quickConnectPopup.sourceHandleId,
         target: newNodeId,
-        targetHandle
+        targetHandle,
       })
 
       animateNodeCreation(newNodeId)
       setQuickConnectPopup(null)
     },
-    [quickConnectPopup, addNode, addEdge, animateNodeCreation]
+    [quickConnectPopup, addNode, addEdge, animateNodeCreation],
   )
 
   // Close quick-connect popup on Escape or outside click
@@ -2201,23 +2445,36 @@ function Canvas(): JSX.Element {
       // F2 — Rename selected node (triggers EditableTitle inline edit)
       if (e.key === 'F2' && selectedNodeIds.length === 1 && !isInputFocused) {
         e.preventDefault()
-        window.dispatchEvent(new CustomEvent('rename-node', { detail: { nodeId: selectedNodeIds[0] } }))
+        window.dispatchEvent(
+          new CustomEvent('rename-node', { detail: { nodeId: selectedNodeIds[0] } }),
+        )
       }
       // Ctrl+D — Duplicate selected node(s), save/restore clipboard
-      if ((e.ctrlKey || e.metaKey) && e.key === 'd' && !isInputFocused && selectedNodeIds.length > 0) {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        e.key === 'd' &&
+        !isInputFocused &&
+        selectedNodeIds.length > 0
+      ) {
         e.preventDefault()
         const store = useWorkspaceStore.getState()
         const savedClipboardNodes = store.clipboardNodes
         const savedClipboardEdges = store.clipboardEdges
         const savedClipboardState = store.clipboardState
         store.copyNodes(selectedNodeIds)
-        const selectedNodes = store.nodes.filter(n => selectedNodeIds.includes(n.id))
+        const selectedNodes = store.nodes.filter((n) => selectedNodeIds.includes(n.id))
         if (selectedNodes.length > 0) {
-          const avgX = selectedNodes.reduce((sum, n) => sum + n.position.x, 0) / selectedNodes.length
-          const avgY = selectedNodes.reduce((sum, n) => sum + n.position.y, 0) / selectedNodes.length
+          const avgX =
+            selectedNodes.reduce((sum, n) => sum + n.position.x, 0) / selectedNodes.length
+          const avgY =
+            selectedNodes.reduce((sum, n) => sum + n.position.y, 0) / selectedNodes.length
           store.pasteNodes({ x: avgX + 40, y: avgY + 40 })
         }
-        useWorkspaceStore.setState({ clipboardNodes: savedClipboardNodes, clipboardEdges: savedClipboardEdges, clipboardState: savedClipboardState })
+        useWorkspaceStore.setState({
+          clipboardNodes: savedClipboardNodes,
+          clipboardEdges: savedClipboardEdges,
+          clipboardState: savedClipboardState,
+        })
       }
       // Paste is handled by the 'paste' event listener below (handlePaste),
       // NOT here in keydown. This allows ClipboardEvent.clipboardData access
@@ -2232,17 +2489,17 @@ function Canvas(): JSX.Element {
       }
       if (m('export') && !isInputFocused) {
         e.preventDefault()
-        setShowExportDialog(prev => !prev)
+        setShowExportDialog((prev) => !prev)
       }
       // Toggle FPS counter (Ctrl + Shift + F) — not customizable
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F' && !isInputFocused) {
         e.preventDefault()
-        setShowFps(prev => !prev)
+        setShowFps((prev) => !prev)
       }
       // PFD Phase 7A: Toggle Canvas Table of Contents (Ctrl + Shift + T)
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T' && !isInputFocused) {
         e.preventDefault()
-        setShowCanvasTOC(prev => !prev)
+        setShowCanvasTOC((prev) => !prev)
       }
       // PFD Phase 7B: Toggle Calm Mode (Ctrl + Shift + M)
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'M' && !isInputFocused) {
@@ -2256,26 +2513,31 @@ function Canvas(): JSX.Element {
         const currentNodes = nodesRef.current
         const currentEdges = edgesRef.current
         // Use selected nodes, or all nodes if none selected
-        const targetNodeIds = selectedNodeIds.length > 0 ? selectedNodeIds : currentNodes.map(n => n.id)
+        const targetNodeIds =
+          selectedNodeIds.length > 0 ? selectedNodeIds : currentNodes.map((n) => n.id)
         const layoutNodes: LayoutNode[] = currentNodes
-          .filter(n => targetNodeIds.includes(n.id))
-          .map(n => ({
+          .filter((n) => targetNodeIds.includes(n.id))
+          .map((n) => ({
             id: n.id,
             x: n.position.x,
             y: n.position.y,
             width: (n.width as number) || 280,
             height: (n.height as number) || 140,
-            pinned: (n.data as { layoutMode?: string })?.layoutMode === 'pinned' && !targetNodeIds.includes(n.id)
+            pinned:
+              (n.data as { layoutMode?: string })?.layoutMode === 'pinned' &&
+              !targetNodeIds.includes(n.id),
           }))
         const layoutEdges: LayoutEdge[] = currentEdges
-          .filter(edge => targetNodeIds.includes(edge.source) || targetNodeIds.includes(edge.target))
-          .map(edge => ({ source: edge.source, target: edge.target }))
+          .filter(
+            (edge) => targetNodeIds.includes(edge.source) || targetNodeIds.includes(edge.target),
+          )
+          .map((edge) => ({ source: edge.source, target: edge.target }))
 
         const result = tidyUpLayout(layoutNodes, layoutEdges)
-        const changes = result.map(r => ({
+        const changes = result.map((r) => ({
           type: 'position' as const,
           id: r.id,
-          position: { x: r.x, y: r.y }
+          position: { x: r.x, y: r.y },
         }))
         if (changes.length > 0) {
           onNodesChange(changes)
@@ -2328,21 +2590,23 @@ function Canvas(): JSX.Element {
                   const viewportDiv = nodeEl?.querySelector<HTMLElement>('[style*="scale"]')
                   const scaleMatch = viewportDiv?.style.transform?.match(/scale\(([\d.]+)\)/)
                   const scale = scaleMatch ? parseFloat(scaleMatch[1]) : 1.0
-                  const chromeH = 88  // header + footer + borders
-                  const chromeW = 24  // padding + borders
+                  const chromeH = 88 // header + footer + borders
+                  const chromeW = 24 // padding + borders
                   items.push({
                     nodeId,
                     width: Math.max(300, Math.round(scrollW * scale) + chromeW),
                     height: Math.max(200, Math.round(scrollH * scale) + chromeH),
                   })
-                  continue  // skip calculateAutoFitDimensions
+                  continue // skip calculateAutoFitDimensions
                 }
               }
               // Fallback: text estimation (non-HTML or iframe not ready)
               const files = nodeData.files as Array<{ id: string; content: string }> | undefined
               const activeFileId = nodeData.activeFileId as string | undefined
               if (files && files.length > 0) {
-                const activeFile = activeFileId ? files.find((f) => f.id === activeFileId) : files[0]
+                const activeFile = activeFileId
+                  ? files.find((f) => f.id === activeFileId)
+                  : files[0]
                 content = activeFile?.content || (nodeData.content as string) || ''
               } else {
                 content = (nodeData.content as string) || ''
@@ -2355,25 +2619,32 @@ function Canvas(): JSX.Element {
           }
 
           const currentW = node.measured?.width ?? (node.width as number) ?? 280
-          const { width, height } = calculateAutoFitDimensions(title, content, headerH, footerH, currentW)
+          const { width, height } = calculateAutoFitDimensions(
+            title,
+            content,
+            headerH,
+            footerH,
+            currentW,
+          )
           items.push({
             nodeId,
             width: Math.max(AUTO_FIT_CONSTRAINTS.minWidth, width),
-            height: Math.max(AUTO_FIT_CONSTRAINTS.minHeight, height)
+            height: Math.max(AUTO_FIT_CONSTRAINTS.minHeight, height),
           })
         }
 
         if (items.length > 0) {
           useWorkspaceStore.getState().batchFitNodesToContent(items)
           items.forEach((item) => updateNodeInternals(item.nodeId))
-          const msg = items.length === 1 ? 'Fitted to content' : `Fitted ${items.length} nodes to content`
+          const msg =
+            items.length === 1 ? 'Fitted to content' : `Fitted ${items.length} nodes to content`
           sciFiToast(msg, 'success', 1500)
         }
       }
       // Edge Grammar Legend (Ctrl + Shift + E)
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'E' && !isInputFocused) {
         e.preventDefault()
-        setShowEdgeLegend(prev => !prev)
+        setShowEdgeLegend((prev) => !prev)
       }
       if (m('newWorkspace') && !isInputFocused) {
         e.preventDefault()
@@ -2443,7 +2714,7 @@ function Canvas(): JSX.Element {
       if (m('themeMenu') && !isInputFocused) {
         e.preventDefault()
         // Toggle theme settings modal
-        setShowThemeModal(prev => !prev)
+        setShowThemeModal((prev) => !prev)
       }
 
       // --- AI shortcuts ---
@@ -2460,9 +2731,12 @@ function Canvas(): JSX.Element {
         if (selectedNodeIds.length > 0) {
           const selectedNodes = nodesRef.current.filter((n) => selectedNodeIds.includes(n.id))
           const selectedEdgesForTemplate = edgesRef.current.filter(
-            (ed) => selectedNodeIds.includes(ed.source) && selectedNodeIds.includes(ed.target)
+            (ed) => selectedNodeIds.includes(ed.source) && selectedNodeIds.includes(ed.target),
           )
-          let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+          let minX = Infinity,
+            maxX = -Infinity,
+            minY = Infinity,
+            maxY = -Infinity
           for (const node of selectedNodes) {
             minX = Math.min(minX, node.position.x)
             maxX = Math.max(maxX, node.position.x + (node.width || 300))
@@ -2477,9 +2751,11 @@ function Canvas(): JSX.Element {
           openSaveTemplateModal({
             nodeIds: selectedNodeIds,
             edgeIds: selectedEdgesForTemplate.map((ed) => ed.id),
-            suggestedName: suggestTemplateName(selectedNodes as import('@xyflow/react').Node<NodeData>[]),
+            suggestedName: suggestTemplateName(
+              selectedNodes as import('@xyflow/react').Node<NodeData>[],
+            ),
             bounds: { width: maxX - minX, height: maxY - minY },
-            rootNodeId: rootNode.id
+            rootNodeId: rootNode.id,
           })
         } else {
           sciFiToast('Select nodes first to save as template', 'warning')
@@ -2487,7 +2763,7 @@ function Canvas(): JSX.Element {
       }
       if (m('toggleAISidebar') && !isInputFocused) {
         e.preventDefault()
-        setAiSidebarOpen(prev => !prev)
+        setAiSidebarOpen((prev) => !prev)
       }
 
       // --- Quick node creation (Shift+letter) ---
@@ -2499,11 +2775,15 @@ function Canvas(): JSX.Element {
           const viewport = getViewport()
           return {
             x: (-viewport.x + window.innerWidth / 2) / viewport.zoom,
-            y: (-viewport.y + window.innerHeight / 2) / viewport.zoom
+            y: (-viewport.y + window.innerHeight / 2) / viewport.zoom,
           }
         }
 
-        const nodeShortcutMap: Array<{ id: string; type: Parameters<typeof addNode>[0]; label: string }> = [
+        const nodeShortcutMap: Array<{
+          id: string
+          type: Parameters<typeof addNode>[0]
+          label: string
+        }> = [
           { id: 'createNote', type: 'note', label: 'New note created' },
           { id: 'createConversation', type: 'conversation', label: 'New conversation created' },
           { id: 'createTask', type: 'task', label: 'New task created' },
@@ -2512,7 +2792,7 @@ function Canvas(): JSX.Element {
           { id: 'createWorkspace', type: 'workspace', label: 'New workspace created' },
           { id: 'createText', type: 'text', label: 'New text node created' },
           { id: 'createAction', type: 'action', label: 'New action created' },
-          { id: 'createOrchestrator', type: 'orchestrator', label: 'New orchestrator created' }
+          { id: 'createOrchestrator', type: 'orchestrator', label: 'New orchestrator created' },
         ]
 
         for (const ns of nodeShortcutMap) {
@@ -2581,7 +2861,18 @@ function Canvas(): JSX.Element {
           }
           // Note nodes: cycle through 10 modes
           else if (node.type === 'note') {
-            const modes = ['freeform', 'page', 'component', 'content-model', 'wp-config', 'feature', 'user-story', 'bug-report', 'tech-spec', 'meeting-note']
+            const modes = [
+              'freeform',
+              'page',
+              'component',
+              'content-model',
+              'wp-config',
+              'feature',
+              'user-story',
+              'bug-report',
+              'tech-spec',
+              'meeting-note',
+            ]
             const currentMode = nodeData.mode || 'freeform'
             const currentIndex = modes.indexOf(currentMode as string)
             const nextIndex = (currentIndex + 1) % modes.length
@@ -2599,7 +2890,7 @@ function Canvas(): JSX.Element {
           const childCount = getChildNodeIds(selectedId).length
           if (childCount > 0) {
             toggleNodeCollapsed(selectedId)
-            const node = nodesRef.current.find(n => n.id === selectedId)
+            const node = nodesRef.current.find((n) => n.id === selectedId)
             if (node?.data?.collapsed) {
               sciFiToast(`Expanded ${childCount} children`, 'info', 1500)
             } else {
@@ -2625,7 +2916,7 @@ function Canvas(): JSX.Element {
       if (m('jumpToBookmark') && !isInputFocused) {
         e.preventDefault()
         if (bookmarkedNodeId) {
-          const bookmarkedNode = nodesRef.current.find(n => n.id === bookmarkedNodeId)
+          const bookmarkedNode = nodesRef.current.find((n) => n.id === bookmarkedNodeId)
           if (bookmarkedNode) {
             setSelectedNodes([bookmarkedNodeId])
             const nodeWidth = bookmarkedNode.measured?.width ?? 200
@@ -2633,7 +2924,7 @@ function Canvas(): JSX.Element {
             setCenter(
               bookmarkedNode.position.x + nodeWidth / 2,
               bookmarkedNode.position.y + nodeHeight / 2,
-              { zoom: 1, duration: 300 }
+              { zoom: 1, duration: 300 },
             )
             sciFiToast('Jumped to bookmark', 'info', 1500)
           }
@@ -2664,7 +2955,7 @@ function Canvas(): JSX.Element {
           } else {
             const nodeId = numberedBookmarksRef.current[num]
             if (nodeId) {
-              const targetNode = nodesRef.current.find(n => n.id === nodeId)
+              const targetNode = nodesRef.current.find((n) => n.id === nodeId)
               if (targetNode) {
                 setSelectedNodes([nodeId])
                 const nodeWidth = targetNode.measured?.width ?? 200
@@ -2690,7 +2981,7 @@ function Canvas(): JSX.Element {
       // --- Panel toggles ---
       if (m('toggleMinimap') && !isInputFocused) {
         e.preventDefault()
-        setMinimapVisible(prev => {
+        setMinimapVisible((prev) => {
           const newVal = !prev
           sciFiToast(newVal ? 'Minimap shown' : 'Minimap hidden', 'info', 1500)
           return newVal
@@ -2715,23 +3006,23 @@ function Canvas(): JSX.Element {
       }
       if (m('toggleUndoHistory') && !isInputFocused) {
         e.preventDefault()
-        setShowUndoHistory(prev => !prev)
+        setShowUndoHistory((prev) => !prev)
       }
       if (m('toggleTrash') && !isInputFocused) {
         e.preventDefault()
-        setShowTrash(prev => !prev)
+        setShowTrash((prev) => !prev)
       }
       if (m('toggleArchive') && !isInputFocused) {
         e.preventDefault()
-        setShowArchive(prev => !prev)
+        setShowArchive((prev) => !prev)
       }
       if (m('toggleSavedViews') && !isInputFocused) {
         e.preventDefault()
-        setShowSavedViews(prev => !prev)
+        setShowSavedViews((prev) => !prev)
       }
       if (m('toggleTimeline') && !isInputFocused) {
         e.preventDefault()
-        setShowTimeline(prev => !prev)
+        setShowTimeline((prev) => !prev)
       }
 
       // --- Misc non-modifier shortcuts ---
@@ -2750,7 +3041,7 @@ function Canvas(): JSX.Element {
         e.preventDefault()
         setSelectionActionBarPosition({
           x: mousePositionRef.current.x,
-          y: mousePositionRef.current.y
+          y: mousePositionRef.current.y,
         })
         setSelectionActionBarOpen(true)
       }
@@ -2772,13 +3063,13 @@ function Canvas(): JSX.Element {
       const files = e.clipboardData?.files
       if (files && files.length > 0) {
         // Filter to image files only
-        const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'))
+        const imageFiles = Array.from(files).filter((f) => f.type.startsWith('image/'))
         if (imageFiles.length > 0) {
           e.preventDefault()
 
           const viewportCenter = screenToFlowPosition({
             x: window.innerWidth / 2,
-            y: window.innerHeight / 2
+            y: window.innerHeight / 2,
           })
 
           let successCount = 0
@@ -2804,13 +3095,14 @@ function Canvas(): JSX.Element {
 
               // Derive a filename — clipboard images typically have no name
               const ext = file.type.split('/')[1] || 'png'
-              const name = file.name && file.name !== 'image.png'
-                ? file.name
-                : `pasted-image-${Date.now()}.${ext}`
+              const name =
+                file.name && file.name !== 'image.png'
+                  ? file.name
+                  : `pasted-image-${Date.now()}.${ext}`
 
               const nodeId = createArtifactFromFile(
                 { name, content, isBase64: true },
-                { x: viewportCenter.x + offset.x, y: viewportCenter.y + offset.y }
+                { x: viewportCenter.x + offset.x, y: viewportCenter.y + offset.y },
               )
               successCount++
 
@@ -2833,10 +3125,13 @@ function Canvas(): JSX.Element {
               successCount === 1
                 ? 'Created artifact from pasted image'
                 : `Created ${successCount} artifacts from pasted images`,
-              'success'
+              'success',
             )
           } else if (successCount > 0 && errorCount > 0) {
-            sciFiToast(`Created ${successCount} artifact${successCount !== 1 ? 's' : ''}, ${errorCount} failed`, 'warning')
+            sciFiToast(
+              `Created ${successCount} artifact${successCount !== 1 ? 's' : ''}, ${errorCount} failed`,
+              'warning',
+            )
           } else if (errorCount > 0) {
             toast.error(`Failed to read pasted image${errorCount !== 1 ? 's' : ''}`)
           }
@@ -2848,7 +3143,7 @@ function Canvas(): JSX.Element {
       e.preventDefault()
       const viewportCenter = screenToFlowPosition({
         x: window.innerWidth / 2,
-        y: window.innerHeight / 2
+        y: window.innerHeight / 2,
       })
       pasteNodes(viewportCenter)
     }
@@ -2910,7 +3205,7 @@ function Canvas(): JSX.Element {
     onNodesChange,
     fitView,
     zoomTo,
-    updateNodeInternals
+    updateNodeInternals,
   ])
 
   // Canvas-level Escape: progressive exit (collapse > focus > clipboard > selection > zoom-out)
@@ -2937,7 +3232,19 @@ function Canvas(): JSX.Element {
     }
     escapeManager.register('canvas-progressive-exit', EscapePriority.CANVAS, handleCanvasEscape)
     return () => escapeManager.unregister('canvas-progressive-exit')
-  }, [demoMode, inPlaceExpandedNodeId, collapseInPlaceExpansion, focusModeNodeId, setFocusModeNode, clipboardState, clearClipboard, clearSelection, selectedNodeIds, selectedEdgeIds, fitView])
+  }, [
+    demoMode,
+    inPlaceExpandedNodeId,
+    collapseInPlaceExpansion,
+    focusModeNodeId,
+    setFocusModeNode,
+    clipboardState,
+    clearClipboard,
+    clearSelection,
+    selectedNodeIds,
+    selectedEdgeIds,
+    fitView,
+  ])
 
   return (
     <div className="h-screen w-screen relative flex flex-col overflow-hidden">
@@ -2951,18 +3258,18 @@ function Canvas(): JSX.Element {
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
       >
-      {/* SPATIAL COMMAND BRIDGE UI - DISABLED FOR v0.2.0 RELEASE
+        {/* SPATIAL COMMAND BRIDGE UI - DISABLED FOR v0.2.0 RELEASE
           Backend infrastructure complete (stores, services, optimizations).
           Frontend integration has debugging issues (components not rendering).
           Deferred to v0.3.0. See docs/TODO-BRIDGE.md for details. */}
 
-      {/* Bridge Status Bar (Phase 1) — re-enabled for v0.3.0 */}
-      <InlineErrorBoundary name="BridgeStatusBar-canvas">
-        <BridgeStatusBar />
-      </InlineErrorBoundary>
+        {/* Bridge Status Bar (Phase 1) — re-enabled for v0.3.0 */}
+        <InlineErrorBoundary name="BridgeStatusBar-canvas">
+          <BridgeStatusBar />
+        </InlineErrorBoundary>
 
-      {/* Proposal Card (Phase 3) - shows when agent proposes changes */}
-      {/* {activeProposal && activeProposal.status === 'pending' && (
+        {/* Proposal Card (Phase 3) - shows when agent proposes changes */}
+        {/* {activeProposal && activeProposal.status === 'pending' && (
         <ProposalCard
           proposal={activeProposal}
           open={!!activeProposalId}
@@ -2972,507 +3279,632 @@ function Canvas(): JSX.Element {
         />
       )} */}
 
-      {/* IconRail removed — V4 chrome */}
-      {/* LeftSidebar moved inside canvas container as floating overlay */}
+        {/* IconRail removed — V4 chrome */}
+        {/* LeftSidebar moved inside canvas container as floating overlay */}
 
-      {/* Main canvas area */}
-      <div
-        ref={canvasContainerRef}
-        className="flex-1 relative overflow-hidden"
-        data-zoom-tier="full"
-        onMouseMove={(e) => {
-          // Track mouse position for InlinePrompt positioning
-          mousePositionRef.current = { x: e.clientX, y: e.clientY }
-          // Broadcast cursor position for multiplayer presence
-          const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-          broadcastCursor(flowPos.x, flowPos.y)
-        }}
-        onMouseLeave={clearCursor}
-      >
-        {/* File drop overlay */}
-        {isDraggingFile && (
-          <div className="absolute inset-0 gui-z-panels bg-blue-500/10 border-4 border-dashed border-blue-500 flex items-center justify-center pointer-events-none">
-            <div className="gui-panel px-8 py-6 rounded-lg text-center shadow-xl" style={{ opacity: 0.95 }}>
-              <FileText size={48} className="mx-auto mb-4 text-blue-400" />
-              <div className="text-xl font-semibold gui-text">Drop files to create artifacts</div>
-              <div className="gui-text-secondary mt-2">Supports code, markdown, images, JSON, and more</div>
-            </div>
-          </div>
-        )}
-
-        {/* Left sidebar — floating overlay inside canvas (V4) */}
-        <LeftSidebar />
-
-        {/* Command response panel — floating left panel for AI responses + agent log (V4.1) */}
-        {!isMobile && <CommandResponsePanel />}
-
-        {/* Top bar — file ops, theme, AI sidebar toggle (V4) */}
-        <TopBar
-          onSave={handleSave}
-          onSaveAs={handleSaveAs}
-          onNew={handleNew}
-          onOpen={handleOpen}
-          onOpenThemeSettings={() => setShowThemeModal(true)}
-          onToggleAISidebar={() => setAiSidebarOpen(prev => !prev)}
-          onOpenInlinePrompt={() => {
-            // Will route to BottomCommandBar in Task 12
+        {/* Main canvas area */}
+        <div
+          ref={canvasContainerRef}
+          className="flex-1 relative overflow-hidden"
+          data-zoom-tier="full"
+          onMouseMove={(e) => {
+            // Track mouse position for InlinePrompt positioning
+            mousePositionRef.current = { x: e.clientX, y: e.clientY }
+            // Broadcast cursor position for multiplayer presence
+            const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+            broadcastCursor(flowPos.x, flowPos.y)
           }}
-        />
-
-        {/* Contextual action bar — Generate/Modify/Preview for selected nodes (V4.1) */}
-        {!isMobile && <ContextualActionBar />}
-
-        {/* Canvas status badges — zoom, selection, performance (V4) */}
-        {!isMobile && <CanvasBadges />}
-
-        {/* Bottom Command Bar — V4 workspace-level natural language input */}
-        {!isMobile && <BottomCommandBar />}
-
-        {/* Living Grid — cursor-responsive dot glow with magnetic attraction */}
-        {(themeSettings.livingGridEnabled ?? true) && <LivingGrid />}
-
-        {/* Particle Drift — gold particles flowing along edge paths */}
-        {(themeSettings.particleDriftEnabled ?? true) && (
-          <Suspense fallback={null}>
-            <ParticleDrift />
-          </Suspense>
-        )}
-
-        <ErrorBoundary componentName="Canvas">
-        <ClickSpark>
-        <ReactFlow
-          className={`${semanticZoomClass} ${shiftDragState.isShiftHeld && !shiftDragState.isActive ? 'shift-drag-ready' : ''} ${shiftDragState.isActive ? 'shift-drag-active' : ''} ${focusModeNodeId ? 'focus-mode-active' : ''} ${contextVizActive ? 'context-viz-active' : ''} ${contextVizIsTerminal ? 'context-viz-terminal' : ''} ${inPlaceExpandedNodeId ? 'in-place-expansion-active' : ''} ${calmMode ? 'calm-mode-active' : ''}`}
-          nodes={filteredNodes}
-          edges={vizEdges}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={handleConnect}
-          onConnectStart={handleConnectStart}
-          onConnectEnd={handleConnectEnd}
-          onMoveStart={handleMoveStart}
-          onMoveEnd={handleMoveEnd}
-          onNodeDragStart={handleNodeDragStart}
-          onNodeDrag={handleNodeDrag}
-          onNodeDragStop={handleNodeDragStop}
-          onEdgeDoubleClick={handleEdgeDoubleClick}
-          onReconnect={handleReconnect}
-          edgesReconnectable={true}
-          reconnectRadius={20}
-          onPaneClick={handlePaneClick}
-          onContextMenu={demoMode || isTouch ? undefined : handleContextMenu}
-          {...(isTouch && !demoMode ? longPressHandlers : {})}
-          onSelectionChange={handleSelectionChange}
-          onNodeClick={handleNodeClick}
-          nodesConnectable={!demoMode}
-          fitView={!demoMode}
-          defaultViewport={demoMode ? { x: 50, y: 50, zoom: 0.28 } : undefined}
-          fitViewOptions={{
-            padding: 0.2,
-            maxZoom: 1.0  // Prevent over-zooming in tests (single nodes would zoom to 400%+)
-          }}
-          defaultEdgeOptions={{
-            type: 'custom',
-            animated: false
-          }}
-          connectionLineType={ConnectionLineType.Bezier}
-          connectionMode={ConnectionMode.Loose}
-          deleteKeyCode={null}
-          selectionOnDrag={!isTouch}
-          selectionMode={isTouch ? SelectionMode.Full : SelectionMode.Partial}
-          panOnDrag={isTouch ? [0] : [1, 2]}
-          onViewportChange={(viewport) => {
-            const prevZoom = viewportRef.current.zoom
-            viewportRef.current = viewport
-            ;(window as any).__cognograph_viewport = viewport
-            const newZoom = viewport.zoom
-            if (Math.abs(newZoom - lastIndicatorZoomRef.current) > 0.01) {
-              lastIndicatorZoomRef.current = newZoom
-              setIndicatorZoom(newZoom)
-            }
-            // Zoom perf tier — only compute when zoom actually changed (not on pan)
-            if (newZoom !== prevZoom) {
-              const prevTier = useWorkspaceStore.getState().zoomPerfTier ?? 'full'
-              const newTier = computeZoomPerfTier(newZoom, prevTier)
-              if (newTier !== prevTier) {
-                useWorkspaceStore.setState({ zoomPerfTier: newTier })
-                canvasContainerRef.current?.setAttribute('data-zoom-tier', newTier)
-              }
-            }
-          }}
-          selectNodesOnDrag={false}
-          multiSelectionKeyCode="Shift"
-          selectionKeyCode={null}
-          minZoom={0.1}
-          maxZoom={4}
-          proOptions={{ hideAttribution: true }}
-          style={{ background: themeSettings.canvasBackground }}
+          onMouseLeave={clearCursor}
         >
-        {/* Canvas grid — configurable via themeSettings.gridStyle */}
-        {(themeSettings.gridStyle ?? 'dots') === 'dots' && (
-          <Background
-            variant={BackgroundVariant.Dots}
-            gap={20}
-            size={1.5}
-            color="var(--grid-dot-color)"
-            className="!transition-none"
-          />
-        )}
-        {themeSettings.gridStyle === 'hash' && (
-          <Background
-            variant={BackgroundVariant.Cross}
-            gap={20}
-            size={4}
-            color="var(--grid-line-color)"
-            lineWidth={0.5}
-            className="!transition-none"
-          />
-        )}
-        {/* gridStyle === 'none' renders no Background component */}
-        {/* Ambient canvas effects layer — lazy-loaded, decorative so no fallback needed */}
-        <Suspense fallback={null}>
-          <AmbientEffectLayer
-            settings={themeSettings.ambientEffect ?? DEFAULT_AMBIENT_EFFECT}
-            accentColor={themeSettings.guiColors?.accentPrimary}
-            accentSecondary={themeSettings.guiColors?.accentSecondary}
-            isDark={themeSettings.mode !== 'light'}
-          />
-        </Suspense>
-        {/* Controls (zoom +/-) removed — DS v3 chrome cleanup */}
-        <EmptyCanvasHint />
-        {!isMobile && minimapVisible && <CollapsibleMinimap />}
-        {/* ZoomIndicator + Fit View removed — V4 uses CanvasBadges ZoomBadge */}
-        <CanvasDistrictOverlay />
-        <SpatialRegionOverlay />
-        <ExecutionStatusOverlay />
-        <ContextScopeBadge />
-        <NodeHoverPreview />
-        {/* SessionReEntryPrompt disabled — removed per Stefan's request */}
-        {showCanvasTOC && <CanvasTableOfContents onClose={() => setShowCanvasTOC(false)} />}
-        {/* CognitiveLoadMeter hidden per Stefan's request */}
-        {!isMobile && showEdgeLegend && <EdgeGrammarLegend onClose={() => setShowEdgeLegend(false)} />}
-
-        {/* Snap alignment guide lines */}
-        {snapGuides.length > 0 && (
-          <svg
-            className="pointer-events-none absolute inset-0 overflow-visible"
-            style={{ zIndex: 999 }}
-          >
-            {snapGuides.map((guide, i) => {
-              const vp = viewportRef.current
-              if (guide.type === 'vertical') {
-                const sx = guide.position * vp.zoom + vp.x
-                const sy1 = guide.start * vp.zoom + vp.y
-                const sy2 = guide.end * vp.zoom + vp.y
-                return (
-                  <line
-                    key={i}
-                    x1={sx} y1={sy1} x2={sx} y2={sy2}
-                    stroke="var(--gui-accent-primary, #06b6d4)"
-                    strokeWidth={1}
-                    strokeDasharray="4 2"
-                    opacity={0.8}
-                  />
-                )
-              } else {
-                const sy = guide.position * vp.zoom + vp.y
-                const sx1 = guide.start * vp.zoom + vp.x
-                const sx2 = guide.end * vp.zoom + vp.x
-                return (
-                  <line
-                    key={i}
-                    x1={sx1} y1={sy} x2={sx2} y2={sy}
-                    stroke="var(--gui-accent-primary, #06b6d4)"
-                    strokeWidth={1}
-                    strokeDasharray="4 2"
-                    opacity={0.8}
-                  />
-                )
-              }
-            })}
-          </svg>
-        )}
-
-        </ReactFlow>
-        </ClickSpark>
-        </ErrorBoundary>
-
-        {/* Shift+drag edge creation preview line - positioned outside ReactFlow to avoid internal transforms */}
-        {shiftDragState.isActive && shiftDragState.sourcePosition && shiftDragState.cursorPosition && (() => {
-          const vp = getViewport()
-          const x1 = shiftDragState.sourcePosition.x * vp.zoom + vp.x
-          const y1 = shiftDragState.sourcePosition.y * vp.zoom + vp.y
-          const x2 = shiftDragState.cursorPosition.x * vp.zoom + vp.x
-          const y2 = shiftDragState.cursorPosition.y * vp.zoom + vp.y
-          return (
-            <svg
-              className="pointer-events-none absolute inset-0 overflow-visible"
-              style={{ zIndex: 1000 }}
-            >
-              <line
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
-                stroke={shiftDragState.isValidTarget ? 'var(--gui-success, #22c55e)' : 'var(--gui-accent-primary, #3b82f6)'}
-                strokeWidth={2}
-                strokeDasharray="6 4"
-                opacity={0.9}
-              />
-              {/* Target indicator circle */}
-              <circle
-                cx={x2}
-                cy={y2}
-                r={6}
-                fill={shiftDragState.isValidTarget ? 'var(--gui-success, #22c55e)' : shiftDragState.targetNodeId ? 'var(--gui-error, #ef4444)' : 'var(--gui-accent-primary, #3b82f6)'}
-                opacity={0.8}
-              />
-            </svg>
-          )
-        })()}
-
-        {/* Multiplayer: Remote cursors overlay */}
-        <UserCursors />
-
-        {/* Multiplayer: Connection status indicator */}
-        <div className="absolute top-2 right-2 gui-z-panels">
-          <ConnectionStatus />
-        </div>
-
-        {/* Multiplayer: Session expired modal */}
-        <SessionExpiredModal onClose={() => { /* Modal auto-hides when status changes */ }} />
-
-        {/* PFD Phase 6B: L0 cluster summary bubbles */}
-        <ClusterOverlay />
-
-        {/* PFD Phase 5B: Z-key zoom overlay */}
-        <ZoomOverlay />
-
-        {/* Task 27: Directional guide lines for keyboard navigation targets */}
-        {!isMobile && <DirectionalGuides />}
-
-        {/* Task 28: Contextual keyboard shortcut legend */}
-        {!isMobile && <KeyboardLegend />}
-
-        {/* FPS counter overlay (toggle with Ctrl+Shift+F) */}
-        {showFps && (
-          <div
-            ref={fpsElRef}
-            className="fixed bottom-4 left-1/2 -translate-x-1/2 gui-z-panels bg-black/70 text-green-400 px-2 py-1 text-xs font-mono rounded"
-          >
-            -- FPS
-          </div>
-        )}
-
-        {/* Quick-connect popup - appears when connection dropped on empty canvas */}
-        {quickConnectPopup && (
-          <div
-            ref={quickConnectRef}
-            className="fixed gui-z-modals"
-            style={{
-              left: Math.min(quickConnectPopup.screenPosition.x, window.innerWidth - 200),
-              top: Math.min(quickConnectPopup.screenPosition.y, window.innerHeight - 300)
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="min-w-[180px] gui-panel border gui-border rounded-lg shadow-xl py-1">
-              <div className="px-3 py-1.5 text-xs gui-text-secondary border-b gui-border">Create & Connect</div>
-              {([
-                { type: 'conversation' as const, icon: MessageSquare, label: 'Conversation' },
-                { type: 'note' as const, icon: FileText, label: 'Note' },
-                { type: 'task' as const, icon: CheckSquare, label: 'Task' },
-                { type: 'project' as const, icon: Folder, label: 'Project' },
-                { type: 'artifact' as const, icon: Code, label: 'Artifact' },
-                { type: 'workspace' as const, icon: Boxes, label: 'Workspace' },
-              ]).map(({ type, icon: Icon, label }) => (
-                <button
-                  key={type}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-sm gui-text hover:gui-panel-secondary rounded transition-colors"
-                  onClick={() => handleQuickConnectSelect(type)}
-                >
-                  <Icon className="w-4 h-4 gui-text-secondary" />
-                  {label}
-                </button>
-              ))}
+          {/* File drop overlay */}
+          {isDraggingFile && (
+            <div className="absolute inset-0 gui-z-panels bg-blue-500/10 border-4 border-dashed border-blue-500 flex items-center justify-center pointer-events-none">
+              <div
+                className="gui-panel px-8 py-6 rounded-lg text-center shadow-xl"
+                style={{ opacity: 0.95 }}
+              >
+                <FileText size={48} className="mx-auto mb-4 text-blue-400" />
+                <div className="text-xl font-semibold gui-text">Drop files to create artifacts</div>
+                <div className="gui-text-secondary mt-2">
+                  Supports code, markdown, images, JSON, and more
+                </div>
+              </div>
             </div>
+          )}
+
+          {/* Left sidebar — floating overlay inside canvas (V4) */}
+          <LeftSidebar />
+
+          {/* Command response panel — floating left panel for AI responses + agent log (V4.1) */}
+          {!(isMobile && !mobileResponsive) && <CommandResponsePanel />}
+
+          {/* Top bar — file ops, theme, AI sidebar toggle (V4) */}
+          <TopBar
+            onSave={handleSave}
+            onSaveAs={handleSaveAs}
+            onNew={handleNew}
+            onOpen={handleOpen}
+            onOpenThemeSettings={() => setShowThemeModal(true)}
+            onToggleAISidebar={() => setAiSidebarOpen((prev) => !prev)}
+            onOpenInlinePrompt={() => {
+              // Will route to BottomCommandBar in Task 12
+            }}
+          />
+
+          {/* Contextual action bar — Generate/Modify/Preview for selected nodes (V4.1) */}
+          {!isMobile && <ContextualActionBar />}
+
+          {/* Canvas status badges — zoom, selection, performance (V4) */}
+          {!(isMobile && !mobileResponsive) && <CanvasBadges />}
+
+          {/* Bottom Command Bar — V4 workspace-level natural language input */}
+          {!(isMobile && !mobileResponsive) && !showWelcome && !showFirstRunSetup && (
+            <BottomCommandBar />
+          )}
+
+          {/* First-Run Setup Gate — API key prompt for new desktop users */}
+          {showFirstRunSetup && (
+            <FirstRunSetup
+              onOpenSettings={() => {
+                setSettingsCategory('ai')
+                setShowSettingsModal(true)
+              }}
+            />
+          )}
+
+          {/* Welcome Screen — full-screen onboarding overlay with chat input */}
+          <WelcomeScreen
+            visible={showWelcome}
+            onComplete={async (savedInput) => {
+              // Dismiss welcome immediately — don't wait for nodes
+              setSessionDismissed(true)
+
+              // Mark first-run onboarding as done
+              const programState = useProgramStore.getState()
+              if (!programState.hasCompletedOnboarding) {
+                programState.completeOnboarding()
+              }
+
+              // Dispatch command
+              useUIStore.getState().setResponsePanelOpen(true)
+              useUIStore.getState().setPromptCollapsed(false)
+              try {
+                await executeCommand(savedInput)
+                const log = useWorkspaceStore.getState().commandLog
+                const latest = log[log.length - 1]
+                if (latest) {
+                  useUIStore.getState().setActiveCommandId(latest.id)
+                }
+              } catch (err) {
+                console.error('[Welcome] Failed to execute first command:', err)
+              }
+            }}
+          />
+
+          {/* Living Grid — cursor-responsive dot glow with magnetic attraction */}
+          {(themeSettings.livingGridEnabled ?? true) && <LivingGrid />}
+
+          {/* Particle Drift — gold particles flowing along edge paths */}
+          {(themeSettings.particleDriftEnabled ?? true) && (
+            <Suspense fallback={null}>
+              <ParticleDrift />
+            </Suspense>
+          )}
+
+          <ErrorBoundary componentName="Canvas">
+            <ClickSpark>
+              <ReactFlow
+                role="application"
+                aria-roledescription="spatial canvas"
+                aria-label="Cognograph workspace canvas"
+                className={`${semanticZoomClass} ${shiftDragState.isShiftHeld && !shiftDragState.isActive ? 'shift-drag-ready' : ''} ${shiftDragState.isActive ? 'shift-drag-active' : ''} ${focusModeNodeId ? 'focus-mode-active' : ''} ${contextVizActive ? 'context-viz-active' : ''} ${contextVizIsTerminal ? 'context-viz-terminal' : ''} ${inPlaceExpandedNodeId ? 'in-place-expansion-active' : ''} ${calmMode ? 'calm-mode-active' : ''}`}
+                nodes={filteredNodes}
+                edges={vizEdges}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={handleConnect}
+                onConnectStart={handleConnectStart}
+                onConnectEnd={handleConnectEnd}
+                onMoveStart={handleMoveStart}
+                onMoveEnd={handleMoveEnd}
+                onNodeDragStart={handleNodeDragStart}
+                onNodeDrag={handleNodeDrag}
+                onNodeDragStop={handleNodeDragStop}
+                onEdgeDoubleClick={handleEdgeDoubleClick}
+                onReconnect={handleReconnect}
+                edgesReconnectable={true}
+                reconnectRadius={20}
+                onPaneClick={handlePaneClick}
+                onContextMenu={demoMode || isTouch ? undefined : handleContextMenu}
+                {...(isTouch && !demoMode ? longPressHandlers : {})}
+                onSelectionChange={handleSelectionChange}
+                onNodeClick={handleNodeClick}
+                nodesConnectable={!demoMode}
+                fitView={!demoMode}
+                defaultViewport={demoMode ? { x: 50, y: 50, zoom: 0.28 } : undefined}
+                fitViewOptions={{
+                  padding: 0.2,
+                  maxZoom: 1.0, // Prevent over-zooming in tests (single nodes would zoom to 400%+)
+                }}
+                defaultEdgeOptions={{
+                  type: 'custom',
+                  animated: false,
+                }}
+                connectionLineType={ConnectionLineType.Bezier}
+                connectionMode={ConnectionMode.Loose}
+                deleteKeyCode={null}
+                selectionOnDrag={!isTouch}
+                selectionMode={isTouch ? SelectionMode.Full : SelectionMode.Partial}
+                panOnDrag={isTouch ? [0] : [1, 2]}
+                onViewportChange={(viewport) => {
+                  const prevZoom = viewportRef.current.zoom
+                  viewportRef.current = viewport
+                  ;(window as any).__cognograph_viewport = viewport
+                  const newZoom = viewport.zoom
+                  if (Math.abs(newZoom - lastIndicatorZoomRef.current) > 0.01) {
+                    lastIndicatorZoomRef.current = newZoom
+                    setIndicatorZoom(newZoom)
+                  }
+                  // Zoom perf tier — only compute when zoom actually changed (not on pan)
+                  if (newZoom !== prevZoom) {
+                    const prevTier = useWorkspaceStore.getState().zoomPerfTier ?? 'full'
+                    const newTier = computeZoomPerfTier(newZoom, prevTier)
+                    if (newTier !== prevTier) {
+                      useWorkspaceStore.setState({ zoomPerfTier: newTier })
+                      canvasContainerRef.current?.setAttribute('data-zoom-tier', newTier)
+                    }
+                  }
+                }}
+                selectNodesOnDrag={false}
+                multiSelectionKeyCode="Shift"
+                selectionKeyCode={null}
+                minZoom={0.1}
+                maxZoom={4}
+                proOptions={{ hideAttribution: true }}
+                style={{ background: themeSettings.canvasBackground }}
+              >
+                {/* Canvas grid — configurable via themeSettings.gridStyle */}
+                {(themeSettings.gridStyle ?? 'dots') === 'dots' && (
+                  <Background
+                    variant={BackgroundVariant.Dots}
+                    gap={20}
+                    size={1.5}
+                    color="var(--grid-dot-color)"
+                    className="!transition-none"
+                  />
+                )}
+                {themeSettings.gridStyle === 'hash' && (
+                  <Background
+                    variant={BackgroundVariant.Cross}
+                    gap={20}
+                    size={4}
+                    color="var(--grid-line-color)"
+                    lineWidth={0.5}
+                    className="!transition-none"
+                  />
+                )}
+                {/* gridStyle === 'none' renders no Background component */}
+                {/* Ambient canvas effects layer — lazy-loaded, decorative so no fallback needed */}
+                <Suspense fallback={null}>
+                  <AmbientEffectLayer
+                    settings={themeSettings.ambientEffect ?? DEFAULT_AMBIENT_EFFECT}
+                    accentColor={themeSettings.guiColors?.accentPrimary}
+                    accentSecondary={themeSettings.guiColors?.accentSecondary}
+                    isDark={themeSettings.mode !== 'light'}
+                  />
+                </Suspense>
+                {/* Controls (zoom +/-) removed — DS v3 chrome cleanup */}
+                {/* EmptyCanvasHint removed — WelcomeScreen is the empty-canvas state */}
+                {!isMobile && minimapVisible && <CollapsibleMinimap />}
+                {/* ZoomIndicator + Fit View removed — V4 uses CanvasBadges ZoomBadge */}
+                <CanvasDistrictOverlay />
+                <SpatialRegionOverlay />
+                <ExecutionStatusOverlay />
+                <ContextScopeBadge />
+                <NodeHoverPreview />
+                {/* SessionReEntryPrompt disabled — removed per Stefan's request */}
+                {showCanvasTOC && <CanvasTableOfContents onClose={() => setShowCanvasTOC(false)} />}
+                {/* CognitiveLoadMeter hidden per Stefan's request */}
+                {!isMobile && showEdgeLegend && (
+                  <EdgeGrammarLegend onClose={() => setShowEdgeLegend(false)} />
+                )}
+
+                {/* Snap alignment guide lines */}
+                {snapGuides.length > 0 && (
+                  <svg
+                    className="pointer-events-none absolute inset-0 overflow-visible"
+                    style={{ zIndex: 999 }}
+                  >
+                    {snapGuides.map((guide, i) => {
+                      const vp = viewportRef.current
+                      if (guide.type === 'vertical') {
+                        const sx = guide.position * vp.zoom + vp.x
+                        const sy1 = guide.start * vp.zoom + vp.y
+                        const sy2 = guide.end * vp.zoom + vp.y
+                        return (
+                          <line
+                            key={i}
+                            x1={sx}
+                            y1={sy1}
+                            x2={sx}
+                            y2={sy2}
+                            stroke="var(--gui-accent-primary, #06b6d4)"
+                            strokeWidth={1}
+                            strokeDasharray="4 2"
+                            opacity={0.8}
+                          />
+                        )
+                      } else {
+                        const sy = guide.position * vp.zoom + vp.y
+                        const sx1 = guide.start * vp.zoom + vp.x
+                        const sx2 = guide.end * vp.zoom + vp.x
+                        return (
+                          <line
+                            key={i}
+                            x1={sx1}
+                            y1={sy}
+                            x2={sx2}
+                            y2={sy}
+                            stroke="var(--gui-accent-primary, #06b6d4)"
+                            strokeWidth={1}
+                            strokeDasharray="4 2"
+                            opacity={0.8}
+                          />
+                        )
+                      }
+                    })}
+                  </svg>
+                )}
+              </ReactFlow>
+            </ClickSpark>
+          </ErrorBoundary>
+
+          {/* Shift+drag edge creation preview line - positioned outside ReactFlow to avoid internal transforms */}
+          {shiftDragState.isActive &&
+            shiftDragState.sourcePosition &&
+            shiftDragState.cursorPosition &&
+            (() => {
+              const vp = getViewport()
+              const x1 = shiftDragState.sourcePosition.x * vp.zoom + vp.x
+              const y1 = shiftDragState.sourcePosition.y * vp.zoom + vp.y
+              const x2 = shiftDragState.cursorPosition.x * vp.zoom + vp.x
+              const y2 = shiftDragState.cursorPosition.y * vp.zoom + vp.y
+              return (
+                <svg
+                  className="pointer-events-none absolute inset-0 overflow-visible"
+                  style={{ zIndex: 1000 }}
+                >
+                  <line
+                    x1={x1}
+                    y1={y1}
+                    x2={x2}
+                    y2={y2}
+                    stroke={
+                      shiftDragState.isValidTarget
+                        ? 'var(--gui-success, #22c55e)'
+                        : 'var(--gui-accent-primary, #3b82f6)'
+                    }
+                    strokeWidth={2}
+                    strokeDasharray="6 4"
+                    opacity={0.9}
+                  />
+                  {/* Target indicator circle */}
+                  <circle
+                    cx={x2}
+                    cy={y2}
+                    r={6}
+                    fill={
+                      shiftDragState.isValidTarget
+                        ? 'var(--gui-success, #22c55e)'
+                        : shiftDragState.targetNodeId
+                          ? 'var(--gui-error, #ef4444)'
+                          : 'var(--gui-accent-primary, #3b82f6)'
+                    }
+                    opacity={0.8}
+                  />
+                </svg>
+              )
+            })()}
+
+          {/* Multiplayer: Remote cursors overlay */}
+          <UserCursors />
+
+          {/* Multiplayer: Connection status indicator */}
+          <div className="absolute top-2 right-2 gui-z-panels">
+            <ConnectionStatus />
           </div>
-        )}
 
-        <Toolbar
-          onSave={handleSave}
-          onSaveAs={handleSaveAs}
-          onNew={handleNew}
-          onOpen={handleOpen}
-          onToggleAISidebar={() => setAiSidebarOpen(prev => !prev)}
-          onOpenInlinePrompt={() => {
-            // V4: Will route to BottomCommandBar in Task 12
-          }}
-          onOpenThemeSettings={() => setShowThemeModal(true)}
-        />
+          {/* Multiplayer: Session expired modal */}
+          <Suspense fallback={null}>
+            <SessionExpiredModal
+              onClose={() => {
+                /* Modal auto-hides when status changes */
+              }}
+            />
+          </Suspense>
 
-        {/* Alignment toolbar - shows when multiple nodes selected */}
-        {!isMobile && <AlignmentToolbar />}
+          {/* PFD Phase 6B: L0 cluster summary bubbles */}
+          <ClusterOverlay />
 
-        {/* Clipboard indicator - shows when nodes are cut/copied */}
-        <ClipboardIndicator />
+          {/* PFD Phase 5B: Z-key zoom overlay */}
+          <ZoomOverlay />
 
-        {/* Offline status indicator */}
-        <OfflineIndicatorCompact />
+          {/* Task 27: Directional guide lines for keyboard navigation targets */}
+          {!isMobile && <DirectionalGuides />}
 
-        {/* Spatial extraction system - floating panel and drag preview */}
-        <ExtractionPanel />
-        <ExtractionDragPreview />
+          {/* Task 28: Contextual keyboard shortcut legend */}
+          {!isMobile && <KeyboardLegend />}
 
-        {/* Bottom-left controls removed — FilterViewDropdown moved to CanvasBadges FilterBadge (V4) */}
+          {/* FPS counter overlay (toggle with Ctrl+Shift+F) */}
+          {showFps && (
+            <div
+              ref={fpsElRef}
+              className="fixed bottom-4 left-1/2 -translate-x-1/2 gui-z-panels bg-black/70 text-green-400 px-2 py-1 text-xs font-mono rounded"
+            >
+              -- FPS
+            </div>
+          )}
 
-        {/* Focus mode indicator - shows when in focus mode */}
-        {!isMobile && <FocusModeIndicator />}
+          {/* Quick-connect popup - appears when connection dropped on empty canvas */}
+          {quickConnectPopup && (
+            <div
+              ref={quickConnectRef}
+              className="fixed gui-z-modals"
+              style={{
+                left: Math.min(quickConnectPopup.screenPosition.x, window.innerWidth - 200),
+                top: Math.min(quickConnectPopup.screenPosition.y, window.innerHeight - 300),
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <div className="min-w-[180px] gui-panel border gui-border rounded-lg shadow-xl py-1">
+                <div className="px-3 py-1.5 text-xs gui-text-secondary border-b gui-border">
+                  Create & Connect
+                </div>
+                {[
+                  { type: 'conversation' as const, icon: MessageSquare, label: 'Conversation' },
+                  { type: 'note' as const, icon: FileText, label: 'Note' },
+                  { type: 'task' as const, icon: CheckSquare, label: 'Task' },
+                  { type: 'project' as const, icon: Folder, label: 'Project' },
+                  { type: 'artifact' as const, icon: Code, label: 'Artifact' },
+                  { type: 'workspace' as const, icon: Boxes, label: 'Workspace' },
+                ].map(({ type, icon: Icon, label }) => (
+                  <button
+                    key={type}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm gui-text hover:gui-panel-secondary rounded transition-colors"
+                    onClick={() => handleQuickConnectSelect(type)}
+                  >
+                    <Icon className="w-4 h-4 gui-text-secondary" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-        {/* Undo history panel - shows action history, press Alt+H to toggle */}
-        <UndoHistoryPanel isOpen={showUndoHistory} onClose={() => setShowUndoHistory(false)} />
+          <Toolbar
+            onSave={handleSave}
+            onSaveAs={handleSaveAs}
+            onNew={handleNew}
+            onOpen={handleOpen}
+            onToggleAISidebar={() => setAiSidebarOpen((prev) => !prev)}
+            onOpenInlinePrompt={() => {
+              // V4: Will route to BottomCommandBar in Task 12
+            }}
+            onOpenThemeSettings={() => setShowThemeModal(true)}
+          />
 
-        {/* Trash panel - shows deleted nodes, press Alt+T to toggle */}
-        <TrashPanel isOpen={showTrash} onClose={() => setShowTrash(false)} />
+          {/* Alignment toolbar - shows when multiple nodes selected */}
+          {!isMobile && <AlignmentToolbar />}
 
-        {/* Archive panel - shows archived nodes, press Alt+A to toggle */}
-        <ArchivePanel isOpen={showArchive} onClose={() => setShowArchive(false)} />
+          {/* Clipboard indicator - shows when nodes are cut/copied */}
+          <ClipboardIndicator />
 
-        {/* Saved views panel - quick context switching, press Alt+V to toggle */}
-        <SavedViewsPanel isOpen={showSavedViews} onClose={() => setShowSavedViews(false)} />
+          {/* Offline status indicator */}
+          <OfflineIndicatorCompact />
 
-        {/* Timeline view - time-based node browsing, press Alt+L to toggle */}
-        <TimelineView isOpen={showTimeline} onClose={() => setShowTimeline(false)} />
+          {/* Spatial extraction system - floating panel and drag preview */}
+          <ExtractionPanel />
+          <ExtractionDragPreview />
 
-        {/* Keyboard shortcuts help overlay - press ? to open */}
-        <KeyboardShortcutsHelp />
+          {/* Bottom-left controls removed — FilterViewDropdown moved to CanvasBadges FilterBadge (V4) */}
 
-        {/* Progress indicator - shows long-running operations */}
-        <ProgressIndicator />
+          {/* Focus mode indicator - shows when in focus mode */}
+          {!(isMobile && !mobileResponsive) && <FocusModeIndicator />}
 
-        {/* Workspace info display - DISABLED (causing dark bar bug) */}
-        {/* <WorkspaceInfo
+          {/* Lazy-loaded panels — only loaded when user opens them (PERF-BUNDLE) */}
+          <Suspense fallback={null}>
+            {/* Undo history panel - shows action history, press Alt+H to toggle */}
+            <UndoHistoryPanel isOpen={showUndoHistory} onClose={() => setShowUndoHistory(false)} />
+
+            {/* Trash panel - shows deleted nodes, press Alt+T to toggle */}
+            <TrashPanel isOpen={showTrash} onClose={() => setShowTrash(false)} />
+
+            {/* Archive panel - shows archived nodes, press Alt+A to toggle */}
+            <ArchivePanel isOpen={showArchive} onClose={() => setShowArchive(false)} />
+
+            {/* Saved views panel - quick context switching, press Alt+V to toggle */}
+            <SavedViewsPanel isOpen={showSavedViews} onClose={() => setShowSavedViews(false)} />
+
+            {/* Timeline view - time-based node browsing, press Alt+L to toggle */}
+            <TimelineView isOpen={showTimeline} onClose={() => setShowTimeline(false)} />
+
+            {/* Keyboard shortcuts help overlay - press ? to open */}
+            <KeyboardShortcutsHelp />
+          </Suspense>
+
+          {/* Progress indicator - shows long-running operations */}
+          <ProgressIndicator />
+
+          {/* Workspace info display - DISABLED (causing dark bar bug) */}
+          {/* <WorkspaceInfo
           hasPropertiesPanel={selectedNodeIds.length > 0 && selectedEdgeIds.length === 0 && workspacePreferences.propertiesDisplayMode === 'sidebar'}
           propertiesPanelWidth={workspacePreferences.propertiesSidebarWidth}
         /> */}
 
-        {/* Side panels container — floating glass overlay (V4) */}
-        {!isMobile && (
-          <>
-            {/* Node Properties panel - float like left sidebar */}
-            {selectedNodeIds.length > 0 && selectedEdgeIds.length === 0 && workspacePreferences.propertiesDisplayMode === 'sidebar' && (
-              <div className="right-panel-float glass-soft pointer-events-auto">
-                <ResizablePropertiesPanel
-                  width={workspacePreferences.propertiesSidebarWidth}
-                  onWidthChange={setPropertiesSidebarWidth}
-                />
+          {/* Side panels container — floating glass overlay (V4) */}
+          {!isMobile && (
+            <>
+              {/* Node Properties panel - float like left sidebar */}
+              {selectedNodeIds.length > 0 &&
+                selectedEdgeIds.length === 0 &&
+                workspacePreferences.propertiesDisplayMode === 'sidebar' && (
+                  <div className="right-panel-float glass-soft pointer-events-auto">
+                    <ResizablePropertiesPanel
+                      width={workspacePreferences.propertiesSidebarWidth}
+                      onWidthChange={setPropertiesSidebarWidth}
+                    />
+                  </div>
+                )}
+
+              {/* Connection Properties panel */}
+              {selectedEdgeIds.length > 0 && selectedNodeIds.length === 0 && selectedEdgeIds[0] && (
+                <div className="right-panel-float glass-soft pointer-events-auto">
+                  <ConnectionPropertiesPanel edgeId={selectedEdgeIds[0]} onClose={clearSelection} />
+                </div>
+              )}
+
+              {/* Theme Settings Modal */}
+              <Suspense fallback={null}>
+                <ThemeSettingsModal open={showThemeModal} onOpenChange={setShowThemeModal} />
+              </Suspense>
+            </>
+          )}
+
+          {/* Mobile: PropertiesPanel as bottom sheet */}
+          {isMobile &&
+            mobileResponsive &&
+            selectedNodeIds.length > 0 &&
+            selectedEdgeIds.length === 0 &&
+            workspacePreferences.propertiesDisplayMode === 'sidebar' && (
+              <div className="mobile-properties-sheet glass-soft pointer-events-auto">
+                <div className="mobile-command-sheet__handle" />
+                <PropertiesPanel compact />
               </div>
             )}
 
-            {/* Connection Properties panel */}
-            {selectedEdgeIds.length > 0 && selectedNodeIds.length === 0 && selectedEdgeIds[0] && (
-              <div className="right-panel-float glass-soft pointer-events-auto">
-                <ConnectionPropertiesPanel
-                  edgeId={selectedEdgeIds[0]}
-                  onClose={clearSelection}
-                />
-              </div>
-            )}
+          {/* Mobile: Theme Settings still renders (it's a modal) */}
+          {isMobile && mobileResponsive && (
+            <Suspense fallback={null}>
+              <ThemeSettingsModal open={showThemeModal} onOpenChange={setShowThemeModal} />
+            </Suspense>
+          )}
 
-            {/* Theme Settings Modal */}
-            <ThemeSettingsModal
-              open={showThemeModal}
-              onOpenChange={setShowThemeModal}
-            />
-          </>
-        )}
-
-        <Toaster
-          position="bottom-right"
-          toastOptions={{
-            className: '!bg-[var(--gui-panel-bg)] !text-[var(--gui-text-primary)] !border !border-[var(--gui-border)]',
-            duration: 3000
-          }}
-        />
-        <SciFiToast />
-        <TokenIndicator />
-
-        {/* Template System Modals */}
-        <SaveTemplateModal />
-        <PasteTemplateModal />
-        <TemplateBrowser />
-
-        {/* Context Menu */}
-        {!demoMode && <ContextMenu />}
-
-        {/* Floating Properties Modals (supports multiple pinned modals) */}
-        {floatingPropertiesNodeIds.map((nodeId, index) => (
-          <FloatingPropertiesModal key={nodeId} nodeId={nodeId} index={index} />
-        ))}
-
-        {/* Pinned Windows (nodes popped out as floating windows) */}
-        <PinnedWindowsContainer />
-
-        {/* Artboard Mode — full-viewport editing overlay (Cmd/Ctrl+Enter) */}
-        <ArtboardOverlay />
-        <FocusModeHint />
-
-        <WorkflowProgress />
-
-        {/* InlinePrompt removed — V4 uses BottomCommandBar */}
-
-        {/* AI Editor SelectionActionBar (Tab with multiple nodes selected) */}
-        {!demoMode && selectionActionBarOpen && selectedNodeIds.length > 1 && (
-          <SelectionActionBar
-            selectedNodeIds={selectedNodeIds}
-            position={selectionActionBarPosition}
-            onClose={() => setSelectionActionBarOpen(false)}
+          <Toaster
+            position="bottom-right"
+            toastOptions={{
+              className:
+                '!bg-[var(--gui-panel-bg)] !text-[var(--gui-text-primary)] !border !border-[var(--gui-border)]',
+              duration: 3000,
+            }}
           />
-        )}
+          <SciFiToast />
+          <TokenIndicator />
 
-        {/* AI Sidebar (Ctrl+Shift+A) */}
-        {!demoMode && <AISidebar
-          isOpen={aiSidebarOpen}
-          onClose={() => setAiSidebarOpen(false)}
-        />}
+          {/* Template System Modals (lazy-loaded — PERF-BUNDLE) */}
+          <Suspense fallback={null}>
+            <SaveTemplateModal />
+            <PasteTemplateModal />
+            <TemplateBrowser />
+          </Suspense>
 
-        {/* Command Palette */}
-        <CommandPalette isOpen={isCommandPaletteOpen} onClose={closePalette} />
+          {/* Context Menu */}
+          {!demoMode && <ContextMenu />}
 
-        {/* Settings Modal */}
-        <SettingsModal isOpen={showSettingsModal} onClose={() => { setShowSettingsModal(false); setSettingsCategory(undefined) }} defaultCategory={settingsCategory as any} />
+          {/* Floating Properties Modals (supports multiple pinned modals) */}
+          <Suspense fallback={null}>
+            {floatingPropertiesNodeIds.map((nodeId, index) => (
+              <FloatingPropertiesModal key={nodeId} nodeId={nodeId} index={index} />
+            ))}
+          </Suspense>
 
-        {/* Export Dialog (Electron only — uses native file dialog) */}
-        {(window as any).__ELECTRON__ && (
-          <ExportDialog isOpen={showExportDialog} onClose={() => setShowExportDialog(false)} />
-        )}
+          {/* Pinned Windows (nodes popped out as floating windows) */}
+          <PinnedWindowsContainer />
 
-        {/* Template Picker */}
-        {!demoMode && <TemplatePicker isOpen={showTemplatePicker} onClose={() => setShowTemplatePicker(false)} />}
+          {/* Artboard Mode — full-viewport editing overlay (Cmd/Ctrl+Enter) */}
+          <ArtboardOverlay />
+          <FocusModeHint />
 
-        {/* Workspace Manager (web only) */}
-        {isWeb && (
+          <Suspense fallback={null}>
+            <WorkflowProgress />
+          </Suspense>
+
+          {/* InlinePrompt removed — V4 uses BottomCommandBar */}
+
+          {/* AI Editor SelectionActionBar (Tab with multiple nodes selected) */}
+          {!demoMode && selectionActionBarOpen && selectedNodeIds.length > 1 && (
+            <Suspense fallback={null}>
+              <SelectionActionBar
+                selectedNodeIds={selectedNodeIds}
+                position={selectionActionBarPosition}
+                onClose={() => setSelectionActionBarOpen(false)}
+              />
+            </Suspense>
+          )}
+
+          {/* AI Sidebar (Ctrl+Shift+A) */}
+          {!demoMode && (
+            <Suspense fallback={null}>
+              <AISidebar isOpen={aiSidebarOpen} onClose={() => setAiSidebarOpen(false)} />
+            </Suspense>
+          )}
+
+          {/* Command Palette */}
+          <Suspense fallback={null}>
+            <CommandPalette isOpen={isCommandPaletteOpen} onClose={closePalette} />
+          </Suspense>
+
+          {/* Settings Modal */}
+          <Suspense fallback={null}>
+            <SettingsModal
+              isOpen={showSettingsModal}
+              onClose={() => {
+                setShowSettingsModal(false)
+                setSettingsCategory(undefined)
+              }}
+              defaultCategory={settingsCategory as any}
+            />
+          </Suspense>
+
+          {/* Export Dialog (Electron only — uses native file dialog) */}
+          {(window as any).__ELECTRON__ && (
+            <Suspense fallback={null}>
+              <ExportDialog isOpen={showExportDialog} onClose={() => setShowExportDialog(false)} />
+            </Suspense>
+          )}
+
+          {/* Template Picker */}
+          {!demoMode && (
+            <Suspense fallback={null}>
+              <TemplatePicker
+                isOpen={showTemplatePicker}
+                onClose={() => setShowTemplatePicker(false)}
+              />
+            </Suspense>
+          )}
+
+          {/* Workspace Manager */}
           <WorkspaceManager
             isOpen={showWorkspaceManager}
             onClose={() => setShowWorkspaceManager(false)}
           />
-        )}
 
-        {/* Welcome Overlay - DISABLED: replaced by default onboarding workspace (spec 2026-03-27) */}
-        {/* {!isWeb && <WelcomeOverlay onOpenSettings={() => { setSettingsCategory('ai'); setShowSettingsModal(true) }} />} */}
+          {/* Welcome Overlay - DISABLED: replaced by default onboarding workspace (spec 2026-03-27) */}
+          {/* {!isWeb && <WelcomeOverlay onOpenSettings={() => { setSettingsCategory('ai'); setShowSettingsModal(true) }} />} */}
 
-        {/* Command Bar (Phase 4) - TEMPORARILY DISABLED FOR DEBUGGING */}
-        {/* <CommandBar /> */}
+          {/* Command Bar (Phase 4) - TEMPORARILY DISABLED FOR DEBUGGING */}
+          {/* <CommandBar /> */}
 
-        {/* Splash Screen */}
-        <AnimatePresence>
-          {!isReady && <SplashScreen />}
-        </AnimatePresence>
-      </div>
+          {/* Splash Screen */}
+          <AnimatePresence>{!isReady && <SplashScreen />}</AnimatePresence>
+        </div>
 
-      {/* AI Editor Modal and Preview - Outside flex container for guaranteed fixed positioning */}
-      {!demoMode && <AIEditorModal />}
-      {isAIEditorOpen && <AIEditorPreview />}
+        {/* AI Editor Modal and Preview - Outside flex container for guaranteed fixed positioning */}
+        <Suspense fallback={null}>
+          {!demoMode && <AIEditorModal />}
+          {isAIEditorOpen && <AIEditorPreview />}
+        </Suspense>
       </div>
     </div>
   )
@@ -3491,6 +3923,10 @@ function App(): JSX.Element {
             <BridgeStatusBar />
           </InlineErrorBoundary>
         )}
+        {/* Advanced notification surface — priority queue, duplicate folding, jump-to-error */}
+        <InlineErrorBoundary name="NotificationToast">
+          <NotificationToast />
+        </InlineErrorBoundary>
       </SyncProviderWrapper>
     </TooltipProvider>
   )

@@ -33,15 +33,19 @@ const pluginTabs: RegisteredTab[] = []
 export async function initRendererPlugins(): Promise<void> {
   // Validate renderer IDs match registered main-process plugins.
   // Uses a dedicated IPC channel (not plugin:call) to avoid regex validation issues.
-  try {
-    const enabledIds = await window.api.plugins.getEnabledIds() as string[]
-    for (const { id } of rendererEntries) {
-      if (!enabledIds.includes(id)) {
-        console.warn(`[plugin-renderer] Plugin '${id}' registered in renderer but not found in main process`)
+  // Skip validation in web mode — there is no main process.
+  const isWeb = import.meta.env.VITE_BUILD_TARGET === 'web'
+  if (!isWeb) {
+    try {
+      const enabledIds = await window.api.plugins.getEnabledIds() as string[]
+      for (const { id } of rendererEntries) {
+        if (!enabledIds.includes(id)) {
+          console.warn(`[plugin-renderer] Plugin '${id}' registered in renderer but not found in main process`)
+        }
       }
+    } catch {
+      // Skip validation in tests or if channel not registered
     }
-  } catch {
-    // Skip validation in tests or if channel not registered
   }
 
   for (const { id, renderer } of rendererEntries) {

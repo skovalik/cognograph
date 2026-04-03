@@ -60,11 +60,46 @@ export interface ActiveTooltip {
   nodeId?: string
 }
 
+// ---------------------------------------------------------------------------
+// Per-hint show cap (localStorage)
+// ---------------------------------------------------------------------------
+
+export const HINT_CAP_STORAGE_KEY = 'cognograph.onboarding-hint-counts'
+export const MAX_SHOWS_PER_HINT = 4
+
+/** Read per-hint show counts from localStorage. */
+export function getHintShowCounts(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(HINT_CAP_STORAGE_KEY)
+    return raw ? (JSON.parse(raw) as Record<string, number>) : {}
+  } catch {
+    return {}
+  }
+}
+
+/** Increment the show count for a hint and persist to localStorage. */
+export function incrementHintShowCount(hintId: string): void {
+  const counts = getHintShowCounts()
+  counts[hintId] = (counts[hintId] || 0) + 1
+  try {
+    localStorage.setItem(HINT_CAP_STORAGE_KEY, JSON.stringify(counts))
+  } catch {
+    // Storage full — non-critical
+  }
+}
+
+/** Check if a hint has been shown fewer than MAX_SHOWS_PER_HINT times. */
+export function isHintUnderCap(hintId: string): boolean {
+  const counts = getHintShowCounts()
+  return (counts[hintId] || 0) < MAX_SHOWS_PER_HINT
+}
+
 /**
  * Hook that monitors workspace changes and triggers contextual onboarding tooltips.
  *
  * Returns the currently active tooltip (if any) and a dismiss function.
  * Only one tooltip is shown at a time. Tooltips auto-dismiss after 8 seconds.
+ * Each hint is shown at most MAX_SHOWS_PER_HINT (4) times across sessions.
  */
 export function useOnboardingTooltips(): {
   activeTooltip: ActiveTooltip | null
@@ -84,6 +119,10 @@ export function useOnboardingTooltips(): {
     if (autoDismissTimerRef.current) {
       clearTimeout(autoDismissTimerRef.current)
       autoDismissTimerRef.current = null
+    }
+    // Track show count for per-hint cap
+    if (tooltip) {
+      incrementHintShowCount(tooltip.id)
     }
     // Set auto-dismiss timer for 8 seconds
     if (tooltip) {
@@ -135,7 +174,7 @@ export function useOnboardingTooltips(): {
     const dismissed = new Set(dismissedTooltips)
 
     function shouldShow(id: string): boolean {
-      return !dismissed.has(id) && activeTooltipRef.current === null
+      return !dismissed.has(id) && activeTooltipRef.current === null && isHintUnderCap(id)
     }
 
     function getNodeScreenPosition(nodeId: string): { x: number; y: number } | null {

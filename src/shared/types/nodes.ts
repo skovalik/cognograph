@@ -620,7 +620,7 @@ export interface TextNodeData extends ContextMetadata {
 // Orchestrator Types
 // -----------------------------------------------------------------------------
 
-export type OrchestratorStrategy = 'sequential' | 'parallel' | 'conditional'
+export type OrchestratorStrategy = 'sequential' | 'parallel' | 'conditional' | 'coordinator'
 
 export type FailurePolicyType = 'retry-and-continue' | 'skip-failed' | 'abort-all'
 
@@ -689,6 +689,8 @@ export type ConnectedAgentStatus =
 export interface ConnectedAgent {
   /** Node ID of the conversation node in agent mode */
   nodeId: string
+  /** Edge ID linking this agent to the orchestrator (for result storage) */
+  edgeId?: string
   /** Execution order for sequential strategy (0-based). Ignored for parallel. */
   order: number
   /** Optional prompt override injected into the agent's context */
@@ -701,6 +703,12 @@ export interface ConnectedAgent {
   retryCount: number
   /** Last error message if status is 'failed' */
   lastError?: string
+  /** Whitelist: if set, only these tools are available to the agent */
+  tools?: string[]
+  /** Blacklist: if set, these tools are excluded (ignored when `tools` is set) */
+  disallowedTools?: string[]
+  /** If true, only tools with isReadOnly=true are available */
+  readOnly?: boolean
 }
 
 export interface OrchestratorAgentResult {
@@ -757,6 +765,8 @@ export interface OrchestratorRun {
   workspaceId?: string
   /** Model used for this run (extracted from first agent config) */
   model?: string
+  /** Edge results from coordinator strategy — keyed by edgeId */
+  edgeResults?: Record<string, import('./edges').AgentEdgeResult>
 }
 
 export interface OrchestratorNodeData extends ContextMetadata {

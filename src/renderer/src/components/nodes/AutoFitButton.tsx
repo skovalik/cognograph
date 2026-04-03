@@ -12,7 +12,7 @@ import { memo, useCallback } from 'react'
 import { Maximize2 } from 'lucide-react'
 import { useUpdateNodeInternals } from '@xyflow/react'
 import { useNodesStore, useHistoryStore } from '../../stores'
-import { calculateAutoFitDimensions, AUTO_FIT_CONSTRAINTS } from '../../utils/nodeUtils'
+import { calculateAutoFitDimensions, AUTO_FIT_CONSTRAINTS } from '../../utils/textMeasure'
 import { toast } from 'react-hot-toast'
 
 interface AutoFitButtonProps {

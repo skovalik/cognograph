@@ -6,9 +6,9 @@
 // =============================================================================
 // Button to trigger AI-assisted configuration
 
-import { memo, useState, useCallback, useMemo } from 'react'
+import { memo, useState, useCallback, useMemo, lazy, Suspense } from 'react'
 import { Wand2 } from 'lucide-react'
-import { AIConfigModal } from './AIConfigModal'
+const AIConfigModal = lazy(() => import('./AIConfigModal').then(m => ({ default: m.AIConfigModal })))
 import type {
   ActionNodeData,
   ActionTrigger,
@@ -175,15 +175,17 @@ function AIConfigButtonComponent({
       </button>
 
       {isModalOpen && (
-        <AIConfigModal
-          nodeId={nodeId}
-          data={data}
-          description={description}
-          context={context}
-          onApply={handleApplyConfig}
-          onApplyAndRun={handleApplyAndRunConfig}
-          onClose={handleCloseModal}
-        />
+        <Suspense fallback={null}>
+          <AIConfigModal
+            nodeId={nodeId}
+            data={data}
+            description={description}
+            context={context}
+            onApply={handleApplyConfig}
+            onApplyAndRun={handleApplyAndRunConfig}
+            onClose={handleCloseModal}
+          />
+        </Suspense>
       )}
     </>
   )

@@ -140,6 +140,27 @@
   border-color: var(--ring-color, var(--cg-accent));
 }
 
+/* ═══ KEYBOARD FOCUS RING (Phase 4B UX-A11Y) ═══ */
+/* Visible focus ring on selected nodes during keyboard navigation.
+   Only shown when [data-keyboard-nav] is set on <html> (set by useSpatialNavigation).
+   Hidden during mouse interaction to avoid visual noise. */
+[data-keyboard-nav="true"] .react-flow__node.selected .cognograph-node {
+  outline: 2px solid var(--selection-color, #3b82f6);
+  outline-offset: 2px;
+}
+
+/* High contrast mode: thicker focus ring */
+[data-high-contrast-focus="true"][data-keyboard-nav="true"] .react-flow__node.selected .cognograph-node {
+  outline-width: 3px;
+  outline-offset: 3px;
+}
+
+/* Ensure focus ring works on text nodes too (different class structure) */
+[data-keyboard-nav="true"] .react-flow__node.selected .text-node {
+  outline: 2px solid var(--selection-color, #3b82f6);
+  outline-offset: 2px;
+}
+
 /* ═══ ACTIVITY INDICATOR ═══ */
 /* Vertical gradient progress bar on left edge — appears only when node is active/thinking.
    Left border is RESERVED for this system — no other feature should use border-left on nodes.
@@ -1687,6 +1708,7 @@
 .note-node--lod-close .cognograph-node__body {
   opacity: 1;
   max-height: none;
+  overflow: auto;
 }
 
 .note-node--lod-close .cognograph-node__footer {
@@ -1701,6 +1723,7 @@
 .note-node--lod-ultra-close .cognograph-node__body {
   opacity: 1;
   max-height: none;
+  overflow: auto;
 }
 
 .note-node--lod-ultra-close .cognograph-node__footer {
@@ -3371,6 +3394,21 @@
    Individual @media (prefers-reduced-motion) blocks above handle specific cases;
    this is the nuclear option that catches everything else.
    ============================================================================= */
+
+/* ═══ Mobile touch targets — handles visible on selected (tapped) nodes ═══ */
+@media (max-width: 767px) {
+  /* Increase handle hit area to 44px for touch */
+  .cognograph-node .react-flow__handle::before {
+    width: 44px;
+    height: 44px;
+  }
+  /* Show handles when a node is selected (tapped), not just on hover */
+  .cognograph-node.selected .react-flow__handle {
+    opacity: 1;
+    pointer-events: auto;
+    transform: var(--handle-translate) scale(1);
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *,

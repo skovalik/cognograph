@@ -130,12 +130,14 @@ export type {
   EdgeWaypoint,
   EdgeStrength,
   EdgeSemanticType,
+  AgentEdgeResult,
   EdgeData,
   EdgeLabelPreset,
   EdgeStyle,
 } from './edges'
 
 export {
+  AGENT_RESULT_SUMMARY_MAX_CHARS,
   DEFAULT_EDGE_DATA,
   migrateEdgeStrength,
   getContextDepthFromStrength,

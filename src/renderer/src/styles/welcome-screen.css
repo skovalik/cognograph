@@ -1,0 +1,169 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
+/* Copyright (C) 2026 Stefan Kovalik / Aurochs Digital */
+/* =============================================================================
+   WELCOME SCREEN — Full-screen overlay with centered chat input
+   Morphs to BottomCommandBar position on first interaction
+   ============================================================================= */
+
+/* ═══ Overlay container ═══ */
+.welcome-screen {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modals);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* ═══ Backdrop ═══ */
+.welcome-screen__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ═══ Content area ═══ */
+.welcome-screen__content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 640px;
+  gap: 24px;
+}
+
+/* ═══ Heading ═══ */
+.welcome-screen__heading {
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(32px, 5vw, 48px);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--text-primary);
+  text-align: center;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.welcome-screen__heading span {
+  color: var(--accent-glow);
+}
+
+/* ═══ Intro text ═══ */
+.welcome-screen__intro {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ═══ Input container — glass ═══ */
+.welcome-screen__input-container {
+  width: 100%;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 12px)) saturate(1.2);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* ═══ Textarea ═══ */
+.welcome-screen__input {
+  width: 100%;
+  min-height: 80px;
+  padding: 16px 20px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  resize: none;
+  box-sizing: border-box;
+}
+
+.welcome-screen__input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ═══ Input footer ═══ */
+.welcome-screen__input-footer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-top: 1px solid var(--glass-border);
+}
+
+/* ═══ Submit button ═══ */
+.welcome-screen__submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent-glow);
+  color: var(--surface-canvas);
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.welcome-screen__submit:hover:not(:disabled) {
+  opacity: 0.85;
+  transform: scale(1.05);
+}
+
+.welcome-screen__submit:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* ═══ Hint text ═══ */
+.welcome-screen__hint {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ═══ Mobile responsive ═══ */
+@media (max-width: 767px) {
+  .welcome-screen__content {
+    padding: 24px 16px;
+  }
+  .welcome-screen__heading {
+    font-size: 24px;
+  }
+  .welcome-screen__input-container {
+    width: calc(100% - 32px);
+    max-width: 100%;
+  }
+  .welcome-screen__submit {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* ═══ Reduced Motion ═══ */
+@media (prefers-reduced-motion: reduce) {
+  .welcome-screen *,
+  .welcome-screen *::before,
+  .welcome-screen *::after {
+    animation-duration: 0ms !important;
+    transition-duration: 0ms !important;
+  }
+}

@@ -88,10 +88,43 @@
   padding: 8px 0 4px 22px;
 }
 
-/* Thinking entry gets subtle accent border-left */
+/* Thinking entry — animated gradient border sweep (full height) */
 .cmd-response-panel__entry.is-thinking {
-  border-left: 2px solid var(--accent-glow);
+  position: relative;
   padding-left: 14px;
+  border-left: none;
+}
+.cmd-response-panel__entry.is-thinking::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(
+    180deg,
+    rgba(200,150,62,0.15) 0%,
+    #C8963E 20%,
+    #E5B95C 35%,
+    #ffffff 50%,
+    #E5B95C 65%,
+    #C8963E 80%,
+    rgba(200,150,62,0.15) 100%
+  );
+  background-size: 100% 300%;
+  animation: gradient-border-sweep 2.4s ease-in-out infinite;
+}
+@keyframes gradient-border-sweep {
+  0%   { background-position: 0% 0%; }
+  50%  { background-position: 0% 100%; }
+  100% { background-position: 0% 0%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cmd-response-panel__entry.is-thinking::before {
+    animation: none;
+    background: var(--accent-glow);
+  }
 }
 
 .cmd-response-panel__icon-btn {
@@ -161,6 +194,30 @@
   border-color: var(--text-secondary);
 }
 
+
+/* ═══ Thinking dot — conic gradient animation ═══ */
+.cmd-response-panel__thinking-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from var(--conic-angle),
+    #C8963E 0deg,
+    #E5B95C 90deg,
+    #d4a056 180deg,
+    #b8860b 270deg,
+    #C8963E 360deg
+  );
+  animation: conic-rotate 3s linear infinite;
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cmd-response-panel__thinking-dot {
+    animation: none;
+    background: var(--accent-glow);
+  }
+}
 
 /* ═══ Thinking state: conic gradient on running entry's prompt line ═══ */
 .cmd-response-panel__entry.is-thinking .cmd-response-panel__entry-prompt {
@@ -252,4 +309,56 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ═══ Mobile bottom sheet layout ═══ */
+@media (max-width: 767px) {
+  .cmd-response-panel {
+    position: fixed !important;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: 50vh;
+    border-radius: var(--radius-xl, 12px) var(--radius-xl, 12px) 0 0;
+  }
+  .cmd-response-toggle {
+    bottom: 8px;
+    left: 8px;
+    top: auto;
+  }
+}
+
+/* ═══ Mobile chat overlay (ChatPanel portal) ═══ */
+.mobile-chat-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modals);
+  background: var(--surface-canvas);
+  display: flex;
+  flex-direction: column;
+}
+.mobile-chat-overlay__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.mobile-chat-overlay__back {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.mobile-chat-overlay__body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }

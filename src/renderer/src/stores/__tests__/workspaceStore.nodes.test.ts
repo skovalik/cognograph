@@ -8,14 +8,16 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useWorkspaceStore } from '../workspaceStore'
+import { useWorkspaceStore, getNodeById } from '../workspaceStore'
 import {
   resetWorkspaceStore,
   getWorkspaceState,
   seedNode,
-  seedNodes
+  seedNodes,
+  seedEdge,
+  seedEdges
 } from '../../../../test/storeUtils'
-import { createNoteNode, createTaskNode, resetTestCounters } from '../../../../test/utils'
+import { createNoteNode, createTaskNode, createTestEdge, resetTestCounters } from '../../../../test/utils'
 
 describe('workspaceStore - Node Operations', () => {
   beforeEach(() => {
@@ -474,6 +476,241 @@ describe('workspaceStore - Node Operations', () => {
       const state = getWorkspaceState()
       expect(state.history).toHaveLength(1)
       expect(state.history[0]!.type).toBe('BULK_UPDATE_NODES')
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // STORE-INDEX — Phase 1: Node & Edge Index Tests
+  // ---------------------------------------------------------------------------
+
+  describe('nodeIndex (STORE-INDEX)', () => {
+    it('should provide O(1) lookup via getNodeById', () => {
+      const note1 = createNoteNode('Note 1', { id: 'note-1' })
+      const note2 = createNoteNode('Note 2', { id: 'note-2' })
+      const note3 = createNoteNode('Note 3', { id: 'note-3' })
+      seedNodes([note1, note2, note3])
+
+      // Allow subscription to rebuild index
+      const state = getWorkspaceState()
+      const found = getNodeById(state, 'note-2')
+      expect(found).toBeDefined()
+      expect(found!.id).toBe('note-2')
+      expect((found!.data as { content: string }).content).toBe('Note 2')
+    })
+
+    it('should return undefined for non-existent node via getNodeById', () => {
+      const note = createNoteNode('Note 1', { id: 'note-1' })
+      seedNode(note)
+
+      const state = getWorkspaceState()
+      const found = getNodeById(state, 'non-existent')
+      expect(found).toBeUndefined()
+    })
+
+    it('should be consistent after addNode', () => {
+      const { addNode } = useWorkspaceStore.getState()
+
+      const id1 = addNode('note', { x: 0, y: 0 })
+      const id2 = addNode('task', { x: 100, y: 100 })
+
+      const state = getWorkspaceState()
+      expect(state.nodeIndex.size).toBe(2)
+      expect(state.nodeIndex.has(id1)).toBe(true)
+      expect(state.nodeIndex.has(id2)).toBe(true)
+
+      // Verify index points to correct positions
+      const idx1 = state.nodeIndex.get(id1)!
+      const idx2 = state.nodeIndex.get(id2)!
+      expect(state.nodes[idx1]!.id).toBe(id1)
+      expect(state.nodes[idx2]!.id).toBe(id2)
+    })
+
+    it('should be consistent after deleteNodes', () => {
+      const note1 = createNoteNode('Note 1', { id: 'note-1' })
+      const note2 = createNoteNode('Note 2', { id: 'note-2' })
+      const note3 = createNoteNode('Note 3', { id: 'note-3' })
+      seedNodes([note1, note2, note3])
+
+      const { deleteNodes } = useWorkspaceStore.getState()
+      deleteNodes(['note-2'])
+
+      const state = getWorkspaceState()
+      expect(state.nodeIndex.size).toBe(2)
+      expect(state.nodeIndex.has('note-1')).toBe(true)
+      expect(state.nodeIndex.has('note-2')).toBe(false)
+      expect(state.nodeIndex.has('note-3')).toBe(true)
+
+      // Verify positions are correct after deletion
+      for (const [nodeId, idx] of state.nodeIndex) {
+        expect(state.nodes[idx]!.id).toBe(nodeId)
+      }
+    })
+
+    it('should be consistent after updateNode', () => {
+      const note = createNoteNode('Original', { id: 'note-1' })
+      seedNode(note)
+
+      const { updateNode } = useWorkspaceStore.getState()
+      updateNode('note-1', { title: 'Updated' })
+
+      const state = getWorkspaceState()
+      expect(state.nodeIndex.size).toBe(1)
+      expect(state.nodeIndex.has('note-1')).toBe(true)
+
+      const idx = state.nodeIndex.get('note-1')!
+      expect(state.nodes[idx]!.id).toBe('note-1')
+      expect((state.nodes[idx]!.data as { title: string }).title).toBe('Updated')
+    })
+
+    it('should be consistent after undo/redo of addNode', () => {
+      const { addNode, undo, redo } = useWorkspaceStore.getState()
+
+      const nodeId = addNode('note', { x: 0, y: 0 })
+
+      // Verify index after add
+      let state = getWorkspaceState()
+      expect(state.nodeIndex.has(nodeId)).toBe(true)
+
+      // Undo - node removed
+      undo()
+      state = getWorkspaceState()
+      expect(state.nodeIndex.has(nodeId)).toBe(false)
+      expect(state.nodeIndex.size).toBe(0)
+
+      // Redo - node restored
+      redo()
+      state = getWorkspaceState()
+      expect(state.nodeIndex.has(nodeId)).toBe(true)
+      expect(state.nodeIndex.size).toBe(1)
+    })
+
+    it('should be consistent after loadWorkspace', () => {
+      const { loadWorkspace } = useWorkspaceStore.getState()
+      loadWorkspace({
+        id: 'test-ws',
+        name: 'Test Workspace',
+        nodes: [
+          createNoteNode('Note A', { id: 'a' }),
+          createNoteNode('Note B', { id: 'b' }),
+          createTaskNode('todo', { id: 'c' })
+        ],
+        edges: [],
+        viewport: { x: 0, y: 0, zoom: 1 }
+      } as Parameters<typeof loadWorkspace>[0])
+
+      const state = getWorkspaceState()
+      expect(state.nodeIndex.size).toBe(3)
+      expect(state.nodeIndex.has('a')).toBe(true)
+      expect(state.nodeIndex.has('b')).toBe(true)
+      expect(state.nodeIndex.has('c')).toBe(true)
+
+      // Verify all positions are correct
+      for (const [nodeId, idx] of state.nodeIndex) {
+        expect(state.nodes[idx]!.id).toBe(nodeId)
+      }
+    })
+
+    it('should be consistent after newWorkspace', () => {
+      // Seed some nodes first
+      seedNodes([
+        createNoteNode('Note 1', { id: 'n1' }),
+        createNoteNode('Note 2', { id: 'n2' })
+      ])
+
+      const { newWorkspace } = useWorkspaceStore.getState()
+      newWorkspace()
+
+      const state = getWorkspaceState()
+      expect(state.nodeIndex.size).toBe(0)
+      expect(state.nodes).toHaveLength(0)
+    })
+  })
+
+  describe('edgesByTarget (STORE-INDEX)', () => {
+    it('should track edges by target node after addEdge', () => {
+      const note = createNoteNode('Context', { id: 'note-1' })
+      const task = createTaskNode('todo', { id: 'task-1' })
+      seedNodes([note, task])
+
+      const { onConnect } = useWorkspaceStore.getState()
+      onConnect({ source: 'note-1', target: 'task-1', sourceHandle: null, targetHandle: null })
+
+      const state = getWorkspaceState()
+      const edgesForTask = state.edgesByTarget.get('task-1')
+      expect(edgesForTask).toBeDefined()
+      expect(edgesForTask!.length).toBe(1)
+    })
+
+    it('should track multiple edges targeting same node', () => {
+      const note1 = createNoteNode('Note 1', { id: 'note-1' })
+      const note2 = createNoteNode('Note 2', { id: 'note-2' })
+      const task = createTaskNode('todo', { id: 'task-1' })
+      seedNodes([note1, note2, task])
+
+      const { onConnect } = useWorkspaceStore.getState()
+      onConnect({ source: 'note-1', target: 'task-1', sourceHandle: null, targetHandle: null })
+      onConnect({ source: 'note-2', target: 'task-1', sourceHandle: null, targetHandle: null })
+
+      const state = getWorkspaceState()
+      const edgesForTask = state.edgesByTarget.get('task-1')
+      expect(edgesForTask).toBeDefined()
+      expect(edgesForTask!.length).toBe(2)
+    })
+
+    it('should be correct after edge deletion', () => {
+      const note = createNoteNode('Context', { id: 'note-1' })
+      const task = createTaskNode('todo', { id: 'task-1' })
+      seedNodes([note, task])
+
+      // Add edge
+      const { onConnect, deleteEdges } = useWorkspaceStore.getState()
+      onConnect({ source: 'note-1', target: 'task-1', sourceHandle: null, targetHandle: null })
+
+      let state = getWorkspaceState()
+      const edgeId = state.edges[0]!.id
+
+      // Delete it
+      deleteEdges([edgeId])
+      state = getWorkspaceState()
+      expect(state.edgesByTarget.get('task-1')).toBeUndefined()
+    })
+
+    it('should be empty after newWorkspace', () => {
+      const note = createNoteNode('Context', { id: 'note-1' })
+      const task = createTaskNode('todo', { id: 'task-1' })
+      seedNodes([note, task])
+      seedEdge(createTestEdge('note-1', 'task-1', { id: 'edge-1' }))
+
+      const { newWorkspace } = useWorkspaceStore.getState()
+      newWorkspace()
+
+      const state = getWorkspaceState()
+      expect(state.edgesByTarget.size).toBe(0)
+    })
+
+    it('should be consistent after deleteNodes removes connected edges', () => {
+      const note1 = createNoteNode('Note 1', { id: 'note-1' })
+      const note2 = createNoteNode('Note 2', { id: 'note-2' })
+      const task = createTaskNode('todo', { id: 'task-1' })
+      seedNodes([note1, note2, task])
+      seedEdges([
+        createTestEdge('note-1', 'task-1', { id: 'e1' }),
+        createTestEdge('note-2', 'task-1', { id: 'e2' })
+      ])
+
+      // Verify initial state
+      let state = getWorkspaceState()
+      expect(state.edgesByTarget.get('task-1')?.length).toBe(2)
+
+      // Delete one source node - should remove its edges too
+      const { deleteNodes } = useWorkspaceStore.getState()
+      deleteNodes(['note-1'])
+
+      state = getWorkspaceState()
+      const edgesForTask = state.edgesByTarget.get('task-1')
+      expect(edgesForTask).toBeDefined()
+      expect(edgesForTask!.length).toBe(1)
+      expect(edgesForTask![0]).toBe('e2')
     })
   })
 })

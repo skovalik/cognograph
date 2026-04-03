@@ -16,11 +16,12 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       exclude: ['node_modules', 'dist', 'out', 'src/test/**'],
+      reportOnFailure: true,
       thresholds: {
-        statements: 5,
-        branches: 5,
-        functions: 5,
-        lines: 5
+        statements: 34,
+        branches: 26,
+        functions: 25,
+        lines: 35
       }
     }
   },

@@ -32,11 +32,9 @@ jobs:
 
       - name: Run tests
         run: npm test
-        continue-on-error: true  # Pre-existing test drift; don't block releases
 
       - name: Type check
         run: npm run typecheck:node
-        continue-on-error: true  # Public repo doesn't have web config
 
       # ============ Build (Unsigned) ============
       - name: Build (macOS - unsigned)

@@ -1,0 +1,3 @@
+{"uuid":"msg-001","isoTimestamp":"2026-04-01T00:00:00.000Z","conversationId":"conv-001","role":"user","content":"What is Perception-First Design?","timestamp":1711929600000}
+{"uuid":"msg-002","isoTimestamp":"2026-04-01T00:00:01.000Z","conversationId":"conv-001","role":"assistant","content":"Perception-First Design is a psychology-backed methodology that optimizes how people perceive and process design.","timestamp":1711929601000}
+{"uuid":"msg-003","isoTimestamp":"2026-04-01T00:00:05.000Z","conversationId":"conv-001","role":"user","content":"Can you give me an example with Unicode? \u4f60\u597d \ud83c\udf0d","timestamp":1711929605000}

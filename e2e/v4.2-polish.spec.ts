@@ -148,32 +148,8 @@ test.describe('V4.2 — Threaded Conversation', () => {
     await expect(thirdEntry).toHaveClass(/is-thinking/)
   })
 
-  test('agent log section visible with entries', async ({ window }) => {
-    await seedCommandLog(window, [
-      { id: 'cmd-log-1', input: 'Test command', tier: 1, status: 'done', narration: 'Done.', affectedNodeIds: [], timestamp: Date.now() }
-    ])
-
-    await window.locator('.cmd-response-toggle').click()
-    await expect(window.locator('.cmd-response-panel__log')).toBeVisible({ timeout: 3000 })
-  })
-
-  test('agent log expands and shows entries', async ({ window }) => {
-    await seedCommandLog(window, [
-      { id: 'cmd-expand-1', input: 'Expand test', tier: 1, status: 'done', narration: 'Done.', affectedNodeIds: [], timestamp: Date.now() }
-    ])
-
-    await window.locator('.cmd-response-toggle').click()
-    await window.waitForTimeout(300)
-
-    // Click the agent log toggle
-    const logToggle = window.locator('.cmd-response-panel__log-toggle')
-    await logToggle.click()
-    await window.waitForTimeout(200)
-
-    // Log list should appear
-    await expect(window.locator('.cmd-response-panel__log-list')).toBeVisible()
-    await expect(window.locator('.cmd-response-panel__log-entry')).toBeVisible()
-  })
+  // Agent log is no longer rendered in CommandResponsePanel — it lives in the
+  // left sidebar tab and the canvas badge popover instead.
 
   test('each prompt has a copy button', async ({ window }) => {
     await seedCommandLog(window, [

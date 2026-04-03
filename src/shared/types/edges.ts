@@ -59,6 +59,23 @@ export type EdgeSemanticType =
   | 'implements'        // solid, indigo tint
   | 'custom'            // user-defined
 
+/**
+ * Result payload stored on an edge by the coordinator strategy.
+ * Summary is capped at AGENT_RESULT_SUMMARY_MAX_CHARS (10,000) characters.
+ * Full results exceeding the cap are spilled to a temp file on disk.
+ */
+export interface AgentEdgeResult {
+  /** Truncated summary of the agent's output (max 10K chars) */
+  summary: string
+  /** Path to the full result file if output exceeded the summary cap */
+  fullResultPath?: string
+  /** ISO 8601 timestamp of when the result was produced */
+  timestamp: string
+}
+
+/** Maximum characters stored inline in AgentEdgeResult.summary */
+export const AGENT_RESULT_SUMMARY_MAX_CHARS = 10_000
+
 export interface EdgeData {
   // Direction control
   direction: 'unidirectional' | 'bidirectional'
@@ -108,6 +125,9 @@ export interface EdgeData {
   // DEPRECATED: Use waypoints instead. Kept for backwards compatibility.
   // Will be auto-migrated to waypoints[0] relative to midpoint on load.
   centerOffset?: { x: number; y: number }
+
+  // Agent orchestration result — populated by coordinator strategy
+  agentResult?: AgentEdgeResult
 
   // Index signature for React Flow compatibility
   [key: string]: unknown

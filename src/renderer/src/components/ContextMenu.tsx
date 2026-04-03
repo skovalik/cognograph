@@ -52,7 +52,7 @@ import {
   Maximize2,
 } from 'lucide-react'
 import { hasTerminalAccess } from '../utils/terminalAccess'
-import { calculateAutoFitDimensions, AUTO_FIT_CONSTRAINTS } from '../utils/nodeUtils'
+import { calculateAutoFitDimensions, AUTO_FIT_CONSTRAINTS } from '../utils/textMeasure'
 import { toast } from 'react-hot-toast'
 import {
   useContextMenuStore,

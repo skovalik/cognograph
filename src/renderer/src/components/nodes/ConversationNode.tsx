@@ -17,7 +17,7 @@ import { NodeSocketBars } from './SocketBar'
 import { AttachmentBadge } from './AttachmentBadge'
 import { EditableTitle } from '../EditableTitle'
 import { InlineIconPicker } from '../InlineIconPicker'
-import { measureTextWidth } from '../../utils/nodeUtils'
+import { measureTextWidth } from '../../utils/textMeasure'
 import { ExtractionBadge } from '../extractions'
 
 import { hasTerminalAccess } from '../../utils/terminalAccess'

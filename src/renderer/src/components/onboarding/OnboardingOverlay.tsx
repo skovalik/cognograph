@@ -47,7 +47,7 @@ import {
   LayoutGrid
 } from 'lucide-react'
 import { useOnboardingStore } from '../../stores/onboardingStore'
-import { usePersistenceStore } from '../../stores/persistenceStore'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 import { useEdgesStore } from '../../stores/edgesStore'
 import { useNodesStore } from '../../stores/nodesStore'
 import { useAnalyticsStore } from '../../stores/analyticsStore'
@@ -593,7 +593,7 @@ function OnboardingOverlayComponent(): JSX.Element | null {
   const skip = useOnboardingStore((s) => s.skip)
   const selectedTemplate = useOnboardingStore((s) => s.selectedTemplate)
   const setSelectedTemplate = useOnboardingStore((s) => s.setSelectedTemplate)
-  const workspaceId = usePersistenceStore((s) => s.workspaceId)
+  const workspaceId = useWorkspaceStore((s) => s.workspaceId)
 
   // Node count for step 2 (First Node) auto-advance
   const nodeCount = useNodesStore((s) => s.nodes.length)

@@ -1,18 +1,58 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useWorkspaceStore } from '../stores/workspaceStore'
-import { getToolsForAgent, executeTool, getMCPToolsForAgent, setMCPToolServerMap } from './agentTools'
-import type { Message, ConversationNodeData, HistoryAction, AgentStatus, AgentMemory } from '@shared/types'
-import { DEFAULT_AGENT_SETTINGS, DEFAULT_AGENT_MEMORY } from '@shared/types'
+/**
+ * Agent Service — manages agent lifecycle, streaming, and tool loop coordination.
+ *
+ * ARCHITECTURE NOTE (Phase 2C: RENDERER-PASSIVIZE):
+ * This file is being refactored toward a passive event-driven model.
+ *
+ * CURRENT (transitional): The renderer runs the tool loop — it receives stream
+ * chunks from the main process, detects tool_use stop reasons, calls executeTool()
+ * locally, and sends continuation messages. This is the "active" model.
+ *
+ * TARGET: The main process runs the tool loop (via agentLoop.ts). The renderer
+ * receives transport events via agentEventReceiver.ts and only updates UI state.
+ * The runAgentLoop() function here will be replaced by a simple IPC call to
+ * start the agent, with all progress tracked via transport events.
+ *
+ * What stays in this file permanently:
+ *   - Agent state management (AgentState, agentStates map)
+ *   - Public API (sendAgentMessage, pauseAgent, resumeAgent, stopAgent, etc.)
+ *   - Stream text handling (text_delta → update conversation UI)
+ *   - buildMessagesForAPI (message format conversion)
+ *   - External stream handler registration (for chatToolService)
+ *
+ * What will be removed after main-process tool loop migration:
+ *   - Tool execution in handleStreamChunk (tool_use_start/delta/end handling)
+ *   - executeTool() calls from runAgentLoop
+ *   - IncrementalBatchParser streaming (moves to main process)
+ *   - Direct tool call tracking (toolCallCount, etc.)
+ */
+
+import type {
+  AgentMemory,
+  AgentStatus,
+  ConversationNodeData,
+  HistoryAction,
+  Message,
+} from '@shared/types'
+import { DEFAULT_AGENT_MEMORY, DEFAULT_AGENT_SETTINGS } from '@shared/types'
+import toast from 'react-hot-toast'
+import { v4 as uuid } from 'uuid'
 import type { AgentStreamChunk } from '../../../preload/index'
 import { getPresetById } from '../constants/agentPresets'
-import { v4 as uuid } from 'uuid'
-import toast from 'react-hot-toast'
-import { logger } from '../utils/logger'
-import { estimateCost } from '../utils/tokenEstimator'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 import { IncrementalBatchParser } from '../utils/incrementalJsonParser'
 import { layoutEvents } from '../utils/layoutEvents'
+import { logger } from '../utils/logger'
+import { estimateCost } from '../utils/tokenEstimator'
+import {
+  executeTool,
+  getMCPToolsForAgent,
+  getToolsForAgent,
+  setMCPToolServerMap,
+} from './agentTools'
 
 // -----------------------------------------------------------------------------
 // Agent State (per-agent Map, not singleton)
@@ -104,7 +144,7 @@ function getOrCreateState(conversationId: string): AgentState {
       streamingDeferredEdges: null,
       streamingNodeCount: 0,
       streamingExecuted: false,
-      streamingToolResult: null
+      streamingToolResult: null,
     })
   }
   return agentStates.get(conversationId)!
@@ -175,7 +215,7 @@ function recoverStaleAgentStates(): void {
 
     if (convData.agentStatus === 'running' || convData.agentStatus === 'paused') {
       store.updateNode(node.id, {
-        agentStatus: 'error' as AgentStatus
+        agentStatus: 'error' as AgentStatus,
       })
 
       // Finalize the last run entry if it exists and is incomplete
@@ -187,7 +227,7 @@ function recoverStaleAgentStates(): void {
           ...lastRun,
           completedAt: new Date().toISOString(),
           status: 'error' as const,
-          errorMessage: 'Agent was interrupted by app restart. Click Retry to resume.'
+          errorMessage: 'Agent was interrupted by app restart. Click Retry to resume.',
         }
         store.updateNode(node.id, { agentRunHistory: updatedHistory })
       }
@@ -226,23 +266,23 @@ function createRunEntry(conversationId: string): void {
     startedAt: new Date().toISOString(),
     status: 'completed', // Will be updated on completion
     toolCallCount: 0,
-    tokensUsed: 0,  // Will be calculated in finalizeRunEntry
-    costUSD: 0,     // Will be calculated in finalizeRunEntry
+    tokensUsed: 0, // Will be calculated in finalizeRunEntry
+    costUSD: 0, // Will be calculated in finalizeRunEntry
     inputTokens: 0,
-    outputTokens: 0
+    outputTokens: 0,
   })
 
   store.updateNode(conversationId, {
     agentRunHistory: history,
     agentStatus: 'running' as AgentStatus,
-    lastRunAt: new Date().toISOString()
+    lastRunAt: new Date().toISOString(),
   })
 }
 
 function finalizeRunEntry(
   conversationId: string,
   status: 'completed' | 'error' | 'cancelled' | 'paused',
-  errorMessage?: string
+  errorMessage?: string,
 ): void {
   const agentState = agentStates.get(conversationId)
   const store = useWorkspaceStore.getState()
@@ -266,7 +306,7 @@ function finalizeRunEntry(
       outputTokens,
       model,
       cacheCreationTokens,
-      cacheReadTokens
+      cacheReadTokens,
     )
 
     history[history.length - 1] = {
@@ -279,20 +319,24 @@ function finalizeRunEntry(
       outputTokens,
       cacheCreationTokens: cacheCreationTokens || undefined,
       cacheReadTokens: cacheReadTokens || undefined,
-      tokensUsed: inputTokens + outputTokens,  // Backwards compat
+      tokensUsed: inputTokens + outputTokens, // Backwards compat
       costUSD: cost.totalCost,
-      errorMessage
+      errorMessage,
     }
   }
 
-  const newStatus: AgentStatus = status === 'completed' ? 'completed' :
-    status === 'paused' ? 'paused' :
-    status === 'cancelled' ? 'idle' :
-    'error'
+  const newStatus: AgentStatus =
+    status === 'completed'
+      ? 'completed'
+      : status === 'paused'
+        ? 'paused'
+        : status === 'cancelled'
+          ? 'idle'
+          : 'error'
 
   store.updateNode(conversationId, {
     agentRunHistory: history,
-    agentStatus: newStatus
+    agentStatus: newStatus,
   })
 }
 
@@ -332,7 +376,7 @@ export function initAgentService(): void {
 export async function sendAgentMessage(
   conversationId: string,
   content: string,
-  options: { priority?: boolean } = {}
+  options: { priority?: boolean } = {},
 ): Promise<void> {
   // Initialize service if needed
   initAgentService()
@@ -364,7 +408,9 @@ export async function sendAgentMessage(
     } else {
       agentState.pendingQueue.push({ conversationId, content, timestamp: Date.now() })
     }
-    logger.log(`[AgentService] Queued message for ${conversationId}, queue length: ${agentState.pendingQueue.length}`)
+    logger.log(
+      `[AgentService] Queued message for ${conversationId}, queue length: ${agentState.pendingQueue.length}`,
+    )
     return
   }
 
@@ -501,7 +547,7 @@ export function getAgentState(conversationId?: string): {
     return {
       isRunning: state?.isRunning ?? false,
       currentConversationId: conversationId,
-      queueLength: state?.pendingQueue.length ?? 0
+      queueLength: state?.pendingQueue.length ?? 0,
     }
   }
 
@@ -511,7 +557,7 @@ export function getAgentState(conversationId?: string): {
       return {
         isRunning: true,
         currentConversationId: state.currentConversationId,
-        queueLength: state.pendingQueue.length
+        queueLength: state.pendingQueue.length,
       }
     }
   }
@@ -543,8 +589,14 @@ async function runAgentLoop(conversationId: string): Promise<void> {
 
   // Mutual exclusion: if a run is already in progress for this conversation,
   // reject immediately to prevent concurrent state mutations (Fix 1.3-C).
-  if (agentState.isRunning && agentState.abortController && !agentState.abortController.signal.aborted) {
-    console.warn(`[AgentService] [${conversationId}] Rejecting concurrent run — agent already in progress`)
+  if (
+    agentState.isRunning &&
+    agentState.abortController &&
+    !agentState.abortController.signal.aborted
+  ) {
+    console.warn(
+      `[AgentService] [${conversationId}] Rejecting concurrent run — agent already in progress`,
+    )
     return
   }
 
@@ -613,9 +665,15 @@ async function runAgentLoop(conversationId: string): Promise<void> {
 
       const tools = [...canvasAndFsTools, ...mcpTools]
 
-      logger.log(`[AgentService] [${conversationId}] Sending request with ${tools.length} tools, requestId: ${agentState.currentRequestId}`)
-      logger.log(`[AgentService] [${conversationId}] Stream listener registered: ${!!streamUnsubscribe}`)
-      logger.log(`[AgentService] [${conversationId}] Messages being sent (${messages.length} messages)`)
+      logger.log(
+        `[AgentService] [${conversationId}] Sending request with ${tools.length} tools, requestId: ${agentState.currentRequestId}`,
+      )
+      logger.log(
+        `[AgentService] [${conversationId}] Stream listener registered: ${!!streamUnsubscribe}`,
+      )
+      logger.log(
+        `[AgentService] [${conversationId}] Messages being sent (${messages.length} messages)`,
+      )
 
       // Set up completion promise BEFORE sending request
       // This ensures we don't miss the 'done' event
@@ -626,21 +684,32 @@ async function runAgentLoop(conversationId: string): Promise<void> {
         clearTimeout(agentState.iterationTimeout)
       }
       agentState.iterationTimeout = setTimeout(() => {
-        console.warn(`[AgentService] [${conversationId}] Iteration timeout reached (${ITERATION_TIMEOUT_MS}ms)`)
+        console.warn(
+          `[AgentService] [${conversationId}] Iteration timeout reached (${ITERATION_TIMEOUT_MS}ms)`,
+        )
         agentState.iterationResolve?.({ stopReason: 'timeout' })
       }, ITERATION_TIMEOUT_MS)
 
-      // Send request (don't await - let it run in background while we wait for chunks)
-      window.api.agent.sendWithTools({
-        requestId: agentState.currentRequestId!,
-        conversationId,
-        messages,
-        context: context || '',
-        tools,
-        model: convData.workspaceOverrides?.llm?.model || 'claude-sonnet-4-6',
-        memory: memory || undefined,
-        systemPromptPrefix: systemPromptPrefix || undefined
-      })
+      // Send request — catch IPC errors so the user isn't stuck waiting
+      try {
+        window.api.agent.sendWithTools({
+          requestId: agentState.currentRequestId!,
+          conversationId,
+          messages,
+          context: context || '',
+          tools,
+          model: convData.workspaceOverrides?.llm?.model || 'claude-sonnet-4-6',
+          memory: memory || undefined,
+          systemPromptPrefix: systemPromptPrefix || undefined,
+        })
+      } catch (ipcError) {
+        console.error('[AgentService] IPC sendWithTools failed:', ipcError)
+        toast.error('Failed to start agent — check your connection and try again')
+        finalizeRunEntry(conversationId, 'error')
+        resetAgentState(conversationId)
+        store.setStreaming(conversationId, false)
+        return
+      }
 
       logger.log(`[AgentService] [${conversationId}] Request sent, waiting for completion...`)
 
@@ -662,7 +731,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
       if (stopReason === 'timeout') {
         store.updateLastMessage(
           conversationId,
-          agentState.accumulatedText + '\n\n[Iteration timed out after 5 minutes]'
+          agentState.accumulatedText + '\n\n[Iteration timed out after 5 minutes]',
         )
         finalizeRunEntry(conversationId, 'error', 'Iteration timeout (5 minutes)')
         break
@@ -691,7 +760,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
             timestamp: Date.now(),
             toolName: toolUse.name,
             toolInput: JSON.parse(toolUse.inputJson || '{}'),
-            toolUseId: toolUse.id
+            toolUseId: toolUse.id,
           }
           store.addToolMessage(conversationId, toolUseMsg)
 
@@ -701,7 +770,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
             content: agentState.streamingToolResult,
             timestamp: Date.now(),
             toolResultFor: toolUse.id,
-            isError: false
+            isError: false,
           }
           store.addToolMessage(conversationId, toolResultMsg)
 
@@ -713,7 +782,9 @@ async function runAgentLoop(conversationId: string): Promise<void> {
           agentState.currentToolUse = null
           agentState.accumulatedText = ''
           const newRequestId = uuid()
-          logger.log(`[AgentService] [${conversationId}] Streaming batch_create complete, new requestId: ${newRequestId}`)
+          logger.log(
+            `[AgentService] [${conversationId}] Streaming batch_create complete, new requestId: ${newRequestId}`,
+          )
           agentState.currentRequestId = newRequestId
           store.addMessage(conversationId, 'assistant', '')
           continue
@@ -725,7 +796,10 @@ async function runAgentLoop(conversationId: string): Promise<void> {
         try {
           parsedToolInput = JSON.parse(toolUse.inputJson || '{}')
         } catch (parseError) {
-          console.error(`[AgentService] [${conversationId}] Failed to parse tool input JSON for ${toolUse.name}:`, parseError)
+          console.error(
+            `[AgentService] [${conversationId}] Failed to parse tool input JSON for ${toolUse.name}:`,
+            parseError,
+          )
           logger.log(`[AgentService] [${conversationId}] Raw inputJson: ${toolUse.inputJson}`)
 
           // Add an error tool_result so Claude sees the failure and can recover
@@ -736,7 +810,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
             timestamp: Date.now(),
             toolName: toolUse.name,
             toolInput: {},
-            toolUseId: toolUse.id
+            toolUseId: toolUse.id,
           }
           store.addToolMessage(conversationId, errorToolUseMsg)
 
@@ -746,7 +820,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
             content: `Error: Malformed tool input JSON — could not parse arguments for ${toolUse.name}`,
             timestamp: Date.now(),
             toolResultFor: toolUse.id,
-            isError: true
+            isError: true,
           }
           store.addToolMessage(conversationId, errorToolResultMsg)
 
@@ -767,26 +841,24 @@ async function runAgentLoop(conversationId: string): Promise<void> {
           timestamp: Date.now(),
           toolName: toolUse.name,
           toolInput: parsedToolInput,
-          toolUseId: toolUse.id
+          toolUseId: toolUse.id,
         }
         store.addToolMessage(conversationId, toolUseMsg)
 
         // Execute tool (async for filesystem IPC tools, sync for canvas tools)
         logger.log(`[AgentService] [${conversationId}] Executing tool: ${toolUse.name}`)
-        const result = await executeTool(
-          toolUse.name,
-          parsedToolInput,
-          conversationId
-        )
+        const result = await executeTool(toolUse.name, parsedToolInput, conversationId)
 
         // Add tool_result message
         const toolResultMsg: Message = {
           id: uuid(),
           role: 'tool_result',
-          content: result.success ? JSON.stringify(result.result, null, 2) : `Error: ${result.error}`,
+          content: result.success
+            ? JSON.stringify(result.result, null, 2)
+            : `Error: ${result.error}`,
           timestamp: Date.now(),
           toolResultFor: toolUse.id,
-          isError: !result.success
+          isError: !result.success,
         }
         store.addToolMessage(conversationId, toolResultMsg)
 
@@ -797,7 +869,9 @@ async function runAgentLoop(conversationId: string): Promise<void> {
 
         // Check abort after tool execution — async gap where state may have changed (Fix 1.3-C)
         if (abortController.signal.aborted) {
-          logger.log(`[AgentService] [${conversationId}] Run aborted after tool execution, exiting loop`)
+          logger.log(
+            `[AgentService] [${conversationId}] Run aborted after tool execution, exiting loop`,
+          )
           return
         }
 
@@ -814,7 +888,9 @@ async function runAgentLoop(conversationId: string): Promise<void> {
         agentState.currentToolUse = null
         agentState.accumulatedText = ''
         const newRequestId = uuid()
-        logger.log(`[AgentService] [${conversationId}] Tool executed, new requestId for next iteration: ${newRequestId}`)
+        logger.log(
+          `[AgentService] [${conversationId}] Tool executed, new requestId for next iteration: ${newRequestId}`,
+        )
         agentState.currentRequestId = newRequestId
 
         // Add empty placeholder for next assistant response
@@ -837,7 +913,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
       if (stopReason === 'max_tokens') {
         store.updateLastMessage(
           conversationId,
-          agentState.accumulatedText + '\n\n[Response truncated due to length limit]'
+          agentState.accumulatedText + '\n\n[Response truncated due to length limit]',
         )
         finalizeRunEntry(conversationId, 'completed')
         break
@@ -852,7 +928,7 @@ async function runAgentLoop(conversationId: string): Promise<void> {
       store.addMessage(
         conversationId,
         'assistant',
-        `I've reached the maximum tool calls (${maxToolCalls}) for this turn. Let me know if you'd like me to continue.`
+        `I've reached the maximum tool calls (${maxToolCalls}) for this turn. Let me know if you'd like me to continue.`,
       )
       finalizeRunEntry(conversationId, 'completed')
     }
@@ -911,6 +987,13 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
     return
   }
 
+  // Ignore chunks for stopped runs — prevents stop button race condition
+  // where late-arriving chunks re-enable streaming state after interrupt
+  if (!agentState.isRunning) {
+    logger.log('[AgentService] Ignoring chunk for stopped run:', chunk.requestId)
+    return
+  }
+
   const conversationId = agentState.currentConversationId
   const store = useWorkspaceStore.getState()
 
@@ -921,22 +1004,28 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
         store.setStreaming(conversationId, true)
       }
       agentState.accumulatedText += chunk.content || ''
-      logger.log(`[AgentService] [${conversationId}] text_delta - accumulated length:`, agentState.accumulatedText.length)
+      logger.log(
+        `[AgentService] [${conversationId}] text_delta - accumulated length:`,
+        agentState.accumulatedText.length,
+      )
       store.updateLastMessage(conversationId, agentState.accumulatedText)
       break
 
     case 'tool_use_start':
       if (!chunk.toolUseId || !chunk.toolName) {
-        console.error(`[AgentService] [${conversationId}] tool_use_start chunk missing toolUseId or toolName, skipping`, {
-          toolUseId: chunk.toolUseId,
-          toolName: chunk.toolName
-        })
+        console.error(
+          `[AgentService] [${conversationId}] tool_use_start chunk missing toolUseId or toolName, skipping`,
+          {
+            toolUseId: chunk.toolUseId,
+            toolName: chunk.toolName,
+          },
+        )
         break
       }
       agentState.currentToolUse = {
         id: chunk.toolUseId,
         name: chunk.toolName,
-        inputJson: ''
+        inputJson: '',
       }
       // Streaming execution for batch_create — create nodes incrementally
       if (chunk.toolName === 'batch_create') {
@@ -952,16 +1041,21 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
         agentState.currentToolUse.inputJson += chunk.toolInput || ''
 
         // Streaming batch_create — parse and create nodes incrementally
-        if (agentState.streamingParser && agentState.streamingTempIdMap && agentState.streamingDeferredEdges) {
+        if (
+          agentState.streamingParser &&
+          agentState.streamingTempIdMap &&
+          agentState.streamingDeferredEdges
+        ) {
           const events = agentState.streamingParser.feed(chunk.toolInput || '')
           for (const event of events) {
             if (event.type === 'node') {
               const nodeData = event.data as Record<string, unknown>
-              const tempId = (nodeData.temp_id as string) || `streaming-${agentState.streamingNodeCount}`
+              const tempId =
+                (nodeData.temp_id as string) || `streaming-${agentState.streamingNodeCount}`
               const nodeType = (nodeData.type as string) || 'note'
 
               // Position in a rough grid relative to conversation node
-              const convNode = store.nodes.find(n => n.id === conversationId)
+              const convNode = store.nodes.find((n) => n.id === conversationId)
               const baseX = convNode?.position?.x ?? 0
               const baseY = convNode?.position?.y ?? 0
               const col = agentState.streamingNodeCount % 4
@@ -985,7 +1079,10 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
             }
             // error events are logged but don't stop streaming
             if (event.type === 'error') {
-              console.warn(`[AgentService] [${conversationId}] Streaming parse error:`, event.message)
+              console.warn(
+                `[AgentService] [${conversationId}] Streaming parse error:`,
+                event.message,
+              )
             }
           }
         }
@@ -1003,7 +1100,12 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
         for (const edgeData of deferredEdges) {
           const sourceId = tempIdMap.get(edgeData.source as string) || (edgeData.source as string)
           const targetId = tempIdMap.get(edgeData.target as string) || (edgeData.target as string)
-          store.addEdge({ source: sourceId, target: targetId, sourceHandle: null, targetHandle: null })
+          store.addEdge({
+            source: sourceId,
+            target: targetId,
+            sourceHandle: null,
+            targetHandle: null,
+          })
           const edgeId = `${sourceId}-${targetId}`
           createdEdgeIds.push(edgeId)
           if (edgeData.label) {
@@ -1013,9 +1115,11 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
 
         // Dispatch layout pipeline via EventTarget (avoids circular dependency with chatToolService)
         const createdNodeIds = Array.from(tempIdMap.values())
-        layoutEvents.dispatchEvent(new CustomEvent('run-layout', {
-          detail: { nodeIds: createdNodeIds, edgeIds: createdEdgeIds, conversationId }
-        }))
+        layoutEvents.dispatchEvent(
+          new CustomEvent('run-layout', {
+            detail: { nodeIds: createdNodeIds, edgeIds: createdEdgeIds, conversationId },
+          }),
+        )
 
         // Mark tool as already executed — skip executeTool in the done/loop handler
         agentState.streamingExecuted = true
@@ -1023,7 +1127,7 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
           success: true,
           nodesCreated: tempIdMap.size,
           edgesCreated: deferredEdges.length,
-          nodeMap: Object.fromEntries(tempIdMap)
+          nodeMap: Object.fromEntries(tempIdMap),
         })
 
         // Cleanup parser state
@@ -1045,7 +1149,9 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
         const visited = new Set<string>([conversationId])
         while (queue.length > 0) {
           const current = queue.shift()!
-          const edges = layoutStore.edges.filter(e => e.source === current || e.target === current)
+          const edges = layoutStore.edges.filter(
+            (e) => e.source === current || e.target === current,
+          )
           for (const e of edges) {
             const neighbor = e.source === current ? e.target : e.source
             if (!visited.has(neighbor)) {
@@ -1057,15 +1163,30 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
         }
         if (connectedNodeIds.size > 0) {
           // layoutEvents already imported at top of file
-          layoutEvents.dispatchEvent(new CustomEvent('run-layout', {
-            detail: {
-              nodeIds: Array.from(connectedNodeIds),
-              edgeIds: [],
-              conversationId
-            }
-          }))
+          layoutEvents.dispatchEvent(
+            new CustomEvent('run-layout', {
+              detail: {
+                nodeIds: Array.from(connectedNodeIds),
+                edgeIds: [],
+                conversationId,
+              },
+            }),
+          )
         }
       }
+      break
+
+    case 'turn_start':
+      // Emitted by agentLoop at the start of each turn after the first.
+      // Reset the text accumulator and create a new assistant placeholder so
+      // that subsequent text_delta events appear in a fresh message bubble
+      // rather than appending to the previous turn's message.
+      agentState.accumulatedText = ''
+      agentState.streamingStarted = false
+      store.addMessage(conversationId, 'assistant', '')
+      logger.log(
+        `[AgentService] [${conversationId}] turn_start — new assistant placeholder created for turn ${(chunk as any).turnIndex}`,
+      )
       break
 
     case 'done':
@@ -1081,6 +1202,7 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
 
     case 'error':
       console.error(`[AgentService] [${conversationId}] Stream error:`, chunk.error)
+      if (chunk.stack) console.error(`[AgentService] Stack:`, chunk.stack)
 
       // Show toast for critical errors
       if (chunk.error?.includes('authentication') || chunk.error?.includes('API key')) {
@@ -1103,7 +1225,10 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
 // Helpers
 // -----------------------------------------------------------------------------
 
-export function registerExternalStreamHandler(requestId: string, handler: ExternalStreamHandler): void {
+export function registerExternalStreamHandler(
+  requestId: string,
+  handler: ExternalStreamHandler,
+): void {
   externalStreamHandlers.set(requestId, handler)
 }
 
@@ -1111,7 +1236,9 @@ export function unregisterExternalStreamHandler(requestId: string): void {
   externalStreamHandlers.delete(requestId)
 }
 
-export function buildMessagesForAPI(conversationId: string): Array<{ role: string; content: unknown }> {
+export function buildMessagesForAPI(
+  conversationId: string,
+): Array<{ role: string; content: unknown }> {
   const store = useWorkspaceStore.getState()
   const node = store.nodes.find((n) => n.id === conversationId)
   if (!node) return []
@@ -1145,7 +1272,7 @@ export function buildMessagesForAPI(conversationId: string): Array<{ role: strin
         if (msg.content.trim()) {
           contentBlocks.push({
             type: 'text',
-            text: msg.content
+            text: msg.content,
           })
         }
 
@@ -1154,12 +1281,12 @@ export function buildMessagesForAPI(conversationId: string): Array<{ role: strin
           type: 'tool_use',
           id: nextMsg.toolUseId,
           name: nextMsg.toolName,
-          input: nextMsg.toolInput
+          input: nextMsg.toolInput,
         })
 
         apiMessages.push({
           role: 'assistant',
-          content: contentBlocks
+          content: contentBlocks,
         })
         i += 2 // Skip both messages
       } else {
@@ -1176,9 +1303,9 @@ export function buildMessagesForAPI(conversationId: string): Array<{ role: strin
             type: 'tool_use',
             id: msg.toolUseId,
             name: msg.toolName,
-            input: msg.toolInput
-          }
-        ]
+            input: msg.toolInput,
+          },
+        ],
       })
       i++
     } else if (msg.role === 'tool_result') {
@@ -1189,9 +1316,9 @@ export function buildMessagesForAPI(conversationId: string): Array<{ role: strin
             type: 'tool_result',
             tool_use_id: msg.toolResultFor,
             content: msg.content,
-            is_error: msg.isError
-          }
-        ]
+            is_error: msg.isError,
+          },
+        ],
       })
       i++
     } else {

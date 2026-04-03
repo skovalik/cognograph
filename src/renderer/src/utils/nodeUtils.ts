@@ -3,17 +3,18 @@
 
 /**
  * Node utility functions
+ *
+ * Text measurement has moved to ./textMeasure.ts — re-exported here for
+ * backward compatibility.
  */
-
-/**
- * Measures the rendered width of a text string using Canvas API.
- */
-export function measureTextWidth(text: string, font: string = '14px Inter, sans-serif'): number {
-  const canvas = document.createElement('canvas')
-  const ctx = canvas.getContext('2d')!
-  ctx.font = font
-  return ctx.measureText(text).width
-}
+export {
+  measureTextWidth,
+  calculateAutoFitDimensions,
+  measureContentDimensions,
+  AUTO_FIT_CONSTRAINTS,
+  TYPE_BADGE_H,
+  MIN_BODY_H
+} from './textMeasure'
 
 /**
  * Checks if a string contains HTML tags.
@@ -84,130 +85,4 @@ export function normalizeContentForEditor(content: string | undefined): string {
 
   // Convert plain text with newlines to HTML
   return plainTextToHtml(content)
-}
-
-/**
- * Auto-fit size constraints
- */
-export const AUTO_FIT_CONSTRAINTS = {
-  minWidth: 100,
-  maxWidth: 600,
-  minHeight: 60,
-  maxHeight: 800,
-  padding: 32 // 16px on each side
-}
-
-export const TYPE_BADGE_H = 20
-export const MIN_BODY_H = 48
-
-/**
- * Measures the dimensions needed to fit content within a node.
- * Uses DOM measurement for accurate text sizing.
- *
- * @param element - The DOM element containing the content to measure
- * @param options - Optional constraints for min/max dimensions
- * @returns The ideal width and height to fit the content
- */
-export function measureContentDimensions(
-  element: HTMLElement,
-  options: Partial<typeof AUTO_FIT_CONSTRAINTS> = {}
-): { width: number; height: number } {
-  const constraints = { ...AUTO_FIT_CONSTRAINTS, ...options }
-
-  // Create a clone to measure without affecting layout
-  const clone = element.cloneNode(true) as HTMLElement
-  clone.style.position = 'absolute'
-  clone.style.visibility = 'hidden'
-  clone.style.width = 'auto'
-  clone.style.height = 'auto'
-  clone.style.maxWidth = `${constraints.maxWidth - constraints.padding}px`
-  clone.style.whiteSpace = 'pre-wrap'
-  clone.style.wordWrap = 'break-word'
-
-  document.body.appendChild(clone)
-
-  const rect = clone.getBoundingClientRect()
-
-  document.body.removeChild(clone)
-
-  // Calculate dimensions with constraints
-  const width = Math.max(
-    constraints.minWidth,
-    Math.min(constraints.maxWidth, Math.ceil(rect.width + constraints.padding))
-  )
-  const height = Math.max(
-    constraints.minHeight,
-    Math.min(constraints.maxHeight, Math.ceil(rect.height + constraints.padding))
-  )
-
-  return { width, height }
-}
-
-/**
- * Calculates auto-fit dimensions for a node based on its title and content.
- *
- * @param title - The node's title text
- * @param content - The node's HTML content (optional)
- * @param headerHeight - Height of header section (default: 40px)
- * @param footerHeight - Height of footer section (default: 36px)
- * @param nodeWidth - Optional node width to constrain content measurement
- * @returns The ideal width and height for the node
- */
-export function calculateAutoFitDimensions(
-  title: string,
-  content?: string,
-  headerHeight: number = 40,
-  footerHeight: number = 36,
-  nodeWidth?: number
-): { width: number; height: number } {
-  const constraints = AUTO_FIT_CONSTRAINTS
-  const effectiveWidth = Math.min(constraints.maxWidth, nodeWidth ?? constraints.maxWidth)
-
-  // Measure title width
-  const titleWidth = measureTextWidth(title, '600 14px Inter, sans-serif')
-  const iconAndPadding = 60 // icon (24) + gaps + padding
-  const titleRequiredWidth = Math.ceil(titleWidth + iconAndPadding)
-
-  // Calculate content dimensions if present
-  let contentWidth = 0
-  let contentHeight = 0
-
-  if (content) {
-    // Strip HTML and measure plain text
-    const plainContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-
-    if (plainContent.length > 0) {
-      // Estimate content dimensions
-      // Assume ~7.5px per character at 14px font size
-      const charsPerLine = Math.floor((effectiveWidth - constraints.padding) / 7.5)
-      const lineCount = Math.ceil(plainContent.length / charsPerLine)
-      const lineHeight = 20 // Approximate line height
-
-      // Calculate based on actual line breaks in HTML
-      const htmlLines = content.split(/<\/p>|<br\s*\/?>/i).filter(Boolean).length
-      const effectiveLines = Math.max(lineCount, htmlLines)
-
-      contentHeight = effectiveLines * lineHeight
-      contentWidth = Math.min(
-        effectiveWidth,
-        Math.ceil(plainContent.length * 7.5) + constraints.padding
-      )
-    }
-  }
-
-  // Calculate final dimensions
-  const width = Math.max(
-    constraints.minWidth,
-    Math.min(constraints.maxWidth, Math.max(titleRequiredWidth, contentWidth))
-  )
-
-  const height = Math.max(
-    constraints.minHeight,
-    Math.min(
-      constraints.maxHeight,
-      TYPE_BADGE_H + headerHeight + Math.max(contentHeight, MIN_BODY_H) + footerHeight + constraints.padding
-    )
-  )
-
-  return { width, height }
 }

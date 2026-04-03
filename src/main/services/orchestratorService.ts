@@ -16,6 +16,16 @@ import { BrowserWindow } from 'electron'
 import { execLogWriter } from './notionExecLog'
 import { emitPluginEvent } from '@plugins/registry'
 import { runAgentForOrchestrator } from '../agent/claudeAgent'
+import { buildTool } from '../tools/buildTool'
+import { assembleToolPool } from '../tools/assembleToolPool'
+import {
+  SpawnWorkerSchema,
+  GetWorkerResultSchema,
+  SynthesizeResultsSchema,
+} from '../tools/canonicalSchemas'
+import type { Tool, ToolResult } from '../tools/types'
+import { AGENT_RESULT_SUMMARY_MAX_CHARS } from '../../shared/types/edges'
+import type { AgentEdgeResult } from '../../shared/types/edges'
 import type {
   OrchestratorNodeData,
   OrchestratorRun,
@@ -27,6 +37,9 @@ import type {
   OrchestratorRunStatus,
   OrchestratorConditionType,
 } from '../../shared/types/nodes'
+import * as fs from 'fs/promises'
+import * as path from 'path'
+import { app } from 'electron'
 
 // Unique run ID generator
 let runIdCounter = 0
@@ -391,6 +404,9 @@ async function executeStrategy(state: ActiveRunState): Promise<void> {
     case 'conditional':
       await executeConditional(state)
       break
+    case 'coordinator':
+      await executeCoordinator(state)
+      break
   }
 
   finishRun(state)
@@ -589,6 +605,377 @@ async function executeConditional(state: ActiveRunState): Promise<void> {
     }
 
     currentAgent = nextAgent as ConnectedAgent
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Coordinator strategy — LLM-driven orchestration with tool-use loop
+// ---------------------------------------------------------------------------
+
+/**
+ * Get the workspace-local temp directory for spilling large results.
+ * Creates the directory if it does not exist.
+ */
+async function getCoordinatorTempDir(workspaceId: string): Promise<string> {
+  const userDataPath = app.getPath('userData')
+  const tempDir = path.join(userDataPath, 'workspaces', '.cognograph', 'temp', workspaceId)
+  await fs.mkdir(tempDir, { recursive: true })
+  return tempDir
+}
+
+/**
+ * Write a full result to the temp directory when it exceeds the summary cap.
+ * Returns the absolute path to the spilled file.
+ */
+async function spillResultToTemp(
+  tempDir: string,
+  agentNodeId: string,
+  fullOutput: string,
+): Promise<string> {
+  const filename = `result-${agentNodeId}-${Date.now()}.txt`
+  const filePath = path.join(tempDir, filename)
+  await fs.writeFile(filePath, fullOutput, 'utf-8')
+  return filePath
+}
+
+/**
+ * Create an AgentEdgeResult with summary capping and optional file spill.
+ */
+async function buildEdgeResult(
+  output: string,
+  tempDir: string,
+  agentNodeId: string,
+): Promise<AgentEdgeResult> {
+  const result: AgentEdgeResult = {
+    summary: output,
+    timestamp: new Date().toISOString(),
+  }
+
+  if (output.length > AGENT_RESULT_SUMMARY_MAX_CHARS) {
+    result.summary =
+      output.slice(0, AGENT_RESULT_SUMMARY_MAX_CHARS) +
+      `\n[Truncated — ${output.length} total characters. Full result saved to disk.]`
+    result.fullResultPath = await spillResultToTemp(tempDir, agentNodeId, output)
+  }
+
+  return result
+}
+
+/**
+ * Build the coordinator-specific tools that the coordinator LLM can call.
+ *
+ * These tools are the ONLY tools available to the coordinator — it cannot
+ * access filesystem, commands, or canvas tools directly.
+ */
+function buildCoordinatorTools(state: ActiveRunState, tempDir: string): Tool[] {
+  // Worker results collected during this coordinator run
+  const workerResults = new Map<string, OrchestratorAgentResult>()
+
+  const spawnWorkerTool = buildTool({
+    name: 'spawn_worker',
+    description:
+      'Dispatch a worker agent on a connected conversation node. ' +
+      'The worker runs to completion and its result is stored. ' +
+      'Returns a summary of the worker output.',
+    inputSchema: SpawnWorkerSchema,
+    async call(input: unknown): Promise<ToolResult> {
+      const { agentNodeId, prompt, edgeId } = input as {
+        agentNodeId: string
+        prompt: string
+        edgeId?: string
+      }
+
+      // Find the agent in our connected agents
+      const agent = state.agents.find((a) => a.nodeId === agentNodeId)
+      if (!agent) {
+        return {
+          content: [{ type: 'text', text: `Error: No connected agent with nodeId "${agentNodeId}"` }],
+          isError: true,
+        }
+      }
+
+      // Budget check
+      const budgetCheck = canRunAgent(state.budget, state.run)
+      if (!budgetCheck.allowed) {
+        return {
+          content: [{
+            type: 'text',
+            text: `Budget exceeded: ${budgetCheck.reason}`,
+          }],
+          isError: true,
+        }
+      }
+
+      // Override prompt for this worker dispatch
+      const originalPrompt = agent.promptOverride
+      agent.promptOverride = prompt
+      if (edgeId) {
+        agent.edgeId = edgeId
+      }
+
+      // Run the worker agent
+      const result = await runAgent(state, agent, undefined)
+      agent.promptOverride = originalPrompt
+
+      // Store result for later retrieval
+      workerResults.set(agentNodeId, result)
+
+      // Build edge result and store on run for edge annotation
+      const edgeResult = await buildEdgeResult(
+        result.output || '',
+        tempDir,
+        agentNodeId,
+      )
+
+      // Store edge results on the run's agentResults for downstream edge annotation
+      if (!state.run.edgeResults) {
+        state.run.edgeResults = {}
+      }
+      const effectiveEdgeId = edgeId || agent.edgeId
+      if (effectiveEdgeId) {
+        state.run.edgeResults[effectiveEdgeId] = edgeResult
+      }
+
+      const summary = edgeResult.summary
+      return {
+        content: [{
+          type: 'text',
+          text: `Worker "${agentNodeId}" completed with status: ${result.status}\n\n${summary}`,
+        }],
+      }
+    },
+  })
+
+  const getWorkerResultTool = buildTool({
+    name: 'get_worker_result',
+    description:
+      'Read the result from a completed worker agent. ' +
+      'Returns the worker output summary, status, and token usage.',
+    inputSchema: GetWorkerResultSchema,
+    isReadOnly: true,
+    async call(input: unknown): Promise<ToolResult> {
+      const { agentNodeId } = input as { agentNodeId: string }
+
+      const result = workerResults.get(agentNodeId)
+      if (!result) {
+        // Check if it's in the run's agentResults (from a previous spawn)
+        const fromRun = state.run.agentResults.find((r) => r.agentNodeId === agentNodeId)
+        if (fromRun) {
+          return {
+            content: [{
+              type: 'text',
+              text: JSON.stringify({
+                agentNodeId: fromRun.agentNodeId,
+                status: fromRun.status,
+                output: fromRun.output?.slice(0, AGENT_RESULT_SUMMARY_MAX_CHARS),
+                inputTokens: fromRun.inputTokens,
+                outputTokens: fromRun.outputTokens,
+                durationMs: fromRun.durationMs,
+              }),
+            }],
+          }
+        }
+
+        return {
+          content: [{
+            type: 'text',
+            text: `No result found for worker "${agentNodeId}". Has it been spawned yet?`,
+          }],
+          isError: true,
+        }
+      }
+
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            agentNodeId: result.agentNodeId,
+            status: result.status,
+            output: result.output?.slice(0, AGENT_RESULT_SUMMARY_MAX_CHARS),
+            error: result.error,
+            inputTokens: result.inputTokens,
+            outputTokens: result.outputTokens,
+            durationMs: result.durationMs,
+            toolCallCount: result.toolCallCount,
+          }),
+        }],
+      }
+    },
+  })
+
+  const synthesizeResultsTool = buildTool({
+    name: 'synthesize_results',
+    description:
+      'Combine multiple worker results into a unified synthesis. ' +
+      'If agentNodeIds is omitted, synthesizes all completed workers. ' +
+      'Returns the combined summary.',
+    inputSchema: SynthesizeResultsSchema,
+    isReadOnly: true,
+    async call(input: unknown): Promise<ToolResult> {
+      const { agentNodeIds, synthesisPrompt } = input as {
+        agentNodeIds?: string[]
+        synthesisPrompt?: string
+      }
+
+      // Determine which results to include
+      const targetIds = agentNodeIds || [...workerResults.keys()]
+      if (targetIds.length === 0) {
+        return {
+          content: [{
+            type: 'text',
+            text: 'No worker results available to synthesize.',
+          }],
+          isError: true,
+        }
+      }
+
+      // Collect results
+      const parts: string[] = []
+      for (const nodeId of targetIds) {
+        const result = workerResults.get(nodeId)
+        if (result) {
+          const outputTruncated = (result.output || '').slice(0, AGENT_RESULT_SUMMARY_MAX_CHARS)
+          parts.push(
+            `## Worker: ${nodeId} (${result.status})\n${outputTruncated}`
+          )
+        } else {
+          parts.push(`## Worker: ${nodeId}\n[No result available]`)
+        }
+      }
+
+      const header = synthesisPrompt
+        ? `Synthesis instructions: ${synthesisPrompt}\n\n`
+        : 'Combined results from all workers:\n\n'
+
+      const combined = header + parts.join('\n\n---\n\n')
+
+      return {
+        content: [{
+          type: 'text',
+          text: combined,
+        }],
+      }
+    },
+  })
+
+  return [spawnWorkerTool, getWorkerResultTool, synthesizeResultsTool]
+}
+
+/**
+ * Coordinator strategy — an LLM-driven orchestrator that reads graph topology
+ * and dispatches workers via tool calls.
+ *
+ * The coordinator:
+ * 1. Receives a restricted tool set (spawn_worker, get_worker_result, synthesize_results)
+ * 2. Reads the graph topology from connected agents list
+ * 3. Uses runAgentWithToolLoop to drive the coordination LLM
+ * 4. Worker results are stored on edges via AgentEdgeResult
+ */
+async function executeCoordinator(state: ActiveRunState): Promise<void> {
+  // Budget check
+  const budgetCheck = canRunAgent(state.budget, state.run)
+  if (!budgetCheck.allowed) {
+    state.run.status = 'failed'
+    state.run.error = budgetCheck.reason
+    emitStatus({
+      orchestratorId: state.orchestratorId,
+      runId: state.run.id,
+      type: 'budget-exceeded',
+      error: budgetCheck.reason,
+    })
+    return
+  }
+
+  // Prepare temp directory for result spilling
+  const workspaceId = state.run.workspaceId || state.orchestratorId
+  const tempDir = await getCoordinatorTempDir(workspaceId)
+
+  // Build coordinator-only tools
+  const coordinatorTools = buildCoordinatorTools(state, tempDir)
+
+  // Build the tool pool with ONLY coordinator tools (no filesystem, no canvas)
+  const toolPool = assembleToolPool(coordinatorTools, [])
+
+  // Build the graph topology description for the coordinator
+  const agentDescriptions = state.agents.map((a) => {
+    const desc = [
+      `- Agent "${a.nodeId}" (order: ${a.order})`,
+    ]
+    if (a.promptOverride) {
+      desc.push(`  Prompt: ${a.promptOverride.slice(0, 200)}...`)
+    }
+    if (a.edgeId) {
+      desc.push(`  Edge ID: ${a.edgeId}`)
+    }
+    return desc.join('\n')
+  })
+
+  const systemPrompt = [
+    'You are an orchestration coordinator for a spatial AI canvas.',
+    'Your job is to read the graph topology of connected agents and coordinate their execution.',
+    '',
+    'You have access to these tools ONLY:',
+    '- spawn_worker: Dispatch a worker agent with a prompt. Pass the agentNodeId and a clear prompt.',
+    '- get_worker_result: Read the output from a completed worker.',
+    '- synthesize_results: Combine results from multiple workers into a unified output.',
+    '',
+    'Connected agents available for dispatch:',
+    ...agentDescriptions,
+    '',
+    'Strategy:',
+    '1. Analyze which agents to run and in what order based on the topology.',
+    '2. Spawn workers with clear, specific prompts.',
+    '3. After all workers complete, synthesize their results.',
+    '4. Provide a final summary of the orchestrated work.',
+    '',
+    'IMPORTANT: You may ONLY use the tools listed above. You cannot access files, run commands, or modify the canvas directly.',
+  ].join('\n')
+
+  // Determine the prompt for the coordinator
+  // Use the orchestrator's description or a default
+  const coordinatorPrompt =
+    'Analyze the connected agents and orchestrate their execution. ' +
+    'Spawn each agent with an appropriate prompt, then synthesize the results.'
+
+  // Run the coordinator through the claudeAgent bridge (simpler than full agentLoop for now)
+  // We use runAgentForOrchestrator with coordinator tools converted to Anthropic format
+  const anthropicTools = toolPool.toAnthropicFormat().map((t) => ({
+    name: t.name,
+    description: t.description,
+    input_schema: t.input_schema,
+  }))
+
+  const coordinatorResult = await runAgentForOrchestrator({
+    agentNodeId: `coordinator-${state.orchestratorId}`,
+    context: systemPrompt,
+    prompt: coordinatorPrompt,
+    tools: anthropicTools as import('@anthropic-ai/sdk').default.Tool[],
+    model: state.run.model,
+    maxTokens: state.budget?.maxTokensPerAgent,
+  })
+
+  // Record the coordinator's own usage
+  const COST_PER_1K_INPUT = 0.003
+  const COST_PER_1K_OUTPUT = 0.015
+  const coordinatorCostUSD =
+    (coordinatorResult.inputTokens / 1000) * COST_PER_1K_INPUT +
+    (coordinatorResult.outputTokens / 1000) * COST_PER_1K_OUTPUT
+
+  // NOTE: The coordinator itself is NOT a worker — but we record its usage for budgeting.
+  // Individual worker results are already in state.run.agentResults (added by runAgent).
+  state.run.totalInputTokens += coordinatorResult.inputTokens
+  state.run.totalOutputTokens += coordinatorResult.outputTokens
+  state.run.totalCostUSD += coordinatorCostUSD
+
+  if (coordinatorResult.status === 'failed') {
+    state.run.status = 'failed'
+    state.run.error = coordinatorResult.error || 'Coordinator agent failed'
+    emitStatus({
+      orchestratorId: state.orchestratorId,
+      runId: state.run.id,
+      type: 'run-failed',
+      error: state.run.error,
+    })
   }
 }
 

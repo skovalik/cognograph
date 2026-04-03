@@ -1,17 +1,73 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { ipcMain, BrowserWindow, safeStorage } from 'electron'
-import { execFile, spawn } from 'child_process'
-import { promisify } from 'util'
-import Store from 'electron-store'
+import { type Options, query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk'
 import Anthropic from '@anthropic-ai/sdk'
+import { execFile, spawn } from 'child_process'
+import { BrowserWindow, ipcMain, safeStorage } from 'electron'
+import Store from 'electron-store'
+import { promisify } from 'util'
+import { callMCPTool, getMCPToolsForServers, listMCPConnections } from '../mcp/mcpClient'
 import { getSetting } from '../settings'
-import { query, type SDKMessage, type Options } from '@anthropic-ai/claude-agent-sdk'
-import { createCognographSdkServer, setCurrentConversationId } from './sdkTools'
+import { assembleToolPool } from '../tools/assembleToolPool'
+import type { BuiltinToolDeps } from '../tools/builtinTools'
+import { createBuiltinTools } from '../tools/builtinTools'
+import { adaptMCPTools } from '../tools/mcpToolAdapter'
+import type { ToolPool } from '../tools/types'
 import { logger } from '../utils/logger'
+import {
+  editFile as fsEditFile,
+  executeCommand as fsExecuteCommand,
+  listDirectory as fsListDirectory,
+  readFile as fsReadFile,
+  searchFiles as fsSearchFiles,
+  writeFile as fsWriteFile,
+  getSecurityContext,
+} from './filesystemTools'
+// === Phase 1B additions — preserve across Phase 2 rewrite ===
+import { classifyLLMError } from './llmErrors'
+import {
+  createCognographSdkServer,
+  executeInRenderer,
+  getCurrentConversationId,
+  setCurrentConversationId,
+  setSdkToolPool,
+} from './sdkTools'
+// === end Phase 1B additions ===
+
+// === Phase 3A additions — context budget enforcement ===
+import {
+  clearContextErrorState,
+  contextBudget,
+  MAX_CONTEXT_RETRIES,
+  recordContextError,
+} from './contextBudget'
+import { estimateTokens } from './tokenEstimation'
+
+// === end Phase 3A additions ===
+
+export type { AgentLoopConfig, AgentLoopEvent, AgentLoopResult } from './agentLoop'
+// === Phase 2B additions — agent loop + tool executor ===
+export { runAgentWithToolLoop } from './agentLoop'
+
+// === end Phase 2B additions ===
+
+import { runAgentWithToolLoop as _runAgentLoop } from './agentLoop'
+// === Phase B1 additions — event bridge + agentLoop wiring ===
+import { bridgeEventToIPC } from './eventBridge'
+
+// === end Phase B1 additions ===
 
 const execFileAsync = promisify(execFile)
+
+// === Phase 1B additions — preserve across Phase 2 rewrite ===
+/** Default max_tokens for API calls */
+const DEFAULT_MAX_TOKENS = 8192
+/** Escalation multiplier when response is truncated (stop_reason: max_tokens) */
+const ESCALATION_MULTIPLIER = 4
+/** Absolute ceiling for escalated max_tokens */
+const MAX_TOKENS_CEILING = 64_000
+// === end Phase 1B additions ===
 
 // Types for agent requests
 interface MemoryEntry {
@@ -103,6 +159,153 @@ const activeRequests = new Map<string, ActiveRequest>()
 let anthropicClient: Anthropic | null = null
 let lastApiKey: string | null = null
 
+// ---------------------------------------------------------------------------
+// Phase B1: Abort all active requests (called from before-quit handler)
+// ---------------------------------------------------------------------------
+
+/**
+ * Abort all active agent requests. Called during app shutdown to ensure
+ * no orphaned streaming connections survive after the window closes.
+ */
+export function abortAllRequests(): void {
+  for (const [, req] of activeRequests) {
+    req.controller.abort(new Error('App quitting'))
+  }
+  activeRequests.clear()
+}
+
+// ---------------------------------------------------------------------------
+// Context refresh IPC — C-FIX-3
+// ---------------------------------------------------------------------------
+
+/** Pending context requests, keyed by requestId */
+const pendingContextRequests = new Map<string, (ctx: string) => void>()
+
+// Permanent listener — registered once at module load
+ipcMain.on('context:response', (_event, data: { requestId: string; context: string }) => {
+  const resolve = pendingContextRequests.get(data.requestId)
+  if (!resolve) return
+  pendingContextRequests.delete(data.requestId)
+  resolve(data.context)
+})
+
+/**
+ * Request the current BFS context for a conversation from the renderer.
+ *
+ * Round-trip: main sends 'context:request' → renderer calls getContextForNode →
+ * renderer sends 'context:response'. Resolves within 5s or returns fallback string.
+ *
+ * Used by agentLoop's onTurnEnd to refresh system prompt after mutating tool calls.
+ */
+export async function getContextForConversation(conversationId: string): Promise<string> {
+  const win = getMainWindow()
+  if (!win || win.isDestroyed()) return 'No connected context.'
+
+  return new Promise((resolve) => {
+    const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    const timeout = setTimeout(() => {
+      pendingContextRequests.delete(requestId)
+      resolve('No connected context.')
+    }, 5000)
+
+    pendingContextRequests.set(requestId, (ctx) => {
+      clearTimeout(timeout)
+      resolve(ctx)
+    })
+
+    win.webContents.send('context:request', { requestId, conversationId })
+  })
+}
+
+// ---------------------------------------------------------------------------
+// API-path BuiltinToolDeps factory
+// ---------------------------------------------------------------------------
+
+/**
+ * Create BuiltinToolDeps for the API path (agentLoop).
+ *
+ * Wires:
+ * - executeInRenderer → shared sdk-tool-call/sdk-tool-result IPC channels
+ *   (renderer-side sdkToolBridge.ts handles and calls executeTool)
+ * - getCurrentConversationId → sdkTools module-level current conversation
+ * - filesystem ops → filesystemTools.ts (symlink-safe, permission-checked)
+ * - getSecurityContext → cached workspace security context (includes trustedSymlinkTargets)
+ *
+ * H-FIX-5: Canvas tools stay in renderer by design — they need Zustand store
+ * access. The IPC round-trip (main → renderer → main) is the bridge.
+ */
+export function createApiPathBuiltinToolDeps(): BuiltinToolDeps {
+  return {
+    executeInRenderer,
+    getCurrentConversationId,
+
+    readFile: (path, allowedPaths, startLine, endLine) => {
+      const ctx = getSecurityContext()
+      return fsReadFile(path, allowedPaths, startLine, endLine, ctx.trustedSymlinkTargets)
+    },
+
+    writeFile: (path, content, allowedPaths) => {
+      const ctx = getSecurityContext()
+      return fsWriteFile(path, content, allowedPaths, ctx.trustedSymlinkTargets)
+    },
+
+    editFile: (path, oldString, newString, allowedPaths) => {
+      const ctx = getSecurityContext()
+      return fsEditFile(path, oldString, newString, allowedPaths, ctx.trustedSymlinkTargets)
+    },
+
+    listDirectory: (path, allowedPaths) => {
+      const ctx = getSecurityContext()
+      return fsListDirectory(path, allowedPaths, ctx.trustedSymlinkTargets)
+    },
+
+    searchFiles: (path, pattern, allowedPaths, fileGlob) => {
+      const ctx = getSecurityContext()
+      return fsSearchFiles(path, pattern, allowedPaths, fileGlob, ctx.trustedSymlinkTargets)
+    },
+
+    executeCommand: (command, allowedPaths, allowedCommands, cwd) => {
+      const ctx = getSecurityContext()
+      return fsExecuteCommand(
+        command,
+        allowedPaths,
+        allowedCommands,
+        cwd,
+        undefined,
+        ctx.trustedSymlinkTargets,
+      )
+    },
+
+    getSecurityContext: () => {
+      const ctx = getSecurityContext()
+      return { allowedPaths: ctx.allowedPaths, allowedCommands: ctx.allowedCommands }
+    },
+  }
+}
+
+/**
+ * Assemble the active ToolPool for an agentLoop call.
+ *
+ * Merges builtin tools (canvas + filesystem + memory) with tools from all
+ * currently-connected MCP servers. MCP tools win on name collision.
+ *
+ * Called once per agent:sendWithTools request — snapshot of connected servers
+ * at request time. Stale pools (after MCP reconnect) are addressed in Phase F.
+ */
+export function getActiveToolPool(builtinDeps: BuiltinToolDeps): ToolPool {
+  const builtins = createBuiltinTools(builtinDeps)
+
+  // Get all active MCP server IDs and their tool definitions
+  const connections = listMCPConnections()
+  const serverIds = connections.map((c) => c.id)
+  const mcpToolDefs = getMCPToolsForServers(serverIds)
+
+  // Adapt MCP tool definitions to canonical Tool objects bound to callMCPTool
+  const mcpTools = adaptMCPTools(mcpToolDefs, callMCPTool)
+
+  return assembleToolPool(builtins, mcpTools)
+}
+
 // Get API key from encrypted store (replicates llm.ts pattern)
 function getApiKey(provider: string): string | null {
   try {
@@ -139,14 +342,12 @@ function sendStreamChunk(chunk: AgentStreamChunk): void {
 function buildAgentSystemPrompt(
   context: string,
   memory?: AgentMemory,
-  promptPrefix?: string
+  promptPrefix?: string,
 ): string {
   // Build memory section if entries exist
   let memorySection = ''
   if (memory && memory.entries.length > 0) {
-    const memoryLines = memory.entries
-      .map((e) => `- **${e.key}**: ${e.value}`)
-      .join('\n')
+    const memoryLines = memory.entries.map((e) => `- **${e.key}**: ${e.value}`).join('\n')
     memorySection = `\n\n## Your Memory\nThe following are facts you've stored from previous runs:\n\n${memoryLines}\n\nUse add_memory to update or add new memories as you learn things. Use delete_memory to remove outdated entries.`
   }
 
@@ -177,7 +378,7 @@ You have access to these tools:
 - **get_selection** — Get currently selected nodes
 
 ### Tools That Do NOT Exist
-You cannot: delete nodes, rename edges, undo actions, or export files. If asked, explain the limitation and suggest alternatives (e.g., manual deletion in UI, unlink + re-link for edge rename).
+You cannot: rename edges, undo actions, or export files. If asked, explain the limitation and suggest alternatives (e.g., unlink + re-link for edge rename).
 
 ## Current Context
 The following context has been gathered from nodes connected to this conversation:
@@ -215,10 +416,16 @@ function findClaudeBinary(): string {
   if (process.platform === 'win32') {
     const npmGlobal = join(process.env.APPDATA || '', 'npm')
     const jsEntry = join(npmGlobal, 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js')
-    try { fs.accessSync(jsEntry); return jsEntry } catch {}
+    try {
+      fs.accessSync(jsEntry)
+      return jsEntry
+    } catch {}
     // Also check local node_modules
     const localEntry = join(process.cwd(), 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js')
-    try { fs.accessSync(localEntry); return localEntry } catch {}
+    try {
+      fs.accessSync(localEntry)
+      return localEntry
+    } catch {}
   }
 
   const candidates = [
@@ -229,7 +436,10 @@ function findClaudeBinary(): string {
   ]
   for (const candidate of candidates) {
     if (candidate && candidate !== 'claude') {
-      try { fs.accessSync(candidate, fs.constants.X_OK); return candidate } catch {}
+      try {
+        fs.accessSync(candidate, fs.constants.X_OK)
+        return candidate
+      } catch {}
     }
   }
   return 'claude'
@@ -285,7 +495,7 @@ async function handleAgentSDKRequest(payload: AgentRequestPayload): Promise<void
       'mcp__cognograph_canvas__get_context_chain',
       'mcp__cognograph_canvas__get_selection',
     ],
-    ...(existingSessionId ? { resume: existingSessionId } : {})
+    ...(existingSessionId ? { resume: existingSessionId } : {}),
   }
 
   const controller = new AbortController()
@@ -314,7 +524,7 @@ async function handleAgentSDKRequest(payload: AgentRequestPayload): Promise<void
               requestId,
               conversationId,
               type: 'text_delta',
-              content: block.text
+              content: block.text,
             })
           }
         }
@@ -333,9 +543,9 @@ async function handleAgentSDKRequest(payload: AgentRequestPayload): Promise<void
           usage: resultMsg.usage
             ? {
                 input_tokens: resultMsg.usage.input_tokens,
-                output_tokens: resultMsg.usage.output_tokens
+                output_tokens: resultMsg.usage.output_tokens,
               }
-            : undefined
+            : undefined,
         })
       }
     }
@@ -351,7 +561,7 @@ async function handleAgentSDKRequest(payload: AgentRequestPayload): Promise<void
         type: 'error',
         error: isCliMissing
           ? 'Claude CLI not found. Install from claude.ai/code or disable "Use Claude Pro" in settings.'
-          : message
+          : message,
       })
     }
   } finally {
@@ -364,7 +574,7 @@ function processStreamEvent(
   requestId: string,
   conversationId: string,
   event: Anthropic.MessageStreamEvent,
-  currentToolUseId: { value: string | null }
+  currentToolUseId: { value: string | null },
 ): AgentStreamChunk | null {
   switch (event.type) {
     case 'content_block_start':
@@ -375,7 +585,7 @@ function processStreamEvent(
           conversationId,
           type: 'tool_use_start',
           toolUseId: event.content_block.id,
-          toolName: event.content_block.name
+          toolName: event.content_block.name,
         }
       }
       return null
@@ -386,7 +596,7 @@ function processStreamEvent(
           requestId,
           conversationId,
           type: 'text_delta',
-          content: event.delta.text
+          content: event.delta.text,
         }
       }
       if (event.delta.type === 'input_json_delta') {
@@ -395,7 +605,7 @@ function processStreamEvent(
           conversationId,
           type: 'tool_use_delta',
           toolUseId: currentToolUseId.value || '',
-          toolInput: event.delta.partial_json
+          toolInput: event.delta.partial_json,
         }
       }
       return null
@@ -406,7 +616,7 @@ function processStreamEvent(
           requestId,
           conversationId,
           type: 'tool_use_end',
-          toolUseId: currentToolUseId.value
+          toolUseId: currentToolUseId.value,
         }
         currentToolUseId.value = null
         return chunk
@@ -467,9 +677,7 @@ export async function runAgentForOrchestrator(opts: {
 
   const systemPrompt = buildAgentSystemPrompt(fullContext)
 
-  const messages: Anthropic.MessageParam[] = [
-    { role: 'user', content: opts.prompt }
-  ]
+  const messages: Anthropic.MessageParam[] = [{ role: 'user', content: opts.prompt }]
 
   try {
     const stream = await anthropicClient.messages.stream(
@@ -482,7 +690,7 @@ export async function runAgentForOrchestrator(opts: {
       },
       {
         signal: opts.abortSignal,
-      }
+      },
     )
 
     // Collect the full response text
@@ -540,15 +748,67 @@ export function registerAgentHandlers(): void {
   ipcMain.handle('agent:sendWithTools', async (_event, payload: AgentRequestPayload) => {
     // Route to Agent SDK if user has "Use Claude Pro account" enabled
     const useAgentSDK = getSetting('useClaudeProAccount') === true
-    logger.debug(`[Agent] useClaudeProAccount=${useAgentSDK} (routing to ${useAgentSDK ? 'Agent SDK' : 'API'})`)
+    logger.debug(
+      `[Agent] useClaudeProAccount=${useAgentSDK} (routing to ${useAgentSDK ? 'Agent SDK' : 'API'})`,
+    )
     if (useAgentSDK) {
       return handleAgentSDKRequest(payload)
     }
 
-    const { requestId, conversationId, messages, context, tools, model, maxTokens, memory, systemPromptPrefix } = payload
+    const {
+      requestId,
+      conversationId,
+      messages,
+      context,
+      tools,
+      model,
+      maxTokens,
+      memory,
+      systemPromptPrefix,
+    } = payload
 
     logger.debug(`[Agent] Received request ${requestId} for conversation ${conversationId}`)
     logger.debug(`[Agent] Tools count: ${tools.length}, Messages count: ${messages.length}`)
+
+    // === B3: Duplicate conversation guard ===
+    // Reject the request if there is already an active request for this conversation.
+    // This prevents race conditions where two requests share the same conversationId
+    // and would both try to append to the same message thread.
+    const existingRequest = [...activeRequests.values()].find(
+      (r) => r.conversationId === conversationId,
+    )
+    if (existingRequest) {
+      sendStreamChunk({
+        requestId,
+        conversationId,
+        type: 'error',
+        error: 'A request is already running for this conversation. Please wait or cancel it.',
+      })
+      return
+    }
+    // === end B3 ===
+
+    // === Phase 1B additions — preserve across Phase 2 rewrite ===
+    // 1.5c: Pre-persist user message before API call for crash safety.
+    // If the process crashes mid-stream, the user's message survives.
+    const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')
+    if (lastUserMessage) {
+      try {
+        const pendingKey = `pendingUserMessage:${conversationId}`
+        store.set(pendingKey, {
+          conversationId,
+          message: lastUserMessage,
+          timestamp: Date.now(),
+          requestId,
+        })
+        logger.debug(`[Agent] Pre-persisted user message for conversation ${conversationId}`)
+      } catch (persistError) {
+        // Non-fatal: log but continue — losing the message on crash
+        // is better than failing the entire request
+        logger.warn(`[Agent] Failed to pre-persist user message:`, persistError)
+      }
+    }
+    // === end Phase 1B additions (1.5c) ===
 
     // Get API key
     const apiKey = getApiKey('anthropic')
@@ -557,7 +817,7 @@ export function registerAgentHandlers(): void {
         requestId,
         conversationId,
         type: 'error',
-        error: 'No Anthropic API key configured. Please set your API key in settings.'
+        error: 'No Anthropic API key configured. Please set your API key in settings.',
       })
       return
     }
@@ -581,91 +841,317 @@ export function registerAgentHandlers(): void {
 
       logger.debug(`[Agent] Starting stream with model: ${model || 'claude-sonnet-4-6'}`)
 
-      // Make streaming API call with rate-limit retry
-      const MAX_RETRIES = 3
-      let finalMessage: Anthropic.Message | null = null
+      // === Phase 3A additions — context budget check ===
+      const estimatedContextTokens =
+        estimateTokens(systemPrompt) + estimateTokens(JSON.stringify(messages))
+      contextBudget.trackConversation(conversationId, estimatedContextTokens)
 
-      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-        try {
-          const stream = await anthropicClient.messages.stream(
-            {
-              model: model || 'claude-sonnet-4-6',
-              max_tokens: maxTokens || 64000,
-              system: systemPrompt,
-              messages: messages as Anthropic.MessageParam[],
-              tools: tools.length > 0 ? tools : undefined
-            },
-            {
-              signal: controller.signal
-            }
-          )
-
-          // Process stream events
-          for await (const event of stream) {
-            if (controller.signal.aborted) {
-              logger.debug(`[Agent] Request ${requestId} was aborted`)
-              break
-            }
-
-            const chunk = processStreamEvent(requestId, conversationId, event, currentToolUseId)
-            if (chunk) {
-              sendStreamChunk(chunk)
-            }
-          }
-
-          // Get final message to determine stop reason and extract usage
-          finalMessage = await stream.finalMessage()
-          break // success — exit retry loop
-        } catch (retryError: any) {
-          if (retryError?.status === 429 && attempt < MAX_RETRIES && !controller.signal.aborted) {
-            const retryAfter = parseInt(retryError?.headers?.['retry-after'] || '60', 10)
-            const waitSeconds = Math.min(retryAfter + 5, 120) // add 5s buffer, cap at 2min
-            logger.debug(`[Agent] Rate limited (attempt ${attempt + 1}/${MAX_RETRIES + 1}). Waiting ${waitSeconds}s before retry...`)
-
-            // Notify UI that we're waiting
-            sendStreamChunk({
-              requestId,
-              conversationId,
-              type: 'text',
-              text: `\n\n*Rate limit reached — waiting ${waitSeconds}s before continuing...*\n\n`
-            })
-
-            // Wait with abort check
-            await new Promise<void>((resolve) => {
-              const timeout = setTimeout(resolve, waitSeconds * 1000)
-              const onAbort = () => { clearTimeout(timeout); resolve() }
-              controller.signal.addEventListener('abort', onAbort, { once: true })
-            })
-
-            if (controller.signal.aborted) throw retryError
-            continue // retry
-          }
-          throw retryError // non-429 or out of retries — let outer catch handle it
-        }
+      // Check if this conversation is frozen (budget exceeded)
+      if (contextBudget.isFrozen(conversationId)) {
+        sendStreamChunk({
+          requestId,
+          conversationId,
+          type: 'error',
+          error:
+            'This conversation has been frozen due to aggregate context budget limits. Please close some conversations and try again.',
+        })
+        return
       }
 
-      if (!finalMessage) throw new Error('No response received after retries')
+      // Check aggregate budget
+      const budgetCheck = contextBudget.checkBudget(conversationId, estimatedContextTokens)
+      if (!budgetCheck.allowed) {
+        logger.warn(`[Agent] Budget check failed: ${budgetCheck.reason}`)
+        sendStreamChunk({
+          requestId,
+          conversationId,
+          type: 'error',
+          error: budgetCheck.reason || 'Context budget exceeded.',
+        })
+        return
+      }
 
-      logger.debug(`[Agent] Stream completed with stop_reason: ${finalMessage.stop_reason}`)
+      if (budgetCheck.frozenCount > 0) {
+        logger.debug(
+          `[Agent] Budget enforcement froze ${budgetCheck.frozenCount} conversation(s). ` +
+            `Aggregate: ${budgetCheck.aggregateTokens} tokens.`,
+        )
+      }
+      // === end Phase 3A additions ===
 
-      // Extract usage data for token tracking
-      // Note: cache token fields may not be in SDK types yet but exist in API responses
-      const usage = finalMessage.usage
-        ? {
-            input_tokens: finalMessage.usage.input_tokens,
-            output_tokens: finalMessage.usage.output_tokens,
-            cache_creation_input_tokens: (finalMessage.usage as any).cache_creation_input_tokens,
-            cache_read_input_tokens: (finalMessage.usage as any).cache_read_input_tokens
+      // === Phase B1: Feature flag — agentLoop vs inline streaming ===
+      // H-FIX-1: AGENT_LOOP_ENABLED defaults to true. Set to 'false' to fall
+      // back to the original inline streaming path for debugging.
+      if (process.env.AGENT_LOOP_ENABLED !== 'false') {
+        // ---------------------------------------------------------------
+        // NEW PATH: delegate to runAgentWithToolLoop
+        // ---------------------------------------------------------------
+        const mainWindow = getMainWindow()
+        if (!mainWindow) throw new Error('No main window available')
+
+        const builtinDeps = createApiPathBuiltinToolDeps()
+        const toolPool = getActiveToolPool(builtinDeps)
+
+        const effectiveMaxTokens = maxTokens || DEFAULT_MAX_TOKENS
+
+        const result = await _runAgentLoop({
+          client: anthropicClient,
+          model: model || 'claude-sonnet-4-6',
+          systemPrompt,
+          messages: messages as Anthropic.MessageParam[],
+          toolPool,
+          executionContext: {
+            workspaceId: conversationId, // conversation acts as workspace scope
+            conversationId,
+            allowedPaths: [],
+            messages: messages as Anthropic.MessageParam[],
+            activeMcpServerIds: [],
+            metadata: {},
+          },
+          maxTokens: effectiveMaxTokens,
+          signal: controller.signal,
+          onEvent: (event) => bridgeEventToIPC(event, requestId, conversationId, mainWindow),
+          onTurnEnd: async ({ lastToolCalls }) => {
+            // Refresh BFS context if any mutating tool was called (Final-21)
+            const MUTATING = [
+              'create_node',
+              'link_nodes',
+              'update_node',
+              'delete_node',
+              'unlink_nodes',
+              'move_node',
+              'batch_create',
+            ]
+            if (lastToolCalls.some((c) => MUTATING.includes(c.name))) {
+              const freshContext = await getContextForConversation(conversationId)
+              return {
+                systemPrompt: buildAgentSystemPrompt(freshContext, memory, systemPromptPrefix),
+              }
+            }
+          },
+        })
+
+        // C-FIX-1: Send done chunk AFTER the loop returns — without this,
+        // chatToolService hangs forever waiting for the done signal.
+        sendStreamChunk({
+          requestId,
+          conversationId,
+          type: 'done',
+          stopReason: result.stopReason,
+          usage: result.usage,
+        })
+
+        // Clear pre-persisted message on successful completion
+        try {
+          store.delete(`pendingUserMessage:${conversationId}`)
+        } catch {
+          // Non-fatal
+        }
+
+        // Clear error state + update budget tracker with actual usage
+        clearContextErrorState(conversationId)
+        if (result.usage) {
+          contextBudget.trackConversation(
+            conversationId,
+            result.usage.input_tokens + result.usage.output_tokens,
+          )
+        }
+      } else {
+        // ---------------------------------------------------------------
+        // OLD PATH: inline streaming (fallback while AGENT_LOOP_ENABLED=false)
+        // ---------------------------------------------------------------
+
+        // === Phase 1B additions — preserve across Phase 2 rewrite ===
+        // 1.5b: Output token escalation. Start with DEFAULT_MAX_TOKENS,
+        // escalate 4x on max_tokens stop_reason, up to MAX_TOKENS_CEILING.
+        let effectiveMaxTokens = maxTokens || DEFAULT_MAX_TOKENS
+        // === end Phase 1B additions (1.5b init) ===
+
+        // Make streaming API call with rate-limit retry
+        const MAX_RETRIES = 3
+        let finalMessage: Anthropic.Message | null = null
+
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+          try {
+            const stream = await anthropicClient.messages.stream(
+              {
+                model: model || 'claude-sonnet-4-6',
+                max_tokens: effectiveMaxTokens,
+                system: systemPrompt,
+                messages: messages as Anthropic.MessageParam[],
+                tools: tools.length > 0 ? tools : undefined,
+              },
+              {
+                signal: controller.signal,
+              },
+            )
+
+            // Process stream events
+            for await (const event of stream) {
+              if (controller.signal.aborted) {
+                logger.debug(`[Agent] Request ${requestId} was aborted`)
+                break
+              }
+
+              const chunk = processStreamEvent(requestId, conversationId, event, currentToolUseId)
+              if (chunk) {
+                sendStreamChunk(chunk)
+              }
+            }
+
+            // Get final message to determine stop reason and extract usage
+            finalMessage = await stream.finalMessage()
+
+            // === Phase 1B additions — preserve across Phase 2 rewrite ===
+            // 1.5b: If response was truncated (max_tokens), escalate and retry
+            if (
+              finalMessage.stop_reason === 'max_tokens' &&
+              effectiveMaxTokens < MAX_TOKENS_CEILING &&
+              !controller.signal.aborted
+            ) {
+              const previousTokens = effectiveMaxTokens
+              effectiveMaxTokens = Math.min(
+                effectiveMaxTokens * ESCALATION_MULTIPLIER,
+                MAX_TOKENS_CEILING,
+              )
+              logger.warn(
+                `[Agent] Output truncated (stop_reason: max_tokens). ` +
+                  `Escalating max_tokens: ${previousTokens} → ${effectiveMaxTokens}`,
+              )
+              sendStreamChunk({
+                requestId,
+                conversationId,
+                type: 'text_delta',
+                content: `\n\n*Response was truncated — retrying with higher token limit (${effectiveMaxTokens})...*\n\n`,
+              })
+              // Don't break — continue the retry loop with escalated tokens
+              continue
+            }
+            // === end Phase 1B additions (1.5b escalation) ===
+
+            break // success — exit retry loop
+          } catch (retryError: unknown) {
+            // === Phase 1B additions — preserve across Phase 2 rewrite ===
+            // Use classifyLLMError for structured error handling
+            const classified = classifyLLMError(retryError, 'anthropic')
+            // === end Phase 1B additions ===
+
+            if (
+              classified.category === 'rate_limit' &&
+              attempt < MAX_RETRIES &&
+              !controller.signal.aborted
+            ) {
+              const retryAfterMs = classified.retryAfterMs ?? 60_000
+              const waitSeconds = Math.min(Math.ceil(retryAfterMs / 1000) + 5, 120) // add 5s buffer, cap at 2min
+              logger.debug(
+                `[Agent] Rate limited (attempt ${attempt + 1}/${MAX_RETRIES + 1}). Waiting ${waitSeconds}s before retry...`,
+              )
+
+              // Notify UI that we're waiting
+              sendStreamChunk({
+                requestId,
+                conversationId,
+                type: 'text_delta',
+                content: `\n\n*Rate limit reached — waiting ${waitSeconds}s before continuing...*\n\n`,
+              })
+
+              // Wait with abort check
+              await new Promise<void>((resolve) => {
+                const timeout = setTimeout(resolve, waitSeconds * 1000)
+                const onAbort = (): void => {
+                  clearTimeout(timeout)
+                  resolve()
+                }
+                controller.signal.addEventListener('abort', onAbort, { once: true })
+              })
+
+              if (controller.signal.aborted) throw retryError
+              continue // retry
+            }
+
+            // === Phase 3A additions — context_length (413) retry with compaction ===
+            if (
+              classified.category === 'context_length' &&
+              classified.status === 413 &&
+              !controller.signal.aborted
+            ) {
+              const errorState = recordContextError(conversationId, classified.message)
+
+              if (!errorState.shouldSurface) {
+                // Withhold error — attempt compaction and retry
+                logger.debug(
+                  `[Agent] Context too large (413), attempt ${errorState.retryCount}/${MAX_CONTEXT_RETRIES}. ` +
+                    `Triggering compaction...`,
+                )
+                sendStreamChunk({
+                  requestId,
+                  conversationId,
+                  type: 'text_delta',
+                  content: `\n\n*Context too large — compacting and retrying (${errorState.retryCount}/${MAX_CONTEXT_RETRIES})...*\n\n`,
+                })
+
+                // Spill current conversation context to free budget
+                const contextContent = JSON.stringify(messages)
+                try {
+                  contextBudget.spillToDisk(conversationId, contextContent)
+                } catch (spillError) {
+                  logger.warn(`[Agent] Spill failed during compaction:`, spillError)
+                }
+
+                continue // retry with compacted context
+              }
+              // After MAX_CONTEXT_RETRIES, fall through to throw
+            }
+            // === end Phase 3A additions ===
+
+            throw retryError // non-retryable or out of retries — let outer catch handle it
           }
-        : undefined
+        }
 
-      sendStreamChunk({
-        requestId,
-        conversationId,
-        type: 'done',
-        stopReason: finalMessage.stop_reason || 'end_turn',
-        usage
-      })
+        if (!finalMessage) throw new Error('No response received after retries')
+
+        logger.debug(`[Agent] Stream completed with stop_reason: ${finalMessage.stop_reason}`)
+
+        // Extract usage data for token tracking
+        // Note: cache token fields may not be in SDK types yet but exist in API responses
+        const usage = finalMessage.usage
+          ? {
+              input_tokens: finalMessage.usage.input_tokens,
+              output_tokens: finalMessage.usage.output_tokens,
+              cache_creation_input_tokens: (finalMessage.usage as any).cache_creation_input_tokens,
+              cache_read_input_tokens: (finalMessage.usage as any).cache_read_input_tokens,
+            }
+          : undefined
+
+        sendStreamChunk({
+          requestId,
+          conversationId,
+          type: 'done',
+          stopReason: finalMessage.stop_reason || 'end_turn',
+          usage,
+        })
+
+        // === Phase 1B additions — preserve across Phase 2 rewrite ===
+        // 1.5c: Clear pre-persisted message on successful completion
+        try {
+          store.delete(`pendingUserMessage:${conversationId}`)
+        } catch {
+          // Non-fatal
+        }
+        // === end Phase 1B additions (1.5c cleanup) ===
+
+        // === Phase 3A additions — clear error state on success ===
+        clearContextErrorState(conversationId)
+        // Update budget tracker with actual usage
+        if (finalMessage?.usage) {
+          contextBudget.trackConversation(
+            conversationId,
+            finalMessage.usage.input_tokens + finalMessage.usage.output_tokens,
+          )
+        }
+        // === end Phase 3A additions ===
+      }
+      // === end Phase B1 feature flag ===
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
         logger.debug(`[Agent] Request ${requestId} cancelled`)
@@ -673,28 +1159,42 @@ export function registerAgentHandlers(): void {
           requestId,
           conversationId,
           type: 'done',
-          stopReason: 'cancelled'
+          stopReason: 'cancelled',
         })
       } else {
         console.error(`[Agent] Error in request ${requestId}:`, error)
 
-        // Determine error type for better UI messaging
-        const errorMessage = (error as Error).message || 'Unknown error'
-        let userMessage = errorMessage
+        // === Phase 1B additions — preserve across Phase 2 rewrite ===
+        // Use classifyLLMError for structured error messaging
+        const classified = classifyLLMError(error, 'anthropic')
+        let userMessage = classified.message
 
-        if (errorMessage.includes('401') || errorMessage.includes('authentication')) {
-          userMessage = 'API authentication failed. Please check your API key.'
-        } else if (errorMessage.includes('429') || errorMessage.includes('rate')) {
-          userMessage = 'Rate limit exceeded. Please wait a moment and try again.'
-        } else if (errorMessage.includes('network') || errorMessage.includes('ENOTFOUND')) {
-          userMessage = 'Network error. Please check your internet connection.'
+        switch (classified.category) {
+          case 'auth':
+            userMessage = 'API authentication failed. Please check your API key.'
+            break
+          case 'rate_limit':
+            userMessage = 'Rate limit exceeded. Please wait a moment and try again.'
+            break
+          case 'network':
+            userMessage = 'Network error. Please check your internet connection.'
+            break
+          case 'context_length':
+            userMessage =
+              'Conversation too long. Try starting a new conversation or removing some context.'
+            break
+          default:
+            // Keep the original classified message
+            break
         }
+        // === end Phase 1B additions ===
 
         sendStreamChunk({
           requestId,
           conversationId,
           type: 'error',
-          error: userMessage
+          error: userMessage,
+          stack: error instanceof Error ? error.stack : undefined,
         })
       }
     } finally {

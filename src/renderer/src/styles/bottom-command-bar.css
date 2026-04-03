@@ -47,10 +47,10 @@
   }
 }
 
-/* ═══ Input row — inside bar ═══ */
+/* --- Input row — inside bar --- */
 .bottom-command-bar__input-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   padding: 10px 14px;
 }
@@ -64,6 +64,9 @@
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.4;
+  resize: none;
+  overflow-y: auto;
+  min-height: 20px;
 }
 
 .bottom-command-bar__input::placeholder {
@@ -268,4 +271,139 @@
 /* Drag highlight */
 .bottom-command-bar__bar.is-dragging {
   border-color: var(--accent-glow);
+}
+
+/* ═══ Prefix routing — completion popover ═══ */
+
+.bottom-command-bar__completions {
+  max-height: 320px;
+  overflow-y: auto;
+  border-radius: var(--radius-lg, 10px);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.bottom-command-bar__completion-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-md, 6px);
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--duration-fast) var(--ease-default);
+  width: 100%;
+}
+
+.bottom-command-bar__completion-item:hover,
+.bottom-command-bar__completion-item.is-selected {
+  background: color-mix(in srgb, var(--surface-panel-secondary) 80%, transparent);
+  color: var(--text-primary);
+}
+
+.bottom-command-bar__completion-item.is-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.bottom-command-bar__completion-label {
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.bottom-command-bar__completion-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ═══ Mode badge — replaces sparkles icon when prefix is active ═══ */
+
+.bottom-command-bar__mode-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color var(--duration-fast) var(--ease-default);
+}
+
+/* ═══ Toolbar prefix buttons — active state ═══ */
+
+.bottom-command-bar__toolbar-btn.is-active {
+  color: var(--accent-glow);
+}
+
+/* ═══ Mobile FAB ═══ */
+.mobile-command-fab {
+  position: fixed;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  right: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--cg-accent, var(--accent-glow));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  box-shadow: var(--shadow-modal, 0 8px 24px rgba(0, 0, 0, 0.4));
+  cursor: pointer;
+  z-index: var(--z-panels);
+  transition: transform var(--duration-normal, 200ms) var(--ease-default, ease);
+}
+.mobile-command-fab:active {
+  transform: scale(0.92);
+}
+
+/* ═══ Mobile Bottom Sheet ═══ */
+.mobile-command-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 60vh;
+  z-index: var(--z-modals);
+  border-radius: var(--radius-xl, 12px) var(--radius-xl, 12px) 0 0;
+  padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: slide-up-sheet var(--duration-enter, 200ms) var(--ease-out-expo, ease-out);
+}
+.mobile-command-sheet__handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--text-muted);
+  margin: 0 auto 8px;
+}
+@keyframes slide-up-sheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* ═══ Terminal hint ═══ */
+
+.bottom-command-bar__terminal-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 11px;
+  color: #a78bfa;
+  border-radius: var(--radius-md, 6px);
+  background: color-mix(in srgb, #a78bfa 8%, transparent);
+  border: 1px solid color-mix(in srgb, #a78bfa 20%, transparent);
 }

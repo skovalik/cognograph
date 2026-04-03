@@ -1,9 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+/**
+ * Agent Tools — tool definitions, filtering, and execution.
+ *
+ * ARCHITECTURE NOTE (Phase 2C: RENDERER-PASSIVIZE):
+ * This file is being refactored. The target architecture has three layers:
+ *
+ *   1. TOOL DEFINITIONS (stay here) — JSON Schema metadata for UI display,
+ *      command palette, tool badges. Pure data, no side effects.
+ *
+ *   2. TOOL FILTERING (stay here) — getToolsForAgent(), getChatToolDefinitions(),
+ *      getMCPToolsForAgent(). Determines which tools an agent can use. Pure logic.
+ *
+ *   3. TOOL EXECUTION (transitional — moves to main process) — executeTool().
+ *      Currently executes canvas/filesystem/MCP tools in the renderer. Will be
+ *      replaced by main-process execution via the shared toolExecutor + builtinTools.
+ *      Canvas tools (create_node, etc.) will be called via IPC from the main
+ *      process's executeInRenderer bridge.
+ *
+ * Context-chain path derivation (derivePathsFromContext) stays here because it
+ * reads from the workspace store which lives in the renderer.
+ */
+
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { getAvailableMediaTools } from './media/agentToolRegistry'
-import { calculateAutoFitDimensions } from '../utils/nodeUtils'
+import { calculateAutoFitDimensions } from '../utils/textMeasure'
 import { layoutEvents } from '../utils/layoutEvents'
 import type {
   AgentToolDefinition,
@@ -751,6 +773,16 @@ export function setMCPToolServerMap(map: Map<string, string>): void {
 
 // -----------------------------------------------------------------------------
 // Tool Executor
+// TRANSITIONAL: This entire section moves to main process in Phase 2C.
+// Canvas tools will be invoked from main via builtinTools.executeInRenderer IPC.
+// Filesystem/MCP tools already delegate to main via window.api IPC.
+// Media tools will route through main-process media pipeline.
+//
+// After migration, this file retains only:
+//   - Tool definitions (QUERY_TOOLS, CREATE_NODE_TOOL, etc.)
+//   - Tool filtering (getToolsForAgent, getChatToolDefinitions, getMCPToolsForAgent)
+//   - Context-chain derivation (derivePathsFromContext, getEffectiveAllowedPaths)
+//   - ToolExecutionResult type (shared with callers)
 // -----------------------------------------------------------------------------
 
 export interface ToolExecutionResult {
@@ -759,6 +791,19 @@ export interface ToolExecutionResult {
   error?: string
 }
 
+/**
+ * Execute a tool in the renderer process.
+ *
+ * @deprecated TRANSITIONAL — Phase 2C RENDERER-PASSIVIZE.
+ * This function is called from:
+ *   - agentService.ts (API path tool loop) — will be replaced by main-process agentLoop
+ *   - chatToolService.ts (chat tool loop) — will be replaced by main-process agentLoop
+ *   - sdkToolBridge.ts (SDK path) — already replaced by main-process setSdkToolPool()
+ *   - WorkspaceCommandService.ts (workspace commands) — will route through main
+ *
+ * Do NOT add new callers. New tool execution should go through the main process
+ * toolExecutor + builtinTools system.
+ */
 export async function executeTool(
   toolName: string,
   input: Record<string, unknown>,
@@ -1045,10 +1090,19 @@ export async function executeTool(
           const dims = calculateAutoFitDimensions(title, content, headerH, FOOTER_H, currentW)
 
           const isHtml = nodeData.contentType === 'html'
-          const contentFloor = isHtml
-            ? Math.max(480, Math.min(1200, Math.round(content.length * 0.9)))
-            : content.length > 1000 ? 500 : content.length > 500 ? 400 : content.length > 200 ? 300 : 0
-          const widthFloor = isHtml ? 680 : content.length > 300 ? 480 : content.length > 100 ? 340 : 0
+
+          // HTML artifacts render in iframes — use fixed reasonable dimensions, not text heuristics
+          if (isHtml) {
+            const finalW = Math.max(currentW, 680)
+            const finalH = Math.max(node.height ?? 140, 520)
+            if (finalW > currentW || finalH > (node.height ?? 140)) {
+              fitItems.push({ nodeId: realId, width: finalW, height: finalH })
+            }
+            continue
+          }
+
+          const contentFloor = content.length > 2000 ? 900 : content.length > 1000 ? 700 : content.length > 500 ? 500 : content.length > 200 ? 350 : 0
+          const widthFloor = content.length > 500 ? 520 : content.length > 300 ? 480 : content.length > 100 ? 340 : 0
 
           const finalW = Math.max(currentW, dims.width, widthFloor)
           const finalH = Math.max(node.height ?? 140, dims.height, contentFloor)

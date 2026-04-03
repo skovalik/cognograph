@@ -1,6 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+// Sentry error tracking — init before React render so early errors are captured.
+// In the Electron renderer, @sentry/electron/renderer re-exports @sentry/browser
+// with Electron-aware transport. Guard on SENTRY_DSN injected via Vite define.
+import * as Sentry from '@sentry/electron/renderer'
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+  })
+}
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
@@ -22,5 +32,14 @@ if ((window as any).__TEST_MODE__) {
   })
   import('./stores/uiStore').then(({ useUIStore }) => {
     ;(window as any).__uiStore = useUIStore
+  })
+  import('./stores/permissionStore').then(({ usePermissionStore }) => {
+    ;(window as any).__permissionStore = usePermissionStore
+  })
+  import('./stores/orchestratorStore').then(({ useOrchestratorStore }) => {
+    ;(window as any).__orchestratorStore = useOrchestratorStore
+  })
+  import('./stores/notificationStore').then(({ useNotificationStore }) => {
+    ;(window as any).__notificationStore = useNotificationStore
   })
 }

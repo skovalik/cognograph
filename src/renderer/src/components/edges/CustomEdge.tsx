@@ -581,6 +581,15 @@ function getArrowStrokeWidth(arrowStyle: EdgeArrowStyle | undefined): number {
 }
 
 // =============================================================================
+// NODE INDEX HELPER
+// =============================================================================
+
+function getNodeFromIndex(state: { nodes: Array<{ id: string; data?: any }>; nodeIndex: Map<string, number> }, id: string) {
+  const idx = state.nodeIndex.get(id)
+  return idx !== undefined ? state.nodes[idx] : undefined
+}
+
+// =============================================================================
 // CUSTOM EDGE COMPONENT
 // =============================================================================
 
@@ -625,31 +634,31 @@ function CustomEdgeComponent({
   // Node colors for gradients (with defensive fallback to hardcoded defaults)
   // Return primitives to avoid new object references causing re-renders on every drag frame
   const sourceColor = useWorkspaceStore((state) => {
-    const node = state.nodes.find(n => n.id === source)
+    const node = getNodeFromIndex(state, source)
     const nodeType = node?.data?.type || 'conversation'
     return node?.data?.color || state.themeSettings.nodeColors[nodeType] || NODE_TYPE_COLORS[nodeType] || '#64748b'
   })
   const targetColor = useWorkspaceStore((state) => {
-    const node = state.nodes.find(n => n.id === target)
+    const node = getNodeFromIndex(state, target)
     const nodeType = node?.data?.type || 'conversation'
     return node?.data?.color || state.themeSettings.nodeColors[nodeType] || NODE_TYPE_COLORS[nodeType] || '#64748b'
   })
 
   // Node metadata for context flow indicators — return primitives, not objects
   const sourceNodeType = useWorkspaceStore((state) => {
-    const node = state.nodes.find(n => n.id === source)
+    const node = getNodeFromIndex(state, source)
     return node?.data?.type ?? null
   })
   const sourceNodeTitle = useWorkspaceStore((state) => {
-    const node = state.nodes.find(n => n.id === source)
+    const node = getNodeFromIndex(state, source)
     return node?.data?.title || 'Untitled'
   })
   const targetNodeType = useWorkspaceStore((state) => {
-    const node = state.nodes.find(n => n.id === target)
+    const node = getNodeFromIndex(state, target)
     return node?.data?.type ?? null
   })
   const targetNodeTitle = useWorkspaceStore((state) => {
-    const node = state.nodes.find(n => n.id === target)
+    const node = getNodeFromIndex(state, target)
     return node?.data?.title || 'Untitled'
   })
   const sourceNodeInfo = sourceNodeType != null ? { type: sourceNodeType, title: sourceNodeTitle } : null
@@ -673,7 +682,7 @@ function CustomEdgeComponent({
     const selectedIds = state.selectedNodeIds
     if (selectedIds.length !== 1) return false
     const selectedId = selectedIds[0]
-    const selectedNode = state.nodes.find(n => n.id === selectedId)
+    const selectedNode = getNodeFromIndex(state, selectedId)
     if (!selectedNode || selectedNode.data?.type !== 'conversation') return false
     // Highlight if this edge targets the selected conversation
     return target === selectedId || (source === selectedId && isBidirectional)
@@ -1386,7 +1395,7 @@ function CustomEdgeComponent({
   const bridgeStrokeBoost = shouldShowBridgeAnimation ? 0.5 : 0
 
   return (
-    <g data-intra-project={isIntraProject ? 'true' : undefined} style={intraProjectStyles}>
+    <g data-intra-project={isIntraProject ? 'true' : undefined} style={intraProjectStyles} aria-hidden="true">
       {/* Main edge path - using direct path element for reliable inline style application */}
       <path
         id={id}

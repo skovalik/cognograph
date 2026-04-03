@@ -36,6 +36,9 @@ export function resetWorkspaceStore(): void {
     workspaceId: null,
     workspaceName: 'Untitled',
     viewport: { x: 0, y: 0, zoom: 1 },
+    // Indexes (STORE-INDEX)
+    nodeIndex: new Map<string, number>(),
+    edgesByTarget: new Map<string, string[]>(),
 
     // Selection
     selectedNodeIds: [],

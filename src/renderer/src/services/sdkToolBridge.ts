@@ -7,6 +7,19 @@ import { executeTool } from './agentTools'
  * Initialize the SDK tool bridge — listens for tool calls from the main process
  * Agent SDK MCP server and dispatches them to the renderer's executeTool.
  * Only activates in Electron builds where the preload exposes sdkTool API.
+ *
+ * @deprecated Phase 2C: RENDERER-PASSIVIZE — SDK tools now execute in the main
+ * process via setSdkToolPool() in builtinTools.ts. This bridge is no longer
+ * needed for the SDK path. The builtinTools system handles canvas tools via
+ * its own executeInRenderer IPC bridge, and filesystem/MCP tools execute
+ * directly in the main process.
+ *
+ * This file is kept temporarily for backward compatibility during the
+ * transition. Remove once the main-process tool pool is confirmed stable
+ * and the sdkTool IPC channel is removed from the preload.
+ *
+ * TODO(Phase 2C): Remove this file and its import from App.tsx after
+ * confirming sdkToolBridge is no longer called.
  */
 export function initSdkToolBridge(): void {
   if (!(window as any).api?.sdkTool) return

@@ -2,10 +2,11 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import { memo, useCallback, useRef, useState } from 'react'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, X } from 'lucide-react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useUIStore, selectLeftSidebarTab } from '../stores/uiStore'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { getFlag } from '@shared/featureFlags'
 import { AnimatedContent } from './ui/react-bits'
 import { LayersPanel } from './LayersPanel'
 import { ActivityFeedPanel } from './ActivityFeedPanel'
@@ -64,6 +65,7 @@ function LeftSidebarComponent(): JSX.Element | null {
   const leftSidebarOpen = useWorkspaceStore((state) => state.leftSidebarOpen)
   const leftSidebarWidth = useWorkspaceStore((state) => state.leftSidebarWidth)
   const setLeftSidebarWidth = useWorkspaceStore((state) => state.setLeftSidebarWidth)
+  const toggleLeftSidebar = useWorkspaceStore((state) => state.toggleLeftSidebar)
   const activeTab = useUIStore(selectLeftSidebarTab)
   const [isResizing, setIsResizing] = useState(false)
   const resizeRef = useRef<HTMLDivElement>(null)
@@ -91,8 +93,8 @@ function LeftSidebarComponent(): JSX.Element | null {
     document.addEventListener('mouseup', handleMouseUp)
   }, [leftSidebarWidth, setLeftSidebarWidth])
 
-  // Hidden on mobile — PFD R1: canvas-only default
-  if (isMobile) return null
+  // Hidden on mobile when responsive flag is off
+  if (isMobile && !getFlag('MOBILE_RESPONSIVE')) return null
 
   // Section header label
   const tabLabels: Record<string, string> = {
@@ -103,6 +105,71 @@ function LeftSidebarComponent(): JSX.Element | null {
     'cc-bridge': 'CC Bridge',
     'agent-log': 'Agent Log',
     'console': 'Console',
+  }
+
+  // Mobile drawer layout
+  if (isMobile && getFlag('MOBILE_RESPONSIVE')) {
+    if (!leftSidebarOpen) return null
+    return (
+      <>
+        <div
+          className="mobile-drawer-backdrop"
+          onClick={() => toggleLeftSidebar()}
+        />
+        <div className="mobile-drawer glass-soft">
+          <div className="mobile-drawer__header">
+            <span style={{
+              fontFamily: 'var(--font-display)',
+              fontStyle: 'italic',
+              fontSize: '20px',
+              color: 'var(--accent-glow)',
+            }}>
+              {tabLabels[activeTab] || 'Outline'}
+            </span>
+            <button
+              className="touch-target"
+              onClick={() => toggleLeftSidebar()}
+              aria-label="Close drawer"
+              style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            {(activeTab === 'layers' || activeTab === 'extractions') && (
+              <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
+                <LayersPanel sidebarWidth={Math.min(window.innerWidth * 0.85, 360)} />
+              </AnimatedContent>
+            )}
+            {activeTab === 'activity' && (
+              <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
+                <ActivityFeedPanel sidebarWidth={Math.min(window.innerWidth * 0.85, 360)} />
+              </AnimatedContent>
+            )}
+            {activeTab === 'dispatch' && (
+              <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
+                <DispatchPanel sidebarWidth={Math.min(window.innerWidth * 0.85, 360)} />
+              </AnimatedContent>
+            )}
+            {hasTerminalAccess() && activeTab === 'cc-bridge' && (
+              <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
+                <BridgeLogPanel sidebarWidth={Math.min(window.innerWidth * 0.85, 360)} />
+              </AnimatedContent>
+            )}
+            {activeTab === 'agent-log' && (
+              <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
+                <AgentLogSidebarContent />
+              </AnimatedContent>
+            )}
+            {activeTab === 'console' && (
+              <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
+                <ConsolePanel />
+              </AnimatedContent>
+            )}
+          </div>
+        </div>
+      </>
+    )
   }
 
   return (
@@ -138,7 +205,7 @@ function LeftSidebarComponent(): JSX.Element | null {
             <ActivityFeedPanel sidebarWidth={leftSidebarWidth} />
           </AnimatedContent>
         )}
-        {hasTerminalAccess() && activeTab === 'dispatch' && (
+        {activeTab === 'dispatch' && (
           <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
             <DispatchPanel sidebarWidth={leftSidebarWidth} />
           </AnimatedContent>
@@ -153,7 +220,7 @@ function LeftSidebarComponent(): JSX.Element | null {
             <AgentLogSidebarContent />
           </AnimatedContent>
         )}
-        {hasTerminalAccess() && activeTab === 'console' && (
+        {activeTab === 'console' && (
           <AnimatedContent distance={20} duration={0.25} direction="vertical" className="h-full">
             <ConsolePanel />
           </AnimatedContent>

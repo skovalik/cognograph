@@ -10,7 +10,7 @@ import { useWorkspaceStore } from '../stores/workspaceStore'
 import type { WorkspaceData } from '@shared/types'
 import type { ConnectionStatus } from '@shared/multiplayerTypes'
 import { logger } from '../utils/logger'
-import { calculateAutoFitDimensions } from '../utils/nodeUtils'
+import { calculateAutoFitDimensions } from '../utils/textMeasure'
 import { layoutEvents, requestFitView } from '../utils/layoutEvents'
 import { toast } from 'react-hot-toast'
 

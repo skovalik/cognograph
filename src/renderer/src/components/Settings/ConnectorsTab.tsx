@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useState, useCallback, useEffect } from 'react'
+import { memo, useState, useCallback, useEffect, lazy, Suspense } from 'react'
 import { toast } from 'react-hot-toast'
 import { Plus, Plug, Server, Trash2, Edit2, Play, Circle, Loader2, CheckCircle, AlertTriangle, X, Database, Link, Zap } from 'lucide-react'
 import { useConnectorStore } from '../../stores/connectorStore'
 import { LLMConnectorCard } from './LLMConnectorCard'
-import { AddLLMModal } from './AddLLMModal'
+const AddLLMModal = lazy(() => import('./AddLLMModal').then(m => ({ default: m.AddLLMModal })))
 import type { LLMConnector, MCPConnector, ConnectorStatus } from '@shared/types'
 
 function ConnectorsTabComponent(): JSX.Element {
@@ -175,10 +175,12 @@ function ConnectorsTabComponent(): JSX.Element {
 
       {/* Add/Edit LLM Modal */}
       {addModalOpen && (
-        <AddLLMModal
-          connector={editingConnector}
-          onClose={handleModalClose}
-        />
+        <Suspense fallback={null}>
+          <AddLLMModal
+            connector={editingConnector}
+            onClose={handleModalClose}
+          />
+        </Suspense>
       )}
     </div>
   )

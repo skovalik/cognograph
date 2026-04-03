@@ -44,7 +44,7 @@ export default defineConfig({
   projects: [
     {
       name: 'electron',
-      testMatch: /(?:app|conversation|gpu|electron|critical).*\.spec\.ts/,
+      testMatch: /(?:app|conversation|gpu|electron|critical|foundation|v4).*\.spec\.ts/,
       // Electron tests must run sequentially (single app instance)
       fullyParallel: false,
     },

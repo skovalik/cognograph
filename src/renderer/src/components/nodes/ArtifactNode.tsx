@@ -25,6 +25,7 @@ import {
   Video,
   Volume2,
   Box,
+  MousePointer,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import type { ArtifactNodeData, ArtifactContentType, ArtifactFile, ArtifactMediaMetadata, PreviewViewport } from '@shared/types'
@@ -38,7 +39,7 @@ import { useWorkspaceStore, useIsSpawning, useNodeWarmth, useIsNodePinned, useIs
 import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
 import { EditableTitle } from '../EditableTitle'
 import { InlineIconPicker } from '../InlineIconPicker'
-import { measureTextWidth } from '../../utils/nodeUtils'
+import { measureTextWidth } from '../../utils/textMeasure'
 import { useNodeResize } from '../../hooks/useNodeResize'
 import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
 import { PreviewToolbar } from './PreviewToolbar'
@@ -1166,10 +1167,12 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                       )}
                       {htmlInteractionMode && (
                         <button
-                          className="absolute top-2 right-2 z-20 px-2 py-1 text-xs rounded bg-black/60 text-white hover:bg-black/80 transition-colors"
+                          className="absolute top-2 right-2 z-20 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-black/70 text-white hover:bg-black/90 transition-colors backdrop-blur-sm border border-white/10"
                           onClick={(e) => { e.stopPropagation(); setHtmlInteractionMode(false) }}
+                          title="Exit interaction mode (Escape)"
                         >
-                          Exit interaction
+                          <MousePointer className="w-3.5 h-3.5" />
+                          Exit Interact
                         </button>
                       )}
                     </div>

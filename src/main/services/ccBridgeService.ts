@@ -19,6 +19,9 @@
  */
 
 import http from 'http'
+import crypto from 'crypto'
+import fs from 'fs'
+import os from 'os'
 import { BrowserWindow } from 'electron'
 import path from 'path'
 import type {
@@ -39,6 +42,17 @@ let currentConfig: CCDispatchConfig = { ...DEFAULT_CC_DISPATCH_CONFIG }
 let currentProjectDir: string | null = null
 
 /**
+ * Ephemeral bearer token for bridge authentication (SEC-0.1e).
+ * Generated via crypto.randomBytes at server start. Rotated on TTL expiry.
+ * Written to a temp file so the CC process can read it.
+ */
+let ephemeralToken: string | null = null
+let tokenCreatedAt: number = 0
+const TOKEN_TTL_MS = 60 * 60 * 1000 // 1 hour
+let tokenFilePath: string | null = null
+let tokenRotationTimer: ReturnType<typeof setInterval> | null = null
+
+/**
  * In-memory dispatch queue. NEVER written to disk.
  * @internal
  */
@@ -46,6 +60,103 @@ const dispatchQueue: CCDispatchMessage[] = []
 
 /** Simple in-memory rate limiter: endpoint -> { count, resetAt } */
 const rateBuckets: Map<string, { count: number; resetAt: number }> = new Map()
+
+// -----------------------------------------------------------------------------
+// Ephemeral Token Management (SEC-0.1e)
+// -----------------------------------------------------------------------------
+
+/**
+ * Generate a new ephemeral token and write it to a temp file.
+ * The CC process reads the token from the file path set in COGNOGRAPH_CONTEXT_FILE.
+ */
+function generateEphemeralToken(): string {
+  const token = crypto.randomBytes(32).toString('hex')
+  ephemeralToken = token
+  tokenCreatedAt = Date.now()
+
+  // Write token to a temp file so the CC process can authenticate
+  try {
+    const tempDir = os.tmpdir()
+    const tokenFile = path.join(tempDir, `cognograph-bridge-token-${process.pid}.txt`)
+    fs.writeFileSync(tokenFile, token, { encoding: 'utf-8', mode: 0o600 })
+    tokenFilePath = tokenFile
+    console.log(`[CCBridgeService] Ephemeral token written to ${tokenFile}`)
+  } catch (err) {
+    console.error('[CCBridgeService] Failed to write token file:', err)
+  }
+
+  return token
+}
+
+/**
+ * Check if the current ephemeral token has expired.
+ */
+function isTokenExpired(): boolean {
+  if (!ephemeralToken || !tokenCreatedAt) return true
+  return Date.now() - tokenCreatedAt > TOKEN_TTL_MS
+}
+
+/**
+ * Rotate the ephemeral token. Called on TTL expiry.
+ */
+function rotateToken(): void {
+  console.log('[CCBridgeService] Rotating ephemeral token (TTL expired)')
+  generateEphemeralToken()
+  notifyRenderer('cc-bridge:token-rotated', { tokenFilePath })
+}
+
+/**
+ * Start the token rotation timer.
+ */
+function startTokenRotation(): void {
+  stopTokenRotation()
+  tokenRotationTimer = setInterval(() => {
+    if (isTokenExpired()) {
+      rotateToken()
+    }
+  }, 60_000) // Check every minute
+}
+
+/**
+ * Stop the token rotation timer and clean up the token file.
+ */
+function stopTokenRotation(): void {
+  if (tokenRotationTimer) {
+    clearInterval(tokenRotationTimer)
+    tokenRotationTimer = null
+  }
+}
+
+/**
+ * Clean up the ephemeral token file from disk.
+ */
+function cleanupTokenFile(): void {
+  if (tokenFilePath) {
+    try {
+      fs.unlinkSync(tokenFilePath)
+    } catch {
+      // File may already be deleted
+    }
+    tokenFilePath = null
+  }
+  ephemeralToken = null
+  tokenCreatedAt = 0
+}
+
+/**
+ * Get the current ephemeral token (for testing/internal use).
+ * @internal
+ */
+export function getEphemeralToken(): string | null {
+  return ephemeralToken
+}
+
+/**
+ * Get the path to the ephemeral token file.
+ */
+export function getTokenFilePath(): string | null {
+  return tokenFilePath
+}
 
 // -----------------------------------------------------------------------------
 // Public API
@@ -70,10 +181,10 @@ export function startDispatchServer(
     return Promise.resolve(null)
   }
 
-  if (!currentConfig.sharedSecret) {
-    console.error('[CCBridgeService] Shared secret is required but not configured')
-    return Promise.resolve(null)
-  }
+  // Generate ephemeral token (replaces static sharedSecret for runtime auth)
+  // If a sharedSecret is configured, we still replace it with ephemeral token for security.
+  generateEphemeralToken()
+  startTokenRotation()
 
   return tryBindServer(currentConfig.dispatchPort, 0)
 }
@@ -90,6 +201,8 @@ export function stopDispatchServer(): void {
   startTime = null
   dispatchQueue.length = 0
   rateBuckets.clear()
+  stopTokenRotation()
+  cleanupTokenFile()
   console.log('[CCBridgeService] Stopped')
 }
 
@@ -436,7 +549,9 @@ function handleComplete(
 // -----------------------------------------------------------------------------
 
 /**
- * Validate the Bearer token in the Authorization header.
+ * Validate the Bearer token in the Authorization header (SEC-0.1e).
+ * Uses ephemeral token (generated at server start, rotated on TTL expiry).
+ * Rejects requests with expired tokens.
  */
 function authenticateRequest(req: http.IncomingMessage): boolean {
   const authHeader = req.headers.authorization
@@ -445,7 +560,24 @@ function authenticateRequest(req: http.IncomingMessage): boolean {
   const parts = authHeader.split(' ')
   if (parts.length !== 2 || parts[0] !== 'Bearer') return false
 
-  return parts[1] === currentConfig.sharedSecret
+  // Reject if no ephemeral token is active
+  if (!ephemeralToken) return false
+
+  // Reject if token has expired (fail-closed: force rotation)
+  if (isTokenExpired()) {
+    rotateToken()
+    // The request still fails — caller must re-read the token file
+    return false
+  }
+
+  // Constant-time comparison to prevent timing attacks
+  const providedToken = parts[1]!
+  if (providedToken.length !== ephemeralToken.length) return false
+
+  return crypto.timingSafeEqual(
+    Buffer.from(providedToken, 'utf-8'),
+    Buffer.from(ephemeralToken, 'utf-8')
+  )
 }
 
 /**

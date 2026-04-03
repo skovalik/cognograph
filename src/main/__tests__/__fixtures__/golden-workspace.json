@@ -1,0 +1,97 @@
+{
+  "id": "golden-workspace-001",
+  "name": "Golden File Test Workspace",
+  "nodes": [
+    {
+      "id": "note-001",
+      "type": "note",
+      "position": { "x": 100, "y": 200 },
+      "data": {
+        "type": "note",
+        "title": "Test Note",
+        "content": "This is a test note with Unicode: \u4f60\u597d \ud83c\udf0d",
+        "createdAt": 1711929600000,
+        "updatedAt": 1711929600000
+      }
+    },
+    {
+      "id": "conv-001",
+      "type": "conversation",
+      "position": { "x": 500, "y": 200 },
+      "data": {
+        "type": "conversation",
+        "title": "Test Conversation",
+        "messages": [],
+        "provider": "anthropic",
+        "model": "claude-sonnet-4-20250514",
+        "createdAt": 1711929600000,
+        "updatedAt": 1711929600000
+      }
+    },
+    {
+      "id": "task-001",
+      "type": "task",
+      "position": { "x": 100, "y": 500 },
+      "data": {
+        "type": "task",
+        "title": "Test Task",
+        "content": "Implement golden file tests",
+        "status": "in-progress",
+        "priority": "high",
+        "createdAt": 1711929600000,
+        "updatedAt": 1711929600000
+      }
+    },
+    {
+      "id": "artifact-001",
+      "type": "artifact",
+      "position": { "x": 500, "y": 500 },
+      "data": {
+        "type": "artifact",
+        "title": "Code Artifact",
+        "content": "console.log('hello')",
+        "contentType": "code",
+        "language": "typescript",
+        "createdAt": 1711929600000,
+        "updatedAt": 1711929600000
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-001",
+      "source": "note-001",
+      "target": "conv-001",
+      "data": {
+        "direction": "unidirectional",
+        "active": true
+      }
+    },
+    {
+      "id": "edge-002",
+      "source": "conv-001",
+      "target": "task-001",
+      "data": {
+        "direction": "unidirectional",
+        "active": true
+      }
+    },
+    {
+      "id": "edge-003",
+      "source": "task-001",
+      "target": "artifact-001",
+      "data": {
+        "direction": "bidirectional",
+        "active": true
+      }
+    }
+  ],
+  "viewport": { "x": 0, "y": 0, "zoom": 1 },
+  "createdAt": 1711929600000,
+  "updatedAt": 1711929600000,
+  "version": 1,
+  "contextSettings": {
+    "globalDepth": 2,
+    "traversalMode": "all"
+  }
+}

@@ -220,19 +220,21 @@ export async function executeCommand(
 // Writes to workspaceConversation (NOT node data). Tool loop follows
 // the same register→stream→execute→continue pattern as chatToolService.
 
-const TIER2_TOOL_LIMIT = 15
-const TIER2_GUARDRAIL = 8
+const TIER2_TOOL_LIMIT = 25
+const TIER2_GUARDRAIL = 20
 
-const WORKSPACE_SYSTEM_PROMPT = `You are the Cognograph workspace command interface. You execute workspace operations via tool calls. You do NOT engage in extended conversation -- you act.
+const WORKSPACE_SYSTEM_PROMPT = `You are the Cognograph workspace command interface. You execute workspace operations ONLY via tool calls.
+
+CRITICAL: Your FIRST response MUST contain tool calls. NEVER respond with only text. NEVER say "I'll do this in stages" or explain a plan — just start calling tools immediately.
 
 Rules:
-- If the user's request can be fulfilled in under 5 tool calls, do it directly.
-- If the request requires 5+ tool calls, create an agent node to handle it autonomously.
-- Always narrate what you did in 1-2 sentences after completing tool calls.
-- Reference node titles, not IDs, in narration.
-- When creating multiple related nodes, prefer batch_create over individual create_node calls.
-- When the user says "this", "these", or "selected", check the selection context.
-- Never explain what you're about to do at length. Just do it and narrate.`
+- ALWAYS start your response with tool calls. Text-only responses are forbidden.
+- Do NOT create agent nodes. Execute everything directly.
+- Use batch_create for multiple related nodes — it accepts an array of node specs and creates them all at once with edges.
+- You can make up to 25 tool calls per request. Use as many as needed.
+- For complex requests: put ALL the content directly in node content fields. Use contentType: "html" for HTML artifacts, "markdown" for rich text. Make the content substantial and complete.
+- After all tool calls are done, narrate what you created in 1-2 sentences. Reference node titles, not IDs.
+- When the user says "this", "these", or "selected", check the selection context.`
 
 /**
  * Build a context string from the current workspace state.
@@ -253,7 +255,14 @@ function buildWorkspaceContext(): string {
     for (const id of selected) {
       const node = nodes.find(n => n.id === id)
       if (node) {
-        context += `- [${node.data.type}] "${node.data.title || 'Untitled'}" (id: ${id})\n`
+        const nd = node.data as any
+        context += `\n### [${nd.type}] "${nd.title || 'Untitled'}" (id: ${id})\n`
+        if (nd.description) context += `Description: ${nd.description}\n`
+        if (nd.content) {
+          // Include content (truncate to 2000 chars per node to keep context manageable)
+          const content = nd.content.length > 2000 ? nd.content.slice(0, 2000) + '\n...(truncated)' : nd.content
+          context += `Content:\n${content}\n`
+        }
       }
     }
   }
@@ -389,15 +398,17 @@ async function executeTier2(input: string, options?: { fileContext?: { filename:
   // 3. Add user message to workspace conversation
   store.addWorkspaceMessage('user', input)
 
-  // 4. Get tool definitions — standard canvas tools + patent-integrated workspace tools
-  const tools = [...getChatToolDefinitions(), ...getWorkspaceToolDefinitions()]
+  // 4. Get tool definitions — standard canvas tools only (no agent/action/region/plan for web demo)
+  const isWeb = !(window as any).__ELECTRON__
+  const tools = isWeb
+    ? getChatToolDefinitions()
+    : [...getChatToolDefinitions(), ...getWorkspaceToolDefinitions()]
 
   // 5. Tool loop — mirrors chatToolService pattern
   let toolCallCount = 0
   let totalInputTokens = 0
   let totalOutputTokens = 0
   let accumulatedText = ''
-  let currentToolUse: { id: string; name: string; inputJson: string } | null = null
   let requestId = uuid()
   const createdNodeIds: string[] = []
   const createdEdgeIds: string[] = []
@@ -409,7 +420,9 @@ async function executeTier2(input: string, options?: { fileContext?: { filename:
       if (currentEntry?.status === 'cancelled') break
 
       accumulatedText = ''
-      currentToolUse = null
+      // Collect ALL tool calls from this turn (LLM can send multiple)
+      const pendingToolCalls: { id: string; name: string; inputJson: string }[] = []
+      let activeToolCall: { id: string; name: string; inputJson: string } | null = null
 
       // Add empty assistant placeholder for this iteration
       store.addWorkspaceMessage('assistant', '')
@@ -426,12 +439,33 @@ async function executeTier2(input: string, options?: { fileContext?: { filename:
               // Live-update the narration in the command log
               store.updateCommandLogEntry(entryId, { narration: accumulatedText })
             } else if (chunk.type === 'tool_use_start') {
-              currentToolUse = { id: chunk.toolUseId, name: chunk.toolName, inputJson: '' }
-            } else if (chunk.type === 'tool_use_delta' && currentToolUse) {
-              currentToolUse.inputJson += chunk.toolInput
+              // Finalize previous tool call if any
+              if (activeToolCall) pendingToolCalls.push(activeToolCall)
+              activeToolCall = { id: chunk.toolUseId, name: chunk.toolName, inputJson: '' }
+              // Show progress in command log so user knows it's working
+              store.updateCommandLogEntry(entryId, { narration: `Creating ${chunk.toolName === 'batch_create' ? 'nodes' : chunk.toolName}...` })
+            } else if (chunk.type === 'tool_use_delta' && activeToolCall) {
+              activeToolCall.inputJson += chunk.toolInput
+              // Update progress with content size hint
+              if (activeToolCall.inputJson.length % 2000 < 100) {
+                store.updateCommandLogEntry(entryId, { narration: `Generating content... (${Math.round(activeToolCall.inputJson.length / 1000)}k chars)` })
+              }
+            } else if (chunk.type === 'tool_use_end') {
+              // Finalize current tool call
+              if (activeToolCall) {
+                pendingToolCalls.push(activeToolCall)
+                activeToolCall = null
+              }
             } else if (chunk.type === 'done') {
+              // Catch any tool call not yet finalized (no tool_use_end before done)
+              if (activeToolCall) {
+                pendingToolCalls.push(activeToolCall)
+                activeToolCall = null
+              }
               resolve({ stopReason: chunk.stopReason, usage: chunk.usage })
             } else if (chunk.type === 'error') {
+              accumulatedText = chunk.error || 'An error occurred processing the command.'
+              store.updateCommandLogEntry(entryId, { narration: accumulatedText })
               resolve({ stopReason: 'error' })
             }
           }
@@ -449,6 +483,8 @@ async function executeTier2(input: string, options?: { fileContext?: { filename:
           tools,
           model: useConnectorStore.getState().getDefaultConnector()?.model || 'claude-sonnet-4-6',
           systemPromptPrefix: WORKSPACE_SYSTEM_PROMPT,
+          clientManagesToolLoop: true,
+          maxTokens: 16384,
         })
       })
 
@@ -467,74 +503,77 @@ async function executeTier2(input: string, options?: { fileContext?: { filename:
         break
       }
 
-      // Tool use handling
-      if (stopReason === 'tool_use' && currentToolUse) {
-        toolCallCount++
+      // Tool use handling — execute ALL tool calls from this turn
+      if (stopReason === 'tool_use' && pendingToolCalls.length > 0) {
+        for (const toolCall of pendingToolCalls) {
+          toolCallCount++
 
-        // Guardrail — suggest agent escalation for complex operations
-        if (toolCallCount > TIER2_GUARDRAIL) {
-          accumulatedText += '\n\n[Reached complexity limit. Consider creating an agent for this task.]'
-          break
+          // Guardrail
+          if (toolCallCount > TIER2_GUARDRAIL) {
+            accumulatedText += '\n\n[Reached complexity limit. Consider creating an agent for this task.]'
+            break
+          }
+
+          // Parse tool input
+          let toolInput: Record<string, unknown>
+          try { toolInput = JSON.parse(toolCall.inputJson) }
+          catch { toolInput = {} }
+
+          // Store tool_use as JSON in content (workspace conversation format)
+          store.addWorkspaceMessage('tool_use', JSON.stringify({
+            toolName: toolCall.name,
+            toolInput,
+            toolUseId: toolCall.id,
+          }))
+
+          // Execute tool — check workspace tools first, then standard canvas tools
+          const WORKSPACE_TOOL_NAMES = ['create_agent', 'create_action', 'create_region', 'execute_plan']
+          const isWorkspaceTool = WORKSPACE_TOOL_NAMES.includes(toolCall.name)
+          const result = isWorkspaceTool
+            ? await executeWorkspaceTool(toolCall.name, toolInput)
+            : await executeTool(toolCall.name, toolInput, 'workspace-command-conversation')
+
+          // Store tool_result
+          store.addWorkspaceMessage('tool_result',
+            result.success ? JSON.stringify(result.result, null, 2) : `Error: ${result.error}`
+          )
+
+          // Track created nodes/edges for layout pipeline
+          if (result.success && toolCall.name === 'create_node' && result.result?.nodeId) {
+            createdNodeIds.push(result.result.nodeId as string)
+          }
+          if (result.success && toolCall.name === 'link_nodes' && result.result?.edgeId) {
+            createdEdgeIds.push(result.result.edgeId as string)
+          }
+          if (result.success && toolCall.name === 'batch_create' && result.result?.nodeMap) {
+            createdNodeIds.push(...Object.values(result.result.nodeMap as Record<string, string>))
+          }
         }
 
-        // Parse tool input
-        let toolInput: Record<string, unknown>
-        try { toolInput = JSON.parse(currentToolUse.inputJson) }
-        catch { toolInput = {} }
-
-        // Store tool_use as JSON in content (workspace conversation format)
-        store.addWorkspaceMessage('tool_use', JSON.stringify({
-          toolName: currentToolUse.name,
-          toolInput,
-          toolUseId: currentToolUse.id,
-        }))
-
-        // Execute tool — check workspace tools first, then standard canvas tools
-        const WORKSPACE_TOOL_NAMES = ['create_agent', 'create_action', 'create_region', 'execute_plan']
-        const isWorkspaceTool = WORKSPACE_TOOL_NAMES.includes(currentToolUse.name)
-        const result = isWorkspaceTool
-          ? await executeWorkspaceTool(currentToolUse.name, toolInput)
-          : await executeTool(currentToolUse.name, toolInput, 'workspace-command-conversation')
-
-        // Store tool_result
-        store.addWorkspaceMessage('tool_result',
-          result.success ? JSON.stringify(result.result, null, 2) : `Error: ${result.error}`
-        )
-
-        // Track created nodes/edges for layout pipeline
-        if (result.success && currentToolUse.name === 'create_node' && result.result?.nodeId) {
-          createdNodeIds.push(result.result.nodeId as string)
-        }
-        if (result.success && currentToolUse.name === 'link_nodes' && result.result?.edgeId) {
-          createdEdgeIds.push(result.result.edgeId as string)
-        }
-        if (result.success && currentToolUse.name === 'batch_create' && result.result?.nodeMap) {
-          createdNodeIds.push(...Object.values(result.result.nodeMap as Record<string, string>))
-        }
-        // Track nodes created by workspace tools
-        if (result.success && currentToolUse.name === 'create_agent' && result.result?.nodeId) {
-          createdNodeIds.push(result.result.nodeId as string)
-        }
-        if (result.success && currentToolUse.name === 'create_action' && result.result?.nodeId) {
-          createdNodeIds.push(result.result.nodeId as string)
-        }
-        if (result.success && currentToolUse.name === 'execute_plan' && result.result?.nodeMap) {
-          createdNodeIds.push(...Object.values(result.result.nodeMap as Record<string, string>))
-        }
+        // Check if guardrail was hit
+        if (toolCallCount > TIER2_GUARDRAIL) break
 
         // Refresh context after mutating tool calls
-        const MUTATING_TOOLS = [
-          'create_node', 'link_nodes', 'update_node', 'delete_node',
-          'unlink_nodes', 'move_node', 'add_comment', 'batch_create',
-          'create_agent', 'create_action', 'create_region', 'execute_plan',
-        ]
-        if (MUTATING_TOOLS.includes(currentToolUse.name)) {
-          context = buildWorkspaceContext()
-        }
+        context = buildWorkspaceContext()
 
         // Prepare for continuation
         requestId = uuid()
         continue
+      }
+
+      // Auto-continue: if LLM narrated mid-task instead of calling tools,
+      // inject a "Continue." message so it picks back up with tool calls.
+      // Only do this if we've already made at least one tool call (work in progress)
+      // and the text suggests more work is coming.
+      if (stopReason === 'end_turn' && toolCallCount > 0 && toolCallCount < TIER2_GUARDRAIL) {
+        const lowerText = accumulatedText.toLowerCase()
+        const continuePatterns = ['let me', "i'll", 'now i', 'next', 'moving on', 'continue', 'creating', 'will create']
+        const shouldContinue = continuePatterns.some(p => lowerText.includes(p))
+        if (shouldContinue) {
+          store.addWorkspaceMessage('user', 'Continue. Execute the remaining operations via tool calls immediately.')
+          requestId = uuid()
+          continue
+        }
       }
 
       // end_turn, stop_sequence, max_tokens — we're done

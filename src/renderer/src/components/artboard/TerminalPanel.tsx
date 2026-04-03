@@ -18,7 +18,7 @@
  * the PTY session, so the terminal persists across artboard toggles.
  */
 
-import { useEffect, useRef, useCallback, memo } from 'react'
+import { useEffect, useRef, useCallback, useState, memo } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
@@ -88,10 +88,26 @@ function TerminalPanelInner({
   const mountedRef = useRef(true)
   const isReplayingRef = useRef(true)          // true during scrollback replay — buffers incoming data
   const pendingDataRef = useRef<string[]>([])   // data buffered during scrollback replay, flushed after
+  const [processExited, setProcessExited] = useState(false)
+  /** Incremented to force the main effect to re-run on respawn. */
+  const [spawnGeneration, setSpawnGeneration] = useState(0)
 
   // Subscribe to theme mode for dynamic theme switching
   const themeMode = useWorkspaceStore((state) => state.themeSettings.mode)
   const workspaceId = useWorkspaceStore((state) => state.workspaceId)
+
+  // -------------------------------------------------------------------------
+  // Respawn handler: kills old PTY session and triggers a fresh spawn cycle
+  // -------------------------------------------------------------------------
+  const handleRespawn = useCallback(async () => {
+    try {
+      await window.api.terminal.kill(nodeId)
+    } catch {
+      // Already dead — that's fine
+    }
+    setProcessExited(false)
+    setSpawnGeneration((g) => g + 1)
+  }, [nodeId])
 
   // -------------------------------------------------------------------------
   // Debounced resize handler
@@ -240,6 +256,9 @@ function TerminalPanelInner({
           `\x1b[33m[Process exited with code ${exitCode}]\x1b[0m`
         )
       }
+      if (mountedRef.current) {
+        setProcessExited(true)
+      }
     })
     cleanups.push(removeExitListener)
 
@@ -371,7 +390,7 @@ function TerminalPanelInner({
       terminalRef.current = null
       fitAddonRef.current = null
     }
-  }, [nodeId, sessionId, accentColor, handleResize])
+  }, [nodeId, sessionId, accentColor, handleResize, spawnGeneration])
 
   // -------------------------------------------------------------------------
   // Theme sync effect — update xterm.js colors when light/dark mode changes.
@@ -402,6 +421,30 @@ function TerminalPanelInner({
         textRendering: 'auto' as const,
       }}
     >
+      {/* Respawn button — visible when the PTY process has exited */}
+      {processExited && (
+        <button
+          onClick={handleRespawn}
+          style={{
+            position: 'absolute',
+            bottom: 28,
+            right: 8,
+            fontSize: 11,
+            padding: '4px 10px',
+            borderRadius: 4,
+            background: 'var(--accent-glow, #C8963E)',
+            color: '#fff',
+            border: 'none',
+            cursor: 'pointer',
+            zIndex: 2,
+            fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Consolas', 'Menlo', monospace",
+          }}
+          aria-label="Respawn terminal"
+        >
+          Respawn
+        </button>
+      )}
+
       {/* Focus escape tooltip */}
       <div
         style={{

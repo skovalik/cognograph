@@ -16,6 +16,7 @@ import { buildContextForNode, writeContextFile, getContextFilePath, getWorkspace
 import { writeClaudeConfig, cleanupClaudeConfig } from './claudeConfigWriter'
 import { existsSync } from 'fs'
 import type { TerminalShell } from '../../shared/types/nodes'
+import { getSafeEnv, mergeSafeEnv } from '../utils/safeEnv'
 
 // node-pty is a native C++ addon. We lazy-load it so the app doesn't crash
 // on startup if it's not installed. The import only fires when spawnTerminal()
@@ -237,19 +238,17 @@ export async function spawnTerminal(config: SpawnConfig): Promise<TerminalSessio
       })
   }
 
-  const mergedEnv: Record<string, string> = {
-    ...process.env as Record<string, string>,
-    ...env,
+  // Build safe env from allowlist, then merge user-provided + Cognograph-specific vars.
+  // This prevents leaking secrets (API keys, DB URLs) from parent process.env.
+  const cognographVars: Record<string, string> = {
+    COLORTERM: 'truecolor',
+    CLAUDE_SESSION_ID: sessionId,
+    COGNOGRAPH_NODE_ID: nodeId,
+    COGNOGRAPH_CONTEXT_FILE: getContextFilePath(nodeId),
+    COGNOGRAPH_WORKSPACE_ID: workspaceId,
   }
 
-  // Signal 24-bit color support to TUI frameworks (Claude Code, htop, etc.)
-  mergedEnv.COLORTERM = 'truecolor'
-
-  // Set Cognograph env vars for all terminals — user may type `claude` in any shell
-  mergedEnv.CLAUDE_SESSION_ID = sessionId
-  mergedEnv.COGNOGRAPH_NODE_ID = nodeId
-  mergedEnv.COGNOGRAPH_CONTEXT_FILE = getContextFilePath(nodeId)
-  mergedEnv.COGNOGRAPH_WORKSPACE_ID = workspaceId
+  const mergedEnv = mergeSafeEnv(getSafeEnv(), { ...env, ...cognographVars })
 
   // Wait for .mcp.json to be written BEFORE spawning PTY.
   // Claude Code reads .mcp.json on startup — if we spawn first, it misses the config.

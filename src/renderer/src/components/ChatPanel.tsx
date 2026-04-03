@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { memo, useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
+import { createPortal } from 'react-dom'
 import { escapeManager, EscapePriority } from '../utils/EscapeManager'
-import { X, Send, Square, Link, Key, Package, ChevronDown, ChevronUp, Boxes, GripHorizontal, Bot, MessageSquare, Settings2 } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { X, Send, Square, Link, Key, Package, ChevronDown, ChevronUp, Boxes, GripHorizontal, Bot, MessageSquare, Settings2, ArrowLeft } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import { StreamingMarkdown } from './StreamingMarkdown'
+import { useRatchetHeight } from '../hooks/useRatchetHeight'
 import { useWorkspaceStore, useIsStreaming as useStoreIsStreaming } from '../stores/workspaceStore'
 import { ContextIndicator } from './ContextIndicator'
-import { ContextSettingsModal } from './ContextSettingsModal'
+const ContextSettingsModal = lazy(() => import('./ContextSettingsModal').then(m => ({ default: m.ContextSettingsModal })))
 import { TokenMeter } from './TokenMeter'
 import { TokenIndicator } from './TokenEstimator'
 import { ToolCallBubble } from './ToolCallBubble'
@@ -27,6 +26,7 @@ import { logger } from '../utils/logger'
 import { InlineErrorBoundary } from './ErrorBoundary'
 import { CreditExhaustedPrompt } from './CreditExhaustedPrompt'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { getFlag } from '@shared/featureFlags'
 
 interface ChatPanelProps {
   nodeId: string
@@ -38,6 +38,7 @@ interface ChatPanelProps {
 function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedded = false }: ChatPanelProps): JSX.Element | null {
   // All store subscriptions MUST come first
   const nodes = useWorkspaceStore((state) => state.nodes)
+  const workspaceId = useWorkspaceStore((state) => state.workspaceId)
   const closeChat = useWorkspaceStore((state) => state.closeChat)
   const focusChat = useWorkspaceStore((state) => state.focusChat)
   const addMessage = useWorkspaceStore((state) => state.addMessage)
@@ -90,6 +91,15 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
   const currentResponseRef = useRef<string>('')
   const userScrolledUpRef = useRef(false)
   const rafRef = useRef<number | null>(null)
+
+  // Auto-resize textarea when input changes programmatically (e.g. cleared after send)
+  useEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    const maxH = Math.floor(window.innerHeight * 0.5)
+    el.style.height = `${Math.min(el.scrollHeight, maxH)}px`
+  }, [input])
 
   // Refs for on-close extraction (avoids stale closure in cleanup effect)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -600,9 +610,13 @@ WHAT YOU SHOULD DO:
 
     setIsStreamingLocal(true)
 
+    // Ensure workspace is in Supabase so orchestrator can find and write to it
+    ;(window.api.workspace as any).ensureSync?.()
+
     try {
       await window.api.llm.send({
         conversationId: nodeId,
+        workspaceId,
         provider: llmSettings.provider,
         messages: messages.filter((m) => m.role !== 'system'),
         systemPrompt,
@@ -866,6 +880,7 @@ WHAT YOU SHOULD DO:
                   isLightMode={isLightMode}
                   onDelete={() => deleteMessage(nodeId, msgIndex)}
                   embedded
+                  isStreaming={isStreaming && msgIndex === nodeData.messages.length - 1 && message.role === 'assistant'}
                 />
               )
             ))
@@ -918,7 +933,8 @@ WHAT YOU SHOULD DO:
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement
                 target.style.height = 'auto'
-                target.style.height = `${Math.min(target.scrollHeight, 80)}px`
+                const maxH = Math.floor(window.innerHeight * 0.5)
+                target.style.height = `${Math.min(target.scrollHeight, maxH)}px`
               }}
               className={`flex-1 bg-[var(--surface-panel-secondary)] rounded px-2.5 py-1.5 ${isMobile ? 'text-base' : 'text-xs'} text-[var(--text-primary)] focus:outline-none focus:border-blue-500 resize-none disabled:opacity-50 border border-[var(--border-subtle)]`}
               style={isMobile ? { minHeight: '44px' } : undefined}
@@ -952,20 +968,25 @@ WHAT YOU SHOULD DO:
             onClose={() => setShowApiKeyModal(false)}
           />
         )}
-        <ContextSettingsModal isOpen={showContextSettings} onClose={() => setShowContextSettings(false)} />
+        <Suspense fallback={null}>
+          <ContextSettingsModal isOpen={showContextSettings} onClose={() => setShowContextSettings(false)} />
+        </Suspense>
       </div>
     )
   }
 
   // Different classes for modal vs column mode
-  const containerClasses = isModal
-    ? `${bgClasses} rounded-lg shadow-2xl flex flex-col border-2 ${focusBorderClasses} ${!isFocused ? 'opacity-90' : ''}`
-    : `h-full w-[380px] ${bgClasses} border-l shadow-xl z-50 flex flex-col ${isFocused ? 'border-blue-500 border-l-2' : borderClasses} ${!isFocused ? 'opacity-90' : ''}`
+  const mobileOverlay = isMobile && getFlag('MOBILE_RESPONSIVE')
+  const containerClasses = mobileOverlay
+    ? 'mobile-chat-overlay'
+    : isModal
+      ? `${bgClasses} rounded-lg shadow-2xl flex flex-col border-2 ${focusBorderClasses} ${!isFocused ? 'opacity-90' : ''}`
+      : `h-full w-[380px] ${bgClasses} border-l shadow-xl z-50 flex flex-col ${isFocused ? 'border-blue-500 border-l-2' : borderClasses} ${!isFocused ? 'opacity-90' : ''}`
 
-  return (
+  const panel = (
     <div
       className={containerClasses}
-      style={isModal ? {
+      style={isModal && !mobileOverlay ? {
         transform: `translate(${modalPosition.x}px, ${modalPosition.y}px)`,
         width: modalSize.width,
         height: modalSize.height,
@@ -973,7 +994,24 @@ WHAT YOU SHOULD DO:
       } : undefined}
       onClick={handleFocus}
     >
-      {/* Header - draggable in modal mode */}
+      {/* Mobile back button */}
+      {mobileOverlay && (
+        <div className="mobile-chat-overlay__header">
+          <button
+            className="mobile-chat-overlay__back touch-target"
+            onClick={() => useWorkspaceStore.getState().setSelectedNodes([])}
+            aria-label="Back"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: '16px', color: 'var(--text-primary)' }}>
+            {nodeData.title || 'Chat'}
+          </span>
+        </div>
+      )}
+
+      {/* Header - draggable in modal mode (hidden on mobile overlay) */}
+      {!mobileOverlay && (
       <div
         className={`gui-panel-header--minimal ${isModal ? 'cursor-move select-none' : ''}`}
         onMouseDown={handleDragStart}
@@ -1064,6 +1102,7 @@ WHAT YOU SHOULD DO:
           </button>
         </div>
       </div>
+      )}
 
       {/* Context indicator - compact badge with settings access */}
       <div className={`px-4 py-2 border-t border-[var(--border-subtle)] flex items-center gap-2 ${isInjecting ? 'animate-pulse bg-blue-500/10' : ''}`}>
@@ -1163,6 +1202,7 @@ WHAT YOU SHOULD DO:
                 conversationNodeId={nodeId}
                 isLightMode={isLightMode}
                 onDelete={() => deleteMessage(nodeId, msgIndex)}
+                isStreaming={isStreaming && msgIndex === nodeData.messages.length - 1 && message.role === 'assistant'}
               />
             )
           ))
@@ -1224,7 +1264,8 @@ WHAT YOU SHOULD DO:
             onInput={(e) => {
               const target = e.target as HTMLTextAreaElement
               target.style.height = 'auto'
-              target.style.height = `${Math.min(target.scrollHeight, 120)}px`
+              const maxH = Math.floor(window.innerHeight * 0.5)
+              target.style.height = `${Math.min(target.scrollHeight, maxH)}px`
             }}
             className={`flex-1 ${inputBgClasses} rounded px-3 py-2 ${isMobile ? 'text-base' : 'text-sm'} ${textClasses} focus:outline-none focus:border-blue-500 resize-none disabled:opacity-50`}
             style={isMobile ? { minHeight: '44px' } : undefined}
@@ -1280,12 +1321,21 @@ WHAT YOU SHOULD DO:
       )}
 
       {/* Context Settings Modal */}
-      <ContextSettingsModal
-        isOpen={showContextSettings}
-        onClose={() => setShowContextSettings(false)}
-      />
+      <Suspense fallback={null}>
+        <ContextSettingsModal
+          isOpen={showContextSettings}
+          onClose={() => setShowContextSettings(false)}
+        />
+      </Suspense>
     </div>
   )
+
+  // Mobile: render as full-screen portal overlay
+  if (mobileOverlay) {
+    return createPortal(panel, document.body)
+  }
+
+  return panel
 }
 
 // Message bubble component with artifact extraction
@@ -1295,12 +1345,17 @@ interface MessageBubbleProps {
   isLightMode?: boolean
   onDelete?: () => void
   embedded?: boolean
+  /** Whether the LLM is actively streaming this message */
+  isStreaming?: boolean
 }
 
-const MessageBubble = memo(function MessageBubbleComponent({ message, conversationNodeId, isLightMode = false, onDelete, embedded = false }: MessageBubbleProps): JSX.Element {
+const MessageBubble = memo(function MessageBubbleComponent({ message, conversationNodeId, isLightMode = false, onDelete, embedded = false, isStreaming: isStreamingProp = false }: MessageBubbleProps): JSX.Element {
   const isUser = message.role === 'user'
   const [showArtifacts, setShowArtifacts] = useState(false)
   const spawnArtifactFromLLM = useWorkspaceStore((state) => state.spawnArtifactFromLLM)
+
+  // Ratchet height: prevents layout shift by locking min-height during streaming
+  const { ref: ratchetRef, minHeight } = useRatchetHeight(isStreamingProp && !isUser)
 
   // Use a specific selector to get only the conversation node position
   // This prevents re-renders when other nodes change
@@ -1396,58 +1451,18 @@ const MessageBubble = memo(function MessageBubbleComponent({ message, conversati
         {isUser ? (
           <p className="whitespace-pre-wrap text-sm break-words">{message.content}</p>
         ) : (
-          <div className={`chat-message-content ${proseClasses} max-w-none w-full`}>
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                // Ensure paragraphs display as blocks with proper spacing
-                p({ children }) {
-                  return <p style={{ display: 'block', marginTop: '0.75em', marginBottom: '0.75em' }}>{children}</p>
-                },
-                code({ className, children, ...props }) {
-                  const match = /language-(\w+)/.exec(className || '')
-                  const isInlineCode = !match
-
-                  if (isInlineCode) {
-                    return (
-                      <code className={`${inlineCodeClasses} px-1 py-0.5 rounded text-sm`} {...props}>
-                        {children}
-                      </code>
-                    )
-                  }
-
-                  return (
-                    <div className="relative group overflow-hidden">
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(String(children).replace(/\n$/, ''))
-                          toast.success('Copied to clipboard')
-                        }}
-                        className={`absolute top-2 right-2 px-2 py-1 ${copyButtonClasses} rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity z-10`}
-                      >
-                        Copy
-                      </button>
-                      <SyntaxHighlighter
-                        style={oneDark}
-                        language={match[1]}
-                        PreTag="div"
-                        customStyle={{
-                          margin: 0,
-                          borderRadius: '0.5rem',
-                          overflowX: 'auto',
-                          maxWidth: '100%'
-                        }}
-                        wrapLongLines={false}
-                      >
-                        {String(children).replace(/\n$/, '')}
-                      </SyntaxHighlighter>
-                    </div>
-                  )
-                }
-              }}
-            >
-              {message.content || ''}
-            </ReactMarkdown>
+          <div
+            ref={ratchetRef}
+            className={`chat-message-content ${proseClasses} max-w-none w-full`}
+            style={minHeight > 0 ? { minHeight } : undefined}
+          >
+            <StreamingMarkdown
+              content={message.content || ''}
+              isStreaming={isStreamingProp}
+              proseClasses={proseClasses}
+              inlineCodeClasses={inlineCodeClasses}
+              copyButtonClasses={copyButtonClasses}
+            />
             {/* Typing indicator when assistant message is empty (streaming) */}
             {!message.content && (
               <div className="typing-indicator">
@@ -1536,7 +1551,8 @@ const MessageBubble = memo(function MessageBubbleComponent({ message, conversati
   return prevProps.message.id === nextProps.message.id &&
          prevProps.message.content === nextProps.message.content &&
          prevProps.conversationNodeId === nextProps.conversationNodeId &&
-         prevProps.isLightMode === nextProps.isLightMode
+         prevProps.isLightMode === nextProps.isLightMode &&
+         prevProps.isStreaming === nextProps.isStreaming
 })
 
 MessageBubble.displayName = 'MessageBubble'

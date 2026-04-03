@@ -169,11 +169,13 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.1",
+    "@biomejs/biome": "^2.4.10",
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@playwright/test": "^1.58.0",
     "@sentry/vite-plugin": "^5.1.1",
     "@tailwindcss/typography": "^0.5.19",
+    "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^22.7.5",
@@ -205,7 +207,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "echo 'TypeScript files staged:'"
+      "biome check --write --no-errors-on-unmatched"
     ]
   }
 }

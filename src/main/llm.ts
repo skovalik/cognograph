@@ -8,6 +8,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import OpenAI from 'openai'
 import type { IPCResponse } from '../shared/ipc-types'
 import { createIPCSuccess, createIPCError, IPC_ERROR_CODES } from '../shared/ipc-types'
+import { LlmSendSchema } from './ipc/schemas'
 
 interface LLMRequest {
   conversationId: string // Identifies which chat panel this request belongs to
@@ -27,6 +28,58 @@ interface EncryptedKeys {
 
 const store = new Store()
 const activeStreams = new Map<string, AbortController>()
+
+// ---------------------------------------------------------------------------
+// Client cache: reuse SDK clients by provider+key+baseUrl composite key
+// ---------------------------------------------------------------------------
+const clientCache = new Map<string, Anthropic | OpenAI | GoogleGenerativeAI>()
+
+function clientCacheKey(provider: string, apiKey: string, baseUrl?: string): string {
+  return `${provider}:${apiKey}:${baseUrl ?? ''}`
+}
+
+/** Get or create a cached Anthropic client */
+function getCachedAnthropicClient(apiKey: string, baseUrl?: string): Anthropic {
+  const key = clientCacheKey('anthropic', apiKey, baseUrl)
+  let client = clientCache.get(key) as Anthropic | undefined
+  if (!client) {
+    client = baseUrl ? new Anthropic({ apiKey, baseURL: baseUrl }) : new Anthropic({ apiKey })
+    clientCache.set(key, client)
+  }
+  return client
+}
+
+/** Get or create a cached OpenAI client */
+function getCachedOpenAIClient(apiKey: string, baseUrl?: string): OpenAI {
+  const key = clientCacheKey('openai', apiKey, baseUrl)
+  let client = clientCache.get(key) as OpenAI | undefined
+  if (!client) {
+    client = baseUrl ? new OpenAI({ apiKey, baseURL: baseUrl }) : new OpenAI({ apiKey })
+    clientCache.set(key, client)
+  }
+  return client
+}
+
+/** Get or create a cached GoogleGenerativeAI client */
+function getCachedGeminiClient(apiKey: string): GoogleGenerativeAI {
+  const key = clientCacheKey('gemini', apiKey)
+  let client = clientCache.get(key) as GoogleGenerativeAI | undefined
+  if (!client) {
+    client = new GoogleGenerativeAI(apiKey)
+    clientCache.set(key, client)
+  }
+  return client
+}
+
+/** Exported for testing: clear the client cache */
+export function clearClientCache(): void {
+  clientCache.clear()
+}
+
+/** Exported for testing: get the current cache size */
+export function getClientCacheSize(): number {
+  return clientCache.size
+}
 
 function getApiKey(provider: string): string | null {
   try {
@@ -58,9 +111,13 @@ async function streamAnthropic(request: LLMRequest): Promise<void> {
   const apiKey = getApiKey('anthropic')
   if (!apiKey) throw new Error('Anthropic API key not set')
 
-  const client = new Anthropic({ apiKey })
+  const client = getCachedAnthropicClient(apiKey)
   const mainWindow = getMainWindow()
   if (!mainWindow) throw new Error('No main window')
+
+  // Abort any in-flight stream for this conversation before starting a new one
+  const existing = activeStreams.get(conversationId)
+  if (existing) existing.abort()
 
   const controller = new AbortController()
   activeStreams.set(conversationId, controller)
@@ -119,9 +176,13 @@ async function streamGemini(request: LLMRequest): Promise<void> {
   const apiKey = getApiKey('gemini')
   if (!apiKey) throw new Error('Gemini API key not set')
 
-  const genAI = new GoogleGenerativeAI(apiKey)
+  const genAI = getCachedGeminiClient(apiKey)
   const mainWindow = getMainWindow()
   if (!mainWindow) throw new Error('No main window')
+
+  // Abort any in-flight stream for this conversation before starting a new one
+  const existing = activeStreams.get(conversationId)
+  if (existing) existing.abort()
 
   // Best-effort cancel: Gemini SDK doesn't support AbortSignal,
   // so we check the controller's signal in the streaming loop
@@ -129,7 +190,8 @@ async function streamGemini(request: LLMRequest): Promise<void> {
   activeStreams.set(conversationId, controller)
 
   const model = genAI.getGenerativeModel({
-    model: request.model || 'gemini-1.5-flash'
+    model: request.model || 'gemini-1.5-flash',
+    systemInstruction: request.systemPrompt || undefined
   })
 
   // Build conversation history
@@ -183,9 +245,13 @@ async function streamOpenAI(request: LLMRequest): Promise<void> {
   const apiKey = getApiKey('openai')
   if (!apiKey) throw new Error('OpenAI API key not set')
 
-  const client = new OpenAI({ apiKey })
+  const client = getCachedOpenAIClient(apiKey)
   const mainWindow = getMainWindow()
   if (!mainWindow) throw new Error('No main window')
+
+  // Abort any in-flight stream for this conversation before starting a new one
+  const existing = activeStreams.get(conversationId)
+  if (existing) existing.abort()
 
   const controller = new AbortController()
   activeStreams.set(conversationId, controller)
@@ -251,7 +317,7 @@ async function extractionCall(request: ExtractionRequest): Promise<IPCResponse<s
   }
 
   try {
-    const client = new Anthropic({ apiKey })
+    const client = getCachedAnthropicClient(apiKey)
     const response = await client.messages.create({
       model: request.model || 'claude-3-haiku-20240307',
       max_tokens: request.maxTokens || 1500,
@@ -279,6 +345,19 @@ export function registerLLMHandlers(): void {
   })
 
   ipcMain.handle('llm:send', async (_event, request: LLMRequest) => {
+    // Zod validation (SEC-0.1j)
+    const validated = LlmSendSchema.safeParse(request)
+    if (!validated.success) {
+      const mainWindow = getMainWindow()
+      if (mainWindow && request?.conversationId) {
+        mainWindow.webContents.send('llm:error', {
+          conversationId: request.conversationId,
+          error: `Validation failed: ${validated.error.issues[0]?.message || 'Invalid input'}`,
+        })
+      }
+      return
+    }
+
     const mainWindow = getMainWindow()
 
     try {

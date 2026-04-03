@@ -297,3 +297,47 @@
   background: rgba(220, 38, 38, 0.08);
   color: #ef4444;
 }
+
+/* ═══ Mobile drawer (LeftSidebar) ═══ */
+.mobile-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: calc(var(--z-modals) - 1);
+}
+.mobile-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(85vw, 360px);
+  z-index: var(--z-modals);
+  display: flex;
+  flex-direction: column;
+  animation: slide-in-left var(--duration-enter, 200ms) var(--ease-out-expo, ease-out);
+}
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+.mobile-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* ═══ Mobile Properties Sheet (PropertiesPanel bottom sheet) ═══ */
+.mobile-properties-sheet {
+  position: fixed !important;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 60vh;
+  z-index: var(--z-modals);
+  border-radius: var(--radius-xl, 12px) var(--radius-xl, 12px) 0 0;
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  animation: slide-up-sheet var(--duration-enter, 200ms) var(--ease-out-expo, ease-out);
+}

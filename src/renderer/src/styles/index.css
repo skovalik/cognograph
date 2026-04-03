@@ -12,6 +12,8 @@
 @import './canvas-badges.css';
 /* V4 workspace-level natural language command input */
 @import './bottom-command-bar.css';
+/* V4 welcome screen overlay — centered input, morphs to BottomCommandBar */
+@import './welcome-screen.css';
 /* V4.1 floating left response panel */
 @import './command-response-panel.css';
 /* V4 contextual action bar — Generate/Modify/Preview for selected nodes */
@@ -406,8 +408,12 @@ html, body, #root {
   @apply h-full w-full m-0 p-0 overflow-hidden;
   @apply bg-canvas-bg text-gray-100;
   font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif);
-  touch-action: none;
   overscroll-behavior: none;
+}
+
+/* Scope touch-action:none to the canvas only — body-level breaks mobile drawers/sheets */
+.react-flow {
+  touch-action: none;
 }
 
 /* Scrollbar styles - uses design tokens */
@@ -1048,6 +1054,25 @@ html, body, #root {
 .props-footer__btn:hover {
   filter: brightness(1.1);
   box-shadow: 0 2px 8px var(--accent-glow-subtle);
+}
+
+/* =============================================================================
+   MOBILE RESPONSIVE — PFD-compliant touch layout (WS3)
+   ============================================================================= */
+@media (max-width: 767px) {
+  /* Safe area padding for notched devices */
+  body {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Touch target utility class — opt-in, not global.
+     Apply to FAB, submit buttons, sidebar tab buttons, close buttons.
+     Do NOT apply globally to all button/a/input elements — this breaks inline icon buttons. */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 /* =============================================================================

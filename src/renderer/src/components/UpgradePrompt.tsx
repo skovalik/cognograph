@@ -40,10 +40,14 @@ const FEATURE_INFO: Record<string, { name: string; description: string; benefit:
   },
 }
 
-// Plan display information
-const PLAN_INFO: Record<Plan, { name: string; price: string }> = {
+// Plan display information (null plan = unauthenticated, treated same as free for display)
+const PLAN_INFO: Record<NonNullable<Plan>, { name: string; price: string }> = {
   free: { name: 'Free', price: '$0' },
   pro: { name: 'Pro', price: '$9/mo' },
+}
+
+function getPlanInfo(plan: Plan): { name: string; price: string } {
+  return PLAN_INFO[plan ?? 'free']
 }
 
 interface UpgradePromptProps {
@@ -64,7 +68,7 @@ export const UpgradePrompt = memo(function UpgradePrompt({
     description: 'This feature requires an upgraded plan.',
     benefit: 'Unlock more capabilities with an upgrade.'
   }
-  const planInfo = PLAN_INFO[requiredPlan]
+  const planInfo = getPlanInfo(requiredPlan)
 
   const [isLoading, setIsLoading] = useState(false)
   const upgradeBtnRef = useRef<HTMLButtonElement>(null)
@@ -185,7 +189,7 @@ export const UpgradePrompt = memo(function UpgradePrompt({
           <div className="flex gap-3 mb-6">
             <div className="flex-1 p-3 rounded-lg border border-[var(--border-default)] opacity-50">
               <p className="text-xs text-[var(--text-secondary)] mb-1">Current</p>
-              <p className="font-medium text-[var(--text-primary)]">{PLAN_INFO[currentPlan].name}</p>
+              <p className="font-medium text-[var(--text-primary)]">{getPlanInfo(currentPlan).name}</p>
             </div>
             <div className="flex items-center">
               <ArrowRight size={16} className="text-[var(--text-secondary)]" />

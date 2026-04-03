@@ -7,15 +7,17 @@
  * Arrow keys move selection to the nearest node in a cardinal direction
  * (based on spatial position, not DOM order). Tab cycles through connected
  * nodes (follows edges). Shift+Arrow extends selection (multi-select).
+ * Enter opens (activates) the selected node via artboard mode.
  *
  * Algorithm: For each arrow direction, filter nodes in a 90-degree cone
  * from the current selection's center, score by distance + off-axis penalty,
  * and select the nearest match.
  *
  * Designed to coexist with React Flow's built-in keyboard handling (Delete,
- * etc.) — only captures Arrow keys, Tab, and Shift+Arrow.
+ * etc.) — only captures Arrow keys, Tab, Shift+Arrow, and Enter.
  *
  * Task 26: Spatial Selection Infrastructure
+ * Phase 4B UX-A11Y: Added Enter-to-activate and exported spatial helpers.
  */
 
 import { useCallback, useEffect, useRef } from 'react'
@@ -27,9 +29,9 @@ import { useUIStore } from '../stores/uiStore'
 // Types
 // =============================================================================
 
-type Direction = 'up' | 'down' | 'left' | 'right'
+export type Direction = 'up' | 'down' | 'left' | 'right'
 
-interface NodeCandidate {
+export interface NodeCandidate {
   id: string
   centerX: number
   centerY: number
@@ -57,7 +59,7 @@ function dist(x1: number, y1: number, x2: number, y2: number): number {
  * penalty so nodes that are more aligned are preferred over closer
  * but off-angle candidates.
  */
-function findNearestInDirection(
+export function findNearestInDirection(
   currentX: number,
   currentY: number,
   candidates: NodeCandidate[],
@@ -105,7 +107,7 @@ function findNearestInDirection(
 /**
  * Map an ArrowKey string to a Direction.
  */
-function arrowToDirection(key: string): Direction | null {
+export function arrowToDirection(key: string): Direction | null {
   switch (key) {
     case 'ArrowUp': return 'up'
     case 'ArrowDown': return 'down'
@@ -288,6 +290,20 @@ export function useSpatialNavigation(): { keyboardNavActive: boolean } {
     return false
   }, [panToNode, setKeyboardNavActive])
 
+  // Enter key: activate (open) the selected node via artboard mode
+  const handleEnterActivate = useCallback(() => {
+    const selectedIds = selectedNodeIdsRef.current
+    if (selectedIds.length !== 1) return false
+
+    const nodeId = selectedIds[0]!
+    const { artboardNodeId, enterArtboard } = useUIStore.getState()
+    // Don't re-enter if already in artboard mode
+    if (artboardNodeId) return false
+
+    enterArtboard(nodeId)
+    return true
+  }, [])
+
   // Register keyboard listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -320,6 +336,16 @@ export function useSpatialNavigation(): { keyboardNavActive: boolean } {
         }
       }
 
+      // Enter (no modifiers): activate selected node via artboard mode.
+      // Ctrl/Cmd+Enter is handled by useArtboardMode — we handle plain Enter here
+      // for keyboard-first navigation flow (select with arrows, open with Enter).
+      if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+        if (handleEnterActivate()) {
+          e.preventDefault()
+          return
+        }
+      }
+
       // Tab: cycle through connected nodes (single selection or no selection only).
       // When multiple nodes are selected, Tab opens SelectionActionBar in App.tsx.
       if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -344,7 +370,18 @@ export function useSpatialNavigation(): { keyboardNavActive: boolean } {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('mousedown', handleMouseDown)
     }
-  }, [handleArrowNav, handleTabNav, setKeyboardNavActive])
+  }, [handleArrowNav, handleTabNav, handleEnterActivate, setKeyboardNavActive])
+
+  // Sync keyboardNavActive to a DOM data attribute so CSS can show/hide
+  // the keyboard focus ring without requiring React re-renders.
+  useEffect(() => {
+    const root = document.documentElement
+    if (keyboardNavActive) {
+      root.setAttribute('data-keyboard-nav', 'true')
+    } else {
+      root.removeAttribute('data-keyboard-nav')
+    }
+  }, [keyboardNavActive])
 
   return { keyboardNavActive }
 }

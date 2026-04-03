@@ -412,8 +412,8 @@ describe('terminalManager', () => {
         'cmd.exe',
         [],
         expect.objectContaining({
-          env: expect.not.objectContaining({
-            COGNOGRAPH_NODE_ID: expect.any(String),
+          env: expect.objectContaining({
+            COGNOGRAPH_NODE_ID: 'node-cmd',
           }),
         }),
       )
@@ -436,8 +436,8 @@ describe('terminalManager', () => {
         'pwsh.exe',
         ['-NoLogo'],
         expect.objectContaining({
-          env: expect.not.objectContaining({
-            COGNOGRAPH_NODE_ID: expect.any(String),
+          env: expect.objectContaining({
+            COGNOGRAPH_NODE_ID: 'node-ps',
           }),
         }),
       )
@@ -492,7 +492,7 @@ describe('terminalManager', () => {
   // -------------------------------------------------------------------------
   // 19. Context injection gating
   // -------------------------------------------------------------------------
-  it('spawnTerminal with shell=cmd does NOT set COGNOGRAPH env vars', async () => {
+  it('spawnTerminal with shell=cmd DOES set COGNOGRAPH env vars (all shells get them)', async () => {
     const originalPlatform = process.platform
     Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
 
@@ -501,9 +501,10 @@ describe('terminalManager', () => {
 
       const envArg = mockSpawn.mock.calls[0]?.[2]?.env as Record<string, string> | undefined
       expect(envArg).toBeDefined()
-      expect(envArg).not.toHaveProperty('CLAUDE_SESSION_ID')
-      expect(envArg).not.toHaveProperty('COGNOGRAPH_NODE_ID')
-      expect(envArg).not.toHaveProperty('COGNOGRAPH_CONTEXT_FILE')
+      // All shells get COGNOGRAPH vars so `claude` typed manually picks up context
+      expect(envArg).toHaveProperty('CLAUDE_SESSION_ID', 'sess-noctx')
+      expect(envArg).toHaveProperty('COGNOGRAPH_NODE_ID', 'node-noctx')
+      expect(envArg).toHaveProperty('COGNOGRAPH_CONTEXT_FILE')
     } finally {
       Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true })
     }

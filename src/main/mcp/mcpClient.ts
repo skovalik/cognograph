@@ -23,6 +23,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { ipcMain } from 'electron'
+import { getSafeEnv, mergeSafeEnv } from '../utils/safeEnv'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -57,6 +58,10 @@ interface MCPConnection {
   transport: StdioClientTransport
   tools: MCPToolDefinition[]
   connectedAt: number
+  // === Phase 1B additions — preserve across Phase 2 rewrite ===
+  /** Original config for reconnection */
+  config: MCPServerConfig
+  // === end Phase 1B additions ===
 }
 
 // -----------------------------------------------------------------------------
@@ -67,6 +72,15 @@ const MAX_CONNECTIONS = 10
 const CONNECT_TIMEOUT_MS = 15_000
 const TOOL_CALL_TIMEOUT_MS = 30_000
 const MAX_RESULT_SIZE = 500 * 1024 // 500KB
+
+// === Phase 1B additions — preserve across Phase 2 rewrite ===
+// Reconnect constants: 3 retries with exponential backoff (1s, 3s, 9s)
+const RECONNECT_MAX_RETRIES = 3
+const RECONNECT_BACKOFF_BASE_MS = 1_000
+const RECONNECT_BACKOFF_MULTIPLIER = 3
+// Circuit breaker: after 10 failures per session, stop retrying
+const CIRCUIT_BREAKER_THRESHOLD = 10
+// === end Phase 1B additions ===
 
 // Allowlist of known-safe MCP server commands.
 // Users can run Node/Python/npx scripts but not arbitrary shell commands.
@@ -117,6 +131,141 @@ function validateMCPCommand(command: string, args?: string[]): { valid: boolean;
 
 const connections = new Map<string, MCPConnection>()
 
+// === Phase 1B additions — preserve across Phase 2 rewrite ===
+
+/** Per-server failure count for circuit breaker (resets on successful reconnect) */
+const reconnectFailures = new Map<string, number>()
+/** Servers where the circuit breaker has tripped — stops all reconnection */
+const circuitBrokenServers = new Set<string>()
+/** Track in-flight reconnection attempts to prevent re-entrancy */
+const reconnectingServers = new Set<string>()
+
+/**
+ * Emit a notification to the renderer about MCP connection state changes.
+ * Used for circuit-breaker alerts and reconnect status.
+ */
+function emitMCPEvent(event: string, data: Record<string, unknown>): void {
+  try {
+    const { BrowserWindow } = require('electron')
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win) {
+      win.webContents.send(event, data)
+    }
+  } catch {
+    // Silently fail — window may not exist during shutdown
+  }
+}
+
+/**
+ * Attempt to reconnect a disconnected MCP server.
+ * Uses exponential backoff: 1s, 3s, 9s.
+ * Circuit breaker trips after 10 cumulative failures per session.
+ */
+async function attemptReconnect(config: MCPServerConfig): Promise<boolean> {
+  const serverId = config.id
+
+  // Guard: circuit breaker already tripped
+  if (circuitBrokenServers.has(serverId)) {
+    console.warn(`[MCPClient] Circuit breaker open for "${config.name}" — skipping reconnect`)
+    return false
+  }
+
+  // Guard: already reconnecting
+  if (reconnectingServers.has(serverId)) {
+    return false
+  }
+
+  reconnectingServers.add(serverId)
+
+  try {
+    for (let attempt = 0; attempt < RECONNECT_MAX_RETRIES; attempt++) {
+      const delayMs = RECONNECT_BACKOFF_BASE_MS * Math.pow(RECONNECT_BACKOFF_MULTIPLIER, attempt)
+      console.log(`[MCPClient] Reconnect attempt ${attempt + 1}/${RECONNECT_MAX_RETRIES} for "${config.name}" (waiting ${delayMs}ms)`)
+      await new Promise<void>(resolve => setTimeout(resolve, delayMs))
+
+      // Clean up stale connection entry before reconnecting
+      connections.delete(serverId)
+
+      const result = await connectMCPServer(config)
+      if (result.success) {
+        console.log(`[MCPClient] Reconnected to "${config.name}" — ${result.tools?.length ?? 0} tools re-registered`)
+        // Reset failure count on success
+        reconnectFailures.set(serverId, 0)
+        emitMCPEvent('mcp:reconnected', { serverId, name: config.name, tools: result.tools })
+        return true
+      }
+
+      // Increment failures
+      const failures = (reconnectFailures.get(serverId) ?? 0) + 1
+      reconnectFailures.set(serverId, failures)
+
+      // Check circuit breaker
+      if (failures >= CIRCUIT_BREAKER_THRESHOLD) {
+        circuitBrokenServers.add(serverId)
+        console.error(`[MCPClient] Circuit breaker tripped for "${config.name}" after ${failures} failures — no more reconnection attempts`)
+        emitMCPEvent('mcp:circuitBroken', {
+          serverId,
+          name: config.name,
+          failures,
+          message: `MCP server "${config.name}" failed to reconnect after ${failures} attempts. Automatic reconnection disabled.`
+        })
+        return false
+      }
+    }
+
+    console.warn(`[MCPClient] All ${RECONNECT_MAX_RETRIES} reconnect attempts failed for "${config.name}"`)
+    emitMCPEvent('mcp:reconnectFailed', { serverId, name: config.name })
+    return false
+  } finally {
+    reconnectingServers.delete(serverId)
+  }
+}
+
+/**
+ * Install transport-level error/close handlers for automatic reconnection.
+ * Called after a successful connection.
+ */
+function installReconnectHandlers(connection: MCPConnection): void {
+  const { transport, config } = connection
+
+  // StdioClientTransport emits 'close' when the child process exits
+  transport.onerror = (error: Error) => {
+    console.error(`[MCPClient] Transport error for "${config.name}":`, error.message)
+  }
+
+  transport.onclose = () => {
+    // Only attempt reconnect if the connection is still in our map
+    // (i.e., it wasn't an intentional disconnect)
+    if (connections.has(config.id)) {
+      console.warn(`[MCPClient] "${config.name}" disconnected unexpectedly — initiating reconnect`)
+      // Remove stale connection
+      connections.delete(config.id)
+      // Fire-and-forget reconnect — errors are handled internally
+      attemptReconnect(config).catch(err => {
+        console.error(`[MCPClient] Reconnect error for "${config.name}":`, err)
+      })
+    }
+  }
+}
+
+/**
+ * Reset the circuit breaker for a specific server, allowing reconnection again.
+ */
+export function resetCircuitBreaker(serverId: string): void {
+  circuitBrokenServers.delete(serverId)
+  reconnectFailures.delete(serverId)
+  console.log(`[MCPClient] Circuit breaker reset for server ${serverId}`)
+}
+
+/**
+ * Check whether the circuit breaker is currently open (tripped) for a server.
+ */
+export function isCircuitBroken(serverId: string): boolean {
+  return circuitBrokenServers.has(serverId)
+}
+
+// === end Phase 1B additions ===
+
 // -----------------------------------------------------------------------------
 // Public API
 // -----------------------------------------------------------------------------
@@ -148,10 +297,7 @@ export async function connectMCPServer(config: MCPServerConfig): Promise<{
   let client: Client | null = null
 
   try {
-    const env = {
-      ...process.env,
-      ...(config.env || {})
-    } as Record<string, string>
+    const env = mergeSafeEnv(getSafeEnv(), config.env || {})
 
     transport = new StdioClientTransport({
       command: config.command,
@@ -180,10 +326,16 @@ export async function connectMCPServer(config: MCPServerConfig): Promise<{
       client,
       transport,
       tools,
-      connectedAt: Date.now()
+      connectedAt: Date.now(),
+      config, // Phase 1B: store for reconnection
     }
 
     connections.set(config.id, connection)
+
+    // === Phase 1B additions — preserve across Phase 2 rewrite ===
+    // Install reconnect handlers for automatic recovery on unexpected disconnect
+    installReconnectHandlers(connection)
+    // === end Phase 1B additions ===
 
     console.log(`[MCPClient] Connected to "${config.name}" — ${tools.length} tools discovered`)
 
@@ -418,4 +570,15 @@ export function registerMCPClientHandlers(): void {
     const tools = getMCPToolsForServers(serverIds)
     return { success: true, tools }
   })
+
+  // === Phase 1B additions — preserve across Phase 2 rewrite ===
+  ipcMain.handle('mcp:resetCircuitBreaker', async (_event, serverId: string) => {
+    resetCircuitBreaker(serverId)
+    return { success: true }
+  })
+
+  ipcMain.handle('mcp:isCircuitBroken', async (_event, serverId: string) => {
+    return { broken: isCircuitBroken(serverId) }
+  })
+  // === end Phase 1B additions ===
 }
