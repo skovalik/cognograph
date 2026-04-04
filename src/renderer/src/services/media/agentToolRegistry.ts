@@ -26,13 +26,8 @@ export function getAvailableMediaTools(): AgentToolDefinition[] {
   // Check which providers have keys configured
   // Try apiKeyStore (web/cloud mode) or localStorage fallback (Electron)
   let providers: Set<string>
-  try {
-    // Dynamic import to avoid hard dependency on web stores in Electron
-    const { useApiKeyStore } = require('../../../../web/stores/apiKeyStore')
-    const { keys } = useApiKeyStore.getState()
-    providers = new Set(keys.map((k: { provider: string }) => k.provider))
-  } catch {
-    // Electron mode — check localStorage for provider keys
+  {
+    // Check localStorage for provider keys (open-source build)
     providers = new Set<string>()
     const providerNames = ['stability', 'openai', 'google', 'replicate', 'runway', 'elevenlabs']
     for (const p of providerNames) {

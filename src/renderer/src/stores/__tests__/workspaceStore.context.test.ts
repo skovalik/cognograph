@@ -4,9 +4,8 @@
 /**
  * BFS Context Injection Tests
  *
- * Tests for getContextForNode — the patent-critical BFS traversal
- * that injects context from connected nodes into AI conversations.
- * (Patent P1: Context Chain Injection)
+ * Tests for getContextForNode — the BFS traversal that injects
+ * context from connected nodes into AI conversations.
  *
  * The BFS follows INBOUND edges (source → target) and bidirectional edges,
  * respects depth limits, skips inactive edges, and handles cycles.

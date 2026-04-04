@@ -143,8 +143,6 @@ Then provide your critique and edits.
 ## Context Files (Optional Background)
 
 If you want full context:
-- `docs/plans/smart-e2e-cognitive-testing-system.md` (original plan)
-- `docs/strategy/VISION.md` (product vision - "Factorio for LLMs")
 - `ARCHITECTURE.md` (technical overview)
 
 ---

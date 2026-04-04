@@ -4659,7 +4659,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         const effectiveBudget = Math.floor(tokenBudget * TOKEN_SAFETY_MARGIN)
 
         finalSortedNodes.forEach((node) => {
-          // Token budget enforcement (Patent 1, Claims 1e/3/14c):
+          // Token budget enforcement:
           // Stop adding nodes once accumulated tokens reach the budget
           if (accumulatedTokens >= effectiveBudget) return
           const nodeData = node.data as {

@@ -188,11 +188,8 @@ If you're not sure where to start, open an issue.
 
 | Document | Purpose |
 |----------|---------|
-| [FEATURES.md](./FEATURES.md) | Comprehensive feature documentation |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, data flow, components |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | How to contribute |
-| [DECISIONS.md](./DECISIONS.md) | Decision log with rationale |
-| [SECURITY.md](./SECURITY.md) | Security policy and reporting |
 | [docs/guides/PITFALLS.md](./docs/guides/PITFALLS.md) | Common bugs and how to avoid them |
 
 ---
@@ -210,7 +207,7 @@ Patent pending. Four provisional patent applications filed February 2026 coverin
 
 ## License
 
-[AGPL-3.0](./LICENSE) with [Defensive Patent Pledge](./PATENTS). Patent pending.
+[AGPL-3.0](./LICENSE) with Defensive Patent Pledge. Patent pending.
 
 **Free for personal use.** Commercial use requires a commercial license -- [contact me](mailto:stefan@aurochs.agency) for details.
 

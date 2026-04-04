@@ -10,10 +10,17 @@
 
 import { memo, useEffect } from 'react'
 import { User, CreditCard, Database, Star, ExternalLink, Loader2 } from 'lucide-react'
-import { useBillingStore } from '../../../../web/stores/billingStore'
-import { isAuthEnabled } from '../../../../web/lib/supabase'
-import { createCheckoutSession, getCustomerPortalUrl } from '../../../../web/lib/billingService'
-import { formatCreditBalance, CREDIT_BUNDLES } from '../../../../web/lib/creditService'
+// Cloud billing not available in open-source build
+const isAuthEnabled = (): boolean => false
+const useBillingStore = (): any => ({
+  tier: 'free', status: 'active', creditBalanceCents: 0, currentPeriodEnd: null,
+  foundingMember: false, storageUsedBytes: 0, storageLimitBytes: 0,
+  loading: false, fetchBilling: () => {},
+})
+const createCheckoutSession = async (_plan: string): Promise<void> => { window.open('https://cognograph.app/#pricing', '_blank') }
+const getCustomerPortalUrl = async (): Promise<string> => 'https://cognograph.app/#pricing'
+const formatCreditBalance = (cents: number): string => `$${(cents / 100).toFixed(2)}`
+const CREDIT_BUNDLES: any[] = []
 
 function AccountTabComponent(): JSX.Element {
   const {

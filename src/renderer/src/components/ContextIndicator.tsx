@@ -7,7 +7,7 @@
  * Shows which nodes are contributing context to the current conversation/agent.
  * Compact badge by default, expands to show full list on click.
  *
- * Implements VISION.md promise: "Automatic with visibility"
+ * Design goal: automatic context with visibility
  */
 
 import { useState, useMemo, useEffect, useRef } from 'react'

@@ -87,19 +87,8 @@ export const useEntitlementsStore = create<EntitlementsState>()(
        */
       fetchEntitlements: async () => {
         try {
-          // Try Supabase auth first (web/cloud mode)
+          // Cloud auth not available in open-source build — use workspace token
           let authHeader: string | null = null
-          try {
-            const { supabase } = await import('../../../web/lib/supabase')
-            if (supabase) {
-              const { data: { session } } = await supabase.auth.getSession()
-              if (session?.access_token) {
-                authHeader = `Bearer ${session.access_token}`
-              }
-            }
-          } catch {
-            // Supabase not available (Electron mode) — try workspace token
-          }
 
           // Fallback: Electron workspace token
           if (!authHeader && (window as any).__ELECTRON__) {

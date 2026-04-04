@@ -1027,7 +1027,7 @@ function ContextMenuComponent(): JSX.Element | null {
                   dispatchType = 'instruction'
                 }
 
-                // Collect file paths from connected artifact nodes (Patent P2 Claim 5)
+                // Collect file paths from connected artifact nodes
                 const connectedNodes = store.getConnectedNodes(target.nodeId)
                 for (const cn of connectedNodes) {
                   if (cn.data.type === 'artifact') {

@@ -22,15 +22,7 @@ const PROVIDER_MAP: Record<string, {
 }
 
 function getApiKey(provider: string): string | null {
-  // Try web apiKeyStore first, then localStorage fallback
-  try {
-    const { useApiKeyStore } = require('../../../../web/stores/apiKeyStore')
-    const { keys } = useApiKeyStore.getState()
-    const key = keys.find((k: { provider: string }) => k.provider === provider)
-    if (key) return key.lastFour // Note: actual key retrieval goes through secure API
-  } catch {
-    // Electron — check localStorage
-  }
+  // Check localStorage for provider API key (open-source build)
   return localStorage.getItem(`cognograph:apikey:${provider}`)
 }
 

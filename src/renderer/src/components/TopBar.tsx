@@ -26,8 +26,9 @@ import { useReactFlow } from '@xyflow/react'
 import { useShortcutHelpStore } from './KeyboardShortcutsHelp'
 import { toast } from 'react-hot-toast'
 import AIActionMenu from './ai-editor/AIActionMenu'
-import ElementBadge from '../../../web/components/ElementBadge'
-import { isAuthEnabled, supabase } from '../../../web/lib/supabase'
+// Cloud auth (ElementBadge, supabase) not included in open-source build.
+const isAuthEnabled = (): boolean => false
+const supabase: null = null
 import type { NodeData } from '@shared/types'
 import '../styles/top-bar.css'
 
@@ -633,11 +634,12 @@ function TopBarComponent({
                 aria-label="User menu"
                 aria-expanded={userMenuOpen}
               >
-                <ElementBadge
-                  name={userInfo.name || userInfo.email}
-                  size={32}
-                  avatarUrl={userInfo.avatarUrl}
-                />
+                <div
+                  className="w-8 h-8 rounded-full bg-[var(--surface-panel-secondary)] flex items-center justify-center text-xs font-medium"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  {(userInfo.name || userInfo.email || '?').charAt(0).toUpperCase()}
+                </div>
               </button>
               {userMenuOpen && (
                 <div className="top-bar__user-menu" role="menu">

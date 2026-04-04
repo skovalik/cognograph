@@ -148,9 +148,8 @@ import {
 } from '@shared/types'
 import type { Edge } from '@xyflow/react'
 import { Boxes, CheckSquare, Code, FileText, Folder, Link2, MessageSquare } from 'lucide-react'
-import { DemoBanner } from '../../web/components/DemoBanner'
-import { StorageWarning } from '../../web/components/StorageWarning'
-import { WorkspaceManager } from '../../web/components/WorkspaceManager'
+// Cloud components (DemoBanner, StorageWarning, WorkspaceManager) are not
+// included in the open-source build. See cognograph.app for the hosted version.
 import { SpatialRegionOverlay } from './components/action/SpatialRegionOverlay'
 import { SuggestedAutomations } from './components/action/SuggestedAutomations'
 // NOTE: ProposalCard, CommandBar, and bridge/BridgeStatusBar are deferred to v0.3.0.
@@ -513,8 +512,7 @@ function Canvas(): JSX.Element {
   const [showExportDialog, setShowExportDialog] = useState(false)
   // Template picker visibility
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
-  // Workspace manager panel visibility (web only)
-  const [showWorkspaceManager, setShowWorkspaceManager] = useState(false)
+  // Workspace manager panel (cloud only — not in open-source build)
   // InlinePrompt state removed — V4 uses TopBar → BottomCommandBar
   // SelectionActionBar visibility and position (toggled with Tab when nodes selected)
   const [selectionActionBarOpen, setSelectionActionBarOpen] = useState(false)
@@ -590,13 +588,6 @@ function Canvas(): JSX.Element {
     const handler = (): void => setShowTemplatePicker(true)
     window.addEventListener('open-template-picker', handler)
     return () => window.removeEventListener('open-template-picker', handler)
-  }, [])
-
-  // Listen for open-workspace-manager events from Command Palette
-  useEffect(() => {
-    const handler = (): void => setShowWorkspaceManager(true)
-    window.addEventListener('open-workspace-manager', handler)
-    return () => window.removeEventListener('open-workspace-manager', handler)
   }, [])
 
   // Initialize CC Bridge + Orchestrator + Spatial Bridge IPC listeners (Electron only)
@@ -1450,7 +1441,7 @@ function Canvas(): JSX.Element {
   // Open workspace handler - web: opens workspace manager panel; desktop: shows file picker dialog
   const handleOpen = useCallback(async (): Promise<void> => {
     if (isWeb) {
-      setShowWorkspaceManager(true)
+      // Cloud workspace manager not available in open-source build
       return
     }
     try {
@@ -3248,7 +3239,7 @@ function Canvas(): JSX.Element {
 
   return (
     <div className="h-screen w-screen relative flex flex-col overflow-hidden">
-      {demoMode && <DemoBanner />}
+      {/* DemoBanner: cloud-only, not in open-source build */}
       {/* Storage warning disabled for now */}
 
       <div
@@ -3826,6 +3817,7 @@ function Canvas(): JSX.Element {
           <ArtboardOverlay />
           <FocusModeHint />
 
+<<<<<<< HEAD
           <Suspense fallback={null}>
             <WorkflowProgress />
           </Suspense>
@@ -3884,11 +3876,7 @@ function Canvas(): JSX.Element {
             </Suspense>
           )}
 
-          {/* Workspace Manager */}
-          <WorkspaceManager
-            isOpen={showWorkspaceManager}
-            onClose={() => setShowWorkspaceManager(false)}
-          />
+          {/* Workspace Manager: cloud-only, not in open-source build */}
 
           {/* Welcome Overlay - DISABLED: replaced by default onboarding workspace (spec 2026-03-27) */}
           {/* {!isWeb && <WelcomeOverlay onOpenSettings={() => { setSettingsCategory('ai'); setShowSettingsModal(true) }} />} */}

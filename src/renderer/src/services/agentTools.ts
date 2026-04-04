@@ -533,7 +533,7 @@ const MEMORY_TOOLS: AgentToolDefinition[] = [
 ]
 
 // -----------------------------------------------------------------------------
-// Context-Chain Path Derivation (Patent P2 Claim 5)
+// Context-Chain Path Derivation
 // -----------------------------------------------------------------------------
 
 /**
@@ -541,9 +541,9 @@ const MEMORY_TOOLS: AgentToolDefinition[] = [
  * Traverses INBOUND + bidirectional edges (same as context injection),
  * finds artifact nodes with filePath properties, and extracts parent directories.
  *
- * This is the patented innovation (P2 Claim 5): spatial topology controls
- * agent permissions. Connect a folder artifact → agent can access that folder.
- * Disconnect it → access revoked. No configuration UI needed.
+ * Spatial topology controls agent permissions. Connect a folder artifact →
+ * agent can access that folder. Disconnect it → access revoked. No
+ * configuration UI needed.
  */
 export function derivePathsFromContext(agentNodeId: string): string[] {
   const { nodes, edges } = useWorkspaceStore.getState()
@@ -588,7 +588,7 @@ export function derivePathsFromContext(agentNodeId: string): string[] {
         }
       }
 
-      // Check for artifact nodes with filesystem paths (Patent P2 Claim 5)
+      // Check for artifact nodes with filesystem paths
       if (node.data.type === 'artifact') {
         const data = node.data as ArtifactNodeData
 

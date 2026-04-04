@@ -398,7 +398,7 @@ async function executeTier2(input: string, options?: { fileContext?: { filename:
   // 3. Add user message to workspace conversation
   store.addWorkspaceMessage('user', input)
 
-  // 4. Get tool definitions — standard canvas tools only (no agent/action/region/plan for web demo)
+  // 4. Get tool definitions — standard canvas tools + workspace tools
   const isWeb = !(window as any).__ELECTRON__
   const tools = isWeb
     ? getChatToolDefinitions()

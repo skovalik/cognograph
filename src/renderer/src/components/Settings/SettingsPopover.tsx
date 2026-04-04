@@ -25,7 +25,8 @@ import { TerminalTab } from './TerminalTab'
 import { AccountTab } from './AccountTab'
 import { AgentToolsTab } from './AgentToolsTab'
 import { hasTerminalAccess } from '../../utils/terminalAccess'
-import { isAuthEnabled } from '../../../../web/lib/supabase'
+// Cloud auth not available in open-source build
+const isAuthEnabled = (): boolean => false
 import { getAvailableMediaTools } from '../../services/media/agentToolRegistry'
 
 // ---------------------------------------------------------------------------

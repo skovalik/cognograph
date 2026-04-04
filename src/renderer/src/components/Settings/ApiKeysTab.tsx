@@ -11,8 +11,16 @@
 
 import { memo, useState, useCallback, useEffect } from 'react'
 import { Key, Plus, Trash2, Play, Loader2, CheckCircle, AlertTriangle, ShieldCheck } from 'lucide-react'
-import { useApiKeyStore, type ApiKeyEntry } from '../../../../web/stores/apiKeyStore'
-import { isAuthEnabled } from '../../../../web/lib/supabase'
+// Cloud key store not available in open-source build
+const isAuthEnabled = (): boolean => false
+type ApiKeyEntry = { id: string; provider: string; keyPrefix: string; createdAt: string }
+const useApiKeyStore = (_selector: any): any => {
+  const noop = async (): Promise<boolean> => false
+  return _selector({
+    keys: [] as ApiKeyEntry[], loading: false,
+    fetchKeys: noop, addKey: noop, removeKey: noop, testKey: noop,
+  })
+}
 
 // ---------------------------------------------------------------------------
 // Provider definitions

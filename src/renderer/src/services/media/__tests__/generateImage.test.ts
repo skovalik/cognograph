@@ -6,9 +6,7 @@ import { generateImageTool } from '../tools/generateImage'
 import { getAvailableMediaTools } from '../agentToolRegistry'
 import { getAdapterForProvider } from '../adapterFactory'
 
-vi.mock('../../../../../web/stores/apiKeyStore', () => {
-  throw new Error('Not in web mode')
-})
+// Cloud key store not available in open-source build — tests use localStorage
 
 describe('generateImage tool', () => {
   it('has correct tool definition', () => {

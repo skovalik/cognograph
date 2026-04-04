@@ -459,14 +459,7 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
     // Check for API key or Supabase session (credit-backed)
     const apiKey = await window.api.settings.getApiKey(llmSettings.provider)
     if (!apiKey) {
-      let hasSession = false
-      try {
-        const mod = await import('../../../web/lib/supabase')
-        if (mod.supabase) {
-          const { data } = await mod.supabase.auth.getSession()
-          hasSession = !!data.session
-        }
-      } catch { /* Electron — no supabase */ }
+      const hasSession = false // Cloud auth not available in open-source build
       if (!hasSession) {
         toast.error(`Please set your ${llmSettings.provider} API key first`)
         setShowApiKeyModal(true)
