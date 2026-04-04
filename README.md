@@ -7,41 +7,19 @@ A spatial canvas where AI conversations, notes, tasks, and artifacts live as con
 Try it: **[canvas.cognograph.app](https://canvas.cognograph.app)** (browser) or clone and run locally (Electron).
 
 <p align="center">
-  <img src="screenshots/01-welcome.png" alt="Welcome screen" width="100%">
+  <a href="screenshots/01-welcome.png"><img src="screenshots/01-welcome.png" alt="Welcome screen" width="32%"></a>
+  <a href="screenshots/03-workspace-overview.png"><img src="screenshots/03-workspace-overview.png" alt="Workspace overview" width="32%"></a>
+  <a href="screenshots/02-brand-guide-generation.png"><img src="screenshots/02-brand-guide-generation.png" alt="Brand guide generation" width="32%"></a>
 </p>
-
 <p align="center">
-  <img src="screenshots/03-workspace-overview.png" alt="Full workspace — connected nodes with brand guide artifacts, research notes, and AI conversation" width="100%">
+  <a href="screenshots/04-canvas-desktop.png"><img src="screenshots/04-canvas-desktop.png" alt="Desktop canvas" width="32%"></a>
+  <a href="screenshots/07-connected-notes.png"><img src="screenshots/07-connected-notes.png" alt="Connected notes" width="32%"></a>
+  <a href="screenshots/08-fog-bean-brand.png"><img src="screenshots/08-fog-bean-brand.png" alt="Multi-artifact brand" width="32%"></a>
 </p>
-
 <p align="center">
-  <img src="screenshots/02-brand-guide-generation.png" alt="AI-generated brand guide rendering as live HTML on the canvas" width="100%">
+  <a href="screenshots/05-dark-theme-settings.png"><img src="screenshots/05-dark-theme-settings.png" alt="Dark theme settings" width="32%"></a>
+  <a href="screenshots/06-light-theme-settings.png"><img src="screenshots/06-light-theme-settings.png" alt="Light theme settings" width="32%"></a>
 </p>
-
-<p align="center">
-  <img src="screenshots/04-canvas-desktop.png" alt="Desktop app — style guide artifact, terminal node, and markdown notes on a dark canvas" width="100%">
-</p>
-
-<p align="center">
-  <img src="screenshots/07-connected-notes.png" alt="Three interconnected notes with compare-methods edges and properties panel" width="100%">
-</p>
-
-<p align="center">
-  <img src="screenshots/08-fog-bean-brand.png" alt="Multi-artifact workspace — brand overview, visual style guide, and sample menu" width="100%">
-</p>
-
-<details>
-<summary><strong>Theme settings</strong></summary>
-
-<p align="center">
-  <img src="screenshots/05-dark-theme-settings.png" alt="Dark mode with theme settings — presets, canvas effects, and atmosphere controls" width="100%">
-</p>
-
-<p align="center">
-  <img src="screenshots/06-light-theme-settings.png" alt="Light mode with theme settings" width="100%">
-</p>
-
-</details>
 
 ---
 
