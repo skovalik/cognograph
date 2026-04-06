@@ -15,6 +15,7 @@ All notable changes to Cognograph are documented in this file.
 - Public repo sanitization: stripped cloud imports, internal paths, patent references
 
 ### Fixed
+- SVG artifacts now render visually (data URI SVGs as `<img>`, raw SVG markup via iframe)
 - Case-sensitive import (`EscapeManager`) for Linux builds
 - CI: `--publish never` prevents `GH_TOKEN` requirement during build
 - CI: `build:mcp` step added (MCP CLI was missing from prior releases)
