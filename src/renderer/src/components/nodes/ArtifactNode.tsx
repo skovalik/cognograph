@@ -76,6 +76,7 @@ import { NodePropertyControls } from './NodePropertyControls'
 import { PreviewToolbar } from './PreviewToolbar'
 import { NodeSocketBars } from './SocketBar'
 import { SpreadHandles } from './SpreadHandles'
+import { StreamingMarkdown } from '../StreamingMarkdown'
 import { StructuredContentPreview } from './StructuredContentPreview'
 
 // TypeScript interface for node styles with CSS custom properties
@@ -1423,6 +1424,25 @@ new ResizeObserver(function() {
                           title="Double-click to interact with HTML preview"
                         />
                       )}
+                    </div>
+                  ) : (activeContent.contentType === 'markdown' || activeContent.contentType === 'text') && activeContent.content ? (
+                    <div
+                      className="overflow-auto p-3 rounded flex-1 prose prose-sm prose-invert max-w-none"
+                      style={{
+                        backgroundColor: 'var(--node-bg-secondary)',
+                        color: 'var(--node-text-secondary)',
+                        overscrollBehavior: 'contain',
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                        minHeight: 0,
+                      }}
+                    >
+                      <StreamingMarkdown
+                        content={activeContent.content}
+                        isStreaming={false}
+                        inlineCodeClasses="bg-white/10 px-1 py-0.5 rounded text-xs"
+                        copyButtonClasses="absolute top-2 right-2 text-xs opacity-50 hover:opacity-100"
+                      />
                     </div>
                   ) : (
                     <pre
