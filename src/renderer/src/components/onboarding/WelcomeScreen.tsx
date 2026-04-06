@@ -17,7 +17,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowUp, X } from 'lucide-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { EscapePriority, escapeManager } from '../../utils/escapeManager'
+import { EscapePriority, escapeManager } from '../../utils/EscapeManager'
 import '../../styles/welcome-screen.css'
 
 // ── Types ───────────────────────────────────────────────────────────────────

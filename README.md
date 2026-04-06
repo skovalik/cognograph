@@ -16,7 +16,7 @@ No system prompts. No config files. Drag, connect, talk.
 
 ---
 
-I'm a full-stack designer and developer with 15 years of experience and a BA in Cognitive Psychology. I have ASD and severe combined-type ADHD. Files in folders don't work for me. Linear chat doesn't work for me. I built the tool that does.
+I'm a designer and developer with 15 years of experience and a BA in Cognitive Psychology. I have ASD and severe combined-type ADHD. Files in folders don't work for me. Linear chat doesn't work for me. I built the tool that does.
 
 It's been my daily driver for months. Turns out spatial thinking isn't a neurodivergent workaround. It's how most people process complex information when given the option.
 
