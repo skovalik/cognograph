@@ -9,7 +9,7 @@ Cognograph makes it spatial. Put your thinking on a canvas. Connect two nodes an
 No system prompts. No config files. Drag, connect, talk.
 
 <p align="center">
-  <a href="cognograph-screenshots/03-workspace-overview.png"><img src="cognograph-screenshots/03-workspace-overview.png" alt="Cognograph workspace showing connected nodes with AI context flow" width="90%"></a>
+  <a href="cognograph-screenshots/01-brand-artifacts-canvas.png"><img src="cognograph-screenshots/01-brand-artifacts-canvas.png" alt="Cognograph canvas with brand artifacts and connected nodes" width="90%"></a>
 </p>
 
 **[Try it now](https://canvas.cognograph.app)** (browser) | Clone and run locally (Electron) | Patent pending
@@ -21,11 +21,12 @@ I'm a full-stack designer and developer with 15 years of experience and a BA in 
 It's been my daily driver for months. Turns out spatial thinking isn't a neurodivergent workaround. It's how most people process complex information when given the option.
 
 <p align="center">
-  <a href="cognograph-screenshots/01-welcome.png"><img src="cognograph-screenshots/01-welcome.png" alt="Welcome screen" width="19%"></a>
-  <a href="cognograph-screenshots/02-brand-guide-generation.png"><img src="cognograph-screenshots/02-brand-guide-generation.png" alt="Brand guide generation" width="19%"></a>
-  <a href="cognograph-screenshots/04-canvas-desktop.png"><img src="cognograph-screenshots/04-canvas-desktop.png" alt="Desktop canvas" width="19%"></a>
-  <a href="cognograph-screenshots/07-connected-notes.png"><img src="cognograph-screenshots/07-connected-notes.png" alt="Connected notes" width="19%"></a>
-  <a href="cognograph-screenshots/08-fog-bean-brand.png"><img src="cognograph-screenshots/08-fog-bean-brand.png" alt="Multi-artifact brand" width="19%"></a>
+  <a href="cognograph-screenshots/02-coffee-shop-dark.png"><img src="cognograph-screenshots/02-coffee-shop-dark.png" alt="Dark theme workspace" width="16%"></a>
+  <a href="cognograph-screenshots/03-coffee-shop-light.png"><img src="cognograph-screenshots/03-coffee-shop-light.png" alt="Light theme workspace" width="16%"></a>
+  <a href="cognograph-screenshots/04-coffee-shop-teal.png"><img src="cognograph-screenshots/04-coffee-shop-teal.png" alt="Teal theme workspace" width="16%"></a>
+  <a href="cognograph-screenshots/05-coffee-shop-amber.png"><img src="cognograph-screenshots/05-coffee-shop-amber.png" alt="Amber theme workspace" width="16%"></a>
+  <a href="cognograph-screenshots/06-multi-artifact-preview.png"><img src="cognograph-screenshots/06-multi-artifact-preview.png" alt="Multi-artifact preview" width="16%"></a>
+  <a href="cognograph-screenshots/07-coffee-shop-navy.png"><img src="cognograph-screenshots/07-coffee-shop-navy.png" alt="Navy theme workspace" width="16%"></a>
 </p>
 
 ---
