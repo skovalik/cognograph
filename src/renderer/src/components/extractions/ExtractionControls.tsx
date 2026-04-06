@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useCallback, useState } from 'react'
 import { Sparkles, Wand2 } from 'lucide-react'
-import { useExtractionStore } from '../../stores'
+import { memo, useCallback, useState } from 'react'
 import { extractFromNode } from '../../services/extractionService'
+import { useExtractionStore } from '../../stores'
 
 interface ExtractionControlsProps {
   nodeId: string
@@ -12,7 +12,10 @@ interface ExtractionControlsProps {
   showAutoExtract?: boolean
 }
 
-function ExtractionControlsComponent({ nodeId, showAutoExtract = false }: ExtractionControlsProps): JSX.Element {
+function ExtractionControlsComponent({
+  nodeId,
+  showAutoExtract = false,
+}: ExtractionControlsProps): JSX.Element {
   const isExtracting = useExtractionStore((s) => s.isExtracting)
   const setIsExtracting = useExtractionStore((s) => s.setIsExtracting)
   const [autoExtractEnabled, setAutoExtractEnabled] = useState(false)
@@ -29,7 +32,7 @@ function ExtractionControlsComponent({ nodeId, showAutoExtract = false }: Extrac
         setIsExtracting(null)
       }
     },
-    [nodeId, isExtracting, setIsExtracting]
+    [nodeId, isExtracting, setIsExtracting],
   )
 
   const handleToggleAutoExtract = useCallback(
@@ -38,7 +41,7 @@ function ExtractionControlsComponent({ nodeId, showAutoExtract = false }: Extrac
       setAutoExtractEnabled(!autoExtractEnabled)
       // Note: Auto-extract for non-conversation nodes would need additional implementation
     },
-    [autoExtractEnabled]
+    [autoExtractEnabled],
   )
 
   return (
@@ -53,7 +56,7 @@ function ExtractionControlsComponent({ nodeId, showAutoExtract = false }: Extrac
             autoExtractEnabled
               ? {
                   backgroundColor: 'color-mix(in srgb, var(--gui-accent-primary) 50%, transparent)',
-                  color: 'color-mix(in srgb, var(--gui-accent-primary) 70%, white)'
+                  color: 'color-mix(in srgb, var(--gui-accent-primary) 70%, white)',
                 }
               : { color: 'var(--node-text-muted)' }
           }

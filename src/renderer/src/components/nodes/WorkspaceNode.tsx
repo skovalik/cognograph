@@ -1,33 +1,29 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useMemo, useCallback, useEffect, useState } from 'react'
-import { NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
-import { SpreadHandles } from './SpreadHandles'
-import {
-  Eye,
-  EyeOff,
-  Link2,
-  Link2Off,
-  Settings2,
-  Users,
-  Bot,
-  Compass
-} from 'lucide-react'
 import type { WorkspaceNodeData } from '@shared/types'
-import { PropertyBadges } from '../properties/PropertyBadge'
+import {
+  type NodeProps,
+  NodeResizer,
+  type ResizeParams,
+  useUpdateNodeInternals,
+} from '@xyflow/react'
+import { Bot, Compass, Eye, EyeOff, Link2, Link2Off, Settings2, Users } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { getPropertiesForNodeType } from '../../constants/properties'
-import { useWorkspaceStore, useIsSpawning } from '../../stores/workspaceStore'
 import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
-import { NodeSocketBars } from './SocketBar'
-import { EditableTitle } from '../EditableTitle'
-import { EditableText } from '../EditableText'
-import { InlineIconPicker } from '../InlineIconPicker'
-import { measureTextWidth } from '../../utils/textMeasure'
-import { AttachmentBadge } from './AttachmentBadge'
 import { useNodeResize } from '../../hooks/useNodeResize'
 import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
+import { useIsSpawning, useWorkspaceStore } from '../../stores/workspaceStore'
+import { measureTextWidth } from '../../utils/textMeasure'
+import { EditableText } from '../EditableText'
+import { EditableTitle } from '../EditableTitle'
+import { InlineIconPicker } from '../InlineIconPicker'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
+import { PropertyBadges } from '../properties/PropertyBadge'
+import { AttachmentBadge } from './AttachmentBadge'
+import { NodeSocketBars } from './SocketBar'
+import { SpreadHandles } from './SpreadHandles'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -99,9 +95,12 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
     startNodeResize(id)
   }, [id, startNodeResize])
 
-  const handleResize = useCallback((_event: unknown, params: ResizeParams) => {
-    updateNodeDimensions(id, params.width, params.height)
-  }, [id, updateNodeDimensions])
+  const handleResize = useCallback(
+    (_event: unknown, params: ResizeParams) => {
+      updateNodeDimensions(id, params.width, params.height)
+    },
+    [id, updateNodeDimensions],
+  )
 
   const handleResizeEnd = useCallback(() => {
     updateNodeInternals(id)
@@ -118,24 +117,43 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ctrl+double-click to auto-fit width to title
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    if (e.ctrlKey) {
-      e.stopPropagation()
-      startNodeResize(id)
-      const titleWidth = measureTextWidth(nodeData.title, '14px Inter, sans-serif')
-      const newWidth = Math.max(MIN_WIDTH, Math.ceil(titleWidth + 80))
-      updateNodeDimensions(id, newWidth, nodeHeight)
-      updateNodeInternals(id)
-      commitNodeResize(id)
-    }
-  }, [nodeData.title, id, nodeHeight, updateNodeDimensions, updateNodeInternals, startNodeResize, commitNodeResize])
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.ctrlKey) {
+        e.stopPropagation()
+        startNodeResize(id)
+        const titleWidth = measureTextWidth(nodeData.title, '14px Inter, sans-serif')
+        const newWidth = Math.max(MIN_WIDTH, Math.ceil(titleWidth + 80))
+        updateNodeDimensions(id, newWidth, nodeHeight)
+        updateNodeInternals(id)
+        commitNodeResize(id)
+      }
+    },
+    [
+      nodeData.title,
+      id,
+      nodeHeight,
+      updateNodeDimensions,
+      updateNodeInternals,
+      startNodeResize,
+      commitNodeResize,
+    ],
+  )
 
   // Count members
   const memberCount = nodeData.includedNodeIds.length
   const excludedCount = nodeData.excludedNodeIds.length
 
   // LOD (Level of Detail) rendering based on zoom level
-  const { showContent, showTitle, showLede, showInteractiveControls, showFooter, lodLevel, zoomLevel } = useNodeContentVisibility()
+  const {
+    showContent,
+    showTitle,
+    showLede,
+    showInteractiveControls,
+    showFooter,
+    lodLevel,
+    zoomLevel,
+  } = useNodeContentVisibility()
 
   // Check if node is disabled
   const isDisabled = nodeData.enabled === false
@@ -156,26 +174,37 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
     isDisabled && 'cognograph-node--disabled',
     isSpawning && 'spawning',
     nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
-    `workspace-node--lod-${zoomLevel}`
-  ].filter(Boolean).join(' ')
+    `workspace-node--lod-${zoomLevel}`,
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   // Handle visibility toggle
-  const handleToggleVisibility = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    toggleWorkspaceVisibility(id)
-  }, [id, toggleWorkspaceVisibility])
+  const handleToggleVisibility = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      toggleWorkspaceVisibility(id)
+    },
+    [id, toggleWorkspaceVisibility],
+  )
 
   // Handle links toggle
-  const handleToggleLinks = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    toggleWorkspaceLinks(id)
-  }, [id, toggleWorkspaceLinks])
+  const handleToggleLinks = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      toggleWorkspaceLinks(id)
+    },
+    [id, toggleWorkspaceLinks],
+  )
 
   // Handle settings click - select node to show properties
-  const handleSettingsClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    setSelectedNodes([id])
-  }, [id, setSelectedNodes])
+  const handleSettingsClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      setSelectedNodes([id])
+    },
+    [id, setSelectedNodes],
+  )
 
   // Format LLM settings summary (L2 compact)
   const llmSummary = useMemo(() => {
@@ -201,10 +230,14 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
   // Direction indicator icon for L1
   const directionLabel = useMemo(() => {
     switch (nodeData.linkDirection) {
-      case 'to-members': return '→ members'
-      case 'from-members': return '← members'
-      case 'bidirectional': return '↔ members'
-      default: return '→ members'
+      case 'to-members':
+        return '→ members'
+      case 'from-members':
+        return '← members'
+      case 'bidirectional':
+        return '↔ members'
+      default:
+        return '→ members'
     }
   }, [nodeData.linkDirection])
 
@@ -216,7 +249,9 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
       data-lod={lodLevel}
       data-transparent={transparent}
       onDoubleClick={handleDoubleClick}
-      {...(lodLevel === 0 ? { role: 'img', 'aria-label': `Workspace: ${nodeData.title} (${memberCount} members)` } : {})}
+      {...(lodLevel === 0
+        ? { role: 'img', 'aria-label': `Workspace: ${nodeData.title} (${memberCount} members)` }
+        : {})}
     >
       {/* Type label: floats above node — hidden at L0 */}
       {lodLevel >= 1 && (
@@ -226,7 +261,7 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
       )}
 
       {/* Handles - hidden at L0 (ultra-far) */}
-      <SpreadHandles hidden={zoomLevel === 'ultra-far'} />
+      <SpreadHandles hidden={zoomLevel === 'ultra-far'} width={nodeWidth} height={nodeHeight} />
 
       {/* ── L0 (ultra-far): Workspace icon + member count badge ── */}
       {lodLevel === 0 && (
@@ -291,11 +326,7 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
           {/* AI Property Assist — L3+ only */}
           {lodLevel >= 3 && showInteractiveControls && (
             <NodeAIErrorBoundary compact>
-              <AIPropertyAssist
-                nodeId={id}
-                nodeData={nodeData}
-                compact={true}
-              />
+              <AIPropertyAssist nodeId={id} nodeData={nodeData} compact={true} />
             </NodeAIErrorBoundary>
           )}
 
@@ -377,8 +408,12 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
           </div>
 
           {/* Temperature + max tokens detail line */}
-          {(nodeData.llmSettings.temperature !== undefined || nodeData.llmSettings.maxTokens !== undefined) && (
-            <div className="flex items-center gap-3 text-[10px]" style={{ color: 'var(--node-text-muted)' }}>
+          {(nodeData.llmSettings.temperature !== undefined ||
+            nodeData.llmSettings.maxTokens !== undefined) && (
+            <div
+              className="flex items-center gap-3 text-[10px]"
+              style={{ color: 'var(--node-text-muted)' }}
+            >
               {nodeData.llmSettings.temperature !== undefined && (
                 <span>temp {nodeData.llmSettings.temperature}</span>
               )}
@@ -402,9 +437,7 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
           {excludedCount > 0 && (
             <div className="flex items-center gap-2 text-xs">
               <EyeOff className="w-3.5 h-3.5" style={{ color: 'var(--node-text-muted)' }} />
-              <span style={{ color: 'var(--node-text-muted)' }}>
-                {excludedCount} excluded
-              </span>
+              <span style={{ color: 'var(--node-text-muted)' }}>{excludedCount} excluded</span>
             </div>
           )}
 
@@ -434,7 +467,9 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
       )}
 
       {/* Socket bars — L3+ only */}
-      {lodLevel >= 3 && showContent && <NodeSocketBars nodeId={id} nodeColor={nodeColor} enabled={selected} />}
+      {lodLevel >= 3 && showContent && (
+        <NodeSocketBars nodeId={id} nodeColor={nodeColor} enabled={selected} />
+      )}
     </div>
   )
 

@@ -24,9 +24,7 @@ export function BooleanField({ label, value, onChange }: BooleanFieldProps): JSX
 
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-[11px] text-[var(--text-secondary)] shrink-0">
-        {label}
-      </span>
+      <span className="text-[11px] text-[var(--text-secondary)] shrink-0">{label}</span>
       <button
         type="button"
         role="switch"
@@ -39,9 +37,7 @@ export function BooleanField({ label, value, onChange }: BooleanFieldProps): JSX
           'transition-colors duration-[var(--duration-fast)]',
           'cursor-pointer',
           'focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]',
-          value
-            ? 'bg-[var(--accent-primary)]'
-            : 'bg-[var(--border-subtle)]',
+          value ? 'bg-[var(--accent-primary)]' : 'bg-[var(--border-subtle)]',
         )}
       >
         <span

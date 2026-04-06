@@ -20,8 +20,8 @@
  * rest at 100% zoom.
  */
 
-import { useMemo, useRef } from 'react'
 import { useStore } from '@xyflow/react'
+import { useMemo, useRef } from 'react'
 
 // --- Types ----------------------------------------------------------------
 
@@ -60,16 +60,16 @@ export const THRESHOLDS = {
   ULTRA_FAR_FAR: 0.05,
   FAR_MID: 0.08,
   MID_CLOSE: 0.12,
-  CLOSE_ULTRA_CLOSE: 1.0
+  CLOSE_ULTRA_CLOSE: 1.0,
 } as const
 
 /** Maps ZoomLevel to numeric LOD level (0-4) */
 export const ZOOM_LEVEL_TO_LOD: Record<ZoomLevel, 0 | 1 | 2 | 3 | 4> = {
   'ultra-far': 0,
-  'far': 1,
-  'mid': 2,
-  'close': 3,
-  'ultra-close': 4
+  far: 1,
+  mid: 2,
+  close: 3,
+  'ultra-close': 4,
 } as const
 
 /** Standard hysteresis offset for most boundaries */
@@ -179,7 +179,7 @@ export function computeNodeContentVisibility(level: ZoomLevel): NodeContentVisib
         effectiveLevel: level,
         showEditor: false,
         showPlaceholders: false,
-        lodLevel
+        lodLevel,
       }
     case 'far':
       return {
@@ -197,7 +197,7 @@ export function computeNodeContentVisibility(level: ZoomLevel): NodeContentVisib
         effectiveLevel: level,
         showEditor: false,
         showPlaceholders: true,
-        lodLevel
+        lodLevel,
       }
     case 'mid':
       return {
@@ -215,7 +215,7 @@ export function computeNodeContentVisibility(level: ZoomLevel): NodeContentVisib
         effectiveLevel: level,
         showEditor: false,
         showPlaceholders: false,
-        lodLevel
+        lodLevel,
       }
     case 'close':
       return {
@@ -233,7 +233,7 @@ export function computeNodeContentVisibility(level: ZoomLevel): NodeContentVisib
         effectiveLevel: level,
         showEditor: true,
         showPlaceholders: false,
-        lodLevel
+        lodLevel,
       }
     case 'ultra-close':
       return {
@@ -251,7 +251,7 @@ export function computeNodeContentVisibility(level: ZoomLevel): NodeContentVisib
         effectiveLevel: level,
         showEditor: true,
         showPlaceholders: false,
-        lodLevel
+        lodLevel,
       }
     default: {
       // Exhaustiveness check

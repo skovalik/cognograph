@@ -30,7 +30,7 @@ const modePatterns: ModePattern[] = [
       'draft',
       'write',
       'compose',
-      'start'
+      'start',
     ],
     patterns: [
       /^create\s+/i,
@@ -40,8 +40,8 @@ const modePatterns: ModePattern[] = [
       /^build\s+/i,
       /^generate\s+/i,
       /^brainstorm\s+/i,
-      /let's?\s+(create|make|build)/i
-    ]
+      /let's?\s+(create|make|build)/i,
+    ],
   },
   {
     mode: 'edit',
@@ -60,7 +60,7 @@ const modePatterns: ModePattern[] = [
       'enhance',
       'simplify',
       'expand',
-      'condense'
+      'condense',
     ],
     patterns: [
       /^edit\s+/i,
@@ -70,8 +70,8 @@ const modePatterns: ModePattern[] = [
       /^refactor\s+/i,
       /^improve\s+/i,
       /^make\s+(it|this|these)\s+(more|less|better)/i,
-      /^rewrite\s+/i
-    ]
+      /^rewrite\s+/i,
+    ],
   },
   {
     mode: 'organize',
@@ -88,7 +88,7 @@ const modePatterns: ModePattern[] = [
       'reorder',
       'structure',
       'categorize',
-      'distribute'
+      'distribute',
     ],
     patterns: [
       /^organize\s+/i,
@@ -99,8 +99,8 @@ const modePatterns: ModePattern[] = [
       /^align\s+/i,
       /^move\s+(all|these|the)\s+/i,
       /^put\s+(these|all)\s+/i,
-      /^position\s+/i
-    ]
+      /^position\s+/i,
+    ],
   },
   {
     mode: 'automate',
@@ -116,7 +116,7 @@ const modePatterns: ModePattern[] = [
       'weekly',
       'automatically',
       'workflow',
-      'action'
+      'action',
     ],
     patterns: [
       /^when\s+/i,
@@ -126,8 +126,8 @@ const modePatterns: ModePattern[] = [
       /^schedule\s+/i,
       /^automate\s+/i,
       /automatically\s+/i,
-      /^trigger\s+/i
-    ]
+      /^trigger\s+/i,
+    ],
   },
   {
     mode: 'ask',
@@ -146,7 +146,7 @@ const modePatterns: ModePattern[] = [
       'search',
       'list',
       'count',
-      'analyze'
+      'analyze',
     ],
     patterns: [
       /^what\s+/i,
@@ -163,9 +163,9 @@ const modePatterns: ModePattern[] = [
       /^list\s+(all|the)/i,
       /^count\s+/i,
       /^analyze\s+/i,
-      /\?$/
-    ]
-  }
+      /\?$/,
+    ],
+  },
 ]
 
 /**
@@ -181,7 +181,7 @@ export function inferModeFromPrompt(prompt: string): AIEditorMode | null {
     edit: 0,
     organize: 0,
     automate: 0,
-    ask: 0
+    ask: 0,
   }
 
   // Check patterns first (higher weight)
@@ -228,35 +228,35 @@ export function getModeSuggestions(mode: AIEditorMode): string[] {
         'Create a project plan for...',
         'Brainstorm ideas about...',
         'Generate notes summarizing...',
-        'Build a task list for...'
+        'Build a task list for...',
       ]
     case 'edit':
       return [
         'Make this more concise',
         'Expand on this topic',
         'Fix the issues in...',
-        'Improve the clarity of...'
+        'Improve the clarity of...',
       ]
     case 'organize':
       return [
         'Organize by topic',
         'Arrange in a timeline',
         'Group related items',
-        'Sort by priority'
+        'Sort by priority',
       ]
     case 'automate':
       return [
         'When a task is completed...',
         'Every morning, create...',
         'If this note is updated...',
-        'Schedule weekly review...'
+        'Schedule weekly review...',
       ]
     case 'ask':
       return [
         'Summarize these notes',
         'What are the key points?',
         'How are these connected?',
-        'Analyze the patterns in...'
+        'Analyze the patterns in...',
       ]
     default:
       return []

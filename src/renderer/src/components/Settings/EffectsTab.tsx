@@ -13,12 +13,9 @@
  * All changes apply immediately via the workspace store -- no save button.
  */
 
+import type { AmbientEffectType, GlassStyle } from '@shared/types'
+import { DEFAULT_AMBIENT_EFFECT, DEFAULT_GLASS_SETTINGS } from '@shared/types'
 import { memo, useCallback } from 'react'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { cn } from '@/lib/utils'
-import { EFFECTS_BY_CATEGORY } from '../ambient/effectRegistry'
-import { DEFAULT_GLASS_SETTINGS, DEFAULT_AMBIENT_EFFECT } from '@shared/types'
-import type { GlassStyle, AmbientEffectType } from '@shared/types'
 import {
   Select,
   SelectContent,
@@ -30,6 +27,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
+import { cn } from '@/lib/utils'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { EFFECTS_BY_CATEGORY } from '../ambient/effectRegistry'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -50,7 +50,9 @@ function EffectsTabComponent(): JSX.Element {
   const glassSettings = useWorkspaceStore((s) => s.themeSettings.glassSettings)
   const ambientEffect = useWorkspaceStore((s) => s.themeSettings.ambientEffect)
   const livingGridEnabled = useWorkspaceStore((s) => s.themeSettings.livingGridEnabled ?? true)
-  const particleDriftEnabled = useWorkspaceStore((s) => s.themeSettings.particleDriftEnabled ?? true)
+  const particleDriftEnabled = useWorkspaceStore(
+    (s) => s.themeSettings.particleDriftEnabled ?? true,
+  )
   const updateThemeSettings = useWorkspaceStore((s) => s.updateThemeSettings)
 
   const currentGlassStyle = glassSettings?.userPreference ?? 'auto'
@@ -225,10 +227,12 @@ function EffectsTabComponent(): JSX.Element {
             )}
           >
             <span>Living Grid</span>
-            <span className={cn(
-              'text-[10px] uppercase tracking-wider',
-              livingGridEnabled ? 'text-[var(--accent-primary)]' : 'text-[var(--text-muted)]',
-            )}>
+            <span
+              className={cn(
+                'text-[10px] uppercase tracking-wider',
+                livingGridEnabled ? 'text-[var(--accent-primary)]' : 'text-[var(--text-muted)]',
+              )}
+            >
               {livingGridEnabled ? 'On' : 'Off'}
             </span>
           </button>
@@ -245,10 +249,12 @@ function EffectsTabComponent(): JSX.Element {
             )}
           >
             <span>Particle Drift</span>
-            <span className={cn(
-              'text-[10px] uppercase tracking-wider',
-              particleDriftEnabled ? 'text-[var(--accent-primary)]' : 'text-[var(--text-muted)]',
-            )}>
+            <span
+              className={cn(
+                'text-[10px] uppercase tracking-wider',
+                particleDriftEnabled ? 'text-[var(--accent-primary)]' : 'text-[var(--text-muted)]',
+              )}
+            >
               {particleDriftEnabled ? 'On' : 'Off'}
             </span>
           </button>

@@ -19,48 +19,50 @@
  * from external/untrusted sources. Sanitization happens at the editor layer.
  */
 
-import React, { memo, useState, useCallback, useMemo } from 'react'
+import type { ActionNodeData } from '@shared/actionTypes'
+import type {
+  ArtifactNodeData,
+  ConversationNodeData,
+  NodeData,
+  NoteNodeData,
+  OrchestratorNodeData,
+  ProjectNodeData,
+  TaskNodeData,
+  TextNodeData,
+  WorkspaceNodeData,
+} from '@shared/types'
+import type { Node } from '@xyflow/react'
+import DOMPurify from 'dompurify'
 import {
-  MessageSquare,
-  FolderKanban,
-  StickyNote,
   CheckSquare,
   Code,
-  Globe,
   FileText,
-  Zap,
-  Workflow,
-  Play,
+  FolderKanban,
+  Globe,
+  MessageSquare,
   Pause,
+  Play,
   Square,
+  StickyNote,
   Terminal,
+  Workflow,
+  Zap,
 } from 'lucide-react'
+import type React from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
-import type {
-  NodeData,
-  ConversationNodeData,
-  ProjectNodeData,
-  NoteNodeData,
-  TaskNodeData,
-  ArtifactNodeData,
-  WorkspaceNodeData,
-  TextNodeData,
-  OrchestratorNodeData,
-} from '@shared/types'
-import type { ActionNodeData } from '@shared/actionTypes'
-import type { Node } from '@xyflow/react'
-import { NodeArtboard } from './NodeArtboard'
-import { ArtboardTabBar } from './ArtboardTabBar'
-import type { ArtboardTab } from './ArtboardTabBar'
-import { ArtboardSplitPane } from './ArtboardSplitPane'
-import { ContextTreePanel } from './ContextTreePanel'
-import { MiniKanban } from './MiniKanban'
-import { ExecutionLog } from './ExecutionLog'
-import type { LogEntry } from './ExecutionLog'
-import { PipelineDiagram } from './PipelineDiagram'
-import type { PipelineAgent, AgentPipelineStatus } from './PipelineDiagram'
-import { TerminalPanel } from './TerminalPanel'
 import { hasTerminalAccess } from '../../utils/terminalAccess'
+import { ArtboardSplitPane } from './ArtboardSplitPane'
+import type { ArtboardTab } from './ArtboardTabBar'
+import { ArtboardTabBar } from './ArtboardTabBar'
+import { ContextTreePanel } from './ContextTreePanel'
+import type { LogEntry } from './ExecutionLog'
+import { ExecutionLog } from './ExecutionLog'
+import { MiniKanban } from './MiniKanban'
+import { NodeArtboard } from './NodeArtboard'
+import type { AgentPipelineStatus, PipelineAgent } from './PipelineDiagram'
+import { PipelineDiagram } from './PipelineDiagram'
+import { TerminalPanel } from './TerminalPanel'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -111,8 +113,10 @@ function EditorPlaceholder({ label }: { label: string }): JSX.Element {
 // ---------------------------------------------------------------------------
 
 function SafeHtmlContent({ html, className }: { html: string; className?: string }): JSX.Element {
+  // S4: Sanitize with DOMPurify to block stored XSS via AI-generated or SSE-injected content
+  const sanitized = DOMPurify.sanitize(html)
   // eslint-disable-next-line react/no-danger
-  return <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
+  return <div className={className} dangerouslySetInnerHTML={{ __html: sanitized }} />
 }
 
 // ---------------------------------------------------------------------------
@@ -146,10 +150,7 @@ function ConversationArtboard({
   const tabs = isTerminal ? CC_SESSION_TABS : CONV_TABS
   const [tab, setTab] = useState(isTerminal ? 'terminal' : 'chat')
   const messageCount = nodeData.messages.length
-  const lastMessages = useMemo(
-    () => nodeData.messages.slice(-20),
-    [nodeData.messages],
-  )
+  const lastMessages = useMemo(() => nodeData.messages.slice(-20), [nodeData.messages])
 
   return (
     <NodeArtboard
@@ -160,8 +161,10 @@ function ConversationArtboard({
     >
       <ArtboardTabBar tabs={tabs} activeTabId={tab} onTabChange={setTab} accentColor={nodeColor} />
       <div className="flex-1 overflow-auto" role="tabpanel" aria-label={`${tab} tab`}>
-        {tab === 'terminal' && isTerminal && nodeData.terminal && (
-          hasTerminalAccess() ? (
+        {tab === 'terminal' &&
+          isTerminal &&
+          nodeData.terminal &&
+          (hasTerminalAccess() ? (
             <TerminalPanel
               nodeId={nodeId}
               sessionId={nodeData.terminal.sessionId}
@@ -190,8 +193,7 @@ function ConversationArtboard({
                 Download Desktop App
               </a>
             </div>
-          )
-        )}
+          ))}
         {tab === 'chat' && (
           <ArtboardSplitPane
             direction="horizontal"
@@ -207,27 +209,32 @@ function ConversationArtboard({
                 {lastMessages.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`text-xs p-2 rounded ${
-                      msg.role === 'user' ? 'ml-4' : 'mr-4'
-                    }`}
+                    className={`text-xs p-2 rounded ${msg.role === 'user' ? 'ml-4' : 'mr-4'}`}
                     style={{
                       backgroundColor:
-                        msg.role === 'user'
-                          ? `${nodeColor}15`
-                          : 'var(--surface-sunken, #0d0d1a)',
+                        msg.role === 'user' ? `${nodeColor}15` : 'var(--surface-sunken, #0d0d1a)',
                     }}
                   >
-                    <span className="font-semibold text-[10px] uppercase" style={{ color: 'var(--text-muted, #888)' }}>
+                    <span
+                      className="font-semibold text-[10px] uppercase"
+                      style={{ color: 'var(--text-muted, #888)' }}
+                    >
                       {msg.role}
                     </span>
-                    <p className="mt-0.5 line-clamp-4" style={{ color: 'var(--text-primary, #e0e0e0)' }}>
+                    <p
+                      className="mt-0.5 line-clamp-4"
+                      style={{ color: 'var(--text-primary, #e0e0e0)' }}
+                    >
                       {msg.content.slice(0, 300)}
                       {msg.content.length > 300 ? '\u2026' : ''}
                     </p>
                   </div>
                 ))}
                 {messageCount > 20 && (
-                  <div className="text-[10px] text-center" style={{ color: 'var(--text-muted, #888)' }}>
+                  <div
+                    className="text-[10px] text-center"
+                    style={{ color: 'var(--text-muted, #888)' }}
+                  >
                     Showing last 20 of {messageCount} messages
                   </div>
                 )}
@@ -282,17 +289,17 @@ function TaskArtboard({
         {/* Description area */}
         <div className="flex-1 overflow-auto p-3">
           {nodeData.description ? (
-            <SafeHtmlContent
-              html={nodeData.description}
-              className="text-xs prose-sm"
-            />
+            <SafeHtmlContent html={nodeData.description} className="text-xs prose-sm" />
           ) : (
             <EditorPlaceholder label="Rich text editor loading..." />
           )}
         </div>
 
         {/* Metadata */}
-        <div className="px-3 py-2 border-t text-xs space-y-1" style={{ borderColor: 'var(--border-subtle, #333)' }}>
+        <div
+          className="px-3 py-2 border-t text-xs space-y-1"
+          style={{ borderColor: 'var(--border-subtle, #333)' }}
+        >
           <div className="flex justify-between">
             <span style={{ color: 'var(--text-secondary, #aaa)' }}>Status</span>
             <span className="capitalize">{nodeData.status}</span>
@@ -351,17 +358,19 @@ function ProjectArtboard({
   const childSummaries = useWorkspaceStore(
     useCallback(
       (state: { nodes: Node<NodeData>[] }) =>
-        childNodeIds.map((cid) => {
-          const n = state.nodes.find((nd) => nd.id === cid)
-          if (!n) return null
-          const d = n.data as Record<string, unknown>
-          return {
-            id: cid,
-            title: (d.title as string) || 'Untitled',
-            type: d.type as string,
-            status: (d.status as string) || '',
-          }
-        }).filter(Boolean) as Array<{ id: string; title: string; type: string; status: string }>,
+        childNodeIds
+          .map((cid) => {
+            const n = state.nodes.find((nd) => nd.id === cid)
+            if (!n) return null
+            const d = n.data as Record<string, unknown>
+            return {
+              id: cid,
+              title: (d.title as string) || 'Untitled',
+              type: d.type as string,
+              status: (d.status as string) || '',
+            }
+          })
+          .filter(Boolean) as Array<{ id: string; title: string; type: string; status: string }>,
       [childNodeIds],
     ),
   )
@@ -373,7 +382,12 @@ function ProjectArtboard({
       title={nodeData.title || 'Untitled Project'}
       icon={TYPE_ICONS.project}
     >
-      <ArtboardTabBar tabs={PROJECT_TABS} activeTabId={tab} onTabChange={setTab} accentColor={nodeColor} />
+      <ArtboardTabBar
+        tabs={PROJECT_TABS}
+        activeTabId={tab}
+        onTabChange={setTab}
+        accentColor={nodeColor}
+      />
       <div className="flex-1 overflow-auto" role="tabpanel" aria-label={`${tab} tab`}>
         {tab === 'kanban' && (
           <MiniKanban
@@ -386,7 +400,10 @@ function ProjectArtboard({
         {tab === 'list' && (
           <div className="p-2 space-y-0.5">
             {childSummaries.length === 0 && (
-              <div className="text-xs text-center py-4" style={{ color: 'var(--text-muted, #888)' }}>
+              <div
+                className="text-xs text-center py-4"
+                style={{ color: 'var(--text-muted, #888)' }}
+              >
                 No child nodes. Drag tasks into this project.
               </div>
             )}
@@ -403,7 +420,10 @@ function ProjectArtboard({
                   {child.type}
                 </span>
                 {child.status && (
-                  <span className="text-[9px] capitalize" style={{ color: 'var(--text-secondary, #aaa)' }}>
+                  <span
+                    className="text-[9px] capitalize"
+                    style={{ color: 'var(--text-secondary, #aaa)' }}
+                  >
                     {child.status}
                   </span>
                 )}
@@ -573,10 +593,7 @@ function NoteArtboard({
           secondary={
             <div className="p-3">
               {nodeData.content ? (
-                <SafeHtmlContent
-                  html={nodeData.content}
-                  className="text-xs"
-                />
+                <SafeHtmlContent html={nodeData.content} className="text-xs" />
               ) : (
                 <EditorPlaceholder label="Notes editor loading..." />
               )}
@@ -611,10 +628,7 @@ function NoteArtboard({
     >
       <div className="p-3 h-full overflow-auto">
         {nodeData.content ? (
-          <SafeHtmlContent
-            html={nodeData.content}
-            className="text-xs prose-sm"
-          />
+          <SafeHtmlContent html={nodeData.content} className="text-xs prose-sm" />
         ) : (
           <EditorPlaceholder label="TipTap editor loading..." />
         )}
@@ -685,7 +699,10 @@ function ArtifactArtboard({
     }
     // markdown, text, mermaid, custom
     return (
-      <div className="p-3 text-xs overflow-auto h-full whitespace-pre-wrap" style={{ color: 'var(--text-primary, #e0e0e0)' }}>
+      <div
+        className="p-3 text-xs overflow-auto h-full whitespace-pre-wrap"
+        style={{ color: 'var(--text-primary, #e0e0e0)' }}
+      >
         {nodeData.content.slice(0, 2000)}
         {nodeData.content.length > 2000 ? '\n\n... (truncated)' : ''}
       </div>
@@ -699,31 +716,42 @@ function ArtifactArtboard({
       title={nodeData.title || 'Untitled Artifact'}
       icon={TYPE_ICONS.artifact}
     >
-      <ArtboardTabBar tabs={ARTIFACT_TABS} activeTabId={tab} onTabChange={setTab} accentColor={nodeColor} />
+      <ArtboardTabBar
+        tabs={ARTIFACT_TABS}
+        activeTabId={tab}
+        onTabChange={setTab}
+        accentColor={nodeColor}
+      />
       <div className="flex-1 overflow-auto" role="tabpanel" aria-label={`${tab} tab`}>
         {tab === 'preview' && previewContent}
         {tab === 'source' && <EditorPlaceholder label="Monaco editor loading..." />}
         {tab === 'diff' && <EditorPlaceholder label="Diff view loading..." />}
         {tab === 'history' && (
           <div className="p-3 space-y-1 text-xs">
-            <div className="text-[10px] uppercase font-medium" style={{ color: 'var(--text-muted, #888)' }}>
+            <div
+              className="text-[10px] uppercase font-medium"
+              style={{ color: 'var(--text-muted, #888)' }}
+            >
               Version {nodeData.version}
             </div>
-            {nodeData.versionHistory?.slice(-10).reverse().map((v, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 px-2 py-1 rounded text-[10px]"
-                style={{ backgroundColor: 'var(--surface-sunken, #0d0d1a)' }}
-              >
-                <span>v{v.version}</span>
-                <span style={{ color: 'var(--text-muted, #888)' }}>
-                  {new Date(v.timestamp).toLocaleString()}
-                </span>
-                <span className="capitalize" style={{ color: 'var(--text-secondary, #aaa)' }}>
-                  {v.changeSource}
-                </span>
-              </div>
-            ))}
+            {nodeData.versionHistory
+              ?.slice(-10)
+              .reverse()
+              .map((v, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 px-2 py-1 rounded text-[10px]"
+                  style={{ backgroundColor: 'var(--surface-sunken, #0d0d1a)' }}
+                >
+                  <span>v{v.version}</span>
+                  <span style={{ color: 'var(--text-muted, #888)' }}>
+                    {new Date(v.timestamp).toLocaleString()}
+                  </span>
+                  <span className="capitalize" style={{ color: 'var(--text-secondary, #aaa)' }}>
+                    {v.changeSource}
+                  </span>
+                </div>
+              ))}
             {!nodeData.versionHistory?.length && (
               <span style={{ color: 'var(--text-muted, #888)' }}>No version history</span>
             )}
@@ -755,7 +783,10 @@ function ActionArtboard({
       <div className="p-3 space-y-3 text-xs overflow-auto h-full">
         {/* Trigger config */}
         <section aria-label="Trigger configuration">
-          <div className="text-[10px] uppercase font-semibold mb-1" style={{ color: 'var(--text-muted, #888)' }}>
+          <div
+            className="text-[10px] uppercase font-semibold mb-1"
+            style={{ color: 'var(--text-muted, #888)' }}
+          >
             Trigger
           </div>
           <div
@@ -773,7 +804,10 @@ function ActionArtboard({
 
         {/* Action steps */}
         <section aria-label="Action steps">
-          <div className="text-[10px] uppercase font-semibold mb-1" style={{ color: 'var(--text-muted, #888)' }}>
+          <div
+            className="text-[10px] uppercase font-semibold mb-1"
+            style={{ color: 'var(--text-muted, #888)' }}
+          >
             Steps ({nodeData.steps.length})
           </div>
           <div className="space-y-1">
@@ -795,35 +829,41 @@ function ActionArtboard({
 
         {/* Execution history */}
         <section aria-label="Execution history">
-          <div className="text-[10px] uppercase font-semibold mb-1" style={{ color: 'var(--text-muted, #888)' }}>
+          <div
+            className="text-[10px] uppercase font-semibold mb-1"
+            style={{ color: 'var(--text-muted, #888)' }}
+          >
             Recent Executions
           </div>
           {nodeData.executionHistory.length > 0 ? (
             <div className="space-y-0.5">
-              {nodeData.executionHistory.slice(-5).reverse().map((exec) => (
-                <div
-                  key={exec.id}
-                  className="flex items-center gap-2 px-2 py-1 rounded text-[10px]"
-                  style={{ backgroundColor: 'var(--surface-sunken, #0d0d1a)' }}
-                >
-                  <span style={{ color: 'var(--text-muted, #888)' }}>
-                    {new Date(exec.timestamp).toLocaleString()}
-                  </span>
-                  <span
-                    className="capitalize"
-                    style={{
-                      color:
-                        exec.status === 'success'
-                          ? '#10b981'
-                          : exec.status === 'error'
-                          ? '#ef4444'
-                          : 'var(--text-secondary, #aaa)',
-                    }}
+              {nodeData.executionHistory
+                .slice(-5)
+                .reverse()
+                .map((exec) => (
+                  <div
+                    key={exec.id}
+                    className="flex items-center gap-2 px-2 py-1 rounded text-[10px]"
+                    style={{ backgroundColor: 'var(--surface-sunken, #0d0d1a)' }}
                   >
-                    {exec.status}
-                  </span>
-                </div>
-              ))}
+                    <span style={{ color: 'var(--text-muted, #888)' }}>
+                      {new Date(exec.timestamp).toLocaleString()}
+                    </span>
+                    <span
+                      className="capitalize"
+                      style={{
+                        color:
+                          exec.status === 'success'
+                            ? '#10b981'
+                            : exec.status === 'error'
+                              ? '#ef4444'
+                              : 'var(--text-secondary, #aaa)',
+                      }}
+                    >
+                      {exec.status}
+                    </span>
+                  </div>
+                ))}
             </div>
           ) : (
             <span style={{ color: 'var(--text-muted, #888)' }}>No executions yet</span>
@@ -861,8 +901,17 @@ function WorkspaceArtboard({
       title={nodeData.title || 'Untitled Workspace'}
       icon={TYPE_ICONS.workspace}
     >
-      <ArtboardTabBar tabs={WORKSPACE_TABS} activeTabId={tab} onTabChange={setTab} accentColor={nodeColor} />
-      <div className="flex-1 overflow-auto p-3 text-xs space-y-2" role="tabpanel" aria-label={`${tab} tab`}>
+      <ArtboardTabBar
+        tabs={WORKSPACE_TABS}
+        activeTabId={tab}
+        onTabChange={setTab}
+        accentColor={nodeColor}
+      />
+      <div
+        className="flex-1 overflow-auto p-3 text-xs space-y-2"
+        role="tabpanel"
+        aria-label={`${tab} tab`}
+      >
         {tab === 'overview' && (
           <>
             <div className="flex justify-between">
@@ -959,10 +1008,7 @@ function TextArtboard({
       aria-label={`Text editor for node ${nodeId}`}
     >
       {nodeData.content ? (
-        <SafeHtmlContent
-          html={nodeData.content}
-          className="text-sm prose-sm"
-        />
+        <SafeHtmlContent html={nodeData.content} className="text-sm prose-sm" />
       ) : (
         <EditorPlaceholder label="Editor loading..." />
       )}
@@ -995,7 +1041,7 @@ function ArtboardRouterComponent(): JSX.Element | null {
   const nodeType = nodeData.type
 
   const nodeColor =
-    (nodeData as Record<string, unknown>).color as string | undefined ??
+    ((nodeData as Record<string, unknown>).color as string | undefined) ??
     (themeSettings.nodeColors as Record<string, string>)[nodeType] ??
     '#6366f1'
 
@@ -1086,10 +1132,13 @@ function ArtboardRouterComponent(): JSX.Element | null {
         <NodeArtboard
           nodeId={expandedNodeId}
           nodeColor={nodeColor}
-          title={(nodeData as Record<string, unknown>).title as string || 'Unknown'}
+          title={((nodeData as Record<string, unknown>).title as string) || 'Unknown'}
           icon={TYPE_ICONS[nodeType]}
         >
-          <div className="flex items-center justify-center h-full text-xs" style={{ color: 'var(--text-muted, #888)' }}>
+          <div
+            className="flex items-center justify-center h-full text-xs"
+            style={{ color: 'var(--text-muted, #888)' }}
+          >
             No artboard view for type &ldquo;{nodeType}&rdquo;
           </div>
         </NodeArtboard>

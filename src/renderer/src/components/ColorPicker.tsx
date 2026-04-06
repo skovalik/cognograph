@@ -12,8 +12,8 @@
  * - AI-powered palette generation
  */
 
-import { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import { Palette, Wand2, Copy, Check, Plus, Minus, Save, Pipette, X } from 'lucide-react'
+import { Check, Copy, Minus, Palette, Pipette, Plus, Save, Wand2, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { logger } from '../utils/logger'
 
 interface ColorPickerProps {
@@ -33,9 +33,9 @@ function hexToHSL(hex: string): { h: number; s: number; l: number } {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
   if (!result || !result[1] || !result[2] || !result[3]) return { h: 0, s: 100, l: 50 }
 
-  let r = parseInt(result[1], 16) / 255
-  let g = parseInt(result[2], 16) / 255
-  let b = parseInt(result[3], 16) / 255
+  const r = parseInt(result[1], 16) / 255
+  const g = parseInt(result[2], 16) / 255
+  const b = parseInt(result[3], 16) / 255
 
   const max = Math.max(r, g, b)
   const min = Math.min(r, g, b)
@@ -70,7 +70,9 @@ function hslToHex(h: number, s: number, l: number): string {
   const f = (n: number): string => {
     const k = (n + h / 30) % 12
     const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1)
-    return Math.round(255 * color).toString(16).padStart(2, '0')
+    return Math.round(255 * color)
+      .toString(16)
+      .padStart(2, '0')
   }
   return `#${f(0)}${f(8)}${f(4)}`
 }
@@ -120,11 +122,7 @@ function generateAnalogousColors(baseHex: string, count: number): string[] {
 // Generate split-complementary colors
 function generateSplitComplementary(baseHex: string): string[] {
   const { h, s, l } = hexToHSL(baseHex)
-  return [
-    baseHex,
-    hslToHex((h + 150) % 360, s, l),
-    hslToHex((h + 210) % 360, s, l)
-  ]
+  return [baseHex, hslToHex((h + 150) % 360, s, l), hslToHex((h + 210) % 360, s, l)]
 }
 
 function ColorPickerComponent({
@@ -136,13 +134,15 @@ function ColorPickerComponent({
   onGeneratePalette,
   isLightMode: _isLightMode = false,
   showAIGeneration = false,
-  aiGenerationEnabled = false
+  aiGenerationEnabled = false,
 }: ColorPickerProps): JSX.Element {
   const [hsl, setHsl] = useState(() => hexToHSL(color))
   const [hexInput, setHexInput] = useState(color)
   const [complementaryCount, setComplementaryCount] = useState(3)
   const [generatedColors, setGeneratedColors] = useState<string[]>([])
-  const [colorScheme, setColorScheme] = useState<'complementary' | 'analogous' | 'split'>('complementary')
+  const [colorScheme, setColorScheme] = useState<'complementary' | 'analogous' | 'split'>(
+    'complementary',
+  )
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [aiInstruction, setAiInstruction] = useState('')
   const [isEyedropperActive, setIsEyedropperActive] = useState(false)
@@ -269,51 +269,60 @@ function ColorPickerComponent({
   }, [hsl])
 
   // Handle wheel click/drag
-  const handleWheelInteraction = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = wheelRef.current
-    if (!canvas) return
+  const handleWheelInteraction = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const canvas = wheelRef.current
+      if (!canvas) return
 
-    const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left - canvas.width / 2
-    const y = e.clientY - rect.top - canvas.height / 2
-    const radius = canvas.width / 2 - 2
+      const rect = canvas.getBoundingClientRect()
+      const x = e.clientX - rect.left - canvas.width / 2
+      const y = e.clientY - rect.top - canvas.height / 2
+      const radius = canvas.width / 2 - 2
 
-    let h = (Math.atan2(y, x) * 180) / Math.PI
-    if (h < 0) h += 360
+      let h = (Math.atan2(y, x) * 180) / Math.PI
+      if (h < 0) h += 360
 
-    let s = Math.min(100, (Math.sqrt(x * x + y * y) / radius) * 100)
+      const s = Math.min(100, (Math.sqrt(x * x + y * y) / radius) * 100)
 
-    const newHsl = { ...hsl, h, s }
-    setHsl(newHsl)
-    const newHex = hslToHex(newHsl.h, newHsl.s, newHsl.l)
-    setHexInput(newHex)
-    onChange(newHex)
-  }, [hsl, onChange])
+      const newHsl = { ...hsl, h, s }
+      setHsl(newHsl)
+      const newHex = hslToHex(newHsl.h, newHsl.s, newHsl.l)
+      setHexInput(newHex)
+      onChange(newHex)
+    },
+    [hsl, onChange],
+  )
 
   // Handle lightness slider
-  const handleLightnessInteraction = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = lightnessRef.current
-    if (!canvas) return
+  const handleLightnessInteraction = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const canvas = lightnessRef.current
+      if (!canvas) return
 
-    const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const l = Math.max(0, Math.min(100, (x / canvas.width) * 100))
+      const rect = canvas.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const l = Math.max(0, Math.min(100, (x / canvas.width) * 100))
 
-    const newHsl = { ...hsl, l }
-    setHsl(newHsl)
-    const newHex = hslToHex(newHsl.h, newHsl.s, newHsl.l)
-    setHexInput(newHex)
-    onChange(newHex)
-  }, [hsl, onChange])
+      const newHsl = { ...hsl, l }
+      setHsl(newHsl)
+      const newHex = hslToHex(newHsl.h, newHsl.s, newHsl.l)
+      setHexInput(newHex)
+      onChange(newHex)
+    },
+    [hsl, onChange],
+  )
 
   // Handle hex input
-  const handleHexChange = useCallback((value: string) => {
-    setHexInput(value)
-    if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
-      setHsl(hexToHSL(value))
-      onChange(value)
-    }
-  }, [onChange])
+  const handleHexChange = useCallback(
+    (value: string) => {
+      setHexInput(value)
+      if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
+        setHsl(hexToHSL(value))
+        onChange(value)
+      }
+    },
+    [onChange],
+  )
 
   // Generate colors based on scheme
   const handleGenerateColors = useCallback(() => {
@@ -470,7 +479,9 @@ function ColorPickerComponent({
               onMouseDown={(e) => {
                 handleLightnessInteraction(e)
                 const onMove = (moveE: MouseEvent): void => {
-                  handleLightnessInteraction(moveE as unknown as React.MouseEvent<HTMLCanvasElement>)
+                  handleLightnessInteraction(
+                    moveE as unknown as React.MouseEvent<HTMLCanvasElement>,
+                  )
                 }
                 const onUp = (): void => {
                   document.removeEventListener('mousemove', onMove)
@@ -487,7 +498,9 @@ function ColorPickerComponent({
       {/* Complementary Colors Section */}
       <div className={`border-t ${borderClasses} pt-3`}>
         <div className="flex items-center justify-between mb-2">
-          <span className={`text-xs font-medium ${textMutedClasses} uppercase`}>Generate Palette</span>
+          <span className={`text-xs font-medium ${textMutedClasses} uppercase`}>
+            Generate Palette
+          </span>
         </div>
 
         {/* Color scheme selector */}
@@ -591,7 +604,7 @@ function ColorPickerComponent({
             </div>
             {onSaveColor && (
               <button
-                onClick={() => generatedColors.forEach(c => onSaveColor?.(c))}
+                onClick={() => generatedColors.forEach((c) => onSaveColor?.(c))}
                 className={`text-[10px] ${textMutedClasses} hover:${textClasses} transition-colors`}
               >
                 Save all to custom colors

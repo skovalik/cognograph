@@ -143,6 +143,7 @@ Then provide your critique and edits.
 ## Context Files (Optional Background)
 
 If you want full context:
+- `docs/plans/smart-e2e-cognitive-testing-system.md` (original plan)
 - `ARCHITECTURE.md` (technical overview)
 
 ---

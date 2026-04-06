@@ -51,13 +51,13 @@ export type EdgeStrength = 'light' | 'normal' | 'strong'
  * Dash pattern + color tint channels only. Width exclusively owned by `strength`.
  */
 export type EdgeSemanticType =
-  | 'provides-context'  // baseline: solid, default color
-  | 'depends-on'        // double-dash (3 3 12 3)
-  | 'references'        // dotted (4 4)
-  | 'derives-from'      // dashed (8 4)
-  | 'extends'           // solid, teal tint
-  | 'implements'        // solid, indigo tint
-  | 'custom'            // user-defined
+  | 'provides-context' // baseline: solid, default color
+  | 'depends-on' // double-dash (3 3 12 3)
+  | 'references' // dotted (4 4)
+  | 'derives-from' // dashed (8 4)
+  | 'extends' // solid, teal tint
+  | 'implements' // solid, indigo tint
+  | 'custom' // user-defined
 
 /**
  * Result payload stored on an edge by the coordinator strategy.
@@ -143,7 +143,7 @@ export const DEFAULT_EDGE_DATA: EdgeData = {
   edgeStyle: undefined,
   lineStyle: 'solid',
   strokePreset: 'normal',
-  arrowStyle: 'filled'
+  arrowStyle: 'filled',
 }
 
 /**
@@ -171,7 +171,7 @@ export function migrateEdgeStrength(edgeData: EdgeData): EdgeData {
 
   return {
     ...edgeData,
-    strength
+    strength,
   }
 }
 
@@ -199,7 +199,7 @@ export const EDGE_LABEL_PRESETS = [
   'continues from',
   'alternative to',
   'extracted',
-  'spawned'
+  'spawned',
 ] as const
 
 export type EdgeLabelPreset = (typeof EDGE_LABEL_PRESETS)[number]

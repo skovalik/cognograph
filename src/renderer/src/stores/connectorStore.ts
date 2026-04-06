@@ -9,10 +9,10 @@
  * API keys are stored separately via secure IPC (settings:setApiKey/getApiKey).
  */
 
+import type { ConnectorStatus, LLMConnector, MCPConnector } from '@shared/types'
+import { v4 as uuid } from 'uuid'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { v4 as uuid } from 'uuid'
-import type { LLMConnector, MCPConnector, ConnectorStatus } from '@shared/types'
 
 // -----------------------------------------------------------------------------
 // Store Interface
@@ -25,7 +25,9 @@ interface ConnectorStoreState {
   defaultLLMId: string | null
 
   // LLM Actions
-  addConnector: (connector: Omit<LLMConnector, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'isDefault'>) => string
+  addConnector: (
+    connector: Omit<LLMConnector, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'isDefault'>,
+  ) => string
   updateConnector: (id: string, updates: Partial<LLMConnector>) => void
   removeConnector: (id: string) => void
   setDefaultLLM: (id: string | null) => void
@@ -34,7 +36,9 @@ interface ConnectorStoreState {
   getConnectorById: (id: string) => LLMConnector | undefined
 
   // MCP Actions
-  addMCPConnector: (connector: Omit<MCPConnector, 'id' | 'createdAt' | 'updatedAt' | 'status'>) => string
+  addMCPConnector: (
+    connector: Omit<MCPConnector, 'id' | 'createdAt' | 'updatedAt' | 'status'>,
+  ) => string
   updateMCPConnector: (id: string, updates: Partial<MCPConnector>) => void
   removeMCPConnector: (id: string) => void
   setMCPConnectorStatus: (id: string, status: ConnectorStatus, error?: string) => void
@@ -62,13 +66,13 @@ export const useConnectorStore = create<ConnectorStoreState>()(
           status: 'untested',
           isDefault: false,
           createdAt: now,
-          updatedAt: now
+          updatedAt: now,
         }
 
         set((state) => ({
           connectors: [...state.connectors, connector],
           // If this is the first connector, make it default
-          defaultLLMId: state.connectors.length === 0 ? id : state.defaultLLMId
+          defaultLLMId: state.connectors.length === 0 ? id : state.defaultLLMId,
         }))
 
         return id
@@ -77,8 +81,8 @@ export const useConnectorStore = create<ConnectorStoreState>()(
       updateConnector: (id, updates) => {
         set((state) => ({
           connectors: state.connectors.map((c) =>
-            c.id === id ? { ...c, ...updates, updatedAt: Date.now() } : c
-          )
+            c.id === id ? { ...c, ...updates, updatedAt: Date.now() } : c,
+          ),
         }))
       },
 
@@ -87,9 +91,8 @@ export const useConnectorStore = create<ConnectorStoreState>()(
           const newConnectors = state.connectors.filter((c) => c.id !== id)
           return {
             connectors: newConnectors,
-            defaultLLMId: state.defaultLLMId === id
-              ? (newConnectors[0]?.id ?? null)
-              : state.defaultLLMId
+            defaultLLMId:
+              state.defaultLLMId === id ? (newConnectors[0]?.id ?? null) : state.defaultLLMId,
           }
         })
       },
@@ -99,8 +102,8 @@ export const useConnectorStore = create<ConnectorStoreState>()(
           defaultLLMId: id,
           connectors: state.connectors.map((c) => ({
             ...c,
-            isDefault: c.id === id
-          }))
+            isDefault: c.id === id,
+          })),
         }))
       },
 
@@ -113,10 +116,10 @@ export const useConnectorStore = create<ConnectorStoreState>()(
                   status,
                   lastTestedAt: Date.now(),
                   lastError: error,
-                  updatedAt: Date.now()
+                  updatedAt: Date.now(),
                 }
-              : c
-          )
+              : c,
+          ),
         }))
       },
 
@@ -140,10 +143,10 @@ export const useConnectorStore = create<ConnectorStoreState>()(
           type: 'mcp',
           status: 'untested',
           createdAt: now,
-          updatedAt: now
+          updatedAt: now,
         }
         set((state) => ({
-          mcpConnectors: [...state.mcpConnectors, connector]
+          mcpConnectors: [...state.mcpConnectors, connector],
         }))
         return id
       },
@@ -151,14 +154,14 @@ export const useConnectorStore = create<ConnectorStoreState>()(
       updateMCPConnector: (id, updates) => {
         set((state) => ({
           mcpConnectors: state.mcpConnectors.map((c) =>
-            c.id === id ? { ...c, ...updates, updatedAt: Date.now() } : c
-          )
+            c.id === id ? { ...c, ...updates, updatedAt: Date.now() } : c,
+          ),
         }))
       },
 
       removeMCPConnector: (id) => {
         set((state) => ({
-          mcpConnectors: state.mcpConnectors.filter((c) => c.id !== id)
+          mcpConnectors: state.mcpConnectors.filter((c) => c.id !== id),
         }))
       },
 
@@ -167,14 +170,14 @@ export const useConnectorStore = create<ConnectorStoreState>()(
           mcpConnectors: state.mcpConnectors.map((c) =>
             c.id === id
               ? { ...c, status, lastTestedAt: Date.now(), lastError: error, updatedAt: Date.now() }
-              : c
-          )
+              : c,
+          ),
         }))
       },
 
       getMCPConnectorById: (id) => {
         return get().mcpConnectors.find((c) => c.id === id)
-      }
+      },
     }),
     {
       name: 'cognograph-connectors',
@@ -184,7 +187,7 @@ export const useConnectorStore = create<ConnectorStoreState>()(
           return { ...(persisted as Record<string, unknown>), mcpConnectors: [] }
         }
         return persisted as ConnectorStoreState
-      }
-    }
-  )
+      },
+    },
+  ),
 )

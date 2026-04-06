@@ -30,7 +30,7 @@ function TetherLineComponent({ sourceX, sourceY, targetX, targetY }: TetherLineP
         left: minX - 5,
         top: minY - 5,
         width,
-        height
+        height,
       }}
     >
       <line x1={x1} y1={y1} x2={x2} y2={y2} />

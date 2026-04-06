@@ -1,18 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useState } from 'react'
-import { History, RotateCcw, ChevronDown, ChevronUp, Clock, User, Cpu, GitFork } from 'lucide-react'
-import { useWorkspaceStore } from '../stores/workspaceStore'
-import { toast } from 'react-hot-toast'
 import type { ArtifactNodeData, ArtifactVersion } from '@shared/types'
+import { ChevronDown, ChevronUp, Clock, Cpu, GitFork, History, RotateCcw, User } from 'lucide-react'
+import { memo, useState } from 'react'
+import { toast } from 'react-hot-toast'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 interface VersionHistoryPanelProps {
   nodeId: string
   data: ArtifactNodeData
 }
 
-function VersionHistoryPanelComponent({ nodeId, data }: VersionHistoryPanelProps): JSX.Element | null {
+function VersionHistoryPanelComponent({
+  nodeId,
+  data,
+}: VersionHistoryPanelProps): JSX.Element | null {
   const [isExpanded, setIsExpanded] = useState(false)
   const [previewingVersion, setPreviewingVersion] = useState<number | null>(null)
   const updateNode = useWorkspaceStore((state) => state.updateNode)
@@ -25,7 +28,9 @@ function VersionHistoryPanelComponent({ nodeId, data }: VersionHistoryPanelProps
   }
 
   // Get change source icon and color
-  const getSourceInfo = (source: ArtifactVersion['changeSource']): { icon: JSX.Element; label: string } => {
+  const getSourceInfo = (
+    source: ArtifactVersion['changeSource'],
+  ): { icon: JSX.Element; label: string } => {
     switch (source) {
       case 'user-edit':
         return { icon: <User className="w-3 h-3" />, label: 'Manual edit' }
@@ -42,19 +47,21 @@ function VersionHistoryPanelComponent({ nodeId, data }: VersionHistoryPanelProps
       version: data.version,
       content: data.content,
       timestamp: Date.now(),
-      changeSource: 'user-edit' // Restoring is a user action
+      changeSource: 'user-edit', // Restoring is a user action
     }
 
     // Create new history with current at the front
-    const newHistory = [currentVersion, ...versionHistory.filter(v => v.version !== versionToRestore.version)]
-      .slice(0, 10) // Keep max 10 versions
+    const newHistory = [
+      currentVersion,
+      ...versionHistory.filter((v) => v.version !== versionToRestore.version),
+    ].slice(0, 10) // Keep max 10 versions
 
     // Update with restored content
     updateNode(nodeId, {
       content: versionToRestore.content,
       version: data.version + 1, // Increment version
       versionHistory: newHistory,
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
     } as Partial<ArtifactNodeData>)
 
     setPreviewingVersion(null)
@@ -76,9 +83,8 @@ function VersionHistoryPanelComponent({ nodeId, data }: VersionHistoryPanelProps
     return date.toLocaleDateString()
   }
 
-  const previewedVersion = previewingVersion !== null
-    ? versionHistory.find(v => v.version === previewingVersion)
-    : null
+  const previewedVersion =
+    previewingVersion !== null ? versionHistory.find((v) => v.version === previewingVersion) : null
 
   return (
     <div className="border-t border-[var(--border-subtle)] mt-3 pt-3">

@@ -7,7 +7,7 @@
  * Extracts actionable Notes and Tasks from conversation messages using LLM analysis.
  */
 
-import type { Message, ExtractionSettings, ExtractionResult } from '@shared/types'
+import type { ExtractionResult, ExtractionSettings, Message } from '@shared/types'
 
 // -----------------------------------------------------------------------------
 // Constants
@@ -50,10 +50,7 @@ Do not explain your reasoning. Return only the JSON object.`
 /**
  * Build the extraction prompt from conversation messages
  */
-export function buildExtractionPrompt(
-  messages: Message[],
-  existingTitles: string[]
-): string {
+export function buildExtractionPrompt(messages: Message[], existingTitles: string[]): string {
   const conversationText = messages
     .filter((m) => m.content.trim())
     .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
@@ -81,7 +78,7 @@ export async function runExtraction(
   _nodeId: string,
   messages: Message[],
   settings: ExtractionSettings,
-  existingTitles: string[] = []
+  existingTitles: string[] = [],
 ): Promise<ExtractionResult[]> {
   if (messages.length === 0) return []
 
@@ -92,7 +89,7 @@ export async function runExtraction(
       systemPrompt: EXTRACTION_SYSTEM_PROMPT,
       userPrompt: prompt,
       model: 'claude-3-haiku-20240307',
-      maxTokens: 1500
+      maxTokens: 1500,
     })
 
     if (!response.success || !response.data) {
@@ -145,10 +142,7 @@ const EXTRACTION_DEBOUNCE_MS = 30000 // 30 seconds
 /**
  * Debounce extraction to avoid excessive API calls in per-message mode
  */
-export function debounceExtraction(
-  nodeId: string,
-  callback: () => Promise<void>
-): void {
+export function debounceExtraction(nodeId: string, callback: () => Promise<void>): void {
   const existingTimer = extractionTimers.get(nodeId)
   if (existingTimer) {
     clearTimeout(existingTimer)

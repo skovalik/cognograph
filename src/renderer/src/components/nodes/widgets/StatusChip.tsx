@@ -5,14 +5,14 @@ import { memo, useCallback } from 'react'
 
 const STATUS_CYCLE = ['todo', 'in-progress', 'done'] as const
 const STATUS_COLORS: Record<string, string> = {
-  'todo': '#6b7280',
+  todo: '#6b7280',
   'in-progress': '#f59e0b',
-  'done': '#22c55e',
+  done: '#22c55e',
 }
 const STATUS_LABELS: Record<string, string> = {
-  'todo': 'To Do',
+  todo: 'To Do',
   'in-progress': 'In Progress',
-  'done': 'Done',
+  done: 'Done',
 }
 
 interface StatusChipProps {
@@ -24,13 +24,16 @@ export const StatusChip = memo(function StatusChip({ value, onChange }: StatusCh
   const color = STATUS_COLORS[value] || STATUS_COLORS.todo
   const label = STATUS_LABELS[value] || value
 
-  const cycle = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    const idx = STATUS_CYCLE.indexOf(value as typeof STATUS_CYCLE[number])
-    const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length]
-    onChange(next)
-  }, [value, onChange])
+  const cycle = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      e.preventDefault()
+      const idx = STATUS_CYCLE.indexOf(value as (typeof STATUS_CYCLE)[number])
+      const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length]
+      onChange(next)
+    },
+    [value, onChange],
+  )
 
   return (
     <button
@@ -44,10 +47,7 @@ export const StatusChip = memo(function StatusChip({ value, onChange }: StatusCh
       }}
       title={`Status: ${label} (click to cycle)`}
     >
-      <span
-        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-        style={{ backgroundColor: color }}
-      />
+      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
       {label}
     </button>
   )

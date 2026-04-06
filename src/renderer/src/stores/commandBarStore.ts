@@ -12,15 +12,15 @@
  * intent classification before LLM response arrives.
  */
 
-import { create } from 'zustand'
 import type {
   BridgeCommand,
-  CommandSuggestion,
-  CommandStatus,
   CommandIntent,
+  CommandStatus,
+  CommandSuggestion,
+  Proposal,
 } from '@shared/types/bridge'
+import { create } from 'zustand'
 import { useProposalStore } from './proposalStore'
-import type { Proposal } from '@shared/types/bridge'
 
 // =============================================================================
 // OPTIMISTIC PREVIEW (Optimization #7)
@@ -45,15 +45,24 @@ function classifyIntent(text: string): CommandIntent {
 /** Generate an optimistic preview description for immediate feedback */
 function getOptimisticDescription(text: string, intent: CommandIntent): string {
   switch (intent) {
-    case 'create-node': return 'Creating a new node...'
-    case 'create-workflow': return 'Setting up a workflow...'
-    case 'connect-nodes': return 'Connecting nodes...'
-    case 'run-orchestrator': return 'Starting orchestrator...'
-    case 'modify-canvas': return 'Modifying canvas layout...'
-    case 'query-canvas': return 'Searching canvas...'
-    case 'control-agent': return 'Controlling agent...'
-    case 'set-policy': return 'Updating policy...'
-    default: return 'Interpreting command...'
+    case 'create-node':
+      return 'Creating a new node...'
+    case 'create-workflow':
+      return 'Setting up a workflow...'
+    case 'connect-nodes':
+      return 'Connecting nodes...'
+    case 'run-orchestrator':
+      return 'Starting orchestrator...'
+    case 'modify-canvas':
+      return 'Modifying canvas layout...'
+    case 'query-canvas':
+      return 'Searching canvas...'
+    case 'control-agent':
+      return 'Controlling agent...'
+    case 'set-policy':
+      return 'Updating policy...'
+    default:
+      return 'Interpreting command...'
   }
 }
 
@@ -62,11 +71,36 @@ function getOptimisticDescription(text: string, intent: CommandIntent): string {
 // =============================================================================
 
 const TEMPLATE_SUGGESTIONS: CommandSuggestion[] = [
-  { text: 'Create a new note about ', intent: 'create-node', description: 'Create a note node', source: 'template' },
-  { text: 'Set up a workflow for ', intent: 'create-workflow', description: 'Create orchestrated workflow', source: 'template' },
-  { text: 'Connect all notes to ', intent: 'connect-nodes', description: 'Create edges between nodes', source: 'template' },
-  { text: 'Run the ', intent: 'run-orchestrator', description: 'Start an orchestrator', source: 'template' },
-  { text: 'Set budget limit to $', intent: 'set-policy', description: 'Configure budget', source: 'template' },
+  {
+    text: 'Create a new note about ',
+    intent: 'create-node',
+    description: 'Create a note node',
+    source: 'template',
+  },
+  {
+    text: 'Set up a workflow for ',
+    intent: 'create-workflow',
+    description: 'Create orchestrated workflow',
+    source: 'template',
+  },
+  {
+    text: 'Connect all notes to ',
+    intent: 'connect-nodes',
+    description: 'Create edges between nodes',
+    source: 'template',
+  },
+  {
+    text: 'Run the ',
+    intent: 'run-orchestrator',
+    description: 'Start an orchestrator',
+    source: 'template',
+  },
+  {
+    text: 'Set budget limit to $',
+    intent: 'set-policy',
+    description: 'Configure budget',
+    source: 'template',
+  },
 ]
 
 // =============================================================================
@@ -105,7 +139,7 @@ interface CommandBarStoreState {
 // =============================================================================
 
 export const useCommandBarStore = create<CommandBarStoreState>((set, get) => ({
-  isVisible: false,  // Hidden by default, toggle with keyboard shortcut
+  isVisible: false, // Hidden by default, toggle with keyboard shortcut
   currentCommand: null,
   currentStatus: 'composing',
   optimisticIntent: null,
@@ -176,7 +210,10 @@ export const useCommandBarStore = create<CommandBarStoreState>((set, get) => ({
           explanation: optimisticDescription,
         }
         command.status = intent === 'unknown' ? 'failed' : 'proposed'
-        command.error = intent === 'unknown' ? 'Command not recognized. Try "Create a note about..." or "Set up a workflow for..."' : undefined
+        command.error =
+          intent === 'unknown'
+            ? 'Command not recognized. Try "Create a note about..." or "Set up a workflow for..."'
+            : undefined
 
         set({
           currentCommand: command,

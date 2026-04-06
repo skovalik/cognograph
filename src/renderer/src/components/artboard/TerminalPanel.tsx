@@ -18,14 +18,14 @@
  * the PTY session, so the terminal persists across artboard toggles.
  */
 
-import { useEffect, useRef, useCallback, useState, memo } from 'react'
-import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { WebglAddon } from '@xterm/addon-webgl'
+import { Terminal } from '@xterm/xterm'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import '@xterm/xterm/css/xterm.css'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
 import { getTerminalTheme, TERMINAL_TOOLTIP_COLOR } from '../../constants/terminalThemes'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 
 // ---------------------------------------------------------------------------
 // Props
@@ -86,8 +86,8 @@ function TerminalPanelInner({
   const fitAddonRef = useRef<FitAddon | null>(null)
   const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mountedRef = useRef(true)
-  const isReplayingRef = useRef(true)          // true during scrollback replay — buffers incoming data
-  const pendingDataRef = useRef<string[]>([])   // data buffered during scrollback replay, flushed after
+  const isReplayingRef = useRef(true) // true during scrollback replay — buffers incoming data
+  const pendingDataRef = useRef<string[]>([]) // data buffered during scrollback replay, flushed after
   const [processExited, setProcessExited] = useState(false)
   /** Incremented to force the main effect to re-run on respawn. */
   const [spawnGeneration, setSpawnGeneration] = useState(0)
@@ -215,18 +215,21 @@ function TerminalPanelInner({
       const pasteModifier = isMac ? event.metaKey : event.ctrlKey
       if (pasteModifier && event.key === 'v') {
         event.preventDefault()
-        navigator.clipboard.readText().then((text) => {
-          if (text && mountedRef.current) {
-            // Bracket paste mode: wrap in \x1b[200~ ... \x1b[201~ so shells
-            // that support it don't execute pasted newlines as commands.
-            const bracketedText = `\x1b[200~${text}\x1b[201~`
-            window.api.terminal.write(nodeId, bracketedText).catch((err: unknown) => {
-              console.warn('[TerminalPanel] Paste write failed:', err)
-            })
-          }
-        }).catch(() => {
-          // Clipboard access denied — fall through to default xterm behavior
-        })
+        navigator.clipboard
+          .readText()
+          .then((text) => {
+            if (text && mountedRef.current) {
+              // Bracket paste mode: wrap in \x1b[200~ ... \x1b[201~ so shells
+              // that support it don't execute pasted newlines as commands.
+              const bracketedText = `\x1b[200~${text}\x1b[201~`
+              window.api.terminal.write(nodeId, bracketedText).catch((err: unknown) => {
+                console.warn('[TerminalPanel] Paste write failed:', err)
+              })
+            }
+          })
+          .catch(() => {
+            // Clipboard access denied — fall through to default xterm behavior
+          })
         return false
       }
 
@@ -252,9 +255,7 @@ function TerminalPanelInner({
     const removeExitListener = window.api.terminal.onExit(nodeId, (exitCode: number) => {
       if (mountedRef.current && terminalRef.current) {
         terminalRef.current.writeln('')
-        terminalRef.current.writeln(
-          `\x1b[33m[Process exited with code ${exitCode}]\x1b[0m`
-        )
+        terminalRef.current.writeln(`\x1b[33m[Process exited with code ${exitCode}]\x1b[0m`)
       }
       if (mountedRef.current) {
         setProcessExited(true)
@@ -281,8 +282,8 @@ function TerminalPanelInner({
       if (!mountedRef.current) return
 
       try {
-        // 2. Spawn terminal with the fitted cols/rows (main process no-ops if session
-        //    already exists for nodeId, so this is safe to call on remount).
+        // 2. Spawn terminal with the fitted cols/rows (main process returns existing
+        //    session if still alive, so this is safe to call on StrictMode remount).
         await window.api.terminal.spawn({
           nodeId,
           sessionId,
@@ -295,7 +296,9 @@ function TerminalPanelInner({
         })
       } catch (err) {
         if (!mountedRef.current) return
-        terminal.writeln(`\x1b[31m[Error] Failed to spawn terminal: ${err instanceof Error ? err.message : String(err)}\x1b[0m`)
+        terminal.writeln(
+          `\x1b[31m[Error] Failed to spawn terminal: ${err instanceof Error ? err.message : String(err)}\x1b[0m`,
+        )
         return
       }
 
@@ -357,7 +360,7 @@ function TerminalPanelInner({
     // --- Cleanup on unmount ---
     return () => {
       mountedRef.current = false
-      isReplayingRef.current = true  // Reset for potential remount
+      isReplayingRef.current = true // Reset for potential remount
       pendingDataRef.current = []
 
       // Clear any pending resize timer

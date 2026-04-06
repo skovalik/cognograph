@@ -1,37 +1,49 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useMemo, useCallback, useState, useEffect, useRef } from 'react'
-import { NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
-import { SpreadHandles } from './SpreadHandles'
-import { Link2, Maximize2 } from 'lucide-react'
-import { sciFiToast } from '../ui/SciFiToast'
 import type { TaskNodeData } from '@shared/types'
 import { DEFAULT_THEME_SETTINGS } from '@shared/types'
-import { useWorkspaceStore, useIsSpawning, useNodeWarmth, useIsNodePinned, useIsNodeBookmarked, useNodeNumberedBookmark, useIsNodeLayoutPinned } from '../../stores/workspaceStore'
-import { useShowMembersClass } from '../../hooks/useShowMembersClass'
-import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
-import { PropertyBadges } from '../properties/PropertyBadge'
-import { getPropertiesForNodeType } from '../../constants/properties'
-import { NodeSocketBars } from './SocketBar'
-import { AttachmentBadge } from './AttachmentBadge'
-import { InlineIconPicker } from '../InlineIconPicker'
-import { EditableTitle } from '../EditableTitle'
-import { RichTextEditor } from '../RichTextEditor'
-import { CollaborativeEditor } from '../CollaborativeEditor'
-import { SelectionIndicator } from '../Presence/SelectionIndicators'
-import { useNodeRemoteSelectors } from '../../hooks/useOtherUserSelections'
-import { useWorkspaceStore as useWsStoreForSync } from '../../stores/workspaceStore'
-import { measureTextWidth, calculateAutoFitDimensions } from '../../utils/textMeasure'
-import { ExtractionBadge, ExtractionControls } from '../extractions'
-import { AutoFitButton } from './AutoFitButton'
-import { FoldBadge } from './FoldBadge'
-import { useNodeResize } from '../../hooks/useNodeResize'
-import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
-import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
-import { StructuredContentPreview } from './StructuredContentPreview'
-import { NodePropertyControls } from './NodePropertyControls'
+import {
+  type NodeProps,
+  NodeResizer,
+  type ResizeParams,
+  useUpdateNodeInternals,
+} from '@xyflow/react'
+import { Link2, Maximize2 } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CONIC_PALETTES } from '../../constants/conicPalettes'
+import { getPropertiesForNodeType } from '../../constants/properties'
+import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
+import { useNodeResize } from '../../hooks/useNodeResize'
+import { useNodeRemoteSelectors } from '../../hooks/useOtherUserSelections'
+import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
+import { useShowMembersClass } from '../../hooks/useShowMembersClass'
+import {
+  useIsNodeBookmarked,
+  useIsNodeLayoutPinned,
+  useIsNodePinned,
+  useIsSpawning,
+  useNodeNumberedBookmark,
+  useNodeWarmth,
+  useWorkspaceStore,
+  useWorkspaceStore as useWsStoreForSync,
+} from '../../stores/workspaceStore'
+import { calculateAutoFitDimensions, measureTextWidth } from '../../utils/textMeasure'
+import { CollaborativeEditor } from '../CollaborativeEditor'
+import { EditableTitle } from '../EditableTitle'
+import { ExtractionBadge, ExtractionControls } from '../extractions'
+import { InlineIconPicker } from '../InlineIconPicker'
+import { SelectionIndicator } from '../Presence/SelectionIndicators'
+import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
+import { PropertyBadges } from '../properties/PropertyBadge'
+import { RichTextEditor } from '../RichTextEditor'
+import { sciFiToast } from '../ui/SciFiToast'
+import { AttachmentBadge } from './AttachmentBadge'
+import { FoldBadge } from './FoldBadge'
+import { NodePropertyControls } from './NodePropertyControls'
+import { NodeSocketBars } from './SocketBar'
+import { SpreadHandles } from './SpreadHandles'
+import { StructuredContentPreview } from './StructuredContentPreview'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -63,14 +75,30 @@ function TaskStatusShape({ status, color }: { status: string; color: string }): 
       return (
         <svg width={size} height={size} viewBox="0 0 16 16" aria-label="Done">
           <circle cx="8" cy="8" r="7" fill={color} stroke={color} strokeWidth="1" />
-          <path d="M4.5 8L7 10.5L11.5 5.5" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M4.5 8L7 10.5L11.5 5.5"
+            stroke="white"
+            strokeWidth="2"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       )
     case 'in-progress':
       // Filled square
       return (
         <svg width={size} height={size} viewBox="0 0 16 16" aria-label="In Progress">
-          <rect x="2" y="2" width="12" height="12" rx="2" fill={color} stroke={color} strokeWidth="1" />
+          <rect
+            x="2"
+            y="2"
+            width="12"
+            height="12"
+            rx="2"
+            fill={color}
+            stroke={color}
+            strokeWidth="1"
+          />
         </svg>
       )
     default:
@@ -94,7 +122,7 @@ function TaskStatusBadge({ status, color }: { status: string; color: string }): 
       className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0"
       style={{
         backgroundColor: `${color}20`,
-        color: color
+        color: color,
       }}
     >
       <TaskStatusShape status={status} color={color} />
@@ -106,9 +134,12 @@ function TaskStatusBadge({ status, color }: { status: string; color: string }): 
 /** Returns a color for task status */
 function getStatusColor(status: string): string {
   switch (status) {
-    case 'done': return '#22c55e'       // green
-    case 'in-progress': return '#f59e0b' // amber
-    default: return '#6b7280'            // gray
+    case 'done':
+      return '#22c55e' // green
+    case 'in-progress':
+      return '#f59e0b' // amber
+    default:
+      return '#6b7280' // gray
   }
 }
 
@@ -141,11 +172,12 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   }, [id])
 
   // Calculate dynamic node color
-  const nodeColor = nodeData.color || themeSettings.nodeColors.task || DEFAULT_THEME_SETTINGS.nodeColors.task
+  const nodeColor =
+    nodeData.color || themeSettings.nodeColors.task || DEFAULT_THEME_SETTINGS.nodeColors.task
 
   // Glass system integration
   const transparent = nodeData.transparent
-  const isGlassEnabled = useIsGlassEnabled('nodes', transparent)
+  const _isGlassEnabled = useIsGlassEnabled('nodes', transparent)
 
   // Node dimensions (for resizing) - prefer props from React Flow, then data, then defaults
   const nodeWidth = propsWidth || nodeData.width || DEFAULT_WIDTH
@@ -153,16 +185,27 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
 
   // LOD (Level of Detail) rendering based on zoom level
   const {
-    showContent, showTitle, showBadges, showLede,
-    showHeader, showFooter, showInteractiveControls,
-    showPlaceholders, showEmbeddedContent, zoomLevel, lodLevel
+    showContent,
+    showTitle,
+    showBadges,
+    showLede,
+    showHeader,
+    showFooter,
+    showInteractiveControls,
+    showPlaceholders,
+    showEmbeddedContent,
+    zoomLevel,
+    lodLevel,
   } = useNodeContentVisibility()
 
   const isUltraFar = zoomLevel === 'ultra-far'
 
   // Strip HTML for character count (content-aware height)
   const plainDescription = nodeData.description
-    ? nodeData.description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    ? nodeData.description
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
     : ''
 
   // Content-aware minimum height: auto-expand based on content length, capped at MAX_HEIGHT
@@ -180,7 +223,7 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
 
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.task ?? '#10b981'
-    const palette = CONIC_PALETTES['task'] || CONIC_PALETTES.default
+    const palette = CONIC_PALETTES.task || CONIC_PALETTES.default
 
     return {
       '--ring-color': safeNodeColor,
@@ -199,9 +242,12 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
     startNodeResize(id)
   }, [id, startNodeResize])
 
-  const handleResize = useCallback((_event: unknown, params: ResizeParams) => {
-    updateNodeDimensions(id, params.width, params.height)
-  }, [id, updateNodeDimensions])
+  const handleResize = useCallback(
+    (_event: unknown, params: ResizeParams) => {
+      updateNodeDimensions(id, params.width, params.height)
+    },
+    [id, updateNodeDimensions],
+  )
 
   const handleResizeEnd = useCallback(() => {
     updateNodeInternals(id)
@@ -215,50 +261,78 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
       updateNodeInternals(id)
     })
     return () => cancelAnimationFrame(rafId)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [updateNodeInternals, id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ctrl+double-click to auto-fit width to title
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    if (e.ctrlKey) {
-      e.stopPropagation()
-      startNodeResize(id)
-      const titleWidth = measureTextWidth(nodeData.title, '14px Inter, sans-serif')
-      const newWidth = Math.max(MIN_WIDTH, Math.ceil(titleWidth + 80))
-      updateNodeDimensions(id, newWidth, effectiveHeight)
-      updateNodeInternals(id)
-      commitNodeResize(id)
-    }
-  }, [nodeData.title, id, effectiveHeight, updateNodeDimensions, updateNodeInternals, startNodeResize, commitNodeResize])
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.ctrlKey) {
+        e.stopPropagation()
+        startNodeResize(id)
+        const titleWidth = measureTextWidth(nodeData.title, '14px Inter, sans-serif')
+        const newWidth = Math.max(MIN_WIDTH, Math.ceil(titleWidth + 80))
+        updateNodeDimensions(id, newWidth, effectiveHeight)
+        updateNodeInternals(id)
+        commitNodeResize(id)
+      }
+    },
+    [
+      nodeData.title,
+      id,
+      effectiveHeight,
+      updateNodeDimensions,
+      updateNodeInternals,
+      startNodeResize,
+      commitNodeResize,
+    ],
+  )
 
   // Merge top-level priority/complexity into properties for unified badge rendering
   // NOTE: status is NOT merged here — it's already rendered by TaskStatusBadge in the header
-  const mergedProperties = useMemo(() => ({
-    ...nodeData.properties,
-    ...(nodeData.priority && { priority: nodeData.priority }),
-    ...(nodeData.complexity && { complexity: nodeData.complexity })
-  }), [nodeData.properties, nodeData.priority, nodeData.complexity])
+  const mergedProperties = useMemo(
+    () => ({
+      ...nodeData.properties,
+      ...(nodeData.priority && { priority: nodeData.priority }),
+      ...(nodeData.complexity && { complexity: nodeData.complexity }),
+    }),
+    [nodeData.properties, nodeData.priority, nodeData.complexity],
+  )
 
   // Handle property cycling from badges
-  const handlePropertyChange = useCallback((propertyId: string, newValue: string) => {
-    updateNode(id, { [propertyId]: newValue })
-  }, [id, updateNode])
+  const handlePropertyChange = useCallback(
+    (propertyId: string, newValue: string) => {
+      updateNode(id, { [propertyId]: newValue })
+    },
+    [id, updateNode],
+  )
 
   // Inline fit-to-content button handler
-  const handleAutoFitInline = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    const { width, height } = calculateAutoFitDimensions(
-      nodeData.title || '',
-      nodeData.description || '',
-      40, // task header height
-      36  // footer height
-    )
-    const finalW = Math.max(300, width)
-    const finalH = Math.max(200, height)
-    startNodeResize(id)
-    updateNodeDimensions(id, finalW, finalH)
-    updateNodeInternals(id)
-    commitNodeResize(id)
-  }, [id, nodeData.title, nodeData.description, startNodeResize, updateNodeDimensions, updateNodeInternals, commitNodeResize])
+  const handleAutoFitInline = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      const { width, height } = calculateAutoFitDimensions(
+        nodeData.title || '',
+        nodeData.description || '',
+        40, // task header height
+        36, // footer height
+      )
+      const finalW = Math.max(300, width)
+      const finalH = Math.max(200, height)
+      startNodeResize(id)
+      updateNodeDimensions(id, finalW, finalH)
+      updateNodeInternals(id)
+      commitNodeResize(id)
+    },
+    [
+      id,
+      nodeData.title,
+      nodeData.description,
+      startNodeResize,
+      updateNodeDimensions,
+      updateNodeInternals,
+      commitNodeResize,
+    ],
+  )
 
   // Content editing and overflow state
   const [isEditing, setIsEditing] = useState(false)
@@ -281,7 +355,9 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   const isLayoutPinned = useIsNodeLayoutPinned(id)
   const isBookmarked = useIsNodeBookmarked(id)
   const numberedBookmark = useNodeNumberedBookmark(id)
-  const isCut = useWorkspaceStore(s => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id))
+  const isCut = useWorkspaceStore(
+    (s) => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id),
+  )
 
   // Show members mode - dim non-members
   const { nonMemberClass, memberHighlightClass } = useShowMembersClass(id, nodeData.parentId)
@@ -313,15 +389,14 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   // Status color for L0/L1 rendering
   const statusColor = getStatusColor(nodeData.status)
 
-  // Activity indicator: tasks use in-progress status as "processing" analog
-  const isProcessing = nodeData.status === 'in-progress'
+  // Activity indicator: spawn-only (matching NoteNode, ArtifactNode, etc.)
+  // 'in-progress' is a workflow status, not an active-computation indicator
+  const isProcessing = isSpawning
 
   // Lede text for L2 (mid zoom) — description truncated to 80 chars
-  const ledeText = useMemo(() => {
+  const _ledeText = useMemo(() => {
     if (!plainDescription) return ''
-    return plainDescription.length > 80
-      ? plainDescription.slice(0, 80) + '...'
-      : plainDescription
+    return plainDescription.length > 80 ? `${plainDescription.slice(0, 80)}...` : plainDescription
   }, [plainDescription])
 
   const nodeClassName = [
@@ -340,8 +415,10 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
     isBookmarked && 'cognograph-node--bookmarked',
     isCut && 'cognograph-node--cut',
     isCelebrating && 'cognograph-node--celebrating',
-    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`
-  ].filter(Boolean).join(' ')
+    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   const nodeContent = (
     <div
@@ -354,9 +431,7 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
       onDoubleClick={handleDoubleClick}
     >
       {/* Type label: floats above node */}
-      <div className="cognograph-node__type-label">
-        TASK
-      </div>
+      <div className="cognograph-node__type-label">TASK</div>
 
       {/* Remote selection indicator */}
       <SelectionIndicator selectors={remoteSelectors} />
@@ -372,31 +447,14 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
         </div>
       )}
 
-      {/* ================================================================
-          L1+ (far and above): Auto-fit button
-          ================================================================ */}
-      {showInteractiveControls && (
-        <AutoFitButton
-          nodeId={id}
-          title={nodeData.title}
-          content={nodeData.description}
-          selected={selected}
-          nodeColor={nodeColor}
-          minWidth={MIN_WIDTH}
-          minHeight={MIN_HEIGHT}
-        />
-      )}
-
       {/* Remote selection indicator — L1+ */}
-      {!isUltraFar && (
-        <SelectionIndicator selectors={remoteSelectors} />
-      )}
+      {!isUltraFar && <SelectionIndicator selectors={remoteSelectors} />}
 
       {/* ================================================================
           L1+ (far and above): Handles on all four sides
           Suppressed at L0 — no connection affordance at navigation level
           ================================================================ */}
-      <SpreadHandles hidden={isUltraFar} />
+      <SpreadHandles hidden={isUltraFar} width={nodeWidth} height={effectiveHeight} />
 
       {/* Numbered bookmark badge — visible at L1+ (navigation aid) */}
       {!isUltraFar && numberedBookmark && (
@@ -406,9 +464,7 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
       )}
 
       {/* Extraction badge for spatial extraction system — L1+ */}
-      {!isUltraFar && (
-        <ExtractionBadge nodeId={id} nodeColor={nodeColor} />
-      )}
+      {!isUltraFar && <ExtractionBadge nodeId={id} nodeColor={nodeColor} />}
 
       {/* ================================================================
           L1+ (far and above): Header with title + status badge
@@ -447,11 +503,7 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
           {showInteractiveControls && (
             <div className="node-chrome--hover">
               <NodeAIErrorBoundary compact>
-                <AIPropertyAssist
-                  nodeId={id}
-                  nodeData={nodeData}
-                  compact={true}
-                />
+                <AIPropertyAssist nodeId={id} nodeData={nodeData} compact={true} />
               </NodeAIErrorBoundary>
             </div>
           )}
@@ -494,7 +546,7 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
                 className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
                 style={{
                   backgroundColor: 'var(--node-bg-secondary)',
-                  color: 'var(--node-text-secondary)'
+                  color: 'var(--node-text-secondary)',
                 }}
               >
                 {nodeData.priority}
@@ -505,10 +557,13 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
                 className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
                 style={{
                   backgroundColor: 'var(--node-bg-secondary)',
-                  color: nodeData.dueDate < Date.now() ? '#ef4444' : 'var(--node-text-muted)'
+                  color: nodeData.dueDate < Date.now() ? '#ef4444' : 'var(--node-text-muted)',
                 }}
               >
-                {new Date(nodeData.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                {new Date(nodeData.dueDate).toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                })}
               </span>
             )}
           </div>
@@ -522,8 +577,8 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
           ================================================================ */}
       {showContent && (
         <div className="cognograph-node__body" data-focusable="true">
-          {!nodeData.hiddenProperties?.includes('description') && (
-            isMultiplayer ? (
+          {!nodeData.hiddenProperties?.includes('description') &&
+            (isMultiplayer ? (
               <CollaborativeEditor
                 nodeId={id}
                 fieldName="description"
@@ -549,8 +604,7 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
                 onOverflowChange={setIsContentOverflowing}
                 observeOverflow={!!selected}
               />
-            )
-          )}
+            ))}
           {isContentOverflowing && !isEditing && effectiveHeight >= MAX_HEIGHT && (
             <div className="cognograph-node__truncation-indicator">...</div>
           )}
@@ -562,7 +616,11 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
           ================================================================ */}
       {showFooter && showContent && (
         <div className="cognograph-node__footer">
-          <NodePropertyControls nodeId={id} nodeType="task" data={data as Record<string, unknown>} />
+          <NodePropertyControls
+            nodeId={id}
+            nodeType="task"
+            data={data as Record<string, unknown>}
+          />
           <button
             className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] hover:bg-white/10 transition-colors"
             style={{ color: 'var(--node-text-muted)' }}
@@ -596,14 +654,10 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
       {/* Artboard expansion removed — task nodes don't have artboard mode */}
 
       {/* Socket bars showing connections — L1+ */}
-      {!isUltraFar && (
-        <NodeSocketBars nodeId={id} nodeColor={nodeColor} enabled={selected} />
-      )}
+      {!isUltraFar && <NodeSocketBars nodeId={id} nodeColor={nodeColor} enabled={selected} />}
 
       {/* Fold badge for collapsing children — L1+ */}
-      {!isUltraFar && (
-        <FoldBadge nodeId={id} nodeColor={nodeColor} />
-      )}
+      {!isUltraFar && <FoldBadge nodeId={id} nodeColor={nodeColor} />}
     </div>
   )
 

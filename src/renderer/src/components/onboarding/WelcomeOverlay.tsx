@@ -11,13 +11,13 @@
  * Shown only once — completion is stored in programStore (localStorage).
  */
 
-import { memo, useState, useCallback } from 'react'
 import { useReactFlow } from '@xyflow/react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, MessageSquare, ArrowRight, X, Zap, Link2, Brain, Check } from 'lucide-react'
-import { useProgramStore, selectHasCompletedOnboarding } from '../../stores/programStore'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ArrowRight, Brain, Check, Link2, MessageSquare, Sparkles, X, Zap } from 'lucide-react'
+import { memo, useCallback, useState } from 'react'
 import { useConnectorStore } from '../../stores/connectorStore'
+import { selectHasCompletedOnboarding, useProgramStore } from '../../stores/programStore'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 
 interface WelcomeOverlayProps {
   onOpenSettings: () => void
@@ -31,7 +31,7 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
   const connectors = useConnectorStore((s) => s.connectors)
   const { screenToFlowPosition } = useReactFlow()
 
-  const [step, setStep] = useState<1 | 2>(1)
+  const [step, _setStep] = useState<1 | 2>(1)
   const [dismissed, setDismissed] = useState(false)
 
   const hasAnyConnector = connectors.length > 0
@@ -51,7 +51,7 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
 
     const nodeId = addNode('conversation', {
       x: flowPos.x - 150, // Center the 300px-wide node
-      y: flowPos.y - 70   // Center the ~140px-tall node
+      y: flowPos.y - 70, // Center the ~140px-tall node
     })
 
     // Select it to open the properties/chat panel
@@ -88,7 +88,7 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
           style={{
             background: 'var(--gui-bg, #1a1a2e)',
             border: '1px solid var(--gui-border, #2a2a4a)',
-            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5), 0 0 80px rgba(200, 150, 62, 0.1)'
+            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5), 0 0 80px rgba(200, 150, 62, 0.1)',
           }}
           initial={{ scale: 0.9, y: 20 }}
           animate={{ scale: 1, y: 0 }}
@@ -96,6 +96,7 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
         >
           {/* Skip/Close button */}
           <button
+            type="button"
             onClick={handleSkip}
             className="absolute top-4 right-4 p-1.5 rounded-lg gui-text-secondary hover:gui-text transition-colors opacity-60 hover:opacity-100"
             title="Skip onboarding"
@@ -114,13 +115,17 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold gui-text">Welcome to [Cognograph]</h1>
+                <h1 className="text-lg font-semibold gui-text">
+                  Welcome to <span style={{ color: 'var(--accent-glow, #C8963E)' }}>[</span>
+                  Cognograph<span style={{ color: 'var(--accent-glow, #C8963E)' }}>]</span>
+                </h1>
               </div>
             </div>
 
             <p className="text-sm gui-text-secondary mb-6 leading-relaxed">
-              Your spatial AI workspace. Connect ideas, conversations, and context on an infinite canvas.
-              Your workspaces save automatically in this browser. Export anytime to keep a backup or move to another device.
+              Your spatial AI workspace. Connect ideas, conversations, and context on an infinite
+              canvas. Your workspaces save automatically in this browser. Export anytime to keep a
+              backup or move to another device.
             </p>
 
             {/* Feature highlights */}
@@ -128,7 +133,7 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
               {[
                 { icon: MessageSquare, label: 'AI Conversations', color: '#C8963E' },
                 { icon: Link2, label: 'Connected Context', color: '#F0EDE8' },
-                { icon: Brain, label: 'Spatial Thinking', color: '#10b981' }
+                { icon: Brain, label: 'Spatial Thinking', color: '#10b981' },
               ].map(({ icon: Icon, label, color }) => (
                 <div
                   key={label}
@@ -136,7 +141,9 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
                   style={{ background: `${color}10`, border: `1px solid ${color}20` }}
                 >
                   <Icon className="w-4 h-4" style={{ color }} />
-                  <span className="text-[10px] font-medium gui-text-secondary text-center">{label}</span>
+                  <span className="text-[10px] font-medium gui-text-secondary text-center">
+                    {label}
+                  </span>
                 </div>
               ))}
             </div>
@@ -157,7 +164,7 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
                   style={{
                     background: step === 1 ? 'var(--gui-bg-hover, #252540)' : 'transparent',
                     border: `1px solid ${step === 1 ? 'var(--accent-glow, #C8963E)' : 'var(--gui-border, #2a2a4a)'}`,
-                    opacity: step === 1 ? 1 : 0.6
+                    opacity: step === 1 ? 1 : 0.6,
                   }}
                 >
                   <div className="flex items-center justify-between">
@@ -170,26 +177,24 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
                             : step === 1
                               ? 'var(--accent-glow, #C8963E)'
                               : 'var(--gui-border, #3a3a5a)',
-                          color: 'white'
+                          color: 'white',
                         }}
                       >
                         {hasAnyConnector ? <Check className="w-4 h-4" /> : '1'}
                       </div>
                       <div>
-                        <div className="text-sm font-medium gui-text">
-                          Set up your AI provider
-                        </div>
+                        <div className="text-sm font-medium gui-text">Set up your AI provider</div>
                         <div className="text-xs gui-text-secondary mt-0.5">
                           {hasAnyConnector
                             ? `${connectors[0].provider} configured`
-                            : 'Add an API key for Anthropic, OpenAI, or others'
-                          }
+                            : 'Add an API key for Anthropic, OpenAI, or others'}
                         </div>
                       </div>
                     </div>
 
                     {step === 1 && (
                       <button
+                        type="button"
                         onClick={handleConfigureProvider}
                         className="gui-btn gui-btn-accent gui-btn-sm flex items-center gap-1.5 whitespace-nowrap"
                       >
@@ -206,7 +211,7 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
                   style={{
                     background: step === 2 ? 'var(--gui-bg-hover, #252540)' : 'transparent',
                     border: `1px solid ${step === 2 ? 'var(--accent-glow, #C8963E)' : 'var(--gui-border, #2a2a4a)'}`,
-                    opacity: step === 2 ? 1 : 0.5
+                    opacity: step === 2 ? 1 : 0.5,
                   }}
                 >
                   <div className="flex items-center justify-between">
@@ -214,10 +219,11 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
                       <div
                         className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
                         style={{
-                          background: step === 2
-                            ? 'var(--accent-glow, #C8963E)'
-                            : 'var(--gui-border, #3a3a5a)',
-                          color: 'white'
+                          background:
+                            step === 2
+                              ? 'var(--accent-glow, #C8963E)'
+                              : 'var(--gui-border, #3a3a5a)',
+                          color: 'white',
                         }}
                       >
                         2
@@ -234,6 +240,7 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
 
                     {step === 2 && (
                       <button
+                        type="button"
                         onClick={handleCreateConversation}
                         className="gui-btn gui-btn-accent gui-btn-sm flex items-center gap-1.5 whitespace-nowrap"
                       >
@@ -253,13 +260,14 @@ function WelcomeOverlayComponent({ onOpenSettings }: WelcomeOverlayProps): JSX.E
             className="px-8 py-3 flex items-center justify-between"
             style={{
               background: 'var(--gui-bg-hover, #1e1e35)',
-              borderTop: '1px solid var(--gui-border, #2a2a4a)'
+              borderTop: '1px solid var(--gui-border, #2a2a4a)',
             }}
           >
             <span className="text-[11px] gui-text-secondary">
               You can always reconfigure in Settings
             </span>
             <button
+              type="button"
               onClick={handleSkip}
               className="text-[11px] gui-text-secondary hover:gui-text transition-colors underline underline-offset-2"
             >

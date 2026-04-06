@@ -44,7 +44,7 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
   'gpt-4.1': { input: 2, output: 8 },
   'gpt-4.1-mini': { input: 0.4, output: 1.6 },
   'gpt-4.1-nano': { input: 0.1, output: 0.4 },
-  'o3': { input: 10, output: 40 },
+  o3: { input: 10, output: 40 },
   'o3-mini': { input: 1.1, output: 4.4 },
   'o4-mini': { input: 1.1, output: 4.4 },
   // OpenAI models (previous generation)
@@ -136,7 +136,7 @@ export function estimateCost(
   outputTokens: number,
   model?: string,
   cacheCreationTokens?: number,
-  cacheReadTokens?: number
+  cacheReadTokens?: number,
 ): CostEstimate {
   const pricing = getModelPricing(model)
   let inputCost: number
@@ -161,7 +161,7 @@ export function estimateCost(
   return {
     inputCost,
     outputCost,
-    totalCost: inputCost + outputCost
+    totalCost: inputCost + outputCost,
   }
 }
 
@@ -184,7 +184,7 @@ export function buildTokenEstimate(params: {
     systemPrompt,
     currentInput,
     model,
-    maxOutputTokens = 4096
+    maxOutputTokens = 4096,
   } = params
 
   const breakdown: TokenBreakdownItem[] = []
@@ -201,7 +201,7 @@ export function buildTokenEstimate(params: {
       breakdown.push({
         label: item.label,
         nodeId: item.nodeId,
-        tokens: estimateTokens(item.text)
+        tokens: estimateTokens(item.text),
       })
     }
   } else if (contextText) {
@@ -233,7 +233,7 @@ export function buildTokenEstimate(params: {
     cost,
     model: model || 'default',
     contextLimit,
-    usagePercentage
+    usagePercentage,
   }
 }
 

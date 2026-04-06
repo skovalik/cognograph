@@ -10,8 +10,8 @@
 
 import Collaboration from '@tiptap/extension-collaboration'
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor'
-import type { XmlFragment as YXmlFragment } from 'yjs'
 import type { Awareness } from 'y-protocols/awareness'
+import type { XmlFragment as YXmlFragment } from 'yjs'
 
 export interface CollabExtensionOptions {
   /** The Y.XmlFragment to bind to */
@@ -34,15 +34,15 @@ export function createCollabExtensions(options: CollabExtensionOptions) {
 
   return [
     Collaboration.configure({
-      fragment
+      fragment,
     }),
     CollaborationCursor.configure({
       provider: { awareness } as any, // CollaborationCursor accepts provider with awareness
       user: {
         name: user.name,
-        color: user.color
-      }
-    })
+        color: user.color,
+      },
+    }),
   ]
 }
 

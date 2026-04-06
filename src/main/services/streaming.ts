@@ -11,8 +11,8 @@
  * Created as part of Batch 2B: Streaming Service
  */
 
-import { BrowserWindow } from 'electron'
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
+import type { BrowserWindow } from 'electron'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -106,7 +106,7 @@ export function createStreamingSession(sessionId: string): ActiveSession {
     id: sessionId,
     abortController: new AbortController(),
     startTime: Date.now(),
-    phase: 'initializing'
+    phase: 'initializing',
   }
 
   activeSessions.set(sessionId, session)
@@ -167,7 +167,11 @@ export function emitStreamChunk(window: BrowserWindow, channel: string, chunk: S
 /**
  * Send a phase update to the renderer
  */
-export function emitStreamPhase(window: BrowserWindow, channel: string, progress: StreamProgress): void {
+export function emitStreamPhase(
+  window: BrowserWindow,
+  channel: string,
+  progress: StreamProgress,
+): void {
   if (!window.isDestroyed()) {
     window.webContents.send(`${channel}:phase`, progress)
   }
@@ -176,7 +180,11 @@ export function emitStreamPhase(window: BrowserWindow, channel: string, progress
 /**
  * Send completion event to the renderer
  */
-export function emitStreamComplete<T>(window: BrowserWindow, channel: string, result: StreamResult<T>): void {
+export function emitStreamComplete<T>(
+  window: BrowserWindow,
+  channel: string,
+  result: StreamResult<T>,
+): void {
   if (!window.isDestroyed()) {
     window.webContents.send(`${channel}:complete`, result)
   }
@@ -229,7 +237,7 @@ export async function streamAnthropicResponse(params: {
       temperature,
       system: systemPrompt,
       messages,
-      ...(tools && tools.length > 0 ? { tools } : {})
+      ...(tools && tools.length > 0 ? { tools } : {}),
     })
 
     // Check for abort before processing
@@ -257,7 +265,7 @@ export async function streamAnthropicResponse(params: {
           fullText += event.delta.text
           callbacks.onChunk?.({
             type: 'text',
-            content: event.delta.text
+            content: event.delta.text,
           })
         }
       } else if (event.type === 'content_block_start') {
@@ -266,7 +274,7 @@ export async function streamAnthropicResponse(params: {
             type: 'tool_use',
             content: '',
             toolName: event.content_block.name,
-            toolId: event.content_block.id
+            toolId: event.content_block.id,
           })
         }
       } else if (event.type === 'message_stop') {

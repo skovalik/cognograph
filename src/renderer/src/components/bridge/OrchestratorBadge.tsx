@@ -8,13 +8,13 @@
  * Positioned absolute top-right of the node.
  */
 
+import { useStore } from '@xyflow/react'
+import { CheckCircle, Pause, XCircle, Zap } from 'lucide-react'
 import { memo, useMemo } from 'react'
-import { Zap, Pause, CheckCircle, XCircle } from 'lucide-react'
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
-import { useBridgeStore } from '../../stores/bridgeStore'
 import { usePerformanceMode } from '../../hooks/usePerformanceMode'
 import { cn } from '../../lib/utils'
-import { useStore } from '@xyflow/react'
+import { useBridgeStore } from '../../stores/bridgeStore'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 
 interface OrchestratorBadgeProps {
   nodeId: string
@@ -44,7 +44,7 @@ const STATUS_CONFIG = {
 } as const
 
 function OrchestratorBadgeComponent({ nodeId }: OrchestratorBadgeProps): JSX.Element | null {
-  const orchState = useBridgeStore(s => s.activeOrchestrators[nodeId])
+  const orchState = useBridgeStore((s) => s.activeOrchestrators[nodeId])
   const performanceMode = usePerformanceMode()
 
   // Scale badge inversely with zoom at low zoom levels
@@ -70,7 +70,7 @@ function OrchestratorBadgeComponent({ nodeId }: OrchestratorBadgeProps): JSX.Ele
           className={cn(
             'orchestrator-badge',
             statusClass,
-            !showGlow && orchState.status === 'orchestrating' && 'animate-none'
+            !showGlow && orchState.status === 'orchestrating' && 'animate-none',
           )}
           style={{ transform: `scale(${badgeScale})` }}
           role="status"
@@ -83,8 +83,7 @@ function OrchestratorBadgeComponent({ nodeId }: OrchestratorBadgeProps): JSX.Ele
         <p className="font-medium">{label}</p>
         <p style={{ color: 'var(--text-muted)' }}>
           {orchState.completedAgentCount}/{orchState.agentCount} agents |{' '}
-          {orchState.totalTokens.toLocaleString()} tokens |{' '}
-          ${orchState.totalCostUSD.toFixed(4)}
+          {orchState.totalTokens.toLocaleString()} tokens | ${orchState.totalCostUSD.toFixed(4)}
         </p>
       </TooltipContent>
     </Tooltip>

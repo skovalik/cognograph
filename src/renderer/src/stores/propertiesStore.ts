@@ -8,12 +8,16 @@
  * Extracted from workspaceStore as part of Week 2 Stream B Track 2 Phase 2.2a.
  */
 
-import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
-import { subscribeWithSelector } from 'zustand/middleware'
+import type { NodeData, PropertyDefinition, PropertyOption, PropertySchema } from '@shared/types'
 import { v4 as uuid } from 'uuid'
-import type { PropertySchema, PropertyDefinition, PropertyOption, NodeData } from '@shared/types'
-import { DEFAULT_PROPERTY_SCHEMA, BUILTIN_PROPERTIES, getPropertiesForNodeType } from '../constants/properties'
+import { create } from 'zustand'
+import { subscribeWithSelector } from 'zustand/middleware'
+import { immer } from 'zustand/middleware/immer'
+import {
+  BUILTIN_PROPERTIES,
+  DEFAULT_PROPERTY_SCHEMA,
+  getPropertiesForNodeType,
+} from '../constants/properties'
 
 // =============================================================================
 // Store State
@@ -41,7 +45,11 @@ interface PropertiesActions {
 
   // Property options
   addPropertyOption: (propertyId: string, option: Omit<PropertyOption, 'value'>) => string
-  updatePropertyOption: (propertyId: string, value: string, updates: Partial<PropertyOption>) => void
+  updatePropertyOption: (
+    propertyId: string,
+    value: string,
+    updates: Partial<PropertyOption>,
+  ) => void
   deletePropertyOption: (propertyId: string, value: string) => void
 
   // Node type property assignment
@@ -67,7 +75,7 @@ type PropertiesStore = PropertiesState & PropertiesActions
 
 const initialState: PropertiesState = {
   propertySchema: { ...DEFAULT_PROPERTY_SCHEMA },
-  customProperties: new Map()
+  customProperties: new Map(),
 }
 
 // =============================================================================
@@ -104,7 +112,7 @@ export const usePropertiesStore = create<PropertiesStore>()(
         const id = uuid()
         const newProperty: PropertyDefinition = {
           ...definition,
-          id
+          id,
         }
 
         set((state) => {
@@ -139,7 +147,7 @@ export const usePropertiesStore = create<PropertiesStore>()(
           // Remove from schema
           if (state.propertySchema.properties) {
             state.propertySchema.properties = state.propertySchema.properties.filter(
-              (p) => p.id !== propertyId
+              (p) => p.id !== propertyId,
             )
           }
           // Remove from node type assignments
@@ -148,7 +156,7 @@ export const usePropertiesStore = create<PropertiesStore>()(
               const props = state.propertySchema.nodeTypeProperties[nodeType]
               if (props) {
                 state.propertySchema.nodeTypeProperties[nodeType] = props.filter(
-                  (id) => id !== propertyId
+                  (id) => id !== propertyId,
                 )
               }
             }
@@ -168,7 +176,7 @@ export const usePropertiesStore = create<PropertiesStore>()(
         const value = uuid()
         const newOption: PropertyOption = {
           ...option,
-          value
+          value,
         }
 
         set((state) => {
@@ -203,7 +211,7 @@ export const usePropertiesStore = create<PropertiesStore>()(
 
               // Update in schema as well
               const schemaProperty = state.propertySchema.properties?.find(
-                (p) => p.id === propertyId
+                (p) => p.id === propertyId,
               )
               if (schemaProperty && schemaProperty.type === 'select' && schemaProperty.options) {
                 const schemaOption = schemaProperty.options.find((o) => o.value === value)
@@ -297,9 +305,9 @@ export const usePropertiesStore = create<PropertiesStore>()(
       getAllProperties: () => {
         const customProps = Array.from(get().customProperties.values())
         return [...BUILTIN_PROPERTIES, ...customProps]
-      }
-    }))
-  )
+      },
+    })),
+  ),
 )
 
 // =============================================================================

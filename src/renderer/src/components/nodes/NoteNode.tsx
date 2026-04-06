@@ -1,45 +1,72 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useMemo, useCallback, useState, useEffect } from 'react'
-import { NodeResizer, useUpdateNodeInternals, useReactFlow, type NodeProps, type ResizeParams } from '@xyflow/react'
-import { SpreadHandles } from './SpreadHandles'
-import { Link2, Bot, BookOpen, Code2, Layers, Palette, FileText, Component, FileJson, Settings, Focus, Minimize2 } from 'lucide-react'
-import type { NoteNodeData, NoteMode } from '@shared/types'
+import type { NoteMode, NoteNodeData } from '@shared/types'
 import { DEFAULT_THEME_SETTINGS } from '@shared/types'
-import { PropertyBadges } from '../properties/PropertyBadge'
-import { getPropertiesForNodeType } from '../../constants/properties'
-import { useWorkspaceStore, useIsSpawning, useNodeWarmth, useIsNodePinned, useIsNodeBookmarked, useNodeNumberedBookmark, useIsNodeLayoutPinned, useDemoMode } from '../../stores/workspaceStore'
-import { useShowMembersClass } from '../../hooks/useShowMembersClass'
-import { NodeSocketBars } from './SocketBar'
-import { AttachmentBadge } from './AttachmentBadge'
-import { InlineIconPicker } from '../InlineIconPicker'
-import { EditableTitle } from '../EditableTitle'
-import { RichTextEditor } from '../RichTextEditor'
-import { CollaborativeEditor } from '../CollaborativeEditor'
-import { SelectionIndicator } from '../Presence/SelectionIndicators'
-import { useNodeRemoteSelectors } from '../../hooks/useOtherUserSelections'
-import { useWorkspaceStore as useWsStoreForSync } from '../../stores/workspaceStore'
-import { measureTextWidth, calculateAutoFitDimensions } from '../../utils/textMeasure'
-import { Maximize2 } from 'lucide-react'
-import { ExtractionBadge, ExtractionControls } from '../extractions'
-import { AutoFitButton } from './AutoFitButton'
-import { FoldBadge } from './FoldBadge'
-import { NodeModeDropdown } from './NodeModeDropdown'
-import { useNodeResize } from '../../hooks/useNodeResize'
-import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
+import {
+  type NodeProps,
+  NodeResizer,
+  type ResizeParams,
+  useReactFlow,
+  useUpdateNodeInternals,
+} from '@xyflow/react'
+import {
+  BookOpen,
+  Bot,
+  Code2,
+  Component,
+  FileJson,
+  FileText,
+  Focus,
+  Layers,
+  Link2,
+  Maximize2,
+  Minimize2,
+  Palette,
+  Settings,
+} from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { CONIC_PALETTES } from '../../constants/conicPalettes'
+import { getPropertiesForNodeType } from '../../constants/properties'
 import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
+import { useNodeResize } from '../../hooks/useNodeResize'
+import { useNodeRemoteSelectors } from '../../hooks/useOtherUserSelections'
+import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
+import { useShowMembersClass } from '../../hooks/useShowMembersClass'
+import {
+  useDemoMode,
+  useIsNodeBookmarked,
+  useIsNodeLayoutPinned,
+  useIsNodePinned,
+  useIsSpawning,
+  useNodeNumberedBookmark,
+  useNodeWarmth,
+  useWorkspaceStore,
+  useWorkspaceStore as useWsStoreForSync,
+} from '../../stores/workspaceStore'
+import { calculateAutoFitDimensions, measureTextWidth } from '../../utils/textMeasure'
+import { CollaborativeEditor } from '../CollaborativeEditor'
+import { EditableTitle } from '../EditableTitle'
+import { ExtractionBadge, ExtractionControls } from '../extractions'
+import { InlineIconPicker } from '../InlineIconPicker'
+import { SelectionIndicator } from '../Presence/SelectionIndicators'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
-import { DesignTokenEditor } from './DesignTokenEditor'
-import { PageNoteBody } from './PageNoteBody'
+import { PropertyBadges } from '../properties/PropertyBadge'
+import { RichTextEditor } from '../RichTextEditor'
+import { AttachmentBadge } from './AttachmentBadge'
 import { ComponentNoteBody } from './ComponentNoteBody'
 import { ContentModelBody } from './ContentModelBody'
-import { WPConfigBody } from './WPConfigBody'
+import { DesignTokenEditor } from './DesignTokenEditor'
+import { FoldBadge } from './FoldBadge'
+import { NodeModeDropdown } from './NodeModeDropdown'
+import { NodePropertyControls } from './NodePropertyControls'
+import { PageNoteBody } from './PageNoteBody'
+import { NodeSocketBars } from './SocketBar'
+import { SpreadHandles } from './SpreadHandles'
 // nodeModeUtils: tinting functions kept for backward compat (no longer called from inline styles)
 // import { getNodeModeStyle, getTintOpacity, getBorderStyle, getBorderWidth } from '../../utils/nodeModeUtils'
 import { StructuredContentPreview } from './StructuredContentPreview'
-import { NodePropertyControls } from './NodePropertyControls'
+import { WPConfigBody } from './WPConfigBody'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -60,23 +87,86 @@ const MIN_HEIGHT = 180
 const MAX_HEIGHT = 600
 
 // Note mode presets — each maps to contextRole + contextPriority + visual badge
-const NOTE_MODE_CONFIG: Record<NoteMode, {
-  label: string
-  contextRole: NoteNodeData['contextRole']
-  contextPriority: NoteNodeData['contextPriority']
-  icon: typeof Bot | null
-  badgeColor: string
-}> = {
-  general: { label: 'General', contextRole: undefined, contextPriority: undefined, icon: null, badgeColor: '' },
-  persona: { label: 'Persona / Instructions', contextRole: 'instruction', contextPriority: 'high', icon: Bot, badgeColor: '#8b5cf6' },
-  reference: { label: 'Reference Material', contextRole: 'reference', contextPriority: 'medium', icon: BookOpen, badgeColor: '#3b82f6' },
-  examples: { label: 'Style Guide / Examples', contextRole: 'example', contextPriority: 'medium', icon: Code2, badgeColor: '#f59e0b' },
-  background: { label: 'Background Context', contextRole: 'background', contextPriority: 'low', icon: Layers, badgeColor: '#6b7280' },
-  'design-tokens': { label: 'Design Tokens', contextRole: 'reference', contextPriority: 'high', icon: Palette, badgeColor: '#ec4899' },
-  page: { label: 'Page', contextRole: 'scope', contextPriority: 'high', icon: FileText, badgeColor: '#3b82f6' },
-  component: { label: 'Component', contextRole: 'reference', contextPriority: 'medium', icon: Component, badgeColor: '#8b5cf6' },
-  'content-model': { label: 'Content Model', contextRole: 'reference', contextPriority: 'medium', icon: FileJson, badgeColor: '#f97316' },
-  'wp-config': { label: 'WordPress Config', contextRole: 'background', contextPriority: 'low', icon: Settings, badgeColor: '#21759b' }
+const NOTE_MODE_CONFIG: Record<
+  NoteMode,
+  {
+    label: string
+    contextRole: NoteNodeData['contextRole']
+    contextPriority: NoteNodeData['contextPriority']
+    icon: typeof Bot | null
+    badgeColor: string
+  }
+> = {
+  general: {
+    label: 'General',
+    contextRole: undefined,
+    contextPriority: undefined,
+    icon: null,
+    badgeColor: '',
+  },
+  persona: {
+    label: 'Persona / Instructions',
+    contextRole: 'instruction',
+    contextPriority: 'high',
+    icon: Bot,
+    badgeColor: '#8b5cf6',
+  },
+  reference: {
+    label: 'Reference Material',
+    contextRole: 'reference',
+    contextPriority: 'medium',
+    icon: BookOpen,
+    badgeColor: '#3b82f6',
+  },
+  examples: {
+    label: 'Style Guide / Examples',
+    contextRole: 'example',
+    contextPriority: 'medium',
+    icon: Code2,
+    badgeColor: '#f59e0b',
+  },
+  background: {
+    label: 'Background Context',
+    contextRole: 'background',
+    contextPriority: 'low',
+    icon: Layers,
+    badgeColor: '#6b7280',
+  },
+  'design-tokens': {
+    label: 'Design Tokens',
+    contextRole: 'reference',
+    contextPriority: 'high',
+    icon: Palette,
+    badgeColor: '#ec4899',
+  },
+  page: {
+    label: 'Page',
+    contextRole: 'scope',
+    contextPriority: 'high',
+    icon: FileText,
+    badgeColor: '#3b82f6',
+  },
+  component: {
+    label: 'Component',
+    contextRole: 'reference',
+    contextPriority: 'medium',
+    icon: Component,
+    badgeColor: '#8b5cf6',
+  },
+  'content-model': {
+    label: 'Content Model',
+    contextRole: 'reference',
+    contextPriority: 'medium',
+    icon: FileJson,
+    badgeColor: '#f97316',
+  },
+  'wp-config': {
+    label: 'WordPress Config',
+    contextRole: 'background',
+    contextPriority: 'low',
+    icon: Settings,
+    badgeColor: '#21759b',
+  },
 }
 
 function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JSX.Element {
@@ -114,12 +204,16 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
 
   // Strip HTML tags for word count
   const plainContent = nodeData.content
-    ? nodeData.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    ? nodeData.content
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
     : ''
   const wordCount = plainContent ? plainContent.split(/\s+/).filter((w) => w.length > 0).length : 0
 
   // Calculate dynamic node color
-  const nodeColor = nodeData.color || themeSettings.nodeColors.note || DEFAULT_THEME_SETTINGS.nodeColors.note
+  const nodeColor =
+    nodeData.color || themeSettings.nodeColors.note || DEFAULT_THEME_SETTINGS.nodeColors.note
 
   // Node dimensions (for resizing) - prefer props from React Flow, then data, then defaults
   const nodeWidth = propsWidth || nodeData.width || DEFAULT_WIDTH
@@ -182,16 +276,25 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
       width: effectiveWidth,
       height: effectiveHeight,
     }
-  }, [nodeColor, effectiveWidth, effectiveHeight, themeSettings.nodeColors.note, modeConfig.badgeColor])
+  }, [
+    nodeColor,
+    effectiveWidth,
+    effectiveHeight,
+    themeSettings.nodeColors.note,
+    modeConfig.badgeColor,
+  ])
 
   // Handle resize - also update node internals to trigger edge recalculation
   const handleResizeStart = useCallback(() => {
     startNodeResize(id)
   }, [id, startNodeResize])
 
-  const handleResize = useCallback((_event: unknown, params: ResizeParams) => {
-    updateNodeDimensions(id, params.width, params.height)
-  }, [id, updateNodeDimensions])
+  const handleResize = useCallback(
+    (_event: unknown, params: ResizeParams) => {
+      updateNodeDimensions(id, params.width, params.height)
+    },
+    [id, updateNodeDimensions],
+  )
 
   const handleResizeEnd = useCallback(() => {
     updateNodeInternals(id)
@@ -211,64 +314,104 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   }, [isInPlaceExpanded, id, updateNodeInternals])
 
   // Ctrl+double-click to auto-fit width to title
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    if (e.ctrlKey) {
-      e.stopPropagation()
-      startNodeResize(id)
-      const titleWidth = measureTextWidth(nodeData.title, '14px Inter, sans-serif')
-      const newWidth = Math.max(MIN_WIDTH, Math.ceil(titleWidth + 80))
-      updateNodeDimensions(id, newWidth, effectiveHeight)
-      updateNodeInternals(id)
-      commitNodeResize(id)
-    }
-  }, [nodeData.title, id, effectiveHeight, updateNodeDimensions, updateNodeInternals, startNodeResize, commitNodeResize])
-
-  // Inline fit-to-content handler
-  const handleAutoFitInline = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    const { width, height } = calculateAutoFitDimensions(
-      nodeData.title || '',
-      nodeData.content || '',
-      44, 36
-    )
-    startNodeResize(id)
-    updateNodeDimensions(id, Math.max(300, width), Math.max(180, height))
-    updateNodeInternals(id)
-    commitNodeResize(id)
-  }, [id, nodeData.title, nodeData.content, startNodeResize, updateNodeDimensions, updateNodeInternals, commitNodeResize])
-
-  // Mode dropdown options (transform NOTE_MODE_CONFIG)
-  const modeOptions = useMemo(() =>
-    Object.entries(NOTE_MODE_CONFIG).map(([key, cfg]) => ({
-      value: key,
-      label: cfg.label,
-      icon: cfg.icon || undefined,
-      color: cfg.badgeColor || undefined,
-      description: key === 'general' ? 'Default note mode' :
-                  key === 'persona' ? 'AI personality & instructions' :
-                  key === 'reference' ? 'Background reading material' :
-                  key === 'examples' ? 'Code/writing style examples' :
-                  key === 'background' ? 'Supporting context' :
-                  key === 'design-tokens' ? 'Theme colors & fonts' :
-                  key === 'page' ? 'Web page documentation' :
-                  key === 'component' ? 'UI component spec' :
-                  key === 'content-model' ? 'Data structure definition' :
-                  key === 'wp-config' ? 'WordPress configuration' :
-                  undefined
-    })),
-    []
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.ctrlKey) {
+        e.stopPropagation()
+        startNodeResize(id)
+        const titleWidth = measureTextWidth(nodeData.title, '14px Inter, sans-serif')
+        const newWidth = Math.max(MIN_WIDTH, Math.ceil(titleWidth + 80))
+        updateNodeDimensions(id, newWidth, effectiveHeight)
+        updateNodeInternals(id)
+        commitNodeResize(id)
+      }
+    },
+    [
+      nodeData.title,
+      id,
+      effectiveHeight,
+      updateNodeDimensions,
+      updateNodeInternals,
+      startNodeResize,
+      commitNodeResize,
+    ],
   )
 
-  const handleModeChange = useCallback((newMode: string) => {
-    const config = NOTE_MODE_CONFIG[newMode as NoteMode]
-    updateNode(id, {
-      noteMode: newMode as NoteMode,
-      ...(newMode !== 'general' ? {
-        contextRole: config.contextRole,
-        contextPriority: config.contextPriority
-      } : {})
-    })
-  }, [id, updateNode])
+  // Inline fit-to-content handler
+  const handleAutoFitInline = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      const { width, height } = calculateAutoFitDimensions(
+        nodeData.title || '',
+        nodeData.content || '',
+        44,
+        36,
+      )
+      startNodeResize(id)
+      updateNodeDimensions(id, Math.max(300, width), Math.max(180, height))
+      updateNodeInternals(id)
+      commitNodeResize(id)
+    },
+    [
+      id,
+      nodeData.title,
+      nodeData.content,
+      startNodeResize,
+      updateNodeDimensions,
+      updateNodeInternals,
+      commitNodeResize,
+    ],
+  )
+
+  // Mode dropdown options (transform NOTE_MODE_CONFIG)
+  const modeOptions = useMemo(
+    () =>
+      Object.entries(NOTE_MODE_CONFIG).map(([key, cfg]) => ({
+        value: key,
+        label: cfg.label,
+        icon: cfg.icon || undefined,
+        color: cfg.badgeColor || undefined,
+        description:
+          key === 'general'
+            ? 'Default note mode'
+            : key === 'persona'
+              ? 'AI personality & instructions'
+              : key === 'reference'
+                ? 'Background reading material'
+                : key === 'examples'
+                  ? 'Code/writing style examples'
+                  : key === 'background'
+                    ? 'Supporting context'
+                    : key === 'design-tokens'
+                      ? 'Theme colors & fonts'
+                      : key === 'page'
+                        ? 'Web page documentation'
+                        : key === 'component'
+                          ? 'UI component spec'
+                          : key === 'content-model'
+                            ? 'Data structure definition'
+                            : key === 'wp-config'
+                              ? 'WordPress configuration'
+                              : undefined,
+      })),
+    [],
+  )
+
+  const handleModeChange = useCallback(
+    (newMode: string) => {
+      const config = NOTE_MODE_CONFIG[newMode as NoteMode]
+      updateNode(id, {
+        noteMode: newMode as NoteMode,
+        ...(newMode !== 'general'
+          ? {
+              contextRole: config.contextRole,
+              contextPriority: config.contextPriority,
+            }
+          : {}),
+      })
+    },
+    [id, updateNode],
+  )
 
   // Content editing and overflow state
   const [isEditing, setIsEditing] = useState(false)
@@ -289,7 +432,9 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   const isLayoutPinned = useIsNodeLayoutPinned(id)
   const isBookmarked = useIsNodeBookmarked(id)
   const numberedBookmark = useNodeNumberedBookmark(id)
-  const isCut = useWorkspaceStore(s => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id))
+  const isCut = useWorkspaceStore(
+    (s) => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id),
+  )
 
   // LOD (Level of Detail) rendering based on zoom level
   const { showContent, showTitle, showBadges, showLede, zoomLevel } = useNodeContentVisibility()
@@ -315,7 +460,6 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   // Focus mode and pinned window actions
   const setFocusModeNode = useWorkspaceStore((state) => state.setFocusModeNode)
 
-
   // Show members mode - dim non-members
   const { nonMemberClass, memberHighlightClass } = useShowMembersClass(id, nodeData.parentId)
 
@@ -338,8 +482,10 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
     nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
     isInPlaceExpanded && 'cognograph-node--in-place-expanded',
     `note-node--lod-${zoomLevel}`,
-    densityClass
-  ].filter(Boolean).join(' ')
+    densityClass,
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   const nodeContent = (
     <div
@@ -356,27 +502,21 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
         {currentMode !== 'general' ? modeConfig.label.toUpperCase() : 'NOTE'}
       </div>
 
-      {/* Auto-fit button - only at close */}
-      {showInteractiveControls && (
-        <AutoFitButton
-          nodeId={id}
-          title={nodeData.title}
-          content={nodeData.content}
-          selected={selected}
-          nodeColor={nodeColor}
-          minWidth={MIN_WIDTH}
-          minHeight={MIN_HEIGHT}
-        />
-      )}
       {/* Remote selection indicator */}
       <SelectionIndicator selectors={remoteSelectors} />
 
       {/* Handles - hidden at far + ultra-far zoom (NoteNode hides one level earlier) */}
-      <SpreadHandles hidden={zoomLevel === 'far' || zoomLevel === 'ultra-far'} />
+      <SpreadHandles
+        hidden={zoomLevel === 'far' || zoomLevel === 'ultra-far'}
+        width={nodeWidth}
+        height={nodeHeight}
+      />
 
       {/* PFD Phase 6B: Landmark badge — visible at all zoom levels */}
       {nodeData.isLandmark && (
-        <div className="landmark-badge" title="Landmark node">&#9670;</div>
+        <div className="landmark-badge" title="Landmark node">
+          &#9670;
+        </div>
       )}
 
       {/* Numbered bookmark badge */}
@@ -422,11 +562,7 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
         {showInteractiveControls && (
           <div className="node-chrome--hover">
             <NodeAIErrorBoundary compact>
-              <AIPropertyAssist
-                nodeId={id}
-                nodeData={nodeData}
-                compact={true}
-              />
+              <AIPropertyAssist nodeId={id} nodeData={nodeData} compact={true} />
             </NodeAIErrorBoundary>
           </div>
         )}
@@ -438,7 +574,10 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
         {/* Focus mode button */}
         {showContent && (
           <button
-            onClick={(e) => { e.stopPropagation(); setFocusModeNode(id) }}
+            onClick={(e) => {
+              e.stopPropagation()
+              setFocusModeNode(id)
+            }}
             className="cognograph-node__focus-trigger"
             title="Focus on this node (Alt+F)"
             aria-label="Focus on this node"
@@ -463,91 +602,114 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
       <div
         className={`cognograph-node__body${isInPlaceExpanded ? ' cognograph-node__body--expanded' : ''}`}
         data-focusable="true"
-        style={isInPlaceExpanded ? { overflow: 'auto', overscrollBehavior: 'contain', flex: 1 } : undefined}
+        style={
+          isInPlaceExpanded
+            ? { overflow: 'auto', overscrollBehavior: 'contain', flex: 1 }
+            : undefined
+        }
       >
         {/* LOD: Far zoom shows structured preview, mid shows clamped content, close shows full editor */}
-        {zoomLevel === 'far' && !isInPlaceExpanded && !nodeData.hiddenProperties?.includes('content') && (
-          <StructuredContentPreview content={nodeData.content || ''} zoomLevel="far" />
-        )}
-        {(showContent || showLede || isEditing || isInPlaceExpanded) && !nodeData.hiddenProperties?.includes('content') && (
-          <div
-            className={zoomLevel === 'ultra-far' && !isInPlaceExpanded ? 'note-node__body-hidden' : undefined}
-            style={
-              isInPlaceExpanded ? undefined :
-              zoomLevel === 'mid' && !isEditing ? { overflow: 'auto' } : undefined
-            }
-            aria-hidden={zoomLevel === 'ultra-far' && !isInPlaceExpanded}
-          >
-            {currentMode === 'page' ? (
-              <PageNoteBody
-                page={nodeData.page}
-                onChange={(page) => updateNode(id, { page })}
-                selected={selected}
-              />
-            ) : currentMode === 'component' ? (
-              <ComponentNoteBody
-                component={nodeData.component}
-                onChange={(component) => updateNode(id, { component })}
-                selected={selected}
-              />
-            ) : currentMode === 'content-model' ? (
-              <ContentModelBody
-                contentModel={nodeData.contentModel}
-                onChange={(contentModel) => updateNode(id, { contentModel })}
-                selected={selected}
-              />
-            ) : currentMode === 'wp-config' ? (
-              <WPConfigBody
-                wpConfig={nodeData.wpConfig}
-                onChange={(wpConfig) => updateNode(id, { wpConfig })}
-                selected={selected}
-              />
-            ) : currentMode === 'design-tokens' ? (
-              <DesignTokenEditor
-                content={nodeData.content || ''}
-                onChange={(content) => updateNode(id, { content, contentFormat: 'plain' })}
-              />
-            ) : isMultiplayer ? (
-              <CollaborativeEditor
-                nodeId={id}
-                fieldName="content"
-                placeholder="Add note content..."
-                enableLists={true}
-                enableFormatting={true}
-                enableHeadings={false}
-                showToolbar={nodeWidth < 280 ? 'off' : 'on-focus'}
-                minHeight={40}
-              />
-            ) : (
-              <RichTextEditor
-                value={nodeData.content || ''}
-                onChange={(html) => updateNode(id, { content: html })}
-                placeholder="Add note content..."
-                enableLists={true}
-                enableFormatting={true}
-                enableHeadings={false}
-                showToolbar={nodeWidth < 280 ? 'off' : 'on-focus'}
-                minHeight={40}
-                editOnDoubleClick={true}
-                onEditingChange={setIsEditing}
-                onOverflowChange={setIsContentOverflowing}
-                observeOverflow={!!selected}
-              />
-            )}
-          </div>
-        )}
-        {isContentOverflowing && !isEditing && !isInPlaceExpanded && effectiveHeight >= MAX_HEIGHT && (
-          <button
-            onClick={(e) => { e.stopPropagation(); expandNodeInPlace(id) }}
-            className="cognograph-node__expand-trigger"
-            aria-label={`Expand node: ${wordCount} words`}
-          >
-            {demoMode ? '↕' : `↕ ${wordCount} words`}
-          </button>
-        )}
+        {zoomLevel === 'far' &&
+          !isInPlaceExpanded &&
+          !nodeData.hiddenProperties?.includes('content') && (
+            <StructuredContentPreview content={nodeData.content || ''} zoomLevel="far" />
+          )}
+        {(showContent || showLede || isEditing || isInPlaceExpanded) &&
+          !nodeData.hiddenProperties?.includes('content') && (
+            <div
+              className={
+                zoomLevel === 'ultra-far' && !isInPlaceExpanded
+                  ? 'note-node__body-hidden'
+                  : undefined
+              }
+              style={
+                isInPlaceExpanded
+                  ? undefined
+                  : zoomLevel === 'mid' && !isEditing
+                    ? { overflow: 'auto' }
+                    : undefined
+              }
+              aria-hidden={zoomLevel === 'ultra-far' && !isInPlaceExpanded}
+            >
+              {currentMode === 'page' ? (
+                <PageNoteBody
+                  page={nodeData.page}
+                  onChange={(page) => updateNode(id, { page })}
+                  selected={selected}
+                />
+              ) : currentMode === 'component' ? (
+                <ComponentNoteBody
+                  component={nodeData.component}
+                  onChange={(component) => updateNode(id, { component })}
+                  selected={selected}
+                />
+              ) : currentMode === 'content-model' ? (
+                <ContentModelBody
+                  contentModel={nodeData.contentModel}
+                  onChange={(contentModel) => updateNode(id, { contentModel })}
+                  selected={selected}
+                />
+              ) : currentMode === 'wp-config' ? (
+                <WPConfigBody
+                  wpConfig={nodeData.wpConfig}
+                  onChange={(wpConfig) => updateNode(id, { wpConfig })}
+                  selected={selected}
+                />
+              ) : currentMode === 'design-tokens' ? (
+                <DesignTokenEditor
+                  content={nodeData.content || ''}
+                  onChange={(content) => updateNode(id, { content, contentFormat: 'plain' })}
+                />
+              ) : isMultiplayer ? (
+                <CollaborativeEditor
+                  nodeId={id}
+                  fieldName="content"
+                  placeholder="Add note content..."
+                  enableLists={true}
+                  enableFormatting={true}
+                  enableHeadings={false}
+                  showToolbar={nodeWidth < 280 ? 'off' : 'on-focus'}
+                  minHeight={40}
+                />
+              ) : (
+                <RichTextEditor
+                  value={nodeData.content || ''}
+                  onChange={(html) => updateNode(id, { content: html })}
+                  placeholder="Add note content..."
+                  enableLists={true}
+                  enableFormatting={true}
+                  enableHeadings={false}
+                  showToolbar={nodeWidth < 280 ? 'off' : 'on-focus'}
+                  minHeight={40}
+                  editOnDoubleClick={true}
+                  onEditingChange={setIsEditing}
+                  onOverflowChange={setIsContentOverflowing}
+                  observeOverflow={!!selected}
+                />
+              )}
+            </div>
+          )}
+        {isContentOverflowing &&
+          !isEditing &&
+          !isInPlaceExpanded &&
+          effectiveHeight >= MAX_HEIGHT && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                expandNodeInPlace(id)
+              }}
+              className="cognograph-node__expand-trigger"
+              aria-label={`Expand node: ${wordCount} words`}
+            >
+              {demoMode ? '↕' : `↕ ${wordCount} words`}
+            </button>
+          )}
         {isInPlaceExpanded && (
           <button
-            onClick={(e) => { e.stopPropagation(); collapseInPlaceExpansion() }}
+            onClick={(e) => {
+              e.stopPropagation()
+              collapseInPlaceExpansion()
+            }}
             className="cognograph-node__collapse-trigger"
             aria-label="Collapse expanded node"
           >
@@ -558,7 +720,11 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
         {/* Inline property controls - only at close */}
         {showContent && (
           <div className="flex items-center gap-1">
-            <NodePropertyControls nodeId={id} nodeType="note" data={data as Record<string, unknown>} />
+            <NodePropertyControls
+              nodeId={id}
+              nodeType="note"
+              data={data as Record<string, unknown>}
+            />
             <button
               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] hover:bg-white/10 transition-colors"
               style={{ color: 'var(--node-text-muted)' }}

@@ -1,24 +1,56 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useCallback } from 'react'
 import type { ActionTrigger, ActionTriggerType } from '@shared/actionTypes'
+import { memo, useCallback } from 'react'
 import { useSpatialRegionStore } from '../../stores/spatialRegionStore'
 
 const TRIGGER_TYPE_OPTIONS: { value: ActionTriggerType; label: string; description: string }[] = [
   { value: 'manual', label: 'Manual', description: 'Triggered by clicking the play button' },
-  { value: 'property-change', label: 'Property Change', description: 'When a node property changes value' },
-  { value: 'node-created', label: 'Node Created', description: 'When a new node is added to the canvas' },
-  { value: 'connection-made', label: 'Connection Made', description: 'When an edge is created between nodes' },
+  {
+    value: 'property-change',
+    label: 'Property Change',
+    description: 'When a node property changes value',
+  },
+  {
+    value: 'node-created',
+    label: 'Node Created',
+    description: 'When a new node is added to the canvas',
+  },
+  {
+    value: 'connection-made',
+    label: 'Connection Made',
+    description: 'When an edge is created between nodes',
+  },
   { value: 'schedule', label: 'Schedule', description: 'On a timed interval (cron expression)' },
-  { value: 'children-complete', label: 'Children Complete', description: 'When all connected child nodes reach a target value' },
-  { value: 'ancestor-change', label: 'Ancestor Change', description: 'When an ancestor node property changes' },
-  { value: 'connection-count', label: 'Connection Count', description: 'When connection count crosses a threshold' },
+  {
+    value: 'children-complete',
+    label: 'Children Complete',
+    description: 'When all connected child nodes reach a target value',
+  },
+  {
+    value: 'ancestor-change',
+    label: 'Ancestor Change',
+    description: 'When an ancestor node property changes',
+  },
+  {
+    value: 'connection-count',
+    label: 'Connection Count',
+    description: 'When connection count crosses a threshold',
+  },
   { value: 'isolation', label: 'Isolation', description: 'When a node has zero connections' },
-  { value: 'region-enter', label: 'Region Enter', description: 'When a node is dragged into a spatial region' },
-  { value: 'region-exit', label: 'Region Exit', description: 'When a node leaves a spatial region' },
+  {
+    value: 'region-enter',
+    label: 'Region Enter',
+    description: 'When a node is dragged into a spatial region',
+  },
+  {
+    value: 'region-exit',
+    label: 'Region Exit',
+    description: 'When a node leaves a spatial region',
+  },
   { value: 'cluster-size', label: 'Cluster Size', description: 'When N nodes are in a region' },
-  { value: 'proximity', label: 'Proximity', description: 'When a node gets close to another node' }
+  { value: 'proximity', label: 'Proximity', description: 'When a node gets close to another node' },
 ]
 
 interface TriggerConfigProps {
@@ -27,51 +59,59 @@ interface TriggerConfigProps {
 }
 
 function TriggerConfigComponent({ trigger, onChange }: TriggerConfigProps): JSX.Element {
-  const handleTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newType = e.target.value as ActionTriggerType
-    // Create default trigger for the new type
-    switch (newType) {
-      case 'manual':
-        onChange({ type: 'manual' })
-        break
-      case 'property-change':
-        onChange({ type: 'property-change', property: 'status' })
-        break
-      case 'node-created':
-        onChange({ type: 'node-created' })
-        break
-      case 'connection-made':
-        onChange({ type: 'connection-made', direction: 'any' })
-        break
-      case 'schedule':
-        onChange({ type: 'schedule', cron: '*/5 * * * *' })
-        break
-      case 'children-complete':
-        onChange({ type: 'children-complete', property: 'status', targetValue: 'done', requireAll: true })
-        break
-      case 'ancestor-change':
-        onChange({ type: 'ancestor-change', property: 'status' })
-        break
-      case 'connection-count':
-        onChange({ type: 'connection-count', threshold: 3, comparison: 'gte', direction: 'any' })
-        break
-      case 'isolation':
-        onChange({ type: 'isolation' })
-        break
-      case 'region-enter':
-        onChange({ type: 'region-enter', regionId: '' })
-        break
-      case 'region-exit':
-        onChange({ type: 'region-exit', regionId: '' })
-        break
-      case 'cluster-size':
-        onChange({ type: 'cluster-size', regionId: '', threshold: 5, comparison: 'gte' })
-        break
-      case 'proximity':
-        onChange({ type: 'proximity', targetNodeId: '', distance: 200, direction: 'entering' })
-        break
-    }
-  }, [onChange])
+  const handleTypeChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newType = e.target.value as ActionTriggerType
+      // Create default trigger for the new type
+      switch (newType) {
+        case 'manual':
+          onChange({ type: 'manual' })
+          break
+        case 'property-change':
+          onChange({ type: 'property-change', property: 'status' })
+          break
+        case 'node-created':
+          onChange({ type: 'node-created' })
+          break
+        case 'connection-made':
+          onChange({ type: 'connection-made', direction: 'any' })
+          break
+        case 'schedule':
+          onChange({ type: 'schedule', cron: '*/5 * * * *' })
+          break
+        case 'children-complete':
+          onChange({
+            type: 'children-complete',
+            property: 'status',
+            targetValue: 'done',
+            requireAll: true,
+          })
+          break
+        case 'ancestor-change':
+          onChange({ type: 'ancestor-change', property: 'status' })
+          break
+        case 'connection-count':
+          onChange({ type: 'connection-count', threshold: 3, comparison: 'gte', direction: 'any' })
+          break
+        case 'isolation':
+          onChange({ type: 'isolation' })
+          break
+        case 'region-enter':
+          onChange({ type: 'region-enter', regionId: '' })
+          break
+        case 'region-exit':
+          onChange({ type: 'region-exit', regionId: '' })
+          break
+        case 'cluster-size':
+          onChange({ type: 'cluster-size', regionId: '', threshold: 5, comparison: 'gte' })
+          break
+        case 'proximity':
+          onChange({ type: 'proximity', targetNodeId: '', distance: 200, direction: 'entering' })
+          break
+      }
+    },
+    [onChange],
+  )
 
   return (
     <div className="space-y-2">
@@ -81,8 +121,10 @@ function TriggerConfigComponent({ trigger, onChange }: TriggerConfigProps): JSX.
         onChange={handleTypeChange}
         className="w-full text-xs gui-input rounded px-2 py-1.5"
       >
-        {TRIGGER_TYPE_OPTIONS.map(opt => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        {TRIGGER_TYPE_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
         ))}
       </select>
 
@@ -122,7 +164,9 @@ function TriggerConfigComponent({ trigger, onChange }: TriggerConfigProps): JSX.
             </div>
           </div>
           <div>
-            <label className="block text-[10px] gui-text-secondary mb-0.5">Node type filter (optional)</label>
+            <label className="block text-[10px] gui-text-secondary mb-0.5">
+              Node type filter (optional)
+            </label>
             <select
               value={trigger.nodeFilter || ''}
               onChange={(e) => onChange({ ...trigger, nodeFilter: e.target.value || undefined })}
@@ -157,7 +201,9 @@ function TriggerConfigComponent({ trigger, onChange }: TriggerConfigProps): JSX.
 
       {trigger.type === 'node-created' && (
         <div className="mt-2">
-          <label className="block text-[10px] gui-text-secondary mb-0.5">Node type filter (optional)</label>
+          <label className="block text-[10px] gui-text-secondary mb-0.5">
+            Node type filter (optional)
+          </label>
           <select
             value={trigger.nodeTypeFilter || ''}
             onChange={(e) => onChange({ ...trigger, nodeTypeFilter: e.target.value || undefined })}
@@ -179,7 +225,9 @@ function TriggerConfigComponent({ trigger, onChange }: TriggerConfigProps): JSX.
           <label className="block text-[10px] gui-text-secondary mb-0.5">Direction</label>
           <select
             value={trigger.direction || 'any'}
-            onChange={(e) => onChange({ ...trigger, direction: e.target.value as 'incoming' | 'outgoing' | 'any' })}
+            onChange={(e) =>
+              onChange({ ...trigger, direction: e.target.value as 'incoming' | 'outgoing' | 'any' })
+            }
             className="w-full text-xs gui-input rounded px-2 py-1"
           >
             <option value="any">Any</option>
@@ -230,7 +278,9 @@ function TriggerConfigComponent({ trigger, onChange }: TriggerConfigProps): JSX.
               <label className="block text-[10px] gui-text-secondary mb-0.5">Comparison</label>
               <select
                 value={trigger.comparison}
-                onChange={(e) => onChange({ ...trigger, comparison: e.target.value as 'gte' | 'lte' | 'eq' })}
+                onChange={(e) =>
+                  onChange({ ...trigger, comparison: e.target.value as 'gte' | 'lte' | 'eq' })
+                }
                 className="w-full text-xs gui-input rounded px-2 py-1"
               >
                 <option value="gte">&gt;=</option>
@@ -254,7 +304,9 @@ function TriggerConfigComponent({ trigger, onChange }: TriggerConfigProps): JSX.
 
       {trigger.type === 'ancestor-change' && (
         <div className="mt-2">
-          <label className="block text-[10px] gui-text-secondary mb-0.5">Property to watch on ancestor</label>
+          <label className="block text-[10px] gui-text-secondary mb-0.5">
+            Property to watch on ancestor
+          </label>
           <input
             type="text"
             value={trigger.property || ''}
@@ -290,7 +342,9 @@ function TriggerConfigComponent({ trigger, onChange }: TriggerConfigProps): JSX.
               <label className="block text-[10px] gui-text-secondary mb-0.5">Comparison</label>
               <select
                 value={trigger.comparison}
-                onChange={(e) => onChange({ ...trigger, comparison: e.target.value as 'gte' | 'lte' | 'eq' })}
+                onChange={(e) =>
+                  onChange({ ...trigger, comparison: e.target.value as 'gte' | 'lte' | 'eq' })
+                }
                 className="w-full text-xs gui-input rounded px-2 py-1"
               >
                 <option value="gte">&gt;=</option>
@@ -330,7 +384,9 @@ function TriggerConfigComponent({ trigger, onChange }: TriggerConfigProps): JSX.
               <input
                 type="number"
                 value={trigger.distance}
-                onChange={(e) => onChange({ ...trigger, distance: parseInt(e.target.value) || 200 })}
+                onChange={(e) =>
+                  onChange({ ...trigger, distance: parseInt(e.target.value) || 200 })
+                }
                 className="w-full text-xs gui-input rounded px-2 py-1"
                 min={10}
               />
@@ -339,7 +395,9 @@ function TriggerConfigComponent({ trigger, onChange }: TriggerConfigProps): JSX.
               <label className="block text-[10px] gui-text-secondary mb-0.5">Direction</label>
               <select
                 value={trigger.direction || 'entering'}
-                onChange={(e) => onChange({ ...trigger, direction: e.target.value as 'entering' | 'leaving' })}
+                onChange={(e) =>
+                  onChange({ ...trigger, direction: e.target.value as 'entering' | 'leaving' })
+                }
                 className="w-full text-xs gui-input rounded px-2 py-1"
               >
                 <option value="entering">Entering range</option>
@@ -352,14 +410,20 @@ function TriggerConfigComponent({ trigger, onChange }: TriggerConfigProps): JSX.
 
       {/* Description of selected trigger */}
       <p className="text-[10px] gui-text-secondary opacity-60 mt-1">
-        {TRIGGER_TYPE_OPTIONS.find(o => o.value === trigger.type)?.description}
+        {TRIGGER_TYPE_OPTIONS.find((o) => o.value === trigger.type)?.description}
       </p>
     </div>
   )
 }
 
 // Helper component for selecting a spatial region
-function RegionSelector({ regionId, onChange }: { regionId: string; onChange: (id: string) => void }): JSX.Element {
+function RegionSelector({
+  regionId,
+  onChange,
+}: {
+  regionId: string
+  onChange: (id: string) => void
+}): JSX.Element {
   const regions = useSpatialRegionStore((state) => state.regions)
 
   return (
@@ -376,8 +440,10 @@ function RegionSelector({ regionId, onChange }: { regionId: string; onChange: (i
           className="w-full text-xs gui-input rounded px-2 py-1"
         >
           <option value="">Select a region...</option>
-          {regions.map(r => (
-            <option key={r.id} value={r.id}>{r.name || `Region ${r.id.slice(0, 6)}`}</option>
+          {regions.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name || `Region ${r.id.slice(0, 6)}`}
+            </option>
           ))}
         </select>
       )}

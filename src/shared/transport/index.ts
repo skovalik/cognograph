@@ -6,18 +6,17 @@
 // =============================================================================
 
 export type {
-  Position,
-  TokenUsage,
-  AgentStreamChunk,
-  ToolResult,
-  PermissionRequest,
-  PermissionResponse,
-  Notification,
   AgentMessage,
   AgentMessageChannel,
+  AgentStreamChunk,
+  Notification,
   PayloadFor,
+  PermissionRequest,
+  PermissionResponse,
+  Position,
+  TokenUsage,
+  ToolResult,
   Transport,
 } from './types'
-
-export { WebSocketTransport } from './webSocketTransport'
 export type { WebSocketTransportConfig } from './webSocketTransport'
+export { WebSocketTransport } from './webSocketTransport'

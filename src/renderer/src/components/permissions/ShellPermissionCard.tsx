@@ -9,8 +9,8 @@
  * - Dangerous subcommands (rm -rf, git push --force, etc.) highlighted in red
  */
 
-import { memo, useMemo } from 'react'
 import type { ShellDisplay } from '@shared/transport/types'
+import { memo, useMemo } from 'react'
 
 // ---------------------------------------------------------------------------
 // Dangerous command patterns
@@ -21,20 +21,20 @@ import type { ShellDisplay } from '@shared/transport/types'
  * Each entry is [regex, label] — regex matches the dangerous segment.
  */
 const DANGEROUS_PATTERNS: ReadonlyArray<RegExp> = [
-  /\brm\s+-[^\s]*r[^\s]*f/,       // rm -rf, rm -fr, rm -rfi, etc.
-  /\brm\s+-[^\s]*f[^\s]*r/,       // rm -fr variant
-  /\bgit\s+push\s+--force\b/,     // git push --force
-  /\bgit\s+push\s+-f\b/,          // git push -f
-  /\bgit\s+reset\s+--hard\b/,     // git reset --hard
-  /\bgit\s+clean\s+-[^\s]*f/,     // git clean -f, git clean -fd
-  /\bgit\s+checkout\s+--\s*\./,   // git checkout -- .
-  /\bgit\s+branch\s+-D\b/,        // git branch -D
-  /\bchmod\s+777\b/,              // chmod 777
-  /\bdd\s+if=/,                   // dd if= (disk destroy)
-  /\bmkfs\b/,                     // mkfs (format)
+  /\brm\s+-[^\s]*r[^\s]*f/, // rm -rf, rm -fr, rm -rfi, etc.
+  /\brm\s+-[^\s]*f[^\s]*r/, // rm -fr variant
+  /\bgit\s+push\s+--force\b/, // git push --force
+  /\bgit\s+push\s+-f\b/, // git push -f
+  /\bgit\s+reset\s+--hard\b/, // git reset --hard
+  /\bgit\s+clean\s+-[^\s]*f/, // git clean -f, git clean -fd
+  /\bgit\s+checkout\s+--\s*\./, // git checkout -- .
+  /\bgit\s+branch\s+-D\b/, // git branch -D
+  /\bchmod\s+777\b/, // chmod 777
+  /\bdd\s+if=/, // dd if= (disk destroy)
+  /\bmkfs\b/, // mkfs (format)
   /\b:\(\)\s*\{\s*:\|:\s*&\s*\}/, // fork bomb
-  /\bcurl\s+.*\|\s*bash/,         // curl | bash (pipe to shell)
-  /\bwget\s+.*\|\s*bash/,         // wget | bash
+  /\bcurl\s+.*\|\s*bash/, // curl | bash (pipe to shell)
+  /\bwget\s+.*\|\s*bash/, // wget | bash
 ]
 
 /**
@@ -60,9 +60,26 @@ function parseCommand(command: string): {
 
   // Tools that use subcommands
   const SUBCOMMAND_BINARIES = new Set([
-    'git', 'npm', 'npx', 'yarn', 'pnpm', 'docker', 'kubectl',
-    'cargo', 'go', 'pip', 'brew', 'apt', 'apt-get', 'systemctl',
-    'wrangler', 'vercel', 'gh', 'az', 'aws', 'gcloud',
+    'git',
+    'npm',
+    'npx',
+    'yarn',
+    'pnpm',
+    'docker',
+    'kubectl',
+    'cargo',
+    'go',
+    'pip',
+    'brew',
+    'apt',
+    'apt-get',
+    'systemctl',
+    'wrangler',
+    'vercel',
+    'gh',
+    'az',
+    'aws',
+    'gcloud',
   ])
 
   if (SUBCOMMAND_BINARIES.has(binary) && parts.length > 1) {
@@ -97,9 +114,7 @@ export const ShellPermissionCard = memo(function ShellPermissionCard({
     <div className="mb-2">
       {/* Binary + subcommand prominence line */}
       <div className="flex items-center gap-1.5 mb-1">
-        <span className="text-[10px] font-mono font-bold text-violet-300">
-          {parsed.binary}
-        </span>
+        <span className="text-[10px] font-mono font-bold text-violet-300">{parsed.binary}</span>
         {parsed.subcommand && (
           <span
             className={`text-[10px] font-mono font-semibold ${
@@ -116,10 +131,7 @@ export const ShellPermissionCard = memo(function ShellPermissionCard({
         className={`
           text-xs bg-black/30 px-1.5 py-1 rounded font-mono break-all
           block max-h-24 overflow-y-auto leading-relaxed
-          ${dangerous
-            ? 'text-red-300 border border-red-500/30'
-            : 'text-white/70'
-          }
+          ${dangerous ? 'text-red-300 border border-red-500/30' : 'text-white/70'}
         `}
       >
         {command}

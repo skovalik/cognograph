@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo } from 'react'
-import { Check, Palette } from 'lucide-react'
-import { THEME_PRESETS } from '../constants/themePresets'
 import type { ThemeMode } from '@shared/types'
+import { Check, Palette } from 'lucide-react'
+import { memo } from 'react'
+import { THEME_PRESETS } from '../constants/themePresets'
 
 interface ThemePresetSelectorProps {
   onSelect: (presetId: string) => void
@@ -15,7 +15,7 @@ interface ThemePresetSelectorProps {
 function ThemePresetSelectorComponent({
   onSelect,
   currentPresetId,
-  mode
+  mode,
 }: ThemePresetSelectorProps): JSX.Element {
   return (
     <div className="space-y-2">
@@ -44,7 +44,7 @@ function ThemePresetSelectorComponent({
               <div
                 className="w-full h-7 rounded-md mb-1 relative overflow-hidden"
                 style={{
-                  background: modeColors.canvasBackground
+                  background: modeColors.canvasBackground,
                 }}
               >
                 {/* Grid dots preview */}
@@ -53,7 +53,7 @@ function ThemePresetSelectorComponent({
                     className="absolute inset-0 opacity-60"
                     style={{
                       backgroundImage: `radial-gradient(${modeColors.canvasGridColor} 1px, transparent 1px)`,
-                      backgroundSize: '4px 4px'
+                      backgroundSize: '4px 4px',
                     }}
                   />
                 )}
@@ -62,7 +62,7 @@ function ThemePresetSelectorComponent({
                     className="absolute inset-0 opacity-40"
                     style={{
                       backgroundImage: `radial-gradient(${modeColors.canvasGridColor} 1px, transparent 1px)`,
-                      backgroundSize: '4px 4px'
+                      backgroundSize: '4px 4px',
                     }}
                   />
                 )}
@@ -80,9 +80,7 @@ function ThemePresetSelectorComponent({
               </div>
 
               {/* Theme name */}
-              <div
-                className="text-[8px] mt-0.5 text-center truncate text-[var(--text-secondary)]"
-              >
+              <div className="text-[8px] mt-0.5 text-center truncate text-[var(--text-secondary)]">
                 {preset.name}
               </div>
 
@@ -102,9 +100,7 @@ function ThemePresetSelectorComponent({
 
       {/* Custom indicator when no preset is active */}
       {currentPresetId === null && (
-        <div
-          className="flex items-center justify-center gap-1.5 py-1 rounded text-[10px] bg-[var(--surface-panel)] text-[var(--text-secondary)]"
-        >
+        <div className="flex items-center justify-center gap-1.5 py-1 rounded text-[10px] bg-[var(--surface-panel)] text-[var(--text-secondary)]">
           <Palette className="w-3 h-3" />
           <span>Custom theme active</span>
         </div>

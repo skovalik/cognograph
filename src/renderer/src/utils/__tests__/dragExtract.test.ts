@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { createExtractionWithProvenance } from '../dragExtract'
 
 describe('dragExtract', () => {
@@ -10,7 +10,7 @@ describe('dragExtract', () => {
       const result = createExtractionWithProvenance(
         'source-node-1',
         'This is extracted content from the source node.',
-        { x: 200, y: 300 }
+        { x: 200, y: 300 },
       )
 
       expect(result.node.type).toBe('note')
@@ -26,11 +26,10 @@ describe('dragExtract', () => {
     })
 
     it('returns provenance edge with correct contextRole and sourceRef', () => {
-      const result = createExtractionWithProvenance(
-        'src-42',
-        'Some excerpt text',
-        { x: 100, y: 100 }
-      )
+      const result = createExtractionWithProvenance('src-42', 'Some excerpt text', {
+        x: 100,
+        y: 100,
+      })
 
       expect(result.edge.source).toBe('src-42')
       expect(result.edge.target).toBe(result.node.id)
@@ -53,7 +52,7 @@ describe('dragExtract', () => {
       const multiline = createExtractionWithProvenance(
         'src',
         'First line title\nSecond line body\nThird line',
-        { x: 0, y: 0 }
+        { x: 0, y: 0 },
       )
       expect(multiline.node.data.title).toBe('First line title')
     })

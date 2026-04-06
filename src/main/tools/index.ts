@@ -7,48 +7,44 @@
  * Consumers import from '@main/tools' (or relative path).
  */
 
-// Types
-export type {
-  ExecutionContext,
-  ToolResult,
-  ToolResultContent,
-  ToolResultContentText,
-  ToolResultContentImage,
-  Tool,
-  ToolConfig,
-  PermissionVerdict,
-  InterruptBehavior,
-  NormalizedToolCall,
-  ToolPool,
-  AnthropicToolDef,
-  OpenAIToolDef,
-  GeminiToolDef,
-  LLMProvider,
-} from './types'
-
-// Factory
-export { buildTool } from './buildTool'
-
 // Pool assembly
 export { assembleToolPool } from './assembleToolPool'
 
+// Factory
+export { buildTool } from './buildTool'
+export type { AgentToolConfig } from './resolveAgentTools'
+// Agent tool filtering
+export { resolveAgentTools } from './resolveAgentTools'
 // Response parser
 export { parseToolCalls } from './responseParser'
-
+export type {
+  AbortLevel,
+  ConcurrentExecutionConfig,
+} from './toolExecutor'
 // Executor
 export {
+  AbortTracker,
+  cleanupTempDir,
   executeToolCall,
   executeToolCallsConcurrently,
   FILE_UNCHANGED_STUB,
   ReadWriteLock,
-  AbortTracker,
-  cleanupTempDir,
 } from './toolExecutor'
+// Types
 export type {
-  ConcurrentExecutionConfig,
-  AbortLevel,
-} from './toolExecutor'
-
-// Agent tool filtering
-export { resolveAgentTools } from './resolveAgentTools'
-export type { AgentToolConfig } from './resolveAgentTools'
+  AnthropicToolDef,
+  ExecutionContext,
+  GeminiToolDef,
+  InterruptBehavior,
+  LLMProvider,
+  NormalizedToolCall,
+  OpenAIToolDef,
+  PermissionVerdict,
+  Tool,
+  ToolConfig,
+  ToolPool,
+  ToolResult,
+  ToolResultContent,
+  ToolResultContentImage,
+  ToolResultContentText,
+} from './types'

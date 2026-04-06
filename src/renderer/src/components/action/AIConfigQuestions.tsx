@@ -6,9 +6,9 @@
 // =============================================================================
 // Renders clarifying questions from AI
 
-import { memo, useState, useCallback } from 'react'
-import { HelpCircle, ChevronRight } from 'lucide-react'
 import type { AIClarifyingQuestion } from '@shared/actionTypes'
+import { ChevronRight, HelpCircle } from 'lucide-react'
+import { memo, useCallback, useState } from 'react'
 
 interface AIConfigQuestionsProps {
   questions: AIClarifyingQuestion[]
@@ -23,12 +23,12 @@ function AIConfigQuestionsComponent({
   round,
   maxRounds,
   onSubmit,
-  onCancel
+  onCancel,
 }: AIConfigQuestionsProps): JSX.Element {
   const [answers, setAnswers] = useState<Record<string, string>>(() => {
     // Initialize with defaults
     const initial: Record<string, string> = {}
-    questions.forEach(q => {
+    questions.forEach((q) => {
       if (q.default) {
         initial[q.id] = q.default
       }
@@ -37,7 +37,7 @@ function AIConfigQuestionsComponent({
   })
 
   const handleAnswerChange = useCallback((questionId: string, value: string) => {
-    setAnswers(prev => ({ ...prev, [questionId]: value }))
+    setAnswers((prev) => ({ ...prev, [questionId]: value }))
   }, [])
 
   const handleSubmit = useCallback(() => {
@@ -45,8 +45,8 @@ function AIConfigQuestionsComponent({
   }, [answers, onSubmit])
 
   const canSubmit = questions
-    .filter(q => q.required)
-    .every(q => answers[q.id] && answers[q.id].trim())
+    .filter((q) => q.required)
+    .every((q) => answers[q.id] && answers[q.id].trim())
 
   return (
     <div className="space-y-4">
@@ -128,11 +128,7 @@ function QuestionInput({ question, value, onChange, autoFocus }: QuestionInputPr
       )}
 
       {question.type === 'multiselect' && (
-        <MultiSelectInput
-          options={question.options}
-          value={value}
-          onChange={onChange}
-        />
+        <MultiSelectInput options={question.options} value={value} onChange={onChange} />
       )}
 
       {question.type === 'text' && (
@@ -312,9 +308,18 @@ function SliderInput({ min, max, step, unit, value, onChange }: SliderInputProps
   return (
     <div className="space-y-2">
       <div className="flex justify-between text-[10px] text-[var(--text-secondary)]">
-        <span>{min}{unit}</span>
-        <span className="font-medium gui-text">{value}{unit}</span>
-        <span>{max}{unit}</span>
+        <span>
+          {min}
+          {unit}
+        </span>
+        <span className="font-medium gui-text">
+          {value}
+          {unit}
+        </span>
+        <span>
+          {max}
+          {unit}
+        </span>
       </div>
       <input
         type="range"
@@ -349,7 +354,8 @@ function NodePickerInput({ nodeTypeFilter, value, onChange }: NodePickerInputPro
         className="w-full px-2 py-1.5 text-xs gui-input rounded outline-none focus:ring-1 focus:ring-purple-500/50"
       />
       <p className="text-[10px] text-[var(--text-muted)]">
-        Tip: You can use node IDs or titles{nodeTypeFilter ? ` (filtered to ${nodeTypeFilter} nodes)` : ''}
+        Tip: You can use node IDs or titles
+        {nodeTypeFilter ? ` (filtered to ${nodeTypeFilter} nodes)` : ''}
       </p>
     </div>
   )

@@ -18,10 +18,10 @@
  *   - pointer-events: none (fully non-interactive)
  */
 
-import { memo, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useEdges, useNodes, useViewport } from '@xyflow/react'
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useReducedMotion } from '../hooks/useReducedMotion'
-import { useProgramStore, selectReduceMotion } from '../stores/programStore'
+import { selectReduceMotion, useProgramStore } from '../stores/programStore'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 
 // ---------------------------------------------------------------------------
@@ -78,7 +78,7 @@ const AREA_PER_PARTICLE = 40000
  */
 function resolveEdgeEndpoints(
   edge: { source: string; target: string },
-  nodeMap: Map<string, { x: number; y: number; w: number; h: number }>
+  nodeMap: Map<string, { x: number; y: number; w: number; h: number }>,
 ): EdgeEndpoints | null {
   const src = nodeMap.get(edge.source)
   const tgt = nodeMap.get(edge.target)
@@ -97,10 +97,7 @@ function resolveEdgeEndpoints(
  * For simplicity we use a single control point offset (quadratic bezier feel)
  * that mimics React Flow's default bezier routing.
  */
-function bezierPoint(
-  t: number,
-  ep: EdgeEndpoints
-): { x: number; y: number } {
+function bezierPoint(t: number, ep: EdgeEndpoints): { x: number; y: number } {
   // React Flow default bezier: control points offset vertically by half the
   // y-distance from source/target. We approximate with a quadratic midpoint
   // control that gives a gentle curve.
@@ -137,7 +134,7 @@ function bezierPoint(
 function flowToScreen(
   fx: number,
   fy: number,
-  vp: { x: number; y: number; zoom: number }
+  vp: { x: number; y: number; zoom: number },
 ): { x: number; y: number } {
   return {
     x: fx * vp.zoom + vp.x,
@@ -181,8 +178,7 @@ function ParticleDriftComponent(): JSX.Element | null {
   const osReducedMotion = useReducedMotion()
   const appReduceMotionPref = useProgramStore(selectReduceMotion)
   const shouldReduceMotion =
-    appReduceMotionPref === 'always' ||
-    (appReduceMotionPref === 'system' && osReducedMotion)
+    appReduceMotionPref === 'always' || (appReduceMotionPref === 'system' && osReducedMotion)
 
   // Build a stable node position map: id -> { x, y, w, h }
   const nodeMap = useMemo(() => {
@@ -275,7 +271,12 @@ function ParticleDriftComponent(): JSX.Element | null {
       return
     }
 
-    const { edgeEndpoints: eps, viewport: vp, maxParticles: maxP, accentColor: color } = stateRef.current
+    const {
+      edgeEndpoints: eps,
+      viewport: vp,
+      maxParticles: maxP,
+      accentColor: color,
+    } = stateRef.current
 
     // Resize canvas to match container (handle DPR for sharpness)
     const container = canvas.parentElement

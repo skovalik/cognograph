@@ -14,8 +14,8 @@
  * - Significant pan/zoom (debounced)
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react'
 import { useReactFlow } from '@xyflow/react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface ViewportState {
   x: number
@@ -37,58 +37,69 @@ export function useNavigationHistory() {
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Record current viewport to history
-  const recordViewport = useCallback((trigger?: ViewportState['trigger']) => {
-    const viewport = getViewport()
-    const now = Date.now()
+  const recordViewport = useCallback(
+    (trigger?: ViewportState['trigger']) => {
+      const viewport = getViewport()
+      const now = Date.now()
 
-    // Check if significantly different from last recorded
-    const last = lastRecordedRef.current
-    if (last) {
-      const dx = Math.abs(viewport.x - last.x)
-      const dy = Math.abs(viewport.y - last.y)
-      const dz = Math.abs(viewport.zoom - last.zoom)
+      // Check if significantly different from last recorded
+      const last = lastRecordedRef.current
+      if (last) {
+        const dx = Math.abs(viewport.x - last.x)
+        const dy = Math.abs(viewport.y - last.y)
+        const dz = Math.abs(viewport.zoom - last.zoom)
 
-      // Skip if too similar and recent
-      if (dx < MIN_MOVE_DISTANCE && dy < MIN_MOVE_DISTANCE && dz < 0.2 && now - last.timestamp < 1000) {
-        return
+        // Skip if too similar and recent
+        if (
+          dx < MIN_MOVE_DISTANCE &&
+          dy < MIN_MOVE_DISTANCE &&
+          dz < 0.2 &&
+          now - last.timestamp < 1000
+        ) {
+          return
+        }
       }
-    }
 
-    const newState: ViewportState = {
-      x: viewport.x,
-      y: viewport.y,
-      zoom: viewport.zoom,
-      timestamp: now,
-      trigger
-    }
-
-    lastRecordedRef.current = newState
-
-    setHistory(prev => {
-      // If we're not at the end of history, truncate forward history
-      const truncated = prev.slice(0, currentIndex + 1)
-      const updated = [...truncated, newState]
-
-      // Keep only last MAX_HISTORY entries
-      if (updated.length > MAX_HISTORY) {
-        return updated.slice(-MAX_HISTORY)
+      const newState: ViewportState = {
+        x: viewport.x,
+        y: viewport.y,
+        zoom: viewport.zoom,
+        timestamp: now,
+        trigger,
       }
-      return updated
-    })
 
-    setCurrentIndex(prev => Math.min(prev + 1, MAX_HISTORY - 1))
-  }, [getViewport, currentIndex])
+      lastRecordedRef.current = newState
+
+      setHistory((prev) => {
+        // If we're not at the end of history, truncate forward history
+        const truncated = prev.slice(0, currentIndex + 1)
+        const updated = [...truncated, newState]
+
+        // Keep only last MAX_HISTORY entries
+        if (updated.length > MAX_HISTORY) {
+          return updated.slice(-MAX_HISTORY)
+        }
+        return updated
+      })
+
+      setCurrentIndex((prev) => Math.min(prev + 1, MAX_HISTORY - 1))
+    },
+    [getViewport, currentIndex],
+  )
 
   // Record with debouncing (for pan/zoom)
-  const recordViewportDebounced = useCallback((trigger?: ViewportState['trigger']) => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
-    }
-    debounceTimerRef.current = setTimeout(() => {
-      recordViewport(trigger)
-      debounceTimerRef.current = null
-    }, DEBOUNCE_MS)
-  }, [recordViewport])
+  const recordViewportDebounced = useCallback(
+    (trigger?: ViewportState['trigger']) => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+      debounceTimerRef.current = setTimeout(() => {
+        recordViewport(trigger)
+        debounceTimerRef.current = null
+      }, DEBOUNCE_MS)
+    },
+    [recordViewport],
+  )
 
   // Navigate back in history
   const goBack = useCallback(() => {
@@ -136,6 +147,6 @@ export function useNavigationHistory() {
     canGoBack,
     canGoForward,
     historyLength: history.length,
-    currentIndex
+    currentIndex,
   }
 }

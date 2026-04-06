@@ -14,7 +14,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       'gui-btn',
       `gui-btn-${variant}`,
       size !== 'md' ? `gui-btn-${size}` : '',
-      className
+      className,
     ]
       .filter(Boolean)
       .join(' ')
@@ -24,7 +24,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {children}
       </button>
     )
-  }
+  },
 )
 
 Button.displayName = 'Button'

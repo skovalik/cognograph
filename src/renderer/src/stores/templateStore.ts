@@ -8,16 +8,12 @@
  * Templates are stored globally at %APPDATA%/cognograph/templates/library.json
  */
 
+import type { NodeTemplate, TemplateFolder, TemplateLibrary } from '@shared/types'
+import { DEFAULT_TEMPLATE_LIBRARY } from '@shared/types'
+import { v4 as uuid } from 'uuid'
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
-import { v4 as uuid } from 'uuid'
-import type {
-  TemplateLibrary,
-  NodeTemplate,
-  TemplateFolder
-} from '@shared/types'
-import { DEFAULT_TEMPLATE_LIBRARY } from '@shared/types'
 
 // -----------------------------------------------------------------------------
 // Context Types for Modals
@@ -71,7 +67,7 @@ interface TemplateActions {
 
   // Template CRUD
   addTemplate: (
-    template: Omit<NodeTemplate, 'id' | 'createdAt' | 'updatedAt' | 'usageCount' | 'schemaVersion'>
+    template: Omit<NodeTemplate, 'id' | 'createdAt' | 'updatedAt' | 'usageCount' | 'schemaVersion'>,
   ) => string
   updateTemplate: (id: string, updates: Partial<NodeTemplate>) => void
   deleteTemplate: (id: string) => void
@@ -198,7 +194,7 @@ export const useTemplateStore = create<TemplateStore>()(
             schemaVersion: 1,
             createdAt: now,
             updatedAt: now,
-            usageCount: 0
+            usageCount: 0,
           })
         })
 
@@ -233,10 +229,10 @@ export const useTemplateStore = create<TemplateStore>()(
         set((state) => {
           state.library.templates = state.library.templates.filter((t) => t.id !== id)
           state.library.favoriteTemplateIds = state.library.favoriteTemplateIds.filter(
-            (fid) => fid !== id
+            (fid) => fid !== id,
           )
           state.library.lastUsedTemplateIds = state.library.lastUsedTemplateIds.filter(
-            (lid) => lid !== id
+            (lid) => lid !== id,
           )
           if (state.selectedTemplateId === id) {
             state.selectedTemplateId = null
@@ -261,7 +257,7 @@ export const useTemplateStore = create<TemplateStore>()(
             createdAt: now,
             updatedAt: now,
             usageCount: 0,
-            source: 'user'
+            source: 'user',
           })
         })
 
@@ -288,7 +284,7 @@ export const useTemplateStore = create<TemplateStore>()(
             name,
             parentId,
             sortOrder: maxSortOrder + 1,
-            createdAt: now
+            createdAt: now,
           })
         })
 
@@ -370,7 +366,7 @@ export const useTemplateStore = create<TemplateStore>()(
         set((state) => {
           // Remove if already in list
           state.library.lastUsedTemplateIds = state.library.lastUsedTemplateIds.filter(
-            (id) => id !== templateId
+            (id) => id !== templateId,
           )
           // Add to front
           state.library.lastUsedTemplateIds.unshift(templateId)
@@ -400,26 +396,26 @@ export const useTemplateStore = create<TemplateStore>()(
       openSaveModal: (context) =>
         set({
           saveModalOpen: true,
-          saveModalContext: context
+          saveModalContext: context,
         }),
 
       closeSaveModal: () =>
         set({
           saveModalOpen: false,
-          saveModalContext: null
+          saveModalContext: null,
         }),
 
       // Paste modal
       openPasteModal: (context) =>
         set({
           pasteModalOpen: true,
-          pasteModalContext: context
+          pasteModalContext: context,
         }),
 
       closePasteModal: () =>
         set({
           pasteModalOpen: false,
-          pasteModalContext: null
+          pasteModalContext: null,
         }),
 
       // ---------------------------------------------------------------------
@@ -436,13 +432,15 @@ export const useTemplateStore = create<TemplateStore>()(
 
       getTemplatesInFolder: (folderId) => {
         return get().library.templates.filter((t) =>
-          folderId === null ? !t.folderId : t.folderId === folderId
+          folderId === null ? !t.folderId : t.folderId === folderId,
         )
       },
 
       getFoldersInFolder: (parentId) => {
         return get()
-          .library.folders.filter((f) => (parentId === null ? !f.parentId : f.parentId === parentId))
+          .library.folders.filter((f) =>
+            parentId === null ? !f.parentId : f.parentId === parentId,
+          )
           .sort((a, b) => a.sortOrder - b.sortOrder)
       },
 
@@ -454,7 +452,7 @@ export const useTemplateStore = create<TemplateStore>()(
           (t) =>
             t.name.toLowerCase().includes(q) ||
             t.description?.toLowerCase().includes(q) ||
-            t.tags?.some((tag) => tag.toLowerCase().includes(q))
+            t.tags?.some((tag) => tag.toLowerCase().includes(q)),
         )
       },
 
@@ -468,47 +466,41 @@ export const useTemplateStore = create<TemplateStore>()(
         return lastUsedIds
           .map((id) => get().library.templates.find((t) => t.id === id))
           .filter((t): t is NodeTemplate => t !== undefined)
-      }
-    }))
-  )
+      },
+    })),
+  ),
 )
 
 // -----------------------------------------------------------------------------
 // Selectors
 // -----------------------------------------------------------------------------
 
-export const useTemplates = (): NodeTemplate[] =>
-  useTemplateStore((s) => s.library.templates ?? [])
+export const useTemplates = (): NodeTemplate[] => useTemplateStore((s) => s.library.templates ?? [])
 
-export const useFolders = (): TemplateFolder[] =>
-  useTemplateStore((s) => s.library.folders ?? [])
+export const useFolders = (): TemplateFolder[] => useTemplateStore((s) => s.library.folders ?? [])
 
 export const useFavoriteIds = (): string[] =>
   useTemplateStore((s) => s.library.favoriteTemplateIds ?? [])
 
-export const useIsBrowserOpen = (): boolean =>
-  useTemplateStore((s) => s.browserOpen)
+export const useIsBrowserOpen = (): boolean => useTemplateStore((s) => s.browserOpen)
 
-export const useIsTemplateLibraryLoaded = (): boolean =>
-  useTemplateStore((s) => s.isLoaded)
+export const useIsTemplateLibraryLoaded = (): boolean => useTemplateStore((s) => s.isLoaded)
 
-export const useTemplateSearchQuery = (): string =>
-  useTemplateStore((s) => s.searchQuery)
+export const useTemplateSearchQuery = (): string => useTemplateStore((s) => s.searchQuery)
 
 export const useSelectedTemplateId = (): string | null =>
   useTemplateStore((s) => s.selectedTemplateId)
 
-export const useSelectedFolderId = (): string | null =>
-  useTemplateStore((s) => s.selectedFolderId)
+export const useSelectedFolderId = (): string | null => useTemplateStore((s) => s.selectedFolderId)
 
 export const useSaveModalState = (): { open: boolean; context: SaveTemplateContext | null } =>
   useTemplateStore((s) => ({
     open: s.saveModalOpen,
-    context: s.saveModalContext
+    context: s.saveModalContext,
   }))
 
 export const usePasteModalState = (): { open: boolean; context: PasteTemplateContext | null } =>
   useTemplateStore((s) => ({
     open: s.pasteModalOpen,
-    context: s.pasteModalContext
+    context: s.pasteModalContext,
   }))

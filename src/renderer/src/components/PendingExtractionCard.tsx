@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useState, useCallback } from 'react'
-import { FileText, CheckSquare, Check, Edit2, X, ChevronDown, ChevronUp } from 'lucide-react'
-import type { PendingExtraction, NoteNodeData, TaskNodeData } from '@shared/types'
+import type { NoteNodeData, PendingExtraction, TaskNodeData } from '@shared/types'
+import { Check, CheckSquare, ChevronDown, ChevronUp, Edit2, FileText, X } from 'lucide-react'
+import { memo, useCallback, useState } from 'react'
 
 interface PendingExtractionCardProps {
   extraction: PendingExtraction
@@ -16,7 +16,7 @@ function PendingExtractionCardComponent({
   extraction,
   onAccept,
   onEdit,
-  onDismiss
+  onDismiss,
 }: PendingExtractionCardProps): JSX.Element {
   const [isEditing, setIsEditing] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
@@ -24,7 +24,7 @@ function PendingExtractionCardComponent({
   const [editedContent, setEditedContent] = useState(
     extraction.type === 'note'
       ? (extraction.suggestedData as Partial<NoteNodeData>).content || ''
-      : (extraction.suggestedData as Partial<TaskNodeData>).description || ''
+      : (extraction.suggestedData as Partial<TaskNodeData>).description || '',
   )
 
   const isTask = extraction.type === 'task'
@@ -48,7 +48,7 @@ function PendingExtractionCardComponent({
 
   const handleSaveEdit = useCallback(() => {
     const updatedData: Partial<NoteNodeData | TaskNodeData> = {
-      title: editedTitle
+      title: editedTitle,
     }
 
     if (isTask) {
@@ -68,7 +68,7 @@ function PendingExtractionCardComponent({
     setEditedContent(
       extraction.type === 'note'
         ? (extraction.suggestedData as Partial<NoteNodeData>).content || ''
-        : (extraction.suggestedData as Partial<TaskNodeData>).description || ''
+        : (extraction.suggestedData as Partial<TaskNodeData>).description || '',
     )
     setIsEditing(false)
   }, [extraction])
@@ -122,7 +122,10 @@ function PendingExtractionCardComponent({
             )}
 
             {extraction.suggestedData.tags?.slice(0, 2).map((tag) => (
-              <span key={tag} className="text-xs px-1.5 py-0.5 bg-[var(--surface-panel)] rounded text-[var(--text-secondary)]">
+              <span
+                key={tag}
+                className="text-xs px-1.5 py-0.5 bg-[var(--surface-panel)] rounded text-[var(--text-secondary)]"
+              >
                 {tag}
               </span>
             ))}

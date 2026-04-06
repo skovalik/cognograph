@@ -9,7 +9,7 @@
  * resets so the container can shrink to its natural size.
  */
 
-import { useRef, useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 // ---------------------------------------------------------------------------
 // Pure helpers (exported for testing)
@@ -22,7 +22,7 @@ import { useRef, useCallback, useEffect, useState } from 'react'
 export function computeRatchetHeight(
   currentMin: number,
   observedHeight: number,
-  isStreaming: boolean
+  isStreaming: boolean,
 ): number {
   if (!isStreaming) return 0
   return Math.max(currentMin, observedHeight)

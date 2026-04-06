@@ -1,31 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useState, useCallback, useRef, useEffect, memo } from 'react'
+import type { NodeData, PropertyDefinition } from '@shared/types'
 import {
+  AlignLeft,
+  Calendar,
+  CheckSquare,
+  ChevronRight,
+  Circle,
+  Clock,
+  Flag,
+  Hash,
+  Link,
+  Mail,
+  MessageCircle,
+  Pencil,
   Plus,
   Tag,
-  Flag,
-  Circle,
-  Calendar,
-  User,
-  Link,
-  MessageCircle,
-  Zap,
-  Hash,
-  AlignLeft,
-  CheckSquare,
-  Clock,
-  Mail,
-  Type,
-  ChevronRight,
   Trash2,
-  Pencil
+  Type,
+  User,
+  Zap,
 } from 'lucide-react'
-import type { PropertyDefinition, NodeData } from '@shared/types'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from 'react-hot-toast'
 import { BUILTIN_PROPERTIES, PROPERTY_TYPE_LABELS } from '../../constants/properties'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { toast } from 'react-hot-toast'
 
 // -----------------------------------------------------------------------------
 // Icon Lookup
@@ -45,7 +45,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   CheckSquare,
   Clock,
   Mail,
-  Type
+  Type,
 }
 
 function getPropertyIcon(iconName?: string): React.ComponentType<{ className?: string }> {
@@ -69,7 +69,7 @@ export const AddPropertyPopover = memo(function AddPropertyPopover({
   currentPropertyIds,
   onAddProperty,
   onCreateCustom,
-  onEditCustom
+  onEditCustom,
 }: AddPropertyPopoverProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -102,7 +102,7 @@ export const AddPropertyPopover = memo(function AddPropertyPopover({
   const availableProperties = useCallback(() => {
     const allProperties: PropertyDefinition[] = [
       ...Object.values(BUILTIN_PROPERTIES),
-      ...propertySchema.customProperties
+      ...propertySchema.customProperties,
     ]
 
     return allProperties.filter((prop) => {
@@ -120,7 +120,7 @@ export const AddPropertyPopover = memo(function AddPropertyPopover({
       setIsOpen(false)
       setSearch('')
     },
-    [onAddProperty]
+    [onAddProperty],
   )
 
   const handleCreateCustom = useCallback(() => {
@@ -129,21 +129,31 @@ export const AddPropertyPopover = memo(function AddPropertyPopover({
     setSearch('')
   }, [onCreateCustom])
 
-  const handleDeleteCustomProperty = useCallback((e: React.MouseEvent, propertyId: string, propertyName: string) => {
-    e.stopPropagation()
-    if (confirm(`Delete custom property "${propertyName}"? This will remove it from all node types.`)) {
-      deleteCustomProperty(propertyId)
-      toast.success(`Property "${propertyName}" deleted`)
-    }
-  }, [deleteCustomProperty])
+  const handleDeleteCustomProperty = useCallback(
+    (e: React.MouseEvent, propertyId: string, propertyName: string) => {
+      e.stopPropagation()
+      if (
+        confirm(
+          `Delete custom property "${propertyName}"? This will remove it from all node types.`,
+        )
+      ) {
+        deleteCustomProperty(propertyId)
+        toast.success(`Property "${propertyName}" deleted`)
+      }
+    },
+    [deleteCustomProperty],
+  )
 
-  const handleEditCustomProperty = useCallback((e: React.MouseEvent, property: PropertyDefinition) => {
-    e.stopPropagation()
-    if (onEditCustom) {
-      onEditCustom(property)
-      setIsOpen(false)
-    }
-  }, [onEditCustom])
+  const handleEditCustomProperty = useCallback(
+    (e: React.MouseEvent, property: PropertyDefinition) => {
+      e.stopPropagation()
+      if (onEditCustom) {
+        onEditCustom(property)
+        setIsOpen(false)
+      }
+    },
+    [onEditCustom],
+  )
 
   const properties = availableProperties()
   const builtinProps = properties.filter((p) => p.id in BUILTIN_PROPERTIES)

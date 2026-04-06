@@ -4,20 +4,39 @@
 // Plugin Registry (Main Process)
 // Loads plugins, manages lifecycle, dispatches IPC calls, and emits events
 
-import { app, ipcMain, BrowserWindow } from 'electron'
+import { app, type BrowserWindow, ipcMain } from 'electron'
 import Store from 'electron-store'
-import path from 'path'
 import fs from 'fs'
-import type { PluginManifest, PluginMain, PluginContext, PluginEvent, PluginEventMap } from './types'
-import { validatePluginId } from './types'
-import { pluginEntries } from './plugins.main'
+import path from 'path'
 // No @main alias exists — use relative path from src/plugins/registry.ts:
-import { setCredential, getRealCredential, deleteCredential } from '../main/services/credentialStore'
+import {
+  deleteCredential,
+  getRealCredential,
+  setCredential,
+} from '../main/services/credentialStore'
+import { pluginEntries } from './plugins.main'
+import type {
+  PluginContext,
+  PluginEvent,
+  PluginEventMap,
+  PluginMain,
+  PluginManifest,
+} from './types'
+import { validatePluginId } from './types'
 
 // Local types for workspace cache — avoids importing 'reactflow' in main process.
 // These match the subset of Node/Edge fields that plugins need.
-interface CachedNode { id: string; type?: string; data: unknown }
-interface CachedEdge { id: string; source: string; target: string; data?: unknown }
+interface CachedNode {
+  id: string
+  type?: string
+  data: unknown
+}
+interface CachedEdge {
+  id: string
+  source: string
+  target: string
+  data?: unknown
+}
 
 const store = new Store({ name: 'cognograph-settings' })
 
@@ -27,7 +46,7 @@ type PluginState = 'registered' | 'initializing' | 'ready' | 'error' | 'disabled
 interface LoadedPlugin {
   manifest: PluginManifest
   main: PluginMain
-  ctx: PluginContext | undefined  // undefined when state is 'disabled'
+  ctx: PluginContext | undefined // undefined when state is 'disabled'
   state: PluginState
   error?: Error
 }
@@ -35,10 +54,13 @@ interface LoadedPlugin {
 const plugins = new Map<string, LoadedPlugin>()
 
 /** Event bus for plugin events */
-const eventListeners = new Map<string, Array<{
-  pluginId: string
-  handler: (data: unknown) => void | Promise<void>
-}>>()
+const eventListeners = new Map<
+  string,
+  Array<{
+    pluginId: string
+    handler: (data: unknown) => void | Promise<void>
+  }>
+>()
 
 /** Reference to main window for sendToRenderer */
 let mainWindowRef: BrowserWindow | null = null
@@ -59,7 +81,9 @@ export async function loadPlugins(): Promise<void> {
   for (const { manifest, create } of pluginEntries) {
     // Validate API version compatibility
     if (manifest.apiVersion !== 1) {
-      console.warn(`[plugin:${manifest.id}] Unsupported API version ${manifest.apiVersion}, skipping`)
+      console.warn(
+        `[plugin:${manifest.id}] Unsupported API version ${manifest.apiVersion}, skipping`,
+      )
       continue
     }
     const id = validatePluginId(manifest.id)
@@ -79,7 +103,9 @@ export async function loadPlugins(): Promise<void> {
       plugins.get(id)!.state = 'initializing'
       await Promise.race([
         main.init(ctx),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('init timeout')), INIT_TIMEOUT_MS))
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('init timeout')), INIT_TIMEOUT_MS),
+        ),
       ])
       registerPluginEvents(manifest, main)
       plugins.get(id)!.state = 'ready'
@@ -92,35 +118,40 @@ export async function loadPlugins(): Promise<void> {
   }
 
   // Register the generic plugin:call dispatcher
-  ipcMain.handle('plugin:call', async (_event, pluginId: string, method: string, ...args: unknown[]) => {
-    // Validate pluginId format
-    if (!/^[a-z][a-z0-9-]{0,63}$/.test(pluginId)) {
-      throw new Error(`Invalid plugin ID: ${pluginId}`)
-    }
+  ipcMain.handle(
+    'plugin:call',
+    async (_event, pluginId: string, method: string, ...args: unknown[]) => {
+      // Validate pluginId format
+      if (!/^[a-z][a-z0-9-]{0,63}$/.test(pluginId)) {
+        throw new Error(`Invalid plugin ID: ${pluginId}`)
+      }
 
-    const plugin = plugins.get(pluginId)
-    if (!plugin || plugin.state !== 'ready') {
-      throw new Error(`Plugin '${pluginId}' not found or not ready (state: ${plugin?.state ?? 'missing'})`)
-    }
+      const plugin = plugins.get(pluginId)
+      if (!plugin || plugin.state !== 'ready') {
+        throw new Error(
+          `Plugin '${pluginId}' not found or not ready (state: ${plugin?.state ?? 'missing'})`,
+        )
+      }
 
-    // Validate method name (prevent prototype chain access)
-    if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(method)) {
-      throw new Error(`Invalid method name: ${method}`)
-    }
+      // Validate method name (prevent prototype chain access)
+      if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(method)) {
+        throw new Error(`Invalid method name: ${method}`)
+      }
 
-    const handler = plugin.main.ipcHandlers?.[method]
-    if (!handler || !Object.prototype.hasOwnProperty.call(plugin.main.ipcHandlers, method)) {
-      throw new Error(`Plugin '${pluginId}' has no method '${method}'`)
-    }
+      const handler = plugin.main.ipcHandlers?.[method]
+      if (!handler || !Object.hasOwn(plugin.main.ipcHandlers!, method)) {
+        throw new Error(`Plugin '${pluginId}' has no method '${method}'`)
+      }
 
-    // Wrap in try-catch so plugin errors don't become unhandled rejections
-    try {
-      return await handler(...args)
-    } catch (err) {
-      console.error(`[plugin:${pluginId}:${method}] Error:`, err)
-      throw err // Re-throw so renderer gets the error
-    }
-  })
+      // Wrap in try-catch so plugin errors don't become unhandled rejections
+      try {
+        return await handler(...args)
+      } catch (err) {
+        console.error(`[plugin:${pluginId}:${method}] Error:`, err)
+        throw err // Re-throw so renderer gets the error
+      }
+    },
+  )
 
   // Dedicated channel for renderer to query enabled plugin IDs.
   // Separate from plugin:call — this is a registry meta-operation, not a plugin method.
@@ -130,16 +161,13 @@ export async function loadPlugins(): Promise<void> {
 }
 
 /** Typed emit function — enforces PluginEventMap at call sites */
-export function emitPluginEvent<E extends PluginEvent>(
-  event: E,
-  data: PluginEventMap[E]
-): void {
+export function emitPluginEvent<E extends PluginEvent>(event: E, data: PluginEventMap[E]): void {
   const listeners = eventListeners.get(event)
   if (!listeners) return
 
   for (const { pluginId, handler } of listeners) {
     // Fire-and-forget — plugin errors don't crash core
-    Promise.resolve(handler(data)).catch(err => {
+    Promise.resolve(handler(data)).catch((err) => {
       console.error(`[plugin:${pluginId}] Error handling ${event}:`, err)
     })
   }
@@ -157,7 +185,7 @@ export async function destroyPlugins(): Promise<void> {
       try {
         await Promise.race([
           plugin.main.destroy(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
         ])
         plugin.state = 'destroyed'
       } catch (err) {
@@ -206,21 +234,19 @@ function createPluginContext(manifest: PluginManifest): PluginContext {
   return {
     settings: caps.includes('settings')
       ? createScopedSettings(id)
-      : proxyThatThrows('settings') as PluginContext['settings'],
+      : (proxyThatThrows('settings') as PluginContext['settings']),
 
     credentials: caps.includes('credentials')
       ? createScopedCredentials(id)
-      : proxyThatThrows('credentials') as PluginContext['credentials'],
+      : (proxyThatThrows('credentials') as PluginContext['credentials']),
 
-    dataDir: caps.includes('filesystem')
-      ? ensurePluginDataDir(id)
-      : '',
+    dataDir: caps.includes('filesystem') ? ensurePluginDataDir(id) : '',
 
     log: createScopedLogger(id),
 
     workspace: caps.includes('workspace-read')
       ? createWorkspaceReader()
-      : proxyThatThrows('workspace-read') as PluginContext['workspace'],
+      : (proxyThatThrows('workspace-read') as PluginContext['workspace']),
 
     sendToRenderer(event: string, ...args: unknown[]) {
       // Validate event name at the send boundary
@@ -230,7 +256,7 @@ function createPluginContext(manifest: PluginManifest): PluginContext {
       if (mainWindowRef && !mainWindowRef.isDestroyed()) {
         mainWindowRef.webContents.send(`plugin:${id}:${event}`, ...args)
       }
-    }
+    },
   }
 }
 
@@ -243,7 +269,7 @@ function createScopedSettings(pluginId: string) {
     set<T>(key: string, value: T): void {
       validateKey(key)
       store.set(`plugin.${pluginId}.${key}`, value)
-    }
+    },
   }
 }
 
@@ -253,7 +279,7 @@ function createScopedSettings(pluginId: string) {
  * The actual credentialStore API is: setCredential(workspaceId, key, value, label, type)
  */
 function createScopedCredentials(pluginId: string) {
-  const workspaceId = `__plugin__`  // Synthetic workspace — isolates plugin credentials
+  const workspaceId = `__plugin__` // Synthetic workspace — isolates plugin credentials
   return {
     set(key: string, value: string, label?: string): void {
       validateKey(key)
@@ -266,7 +292,7 @@ function createScopedCredentials(pluginId: string) {
     delete(key: string): void {
       validateKey(key)
       deleteCredential(workspaceId, `${pluginId}.${key}`)
-    }
+    },
   }
 }
 
@@ -285,20 +311,20 @@ function createWorkspaceReader() {
     async getNodes(filter?: { type?: string }) {
       if (!cachedWorkspace) return []
       let nodes = cachedWorkspace.nodes
-      if (filter?.type) nodes = nodes.filter(n => n.type === filter.type)
-      return nodes.map(n => ({ id: n.id, type: n.type ?? 'unknown', data: n.data }))
+      if (filter?.type) nodes = nodes.filter((n) => n.type === filter.type)
+      return nodes.map((n) => ({ id: n.id, type: n.type ?? 'unknown', data: n.data }))
     },
     async getNodeById(id: string) {
       if (!cachedWorkspace) return null
-      const node = cachedWorkspace.nodes.find(n => n.id === id)
+      const node = cachedWorkspace.nodes.find((n) => n.id === id)
       return node ? { id: node.id, type: node.type ?? 'unknown', data: node.data } : null
     },
     async getEdges(nodeId?: string) {
       if (!cachedWorkspace) return []
       let edges = cachedWorkspace.edges
-      if (nodeId) edges = edges.filter(e => e.source === nodeId || e.target === nodeId)
-      return edges.map(e => ({ id: e.id, source: e.source, target: e.target, data: e.data }))
-    }
+      if (nodeId) edges = edges.filter((e) => e.source === nodeId || e.target === nodeId)
+      return edges.map((e) => ({ id: e.id, source: e.source, target: e.target, data: e.data }))
+    },
   }
 }
 
@@ -323,14 +349,19 @@ function registerPluginEvents(manifest: PluginManifest, main: PluginMain): void 
     if (!eventListeners.has(event)) eventListeners.set(event, [])
     eventListeners.get(event)!.push({
       pluginId: manifest.id,
-      handler: handler as (data: unknown) => void | Promise<void>
+      handler: handler as (data: unknown) => void | Promise<void>,
     })
   }
 }
 
 /** Returns a Proxy that throws on any property access — used for unclaimed capabilities */
 function proxyThatThrows(capability: string): unknown {
-  return new Proxy({}, {
-    get() { throw new Error(`Plugin does not have '${capability}' capability`) }
-  })
+  return new Proxy(
+    {},
+    {
+      get() {
+        throw new Error(`Plugin does not have '${capability}' capability`)
+      },
+    },
+  )
 }

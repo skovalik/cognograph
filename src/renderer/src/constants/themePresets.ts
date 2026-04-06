@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import type { ThemePreset, GuiColors } from '@shared/types'
+import type { GuiColors, ThemePreset } from '@shared/types'
 import { DEFAULT_GLASS_SETTINGS } from '@shared/types'
 
 // Default GUI colors for dark mode — Gold accent (matches DS v3)
@@ -10,8 +10,8 @@ export const DEFAULT_GUI_DARK: GuiColors = {
   panelBackgroundSecondary: '#12110F',
   textPrimary: '#EDE8E0',
   textSecondary: '#9E978D',
-  accentPrimary: '#E5B95C',      // Warm Gold — primary interactive
-  accentSecondary: '#C8963E',    // Gold glow — secondary accent
+  accentPrimary: '#E5B95C', // Warm Gold — primary interactive
+  accentSecondary: '#C8963E', // Gold glow — secondary accent
   toolbarIconDefault: '#5A554E',
   toolbarIconAccent: ['#E5B95C', '#E5B95C', '#E5B95C', '#E5B95C'],
 }
@@ -22,8 +22,8 @@ export const DEFAULT_GUI_LIGHT: GuiColors = {
   panelBackgroundSecondary: '#FFFFFF',
   textPrimary: '#1A1816',
   textSecondary: '#6B6560',
-  accentPrimary: '#A67B30',      // Dark Gold — primary interactive
-  accentSecondary: '#A67B30',    // Gold glow — secondary accent
+  accentPrimary: '#A67B30', // Dark Gold — primary interactive
+  accentSecondary: '#A67B30', // Gold glow — secondary accent
   toolbarIconDefault: '#9E978D',
   toolbarIconAccent: ['#A67B30', '#A67B30', '#A67B30', '#A67B30'],
 }
@@ -54,7 +54,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     description: 'Cool blue accent with vibrant rainbow nodes',
     glassSettings: {
       ...DEFAULT_GLASS_SETTINGS,
-      userPreference: 'auto' // Professional default
+      userPreference: 'auto', // Professional default
     },
     dark: {
       canvasBackground: 'linear-gradient(135deg, #0d0d14 0%, #0f0f1a 50%, #0d0d14 100%)',
@@ -68,9 +68,9 @@ export const THEME_PRESETS: ThemePreset[] = [
         workspace: '#AB6A6A', // muted rose
         text: '#94a3b8', // already muted
         action: '#C4845A', // muted copper
-        orchestrator: '#a855f7' // purple — primary, keep vivid
+        orchestrator: '#a855f7', // purple — primary, keep vivid
       },
-      guiColors: DEFAULT_GUI_DARK
+      guiColors: DEFAULT_GUI_DARK,
     },
     light: {
       canvasBackground: 'linear-gradient(135deg, #fafbff 0%, #f5f3ff 50%, #fafbff 100%)',
@@ -84,10 +84,10 @@ export const THEME_PRESETS: ThemePreset[] = [
         workspace: '#dc2626', // red-600
         text: '#64748b',
         action: '#ea580c', // orange-600
-        orchestrator: '#7c3aed' // violet-600
+        orchestrator: '#7c3aed', // violet-600
       },
-      guiColors: DEFAULT_GUI_LIGHT
-    }
+      guiColors: DEFAULT_GUI_LIGHT,
+    },
   },
 
   // ============================================================================
@@ -101,7 +101,7 @@ export const THEME_PRESETS: ThemePreset[] = [
       ...DEFAULT_GLASS_SETTINGS,
       userPreference: 'fluid-glass', // Dramatic cinematic glass
       blurRadius: 20,
-      noiseOpacity: 8
+      noiseOpacity: 8,
     },
     dark: {
       canvasBackground: 'linear-gradient(160deg, #0f0a0c 0%, #1a0f14 50%, #0d0608 100%)',
@@ -115,7 +115,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         workspace: '#a855f7', // purple-500
         text: '#94a3b8',
         action: '#fb923c', // orange-400
-        orchestrator: '#c084fc' // purple-400
+        orchestrator: '#c084fc', // purple-400
       },
       guiColors: {
         panelBackground: '#0f0a0c',
@@ -125,8 +125,8 @@ export const THEME_PRESETS: ThemePreset[] = [
         accentPrimary: '#fb7185',
         accentSecondary: '#e11d48',
         toolbarIconDefault: '#fda4af',
-        toolbarIconAccent: ['#fb7185', '#fbbf24', '#f97316', '#f472b6']
-      }
+        toolbarIconAccent: ['#fb7185', '#fbbf24', '#f97316', '#f472b6'],
+      },
     },
     light: {
       canvasBackground: 'linear-gradient(160deg, #fff1f3 0%, #ffe4e8 50%, #fef2f2 100%)',
@@ -140,7 +140,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         workspace: '#7c3aed', // purple-600
         text: '#64748b',
         action: '#ea580c', // orange-600
-        orchestrator: '#9333ea' // purple-600
+        orchestrator: '#9333ea', // purple-600
       },
       guiColors: {
         panelBackground: '#ffffff',
@@ -150,9 +150,9 @@ export const THEME_PRESETS: ThemePreset[] = [
         accentPrimary: '#e11d48',
         accentSecondary: '#be123c',
         toolbarIconDefault: '#9f1239',
-        toolbarIconAccent: ['#e11d48', '#b45309', '#c2410c', '#db2777']
-      }
-    }
+        toolbarIconAccent: ['#e11d48', '#b45309', '#c2410c', '#db2777'],
+      },
+    },
   },
 
   // ============================================================================
@@ -164,7 +164,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     description: 'Natural deep green wilderness',
     glassSettings: {
       ...DEFAULT_GLASS_SETTINGS,
-      userPreference: 'solid' // Understated natural aesthetic
+      userPreference: 'solid', // Understated natural aesthetic
     },
     dark: {
       canvasBackground: 'linear-gradient(145deg, #071108 0%, #0c1a0e 50%, #061008 100%)',
@@ -178,7 +178,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         workspace: '#f472b6', // pink-400
         text: '#94a3b8',
         action: '#fbbf24', // amber-400
-        orchestrator: '#a78bfa' // violet-400
+        orchestrator: '#a78bfa', // violet-400
       },
       guiColors: {
         panelBackground: '#071108',
@@ -188,8 +188,8 @@ export const THEME_PRESETS: ThemePreset[] = [
         accentPrimary: '#4ade80',
         accentSecondary: '#22c55e',
         toolbarIconDefault: '#86efac',
-        toolbarIconAccent: ['#4ade80', '#bef264', '#86efac', '#2dd4bf']
-      }
+        toolbarIconAccent: ['#4ade80', '#bef264', '#86efac', '#2dd4bf'],
+      },
     },
     light: {
       canvasBackground: 'linear-gradient(145deg, #f0fdf4 0%, #dcfce7 50%, #ecfdf5 100%)',
@@ -203,7 +203,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         workspace: '#db2777', // pink-600
         text: '#64748b',
         action: '#d97706', // amber-600
-        orchestrator: '#7c3aed' // violet-600
+        orchestrator: '#7c3aed', // violet-600
       },
       guiColors: {
         panelBackground: '#ffffff',
@@ -213,9 +213,9 @@ export const THEME_PRESETS: ThemePreset[] = [
         accentPrimary: '#16a34a',
         accentSecondary: '#15803d',
         toolbarIconDefault: '#166534',
-        toolbarIconAccent: ['#16a34a', '#65a30d', '#059669', '#0d9488']
-      }
-    }
+        toolbarIconAccent: ['#16a34a', '#65a30d', '#059669', '#0d9488'],
+      },
+    },
   },
 
   // ============================================================================
@@ -227,7 +227,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     description: 'Deep aquatic blues and teals',
     glassSettings: {
       ...DEFAULT_GLASS_SETTINGS,
-      userPreference: 'auto' // Professional default
+      userPreference: 'auto', // Professional default
     },
     dark: {
       canvasBackground: 'linear-gradient(180deg, #030a1a 0%, #0c1929 50%, #041220 100%)',
@@ -241,7 +241,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         workspace: '#ec4899', // pink-500
         text: '#94a3b8',
         action: '#fb923c', // orange-400
-        orchestrator: '#a78bfa' // violet-400
+        orchestrator: '#a78bfa', // violet-400
       },
       guiColors: {
         panelBackground: '#030a1a',
@@ -251,8 +251,8 @@ export const THEME_PRESETS: ThemePreset[] = [
         accentPrimary: '#38bdf8',
         accentSecondary: '#0ea5e9',
         toolbarIconDefault: '#7dd3fc',
-        toolbarIconAccent: ['#38bdf8', '#22d3ee', '#67e8f9', '#2dd4bf']
-      }
+        toolbarIconAccent: ['#38bdf8', '#22d3ee', '#67e8f9', '#2dd4bf'],
+      },
     },
     light: {
       canvasBackground: 'linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 50%, #ecfeff 100%)',
@@ -266,7 +266,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         workspace: '#be185d', // pink-700
         text: '#64748b',
         action: '#ea580c', // orange-600
-        orchestrator: '#7c3aed' // violet-600
+        orchestrator: '#7c3aed', // violet-600
       },
       guiColors: {
         panelBackground: '#ffffff',
@@ -276,9 +276,9 @@ export const THEME_PRESETS: ThemePreset[] = [
         accentPrimary: '#0284c7',
         accentSecondary: '#0369a1',
         toolbarIconDefault: '#0369a1',
-        toolbarIconAccent: ['#0284c7', '#0891b2', '#0e7490', '#0f766e']
-      }
-    }
+        toolbarIconAccent: ['#0284c7', '#0891b2', '#0e7490', '#0f766e'],
+      },
+    },
   },
 
   // ============================================================================
@@ -292,7 +292,7 @@ export const THEME_PRESETS: ThemePreset[] = [
       ...DEFAULT_GLASS_SETTINGS,
       userPreference: 'fluid-glass', // Dramatic warm glass
       blurRadius: 18,
-      noiseOpacity: 10
+      noiseOpacity: 10,
     },
     dark: {
       canvasBackground: 'linear-gradient(135deg, #1a0f08 0%, #1c1008 40%, #1a0d10 100%)',
@@ -306,7 +306,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         workspace: '#c084fc', // purple-400
         text: '#94a3b8',
         action: '#ef4444', // red-500
-        orchestrator: '#c084fc' // purple-400
+        orchestrator: '#c084fc', // purple-400
       },
       guiColors: {
         panelBackground: '#1a0f08',
@@ -316,8 +316,8 @@ export const THEME_PRESETS: ThemePreset[] = [
         accentPrimary: '#fb923c',
         accentSecondary: '#f97316',
         toolbarIconDefault: '#fdba74',
-        toolbarIconAccent: ['#fb923c', '#fcd34d', '#fdba74', '#f9a8d4']
-      }
+        toolbarIconAccent: ['#fb923c', '#fcd34d', '#fdba74', '#f9a8d4'],
+      },
     },
     light: {
       canvasBackground: 'linear-gradient(135deg, #fffbeb 0%, #fff7ed 40%, #fef2f2 100%)',
@@ -331,7 +331,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         workspace: '#7c3aed', // purple-600
         text: '#64748b',
         action: '#dc2626', // red-600
-        orchestrator: '#9333ea' // purple-600
+        orchestrator: '#9333ea', // purple-600
       },
       guiColors: {
         panelBackground: '#ffffff',
@@ -341,9 +341,9 @@ export const THEME_PRESETS: ThemePreset[] = [
         accentPrimary: '#ea580c',
         accentSecondary: '#c2410c',
         toolbarIconDefault: '#b45309',
-        toolbarIconAccent: ['#ea580c', '#ca8a04', '#d97706', '#db2777']
-      }
-    }
+        toolbarIconAccent: ['#ea580c', '#ca8a04', '#d97706', '#db2777'],
+      },
+    },
   },
 
   // ============================================================================
@@ -355,7 +355,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     description: 'Rich purple and magenta cosmic',
     glassSettings: {
       ...DEFAULT_GLASS_SETTINGS,
-      userPreference: 'auto' // Professional default
+      userPreference: 'auto', // Professional default
     },
     dark: {
       canvasBackground: 'linear-gradient(155deg, #0f0a18 0%, #150d20 50%, #0d081a 100%)',
@@ -369,7 +369,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         workspace: '#22d3ee', // cyan-400
         text: '#94a3b8',
         action: '#fb923c', // orange-400
-        orchestrator: '#e879f9' // fuchsia-400
+        orchestrator: '#e879f9', // fuchsia-400
       },
       guiColors: {
         panelBackground: '#0f0a18',
@@ -379,8 +379,8 @@ export const THEME_PRESETS: ThemePreset[] = [
         accentPrimary: '#c084fc',
         accentSecondary: '#a855f7',
         toolbarIconDefault: '#d8b4fe',
-        toolbarIconAccent: ['#c084fc', '#f0abfc', '#d8b4fe', '#f472b6']
-      }
+        toolbarIconAccent: ['#c084fc', '#f0abfc', '#d8b4fe', '#f472b6'],
+      },
     },
     light: {
       canvasBackground: 'linear-gradient(155deg, #faf5ff 0%, #f5f0ff 50%, #fdf4ff 100%)',
@@ -394,7 +394,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         workspace: '#0891b2', // cyan-600
         text: '#64748b',
         action: '#ea580c', // orange-600
-        orchestrator: '#c026d3' // fuchsia-600
+        orchestrator: '#c026d3', // fuchsia-600
       },
       guiColors: {
         panelBackground: '#ffffff',
@@ -404,9 +404,9 @@ export const THEME_PRESETS: ThemePreset[] = [
         accentPrimary: '#9333ea',
         accentSecondary: '#7c3aed',
         toolbarIconDefault: '#7c3aed',
-        toolbarIconAccent: ['#9333ea', '#c026d3', '#a855f7', '#db2777']
-      }
-    }
+        toolbarIconAccent: ['#9333ea', '#c026d3', '#a855f7', '#db2777'],
+      },
+    },
   },
 
   // ============================================================================
@@ -418,7 +418,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     description: 'Sophisticated neutral monochrome',
     glassSettings: {
       ...DEFAULT_GLASS_SETTINGS,
-      userPreference: 'solid' // Understated monochrome
+      userPreference: 'solid', // Understated monochrome
     },
     dark: {
       canvasBackground: '#0c1017',
@@ -432,7 +432,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         workspace: '#d4d4d8', // zinc-300
         text: '#94a3b8',
         action: '#78716c', // stone-500
-        orchestrator: '#a1a1aa' // zinc-400
+        orchestrator: '#a1a1aa', // zinc-400
       },
       guiColors: {
         panelBackground: '#0c1017',
@@ -442,8 +442,8 @@ export const THEME_PRESETS: ThemePreset[] = [
         accentPrimary: '#94a3b8',
         accentSecondary: '#64748b',
         toolbarIconDefault: '#94a3b8',
-        toolbarIconAccent: ['#94a3b8', '#a1a1aa', '#a8a29e', '#9ca3af']
-      }
+        toolbarIconAccent: ['#94a3b8', '#a1a1aa', '#a8a29e', '#9ca3af'],
+      },
     },
     light: {
       canvasBackground: '#f8fafc',
@@ -457,7 +457,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         workspace: '#3f3f46', // zinc-700
         text: '#64748b',
         action: '#44403c', // stone-700
-        orchestrator: '#52525b' // zinc-600
+        orchestrator: '#52525b', // zinc-600
       },
       guiColors: {
         panelBackground: '#ffffff',
@@ -467,9 +467,9 @@ export const THEME_PRESETS: ThemePreset[] = [
         accentPrimary: '#475569',
         accentSecondary: '#334155',
         toolbarIconDefault: '#475569',
-        toolbarIconAccent: ['#475569', '#52525b', '#57534e', '#4b5563']
-      }
-    }
+        toolbarIconAccent: ['#475569', '#52525b', '#57534e', '#4b5563'],
+      },
+    },
   },
 
   // ============================================================================
@@ -481,7 +481,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     description: 'Deep indigo starlit night',
     glassSettings: {
       ...DEFAULT_GLASS_SETTINGS,
-      userPreference: 'auto' // Professional default
+      userPreference: 'auto', // Professional default
     },
     dark: {
       canvasBackground: 'linear-gradient(180deg, #07081a 0%, #0d0f28 50%, #050614 100%)',
@@ -495,7 +495,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         workspace: '#f9a8d4', // pink-300
         text: '#94a3b8',
         action: '#fdba74', // orange-300
-        orchestrator: '#c4b5fd' // violet-300
+        orchestrator: '#c4b5fd', // violet-300
       },
       guiColors: {
         panelBackground: '#07081a',
@@ -505,8 +505,8 @@ export const THEME_PRESETS: ThemePreset[] = [
         accentPrimary: '#a5b4fc',
         accentSecondary: '#818cf8',
         toolbarIconDefault: '#a5b4fc',
-        toolbarIconAccent: ['#a5b4fc', '#c4b5fd', '#93c5fd', '#e0e7ff']
-      }
+        toolbarIconAccent: ['#a5b4fc', '#c4b5fd', '#93c5fd', '#e0e7ff'],
+      },
     },
     light: {
       canvasBackground: 'linear-gradient(180deg, #eef2ff 0%, #e0e7ff 50%, #f5f3ff 100%)',
@@ -520,7 +520,7 @@ export const THEME_PRESETS: ThemePreset[] = [
         workspace: '#db2777', // pink-600
         text: '#64748b',
         action: '#ea580c', // orange-600
-        orchestrator: '#7c3aed' // violet-600
+        orchestrator: '#7c3aed', // violet-600
       },
       guiColors: {
         panelBackground: '#ffffff',
@@ -530,10 +530,10 @@ export const THEME_PRESETS: ThemePreset[] = [
         accentPrimary: '#4f46e5',
         accentSecondary: '#4338ca',
         toolbarIconDefault: '#4338ca',
-        toolbarIconAccent: ['#4f46e5', '#6d28d9', '#2563eb', '#6366f1']
-      }
-    }
-  }
+        toolbarIconAccent: ['#4f46e5', '#6d28d9', '#2563eb', '#6366f1'],
+      },
+    },
+  },
 ]
 
 // Helper to find a preset by ID

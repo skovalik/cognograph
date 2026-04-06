@@ -16,8 +16,8 @@ export const manifest: PluginManifest = {
     'network',
     'settings-tab',
     'filesystem',
-    'workspace-read'
+    'workspace-read',
   ],
   events: ['workspace:saved', 'orchestrator:run-complete', 'workspace:loaded', 'app:quit'],
-  dependencies: ['@notionhq/client']
+  dependencies: ['@notionhq/client'],
 }

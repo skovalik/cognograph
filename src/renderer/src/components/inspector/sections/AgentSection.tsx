@@ -11,17 +11,16 @@
  * Only renders content when the node is a conversation in agent mode.
  */
 
-import { useCallback } from 'react'
-import { useWorkspaceStore } from '../../../stores/workspaceStore'
-import { AGENT_PRESETS, getPresetById } from '../../../constants/agentPresets'
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '../../ui'
-import { AgentMemoryViewer } from '../../agent/AgentMemoryViewer'
-import { AgentSettingsEditor } from '../../agent/AgentSettingsEditor'
-import { AgentRunHistoryViewer } from '../../agent/AgentRunHistoryViewer'
 import type { ConversationNodeData, NodeData } from '@shared/types'
-
 // Help tooltip — duplicated locally so extracted section stays self-contained
 import { HelpCircle } from 'lucide-react'
+import { useCallback } from 'react'
+import { AGENT_PRESETS, getPresetById } from '../../../constants/agentPresets'
+import { useWorkspaceStore } from '../../../stores/workspaceStore'
+import { AgentMemoryViewer } from '../../agent/AgentMemoryViewer'
+import { AgentRunHistoryViewer } from '../../agent/AgentRunHistoryViewer'
+import { AgentSettingsEditor } from '../../agent/AgentSettingsEditor'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui'
 
 function HelpTooltip({ text }: { text: string }): JSX.Element {
   return (
@@ -47,9 +46,7 @@ export interface AgentSectionProps {
 // ---------------------------------------------------------------------------
 
 export function AgentSection({ nodeId }: AgentSectionProps): JSX.Element | null {
-  const nodeData = useWorkspaceStore(
-    (state) => state.nodes.find((n) => n.id === nodeId)?.data,
-  )
+  const nodeData = useWorkspaceStore((state) => state.nodes.find((n) => n.id === nodeId)?.data)
   const updateNode = useWorkspaceStore((state) => state.updateNode)
 
   const handleChange = useCallback(
@@ -123,10 +120,7 @@ export function AgentSection({ nodeId }: AgentSectionProps): JSX.Element | null 
         }}
       />
 
-      <AgentRunHistoryViewer
-        nodeId={data.id || ''}
-        history={data.agentRunHistory || []}
-      />
+      <AgentRunHistoryViewer nodeId={data.id || ''} history={data.agentRunHistory || []} />
     </>
   )
 }

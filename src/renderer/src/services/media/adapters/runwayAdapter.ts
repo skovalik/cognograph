@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { ProviderAdapter, type ImageGenParams, type MediaResult, type VideoGenParams } from '../providerAdapter'
+import {
+  type ImageGenParams,
+  type MediaResult,
+  ProviderAdapter,
+  type VideoGenParams,
+} from '../providerAdapter'
 
 export class RunwayAdapter extends ProviderAdapter {
   readonly name = 'runway'
@@ -23,11 +28,11 @@ export class RunwayAdapter extends ProviderAdapter {
       const res = await fetch('https://api.dev.runwayml.com/v1/image_to_video', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
-          'X-Runway-Version': '2024-11-06'
+          'X-Runway-Version': '2024-11-06',
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       })
 
       if (!res.ok) {
@@ -50,14 +55,14 @@ export class RunwayAdapter extends ProviderAdapter {
     while (Date.now() - start < maxWait) {
       const res = await fetch(`https://api.dev.runwayml.com/v1/tasks/${id}`, {
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'X-Runway-Version': '2024-11-06'
-        }
+          Authorization: `Bearer ${this.apiKey}`,
+          'X-Runway-Version': '2024-11-06',
+        },
       })
       const data = await res.json()
       if (data.status === 'SUCCEEDED') return data.output?.[0]
       if (data.status === 'FAILED') throw new Error(`Runway task failed: ${data.failure}`)
-      await new Promise(r => setTimeout(r, 5000))
+      await new Promise((r) => setTimeout(r, 5000))
     }
     throw new Error('Runway task timed out')
   }

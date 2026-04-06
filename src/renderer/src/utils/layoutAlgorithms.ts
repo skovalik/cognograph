@@ -8,8 +8,8 @@
  * Uses dagre for hierarchical layouts and custom implementations for others.
  */
 
+import type { Edge, Node } from '@xyflow/react'
 import dagre from 'dagre'
-import type { Node, Edge } from '@xyflow/react'
 
 // Layout types
 export type LayoutType =
@@ -26,7 +26,7 @@ export type SpacingPreset = 'narrow' | 'default' | 'wide'
 export const SPACING_VALUES: Record<SpacingPreset, { nodeGap: number; edgeLength: number }> = {
   narrow: { nodeGap: 40, edgeLength: 60 },
   default: { nodeGap: 80, edgeLength: 120 },
-  wide: { nodeGap: 120, edgeLength: 180 }
+  wide: { nodeGap: 120, edgeLength: 180 },
 }
 
 // Direction mapping for dagre
@@ -34,7 +34,7 @@ const DIRECTION_MAP: Record<string, 'TB' | 'LR' | 'BT' | 'RL'> = {
   'hierarchical-down': 'TB',
   'hierarchical-right': 'LR',
   'hierarchical-up': 'BT',
-  'hierarchical-left': 'RL'
+  'hierarchical-left': 'RL',
 }
 
 export interface LayoutOptions {
@@ -49,7 +49,7 @@ export function applyHierarchicalLayout(
   nodes: Node[],
   edges: Edge[],
   direction: 'TB' | 'LR' | 'BT' | 'RL' = 'TB',
-  spacing: { nodeGap: number; edgeLength: number } = SPACING_VALUES.default
+  spacing: { nodeGap: number; edgeLength: number } = SPACING_VALUES.default,
 ): Map<string, { x: number; y: number }> {
   const g = new dagre.graphlib.Graph()
   g.setGraph({
@@ -57,7 +57,7 @@ export function applyHierarchicalLayout(
     nodesep: spacing.nodeGap,
     ranksep: spacing.edgeLength,
     marginx: 50,
-    marginy: 50
+    marginy: 50,
   })
   g.setDefaultEdgeLabel(() => ({}))
 
@@ -91,7 +91,7 @@ export function applyHierarchicalLayout(
       // Dagre returns center positions, convert to top-left
       positions.set(node.id, {
         x: layoutNode.x - width / 2,
-        y: layoutNode.y - height / 2
+        y: layoutNode.y - height / 2,
       })
     }
   })
@@ -107,7 +107,7 @@ export function applyForceLayout(
   nodes: Node[],
   edges: Edge[],
   iterations: number = 100,
-  options: LayoutOptions = {}
+  options: LayoutOptions = {},
 ): Map<string, { x: number; y: number }> {
   const spacing = SPACING_VALUES[options.spacing || 'default']
 
@@ -200,7 +200,7 @@ export function applyForceLayout(
 export function applyCircularLayout(
   nodes: Node[],
   edges: Edge[],
-  options: LayoutOptions = {}
+  options: LayoutOptions = {},
 ): Map<string, { x: number; y: number }> {
   const spacing = SPACING_VALUES[options.spacing || 'default']
 
@@ -244,7 +244,7 @@ export function applyCircularLayout(
     // Position is top-left corner
     positions.set(node.id, {
       x: center!.x + radius * Math.cos(angle) - width / 2,
-      y: center!.y + radius * Math.sin(angle) - height / 2
+      y: center!.y + radius * Math.sin(angle) - height / 2,
     })
   })
 
@@ -258,7 +258,7 @@ export function applyLayout(
   layoutType: LayoutType,
   nodes: Node[],
   edges: Edge[],
-  options: LayoutOptions = {}
+  options: LayoutOptions = {},
 ): Map<string, { x: number; y: number }> {
   const spacing = SPACING_VALUES[options.spacing || 'default']
 
@@ -289,33 +289,33 @@ export const LAYOUT_INFO: Record<LayoutType, { label: string; description: strin
     'hierarchical-down': {
       label: 'Hierarchical (Down)',
       description: 'Tree layout flowing top to bottom',
-      icon: 'ArrowDown'
+      icon: 'ArrowDown',
     },
     'hierarchical-right': {
       label: 'Hierarchical (Right)',
       description: 'Tree layout flowing left to right',
-      icon: 'ArrowRight'
+      icon: 'ArrowRight',
     },
     'hierarchical-up': {
       label: 'Hierarchical (Up)',
       description: 'Tree layout flowing bottom to top',
-      icon: 'ArrowUp'
+      icon: 'ArrowUp',
     },
     'hierarchical-left': {
       label: 'Hierarchical (Left)',
       description: 'Tree layout flowing right to left',
-      icon: 'ArrowLeft'
+      icon: 'ArrowLeft',
     },
     force: {
       label: 'Force-directed',
       description: 'Organic clustering based on connections',
-      icon: 'Sparkles'
+      icon: 'Sparkles',
     },
     circular: {
       label: 'Circular',
       description: 'Nodes arranged in a circle',
-      icon: 'Circle'
-    }
+      icon: 'Circle',
+    },
   }
 
 /**
@@ -328,14 +328,14 @@ export const LAYOUT_INFO: Record<LayoutType, { label: string; description: strin
 export function applyClusteredHierarchicalLayout(
   nodes: Node[],
   edges: Edge[],
-  opts: { nodeGap?: number; rankGap?: number; clusterGap?: number } = {}
+  opts: { nodeGap?: number; rankGap?: number; clusterGap?: number } = {},
 ): Map<string, { x: number; y: number }> {
   const nodeGap = opts.nodeGap ?? 28
   const rankGap = opts.rankGap ?? 120
   const clusterGap = opts.clusterGap ?? 120
 
-  const nodeSet = new Set(nodes.map(n => n.id))
-  const nodeMap = new Map(nodes.map(n => [n.id, n]))
+  const nodeSet = new Set(nodes.map((n) => n.id))
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]))
 
   // 1. Build adjacency
   const children = new Map<string, string[]>()
@@ -400,9 +400,9 @@ export function applyClusteredHierarchicalLayout(
   const claimed = new Set<string>()
   function subtreeWidth(id: string): number {
     if (stWidthCache.has(id)) return stWidthCache.get(id)!
-    const kids = children.get(id)!.filter(c =>
-      (rank.get(c) ?? 0) > (rank.get(id) ?? 0) && !claimed.has(c)
-    )
+    const kids = children
+      .get(id)!
+      .filter((c) => (rank.get(c) ?? 0) > (rank.get(id) ?? 0) && !claimed.has(c))
     // Claim these children so other parents don't double-count
     for (const k of kids) claimed.add(k)
     if (kids.length === 0) {
@@ -425,12 +425,16 @@ export function applyClusteredHierarchicalLayout(
   // Sort children by edge-target centroid before placement. Cross-phase targets
   // may already be positioned; unpositioned targets fall back to edge count.
   const edgeTargetCentroid = (childId: string): number => {
-    const outEdges = edges.filter(e => e.source === childId)
+    const outEdges = edges.filter((e) => e.source === childId)
     if (outEdges.length === 0) return (children.get(childId) ?? []).length // child-count fallback
-    let sum = 0, posCount = 0
+    let sum = 0,
+      posCount = 0
     for (const e of outEdges) {
       const tp = positions.get(e.target)
-      if (tp) { sum += tp.x; posCount++ }
+      if (tp) {
+        sum += tp.x
+        posCount++
+      }
     }
     return posCount > 0 ? sum / posCount : outEdges.length // edge-count fallback for unpositioned targets
   }
@@ -438,7 +442,7 @@ export function applyClusteredHierarchicalLayout(
   function placeSubtree(id: string, centerX: number): void {
     if (positions.has(id)) return // already placed by another parent path
     positions.set(id, { x: centerX - nodeWidth(id) / 2, y: 0 }) // y assigned later
-    const kids = children.get(id)!.filter(c => (rank.get(c) ?? 0) > (rank.get(id) ?? 0))
+    const kids = children.get(id)!.filter((c) => (rank.get(c) ?? 0) > (rank.get(id) ?? 0))
     if (kids.length === 0) return
     // Sort children by edge-target centroid — stable sort preserves insertion order on ties
     kids.sort((a, b) => edgeTargetCentroid(a) - edgeTargetCentroid(b))
@@ -451,7 +455,7 @@ export function applyClusteredHierarchicalLayout(
     }
   }
 
-  const roots = nodes.filter(n => parents.get(n.id)!.length === 0)
+  const roots = nodes.filter((n) => parents.get(n.id)!.length === 0)
   // Sort: roots with more children claim first — defines primary clusters
   roots.sort((a, b) => (children.get(b.id)?.length ?? 0) - (children.get(a.id)?.length ?? 0))
   let rootCursor = 0
@@ -468,24 +472,32 @@ export function applyClusteredHierarchicalLayout(
   const sortedNodes = [...nodes].sort((a, b) => (rank.get(b.id) ?? 0) - (rank.get(a.id) ?? 0))
 
   for (const node of sortedNodes) {
-    const kids = children.get(node.id)!.filter(c => (rank.get(c) ?? 0) > (rank.get(node.id) ?? 0))
+    const kids = children.get(node.id)!.filter((c) => (rank.get(c) ?? 0) > (rank.get(node.id) ?? 0))
     if (kids.length < 2) continue
 
     // Skip multi-parent kids — step 5 will override their positions
-    const ownedKids = kids.filter(k => (parents.get(k)?.length ?? 0) <= 1)
+    const ownedKids = kids.filter((k) => (parents.get(k)?.length ?? 0) <= 1)
     if (ownedKids.length < 2) continue
 
     // Current order by x position
-    const currentOrder = [...ownedKids].sort((a, b) => (positions.get(a)?.x ?? 0) - (positions.get(b)?.x ?? 0))
+    const currentOrder = [...ownedKids].sort(
+      (a, b) => (positions.get(a)?.x ?? 0) - (positions.get(b)?.x ?? 0),
+    )
 
     // Desired order: sort by x-centroid of THEIR placed children (real barycenter)
     const barycenter = (kidId: string): number => {
-      const grandkids = children.get(kidId)!.filter(c => (rank.get(c) ?? 0) > (rank.get(kidId) ?? 0))
+      const grandkids = children
+        .get(kidId)!
+        .filter((c) => (rank.get(c) ?? 0) > (rank.get(kidId) ?? 0))
       if (grandkids.length === 0) return positions.get(kidId)?.x ?? 0 // leaf: own x
-      let sum = 0, count = 0
+      let sum = 0,
+        count = 0
       for (const gc of grandkids) {
         const pos = positions.get(gc)
-        if (pos) { sum += pos.x; count++ }
+        if (pos) {
+          sum += pos.x
+          count++
+        }
       }
       return count > 0 ? sum / count : (positions.get(kidId)?.x ?? 0)
     }
@@ -503,7 +515,8 @@ export function applyClusteredHierarchicalLayout(
     if (!parentPos) continue
     // positions.x is LEFT EDGE — convert to center for cursor math
     const parentCenterX = parentPos.x + nodeWidth(node.id) / 2
-    const totalW = desiredOrder.reduce((s, k) => s + subtreeWidth(k), 0) + nodeGap * (desiredOrder.length - 1)
+    const totalW =
+      desiredOrder.reduce((s, k) => s + subtreeWidth(k), 0) + nodeGap * (desiredOrder.length - 1)
     let cursor = parentCenterX - totalW / 2
     for (const kid of desiredOrder) {
       const sw = subtreeWidth(kid)
@@ -513,12 +526,15 @@ export function applyClusteredHierarchicalLayout(
         // oldPos.x is left edge, newCenterX is center — convert to left edge for delta
         const oldCenterX = oldPos.x + nodeWidth(kid) / 2
         const dx = newCenterX - oldCenterX
-        if (Math.abs(dx) < 1) { cursor += sw + nodeGap; continue } // skip negligible shifts
+        if (Math.abs(dx) < 1) {
+          cursor += sw + nodeGap
+          continue
+        } // skip negligible shifts
         // Shift this kid AND all descendants by dx
         const shiftSubtree = (id: string): void => {
           const pos = positions.get(id)
           if (pos) positions.set(id, { x: pos.x + dx, y: pos.y })
-          const subKids = children.get(id)!.filter(c => (rank.get(c) ?? 0) > (rank.get(id) ?? 0))
+          const subKids = children.get(id)!.filter((c) => (rank.get(c) ?? 0) > (rank.get(id) ?? 0))
           for (const sk of subKids) shiftSubtree(sk)
         }
         shiftSubtree(kid)
@@ -531,10 +547,11 @@ export function applyClusteredHierarchicalLayout(
   for (const n of nodes) {
     const pars = parents.get(n.id)!
     if (pars.length >= 2) {
-      const avgX = pars.reduce((s, p) => {
-        const pp = positions.get(p)
-        return s + (pp ? pp.x + nodeWidth(p) / 2 : 0)
-      }, 0) / pars.length
+      const avgX =
+        pars.reduce((s, p) => {
+          const pp = positions.get(p)
+          return s + (pp ? pp.x + nodeWidth(p) / 2 : 0)
+        }, 0) / pars.length
       positions.set(n.id, { x: avgX - nodeWidth(n.id) / 2, y: 0 })
     }
   }
@@ -550,7 +567,7 @@ export function applyClusteredHierarchicalLayout(
   let yAccum = 0
   for (const r of sortedRanks) {
     const ids = rankGroups.get(r)!
-    const maxH = Math.max(...ids.map(id => nodeHeight(id)))
+    const maxH = Math.max(...ids.map((id) => nodeHeight(id)))
     for (const id of ids) {
       const pos = positions.get(id)
       if (pos) pos.y = yAccum
@@ -563,7 +580,13 @@ export function applyClusteredHierarchicalLayout(
     if (!positions.has(n.id)) {
       const r = rank.get(n.id) ?? 0
       const ids = rankGroups.get(r)
-      const maxX = ids ? Math.max(...ids.filter(id => positions.has(id)).map(id => positions.get(id)!.x + nodeWidth(id))) : 0
+      const maxX = ids
+        ? Math.max(
+            ...ids
+              .filter((id) => positions.has(id))
+              .map((id) => positions.get(id)!.x + nodeWidth(id)),
+          )
+        : 0
       positions.set(n.id, { x: maxX + clusterGap, y: 0 })
     }
   }
@@ -577,7 +600,7 @@ export function applyClusteredHierarchicalLayout(
  */
 export function detectGraphType(
   nodes: Node[],
-  edges: Edge[]
+  edges: Edge[],
 ): 'tree' | 'chain' | 'hub' | 'dag' | 'mesh' | 'single' | 'disconnected' {
   if (nodes.length === 0) return 'disconnected'
   if (nodes.length === 1) return 'single'
@@ -594,9 +617,7 @@ export function detectGraphType(
     outDeg.set(e.source, (outDeg.get(e.source) || 0) + 1)
   })
 
-  const maxDeg = Math.max(
-    ...nodes.map((n) => (inDeg.get(n.id) || 0) + (outDeg.get(n.id) || 0))
-  )
+  const maxDeg = Math.max(...nodes.map((n) => (inDeg.get(n.id) || 0) + (outDeg.get(n.id) || 0)))
   const roots = nodes.filter((n) => inDeg.get(n.id) === 0)
   const leaves = nodes.filter((n) => outDeg.get(n.id) === 0)
 
@@ -605,8 +626,7 @@ export function detectGraphType(
 
   // Hub: one node has >50% of edges
   for (const n of nodes) {
-    if ((inDeg.get(n.id) || 0) + (outDeg.get(n.id) || 0) > edges.length * 0.5)
-      return 'hub'
+    if ((inDeg.get(n.id) || 0) + (outDeg.get(n.id) || 0) > edges.length * 0.5) return 'hub'
   }
 
   // Cycle detection (DFS)
@@ -628,8 +648,7 @@ export function detectGraphType(
   for (const n of nodes) if (!visited.has(n.id) && hasCycle(n.id)) return 'mesh'
 
   // Tree: one root, no node has in-degree > 1
-  if (roots.length === 1 && !Array.from(inDeg.values()).some((d) => d > 1))
-    return 'tree'
+  if (roots.length === 1 && !Array.from(inDeg.values()).some((d) => d > 1)) return 'tree'
 
   if (roots.length >= 1) return 'dag'
   return 'mesh'
@@ -640,8 +659,14 @@ export function detectGraphType(
  * at a strict interior point (excludes shared endpoints).
  */
 export function segmentsIntersect(
-  ax1: number, ay1: number, ax2: number, ay2: number,
-  bx1: number, by1: number, bx2: number, by2: number
+  ax1: number,
+  ay1: number,
+  ax2: number,
+  ay2: number,
+  bx1: number,
+  by1: number,
+  bx2: number,
+  by2: number,
 ): boolean {
   const d = (bx2 - bx1) * (ay2 - ay1) - (by2 - by1) * (ax2 - ax1)
   if (Math.abs(d) < 1e-10) return false

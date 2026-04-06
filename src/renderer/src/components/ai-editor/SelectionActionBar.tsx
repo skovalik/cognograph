@@ -9,15 +9,8 @@
  * Implements ARIA toolbar pattern with arrow key navigation.
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react'
-import {
-  LayoutGrid,
-  FileText,
-  Link2,
-  Expand,
-  Wand2,
-  X
-} from 'lucide-react'
+import { Expand, FileText, LayoutGrid, Link2, Wand2, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useAIEditorStore } from '../../stores/aiEditorStore'
 
 interface SelectionActionBarProps {
@@ -40,35 +33,35 @@ const QUICK_ACTIONS: QuickAction[] = [
     label: 'Organize',
     icon: LayoutGrid,
     mode: 'organize',
-    prompt: 'Organize these nodes into a logical layout'
+    prompt: 'Organize these nodes into a logical layout',
   },
   {
     id: 'summarize',
     label: 'Summarize',
     icon: FileText,
     mode: 'ask',
-    prompt: 'Summarize the content of these selected notes'
+    prompt: 'Summarize the content of these selected notes',
   },
   {
     id: 'connect',
     label: 'Connect',
     icon: Link2,
     mode: 'generate',
-    prompt: 'Create meaningful connections between these nodes'
+    prompt: 'Create meaningful connections between these nodes',
   },
   {
     id: 'expand',
     label: 'Expand',
     icon: Expand,
     mode: 'generate',
-    prompt: 'Expand on these ideas and create related notes'
-  }
+    prompt: 'Expand on these ideas and create related notes',
+  },
 ]
 
 function SelectionActionBarComponent({
   selectedNodeIds,
   position,
-  onClose
+  onClose,
 }: SelectionActionBarProps): JSX.Element {
   const barRef = useRef<HTMLDivElement>(null)
   const [focusedIndex, setFocusedIndex] = useState(0)
@@ -76,7 +69,7 @@ function SelectionActionBarComponent({
   const [customPrompt, setCustomPrompt] = useState('')
 
   const openModal = useAIEditorStore((s) => s.openModal)
-  const setPrompt = useAIEditorStore((s) => s.setPrompt)
+  const _setPrompt = useAIEditorStore((s) => s.setPrompt)
 
   // Focus management
   useEffect(() => {
@@ -87,42 +80,48 @@ function SelectionActionBarComponent({
   }, [focusedIndex])
 
   // Keyboard navigation
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const actionCount = QUICK_ACTIONS.length + 1 // +1 for custom button
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const actionCount = QUICK_ACTIONS.length + 1 // +1 for custom button
 
-    switch (e.key) {
-      case 'ArrowRight':
-        e.preventDefault()
-        setFocusedIndex((prev) => (prev + 1) % actionCount)
-        break
-      case 'ArrowLeft':
-        e.preventDefault()
-        setFocusedIndex((prev) => (prev - 1 + actionCount) % actionCount)
-        break
-      case 'Home':
-        e.preventDefault()
-        setFocusedIndex(0)
-        break
-      case 'End':
-        e.preventDefault()
-        setFocusedIndex(actionCount - 1)
-        break
-      case 'Escape':
-        e.preventDefault()
-        onClose()
-        break
-    }
-  }, [onClose])
+      switch (e.key) {
+        case 'ArrowRight':
+          e.preventDefault()
+          setFocusedIndex((prev) => (prev + 1) % actionCount)
+          break
+        case 'ArrowLeft':
+          e.preventDefault()
+          setFocusedIndex((prev) => (prev - 1 + actionCount) % actionCount)
+          break
+        case 'Home':
+          e.preventDefault()
+          setFocusedIndex(0)
+          break
+        case 'End':
+          e.preventDefault()
+          setFocusedIndex(actionCount - 1)
+          break
+        case 'Escape':
+          e.preventDefault()
+          onClose()
+          break
+      }
+    },
+    [onClose],
+  )
 
   // Handle quick action click
-  const handleQuickAction = useCallback((action: QuickAction) => {
-    openModal({
-      mode: action.mode,
-      scope: 'selection',
-      prompt: action.prompt
-    })
-    onClose()
-  }, [openModal, onClose])
+  const handleQuickAction = useCallback(
+    (action: QuickAction) => {
+      openModal({
+        mode: action.mode,
+        scope: 'selection',
+        prompt: action.prompt,
+      })
+      onClose()
+    },
+    [openModal, onClose],
+  )
 
   // Handle custom prompt
   const handleCustomPrompt = useCallback(() => {
@@ -134,23 +133,26 @@ function SelectionActionBarComponent({
     openModal({
       mode: 'generate',
       scope: 'selection',
-      prompt: customPrompt.trim()
+      prompt: customPrompt.trim(),
     })
     onClose()
   }, [customPrompt, openModal, onClose])
 
   // Handle custom prompt submit
-  const handleCustomSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault()
-    if (customPrompt.trim()) {
-      openModal({
-        mode: 'generate',
-        scope: 'selection',
-        prompt: customPrompt.trim()
-      })
-      onClose()
-    }
-  }, [customPrompt, openModal, onClose])
+  const handleCustomSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault()
+      if (customPrompt.trim()) {
+        openModal({
+          mode: 'generate',
+          scope: 'selection',
+          prompt: customPrompt.trim(),
+        })
+        onClose()
+      }
+    },
+    [customPrompt, openModal, onClose],
+  )
 
   return (
     <div
@@ -158,7 +160,7 @@ function SelectionActionBarComponent({
       className="selection-action-bar"
       style={{
         left: position.x,
-        top: position.y
+        top: position.y,
       }}
       role="toolbar"
       aria-label={`AI actions for ${selectedNodeIds.length} selected node${selectedNodeIds.length !== 1 ? 's' : ''}`}
@@ -166,6 +168,7 @@ function SelectionActionBarComponent({
     >
       {/* Close button */}
       <button
+        type="button"
         className="close-button"
         onClick={onClose}
         aria-label="Close action bar"
@@ -184,10 +187,10 @@ function SelectionActionBarComponent({
           const Icon = action.icon
           return (
             <button
+              type="button"
               key={action.id}
               className={`action-button ${focusedIndex === index ? 'focused' : ''}`}
               onClick={() => handleQuickAction(action)}
-              role="button"
               tabIndex={focusedIndex === index ? 0 : -1}
               aria-label={action.label}
             >
@@ -199,9 +202,9 @@ function SelectionActionBarComponent({
 
         {/* Custom prompt button */}
         <button
+          type="button"
           className={`action-button custom ${focusedIndex === QUICK_ACTIONS.length ? 'focused' : ''}`}
           onClick={handleCustomPrompt}
-          role="button"
           tabIndex={focusedIndex === QUICK_ACTIONS.length ? 0 : -1}
           aria-label="Custom prompt"
         >
@@ -218,7 +221,6 @@ function SelectionActionBarComponent({
             value={customPrompt}
             onChange={(e) => setCustomPrompt(e.target.value)}
             placeholder="Enter your prompt..."
-            autoFocus
             aria-label="Custom AI prompt"
           />
           <button type="submit" disabled={!customPrompt.trim()} aria-label="Submit custom prompt">
@@ -266,7 +268,7 @@ function SelectionActionBarComponent({
           background: transparent;
           border: none;
           border-radius: 4px;
-          color: #666;
+          color: var(--text-secondary);
           cursor: pointer;
           transition: all 0.15s;
         }

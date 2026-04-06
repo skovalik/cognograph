@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useCallback, useEffect, useRef, useState, useMemo } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
-import { createEditorExtensions } from '../utils/tiptapConfig'
-import { createCollabExtensions, COLLAB_CURSOR_STYLES } from '../utils/tiptapCollabConfig'
-import { RichTextToolbar } from './RichTextToolbar'
-import { normalizeContentForEditor } from '../utils/nodeUtils'
-import type { XmlFragment as YXmlFragment } from 'yjs'
+import { EditorContent, useEditor } from '@tiptap/react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Awareness } from 'y-protocols/awareness'
+import type { XmlFragment as YXmlFragment } from 'yjs'
+import { normalizeContentForEditor } from '../utils/nodeUtils'
+import { COLLAB_CURSOR_STYLES, createCollabExtensions } from '../utils/tiptapCollabConfig'
+import { createEditorExtensions } from '../utils/tiptapConfig'
+import { RichTextToolbar } from './RichTextToolbar'
 
 interface RichTextEditorProps {
   value: string
@@ -102,7 +102,16 @@ function RichTextEditorComponent({
     }
 
     return base
-  }, [enableLists, enableHeadings, enableFormatting, enableAlignment, placeholder, yjsFragment, awareness, collaborativeUser])
+  }, [
+    enableLists,
+    enableHeadings,
+    enableFormatting,
+    enableAlignment,
+    placeholder,
+    yjsFragment,
+    awareness,
+    collaborativeUser,
+  ])
 
   // Inject collab cursor CSS when in collaborative mode
   useEffect(() => {
@@ -197,38 +206,49 @@ function RichTextEditorComponent({
   // Toolbar action callback — suppress the next blur to keep editing mode active
   const handleToolbarAction = useCallback(() => {
     suppressBlurRef.current = true
-    setTimeout(() => { suppressBlurRef.current = false }, 150)
+    setTimeout(() => {
+      suppressBlurRef.current = false
+    }, 150)
   }, [])
 
   // Double-click to enter edit mode
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    if (!editOnDoubleClick || !editor) return
-    e.stopPropagation()
-    e.preventDefault()
-    setIsEditing(true)
-    onEditingChange?.(true)
-    // Focus after editable state takes effect — no position arg so user clicks where they want
-    setTimeout(() => {
-      editor.commands.focus()
-    }, 0)
-  }, [editOnDoubleClick, editor, onEditingChange])
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (!editOnDoubleClick || !editor) return
+      e.stopPropagation()
+      e.preventDefault()
+      setIsEditing(true)
+      onEditingChange?.(true)
+      // Focus after editable state takes effect — no position arg so user clicks where they want
+      setTimeout(() => {
+        editor.commands.focus()
+      }, 0)
+    },
+    [editOnDoubleClick, editor, onEditingChange],
+  )
 
   // Prevent node drag when editing; block middle-click auto-scroll always
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (isEditing || !editOnDoubleClick) {
-      e.stopPropagation()
-    }
-    if (e.button === 1) {
-      e.preventDefault()
-    }
-  }, [isEditing, editOnDoubleClick])
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (isEditing || !editOnDoubleClick) {
+        e.stopPropagation()
+      }
+      if (e.button === 1) {
+        e.preventDefault()
+      }
+    },
+    [isEditing, editOnDoubleClick],
+  )
 
   // Only stop click propagation when editing (so node selection works when not editing)
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    if (isEditing || !editOnDoubleClick) {
-      e.stopPropagation()
-    }
-  }, [isEditing, editOnDoubleClick])
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (isEditing || !editOnDoubleClick) {
+        e.stopPropagation()
+      }
+    },
+    [isEditing, editOnDoubleClick],
+  )
 
   if (!editor) return <div className="min-h-[30px]" />
 

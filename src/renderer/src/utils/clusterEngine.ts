@@ -128,7 +128,10 @@ function areAdjacent(keyA: string, keyB: string): boolean {
 
 // ─── Cluster metadata computation ───────────────────────────────────
 
-function computeClusterMetadata(nodeIds: string[], nodesById: Map<string, NodePosition>): {
+function computeClusterMetadata(
+  nodeIds: string[],
+  nodesById: Map<string, NodePosition>,
+): {
   centroid: { x: number; y: number }
   bounds: { minX: number; minY: number; maxX: number; maxY: number }
   dominantType: string
@@ -179,8 +182,8 @@ function computeClusterMetadata(nodeIds: string[], nodesById: Map<string, NodePo
     summary: {
       nodeCount: nodeIds.length,
       typeCounts,
-      statusCounts
-    }
+      statusCounts,
+    },
   }
 }
 
@@ -189,7 +192,7 @@ function computeClusterMetadata(nodeIds: string[], nodesById: Map<string, NodePo
 function centroidDistance(
   nodesA: string[],
   nodesB: string[],
-  nodesById: Map<string, NodePosition>
+  nodesById: Map<string, NodePosition>,
 ): number {
   let axSum = 0
   let aySum = 0
@@ -217,7 +220,7 @@ function centroidDistance(
 export function computeClusters(
   nodes: NodePosition[],
   edges: EdgeInfo[],
-  gridSize: number = 400
+  gridSize: number = 400,
 ): Cluster[] {
   if (nodes.length === 0) return []
 
@@ -272,7 +275,11 @@ export function computeClusters(
         gridCells.get(cellA)!.push(nid)
       }
       gridCells.set(cellB, [])
-    } else if (candidateCells.has(cellB) && !candidateCells.has(cellA) && areAdjacent(cellA, cellB)) {
+    } else if (
+      candidateCells.has(cellB) &&
+      !candidateCells.has(cellA) &&
+      areAdjacent(cellA, cellB)
+    ) {
       const stragglers = gridCells.get(cellA)!
       for (const nid of stragglers) {
         nodeToCell.set(nid, cellB)
@@ -311,7 +318,7 @@ export function computeClusters(
   const cellGroups = uf.getGroups()
 
   // Now collect node IDs per cluster group
-  let clusterNodeLists: string[][] = []
+  const clusterNodeLists: string[][] = []
   for (const cellKeys of cellGroups.values()) {
     const nodeIds: string[] = []
     for (const key of cellKeys) {
@@ -339,10 +346,7 @@ export function computeClusters(
       }
     }
     // Merge j into i
-    clusterNodeLists[mergeI] = [
-      ...clusterNodeLists[mergeI],
-      ...clusterNodeLists[mergeJ]
-    ]
+    clusterNodeLists[mergeI] = [...clusterNodeLists[mergeI], ...clusterNodeLists[mergeJ]]
     clusterNodeLists.splice(mergeJ, 1)
   }
 
@@ -411,7 +415,7 @@ export function computeClusters(
       centroid: metadata.centroid,
       bounds: metadata.bounds,
       dominantType: metadata.dominantType,
-      summary: metadata.summary
+      summary: metadata.summary,
     })
   }
 

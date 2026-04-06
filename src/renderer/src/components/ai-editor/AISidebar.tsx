@@ -8,22 +8,14 @@
  * Shows conversation history, supports @mentions for nodes, and can apply plans to canvas.
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react'
-import {
-  X,
-  Send,
-  Trash2,
-  Sparkles,
-  ChevronDown,
-  ChevronUp,
-  Play
-} from 'lucide-react'
+import type { ConversationMessage, MutationPlan } from '@shared/types'
+import { ChevronDown, ChevronUp, Play, Send, Sparkles, Trash2, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useAIEditorStore } from '../../stores/aiEditorStore'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
 import { buildAIEditorContext } from '../../utils/contextBuilder'
 import { executeMutationPlan } from '../../utils/mutationExecutor'
 import { ScrollArea } from '../ui'
-import type { ConversationMessage, MutationPlan } from '@shared/types'
 
 interface AISidebarProps {
   isOpen: boolean
@@ -79,7 +71,7 @@ function AISidebarComponent({ isOpen, onClose }: AISidebarProps): JSX.Element | 
     // Add user message
     addToConversation({
       role: 'user',
-      content: message
+      content: message,
     })
 
     try {
@@ -95,9 +87,9 @@ function AISidebarComponent({ isOpen, onClose }: AISidebarProps): JSX.Element | 
         viewportBounds: { width: window.innerWidth, height: window.innerHeight },
         workspaceSettings: {
           defaultProvider: 'anthropic',
-          themeMode: themeSettings.mode
+          themeMode: themeSettings.mode,
         },
-        includeEnhancedAnalysis: true
+        includeEnhancedAnalysis: true,
       })
 
       // Generate plan using AI
@@ -110,31 +102,42 @@ function AISidebarComponent({ isOpen, onClose }: AISidebarProps): JSX.Element | 
       if (error) {
         addToConversation({
           role: 'assistant',
-          content: `I encountered an error: ${error}. Please try rephrasing your request.`
+          content: `I encountered an error: ${error}. Please try rephrasing your request.`,
         })
       } else if (plan) {
         const opCount = plan.operations.length
-        const reasoning = plan.reasoning || 'Here\'s what I found based on your request.'
+        const reasoning = plan.reasoning || "Here's what I found based on your request."
         addToConversation({
           role: 'assistant',
           content: reasoning,
-          plan: plan
+          plan: plan,
         })
       } else {
         addToConversation({
           role: 'assistant',
-          content: 'I processed your request but no specific actions were generated. Try being more specific about what you\'d like to do.'
+          content:
+            "I processed your request but no specific actions were generated. Try being more specific about what you'd like to do.",
         })
       }
     } catch (error) {
       addToConversation({
         role: 'assistant',
-        content: `Something went wrong: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`
+        content: `Something went wrong: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
       })
     } finally {
       setIsSubmitting(false)
     }
-  }, [inputValue, isSubmitting, addToConversation, generatePlan, nodes, edges, selectedNodeIds, viewport, themeSettings.mode])
+  }, [
+    inputValue,
+    isSubmitting,
+    addToConversation,
+    generatePlan,
+    nodes,
+    edges,
+    selectedNodeIds,
+    viewport,
+    themeSettings.mode,
+  ])
 
   // Handle key down
   const handleKeyDown = useCallback(
@@ -147,7 +150,7 @@ function AISidebarComponent({ isOpen, onClose }: AISidebarProps): JSX.Element | 
         onClose()
       }
     },
-    [handleSubmit, onClose]
+    [handleSubmit, onClose],
   )
 
   // Toggle plan expansion
@@ -176,7 +179,7 @@ function AISidebarComponent({ isOpen, onClose }: AISidebarProps): JSX.Element | 
         const node = nodes.find(
           (n) =>
             n.data.title?.toLowerCase().includes(name.toLowerCase()) ||
-            n.id.toLowerCase().includes(name.toLowerCase())
+            n.id.toLowerCase().includes(name.toLowerCase()),
         )
         if (node) {
           mentionedNodes.push(node.id)
@@ -186,17 +189,13 @@ function AISidebarComponent({ isOpen, onClose }: AISidebarProps): JSX.Element | 
       })
       return { text: processedText, mentionedNodes }
     },
-    [nodes]
+    [nodes],
   )
 
   if (!isOpen) return null
 
   return (
-    <div
-      className="ai-sidebar"
-      role="complementary"
-      aria-label="AI Assistant sidebar"
-    >
+    <div className="ai-sidebar" role="complementary" aria-label="AI Assistant sidebar">
       {/* Header */}
       <div className="sidebar-header">
         <div className="header-title">
@@ -225,82 +224,85 @@ function AISidebarComponent({ isOpen, onClose }: AISidebarProps): JSX.Element | 
       </div>
 
       {/* Messages */}
-      <ScrollArea className="messages-container" role="log" aria-label="Conversation history" aria-live="polite">
+      <ScrollArea
+        className="messages-container"
+        role="log"
+        aria-label="Conversation history"
+        aria-live="polite"
+      >
         <div ref={messagesRef}>
-        {conversationHistory.length === 0 ? (
-          <div className="empty-state">
-            <Sparkles className="empty-icon" />
-            <p className="empty-title">Start a conversation</p>
-            <p className="empty-description">
-              Ask questions about your workspace, generate content, or get AI assistance.
-            </p>
-            <p className="empty-hint">
-              Tip: Use @nodename to reference specific nodes
-            </p>
-          </div>
-        ) : (
-          conversationHistory.map((msg, index) => (
-            <div key={index} className={`message ${msg.role}`}>
-              <div className="message-header">
-                <span className="message-role">{msg.role === 'user' ? 'You' : 'AI'}</span>
-                <span className="message-time">
-                  {new Date(msg.timestamp).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </span>
-              </div>
-              <div className="message-content">{msg.content}</div>
-              {msg.plan && (
-                <div className="message-plan">
-                  <button
-                    className="plan-toggle"
-                    onClick={() => togglePlanExpansion(index)}
-                    aria-expanded={expandedPlans.has(index)}
-                    aria-label={`${expandedPlans.has(index) ? 'Collapse' : 'Expand'} plan details`}
-                  >
-                    {expandedPlans.has(index) ? (
-                      <ChevronUp className="toggle-icon" />
-                    ) : (
-                      <ChevronDown className="toggle-icon" />
-                    )}
-                    <span>
-                      {msg.plan.operations.length} operation
-                      {msg.plan.operations.length !== 1 ? 's' : ''}
-                    </span>
-                  </button>
-                  {expandedPlans.has(index) && (
-                    <div className="plan-details">
-                      {msg.plan.operations.map((op, opIndex) => (
-                        <div key={opIndex} className="plan-op">
-                          <span className="op-type">{op.op}</span>
-                        </div>
-                      ))}
-                      <button
-                        className="apply-plan-btn"
-                        aria-label="Apply plan to canvas"
-                        onClick={() => handleApplyPlan(msg.plan!)}
-                      >
-                        <Play className="apply-icon" />
-                        Apply to Canvas
-                      </button>
-                    </div>
-                  )}
+          {conversationHistory.length === 0 ? (
+            <div className="empty-state">
+              <Sparkles className="empty-icon" />
+              <p className="empty-title">Start a conversation</p>
+              <p className="empty-description">
+                Ask questions about your workspace, generate content, or get AI assistance.
+              </p>
+              <p className="empty-hint">Tip: Use @nodename to reference specific nodes</p>
+            </div>
+          ) : (
+            conversationHistory.map((msg, index) => (
+              <div key={index} className={`message ${msg.role}`}>
+                <div className="message-header">
+                  <span className="message-role">{msg.role === 'user' ? 'You' : 'AI'}</span>
+                  <span className="message-time">
+                    {new Date(msg.timestamp).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
                 </div>
-              )}
-            </div>
-          ))
-        )}
+                <div className="message-content">{msg.content}</div>
+                {msg.plan && (
+                  <div className="message-plan">
+                    <button
+                      className="plan-toggle"
+                      onClick={() => togglePlanExpansion(index)}
+                      aria-expanded={expandedPlans.has(index)}
+                      aria-label={`${expandedPlans.has(index) ? 'Collapse' : 'Expand'} plan details`}
+                    >
+                      {expandedPlans.has(index) ? (
+                        <ChevronUp className="toggle-icon" />
+                      ) : (
+                        <ChevronDown className="toggle-icon" />
+                      )}
+                      <span>
+                        {msg.plan.operations.length} operation
+                        {msg.plan.operations.length !== 1 ? 's' : ''}
+                      </span>
+                    </button>
+                    {expandedPlans.has(index) && (
+                      <div className="plan-details">
+                        {msg.plan.operations.map((op, opIndex) => (
+                          <div key={opIndex} className="plan-op">
+                            <span className="op-type">{op.op}</span>
+                          </div>
+                        ))}
+                        <button
+                          className="apply-plan-btn"
+                          aria-label="Apply plan to canvas"
+                          onClick={() => handleApplyPlan(msg.plan!)}
+                        >
+                          <Play className="apply-icon" />
+                          Apply to Canvas
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
 
-        {isSubmitting && (
-          <div className="message assistant loading">
-            <div className="loading-dots">
-              <span></span>
-              <span></span>
-              <span></span>
+          {isSubmitting && (
+            <div className="message assistant loading">
+              <div className="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
         </div>
       </ScrollArea>
 

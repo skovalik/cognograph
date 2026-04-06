@@ -9,16 +9,17 @@
  * receives its own native props via effectRegistry.ts.
  */
 
-import React, { Component, memo, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { AmbientEffectSettings } from '@shared/types'
-import { useReducedMotion } from '../../hooks/useReducedMotion'
-import { getGPUTier } from '../../utils/gpuDetection'
-import { useProgramStore, selectReduceMotion } from '../../stores/programStore'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { useAdaptiveQuality } from '../../hooks/useAdaptiveQuality'
+import type React from 'react'
+import { Component, memo, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { AdaptiveQualityState } from '../../hooks/useAdaptiveQuality'
+import { useAdaptiveQuality } from '../../hooks/useAdaptiveQuality'
+import { useReducedMotion } from '../../hooks/useReducedMotion'
+import { selectReduceMotion, useProgramStore } from '../../stores/programStore'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { getGPUTier } from '../../utils/gpuDetection'
 import { EFFECT_REGISTRY } from './effectRegistry'
-import { hexToRgbFloat, generatePaletteFromAccents, deriveColor } from './utils/colorConvert'
+import { deriveColor, generatePaletteFromAccents, hexToRgbFloat } from './utils/colorConvert'
 
 // ---------------------------------------------------------------------------
 // ErrorBoundary — catches WebGL/OGL crashes in ambient effects
@@ -85,7 +86,7 @@ function buildEffectProps(
   userOverrides: Record<string, unknown>,
   themeBaseColor: string,
   themeSecondaryColor?: string,
-  isDark = true
+  isDark = true,
 ): Record<string, unknown> {
   // Start with registry defaults
   const props: Record<string, unknown> = { ...entry.defaultProps }
@@ -103,7 +104,9 @@ function buildEffectProps(
       if (schema.colorFormat === 'hex') {
         props[propKey] = generatePaletteFromAccents(themeBaseColor, themeSecondaryColor, count)
       } else {
-        props[propKey] = generatePaletteFromAccents(themeBaseColor, themeSecondaryColor, count).map(h => hexToRgbFloat(h))
+        props[propKey] = generatePaletteFromAccents(themeBaseColor, themeSecondaryColor, count).map(
+          (h) => hexToRgbFloat(h),
+        )
       }
     } else if (schema.colorFormat === 'rgb-float') {
       props[propKey] = hexToRgbFloat(themeBaseColor)
@@ -144,17 +147,19 @@ function AmbientEffectLayerComponent({
 }: AmbientEffectLayerProps): JSX.Element | null {
   const containerRef = useRef<HTMLDivElement>(null)
   const gpuTierRef = useRef(getGPUTier())
-  const [dimensions, setDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
+  const [dimensions, setDimensions] = useState<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  })
 
   // Check reduced motion preference
   const osReducedMotion = useReducedMotion()
   const appReduceMotionPref = useProgramStore(selectReduceMotion)
   const shouldReduceMotion =
-    appReduceMotionPref === 'always' ||
-    (appReduceMotionPref === 'system' && osReducedMotion)
+    appReduceMotionPref === 'always' || (appReduceMotionPref === 'system' && osReducedMotion)
 
   // Zoom performance tier — disable effects at minimal, cap quality at reduced
-  const zoomPerfTier = useWorkspaceStore(s => s.zoomPerfTier) ?? 'full'
+  const zoomPerfTier = useWorkspaceStore((s) => s.zoomPerfTier) ?? 'full'
 
   // Track container dimensions with ResizeObserver
   useEffect(() => {
@@ -208,7 +213,7 @@ function AmbientEffectLayerComponent({
   const bloomIntensity = gpuTierRef.current.tier === 'medium' ? Math.min(rawBloom, 30) : rawBloom
   const showBloom = bloomIntensity > 0 && shouldRenderEffect
   const t = bloomIntensity / 100
-  const bloomOpacity = t * (0.6 + 0.6 * t)   // 0→0, 50→0.45, 100→1.2 (clamped by CSS)
+  const bloomOpacity = t * (0.6 + 0.6 * t) // 0→0, 50→0.45, 100→1.2 (clamped by CSS)
   const bloomBlurPx = Math.round(4 + t * t * 24) // 0→4px, 50→10px, 100→28px
 
   // Build final props for the active effect
@@ -221,13 +226,19 @@ function AmbientEffectLayerComponent({
   }, [settings.effect, settings.effectProps, effectColor, accentSecondary, isDark])
 
   // Cap quality at reduced zoom tier — create a ref wrapper that limits resolutionScale
-  const cappedQualityRef = useRef<AdaptiveQualityState>({ resolutionScale: 1, frameSkip: false, shouldRender: true, dprCap: 1 })
+  const cappedQualityRef = useRef<AdaptiveQualityState>({
+    resolutionScale: 1,
+    frameSkip: false,
+    shouldRender: true,
+    dprCap: 1,
+  })
   useEffect(() => {
     if (qualityRef.current) {
       const src = qualityRef.current
-      cappedQualityRef.current = zoomPerfTier === 'reduced'
-        ? { ...src, resolutionScale: Math.min(src.resolutionScale, 0.5) }
-        : src
+      cappedQualityRef.current =
+        zoomPerfTier === 'reduced'
+          ? { ...src, resolutionScale: Math.min(src.resolutionScale, 0.5) }
+          : src
     }
   })
 
@@ -279,11 +290,7 @@ function AmbientEffectLayerComponent({
       )}
 
       {showBloom && zoomPerfTier === 'full' && (
-        <BloomLayer
-          bloomBlurPx={bloomBlurPx}
-          bloomOpacity={bloomOpacity}
-          qualityRef={qualityRef}
-        />
+        <BloomLayer bloomBlurPx={bloomBlurPx} bloomOpacity={bloomOpacity} qualityRef={qualityRef} />
       )}
     </div>
   )
@@ -320,7 +327,9 @@ function BloomLayerComponent({
       }
 
       const container = bloomCanvas.parentElement
-      const effectCanvas = container?.querySelector('canvas:not([data-bloom])') as HTMLCanvasElement | null
+      const effectCanvas = container?.querySelector(
+        'canvas:not([data-bloom])',
+      ) as HTMLCanvasElement | null
       if (!effectCanvas) {
         animId = requestAnimationFrame(copyFrame)
         return

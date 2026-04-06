@@ -13,8 +13,8 @@
  * - Light mode: Tailwind 600-700 shades on #f1f5f9 background (4.5:1+ contrast)
  */
 
-import type { ITheme } from '@xterm/xterm'
 import type { ThemeMode } from '@shared/types'
+import type { ITheme } from '@xterm/xterm'
 
 // ---------------------------------------------------------------------------
 // Dark Mode Terminal Theme
@@ -50,28 +50,28 @@ export const TERMINAL_THEME_DARK: ITheme = {
 // ---------------------------------------------------------------------------
 
 export const TERMINAL_THEME_LIGHT: ITheme = {
-  background: '#f1f5f9',        // slate-100 — matches --terminal-bg light
-  foreground: '#334155',         // slate-700 — matches --terminal-text light
-  cursor: '#6d28d9',             // violet-700 — darker cursor for light bg
-  cursorAccent: '#f1f5f9',       // matches background
+  background: '#f1f5f9', // slate-100 — matches --terminal-bg light
+  foreground: '#334155', // slate-700 — matches --terminal-text light
+  cursor: '#6d28d9', // violet-700 — darker cursor for light bg
+  cursorAccent: '#f1f5f9', // matches background
   selectionBackground: 'rgba(109, 40, 217, 0.2)',
   selectionForeground: undefined,
-  black: '#1e293b',              // slate-800 — visible on light bg
-  red: '#dc2626',                // red-600
-  green: '#16a34a',              // green-600
-  yellow: '#ca8a04',             // yellow-600 — darkened for light bg readability
-  blue: '#2563eb',               // blue-600
-  magenta: '#9333ea',            // purple-600
-  cyan: '#0891b2',               // cyan-600
-  white: '#f1f5f9',              // slate-100 — same as background (intentional: ANSI white on light bg is invisible by design, matching typical light terminal behavior)
-  brightBlack: '#64748b',        // slate-500
-  brightRed: '#b91c1c',          // red-700
-  brightGreen: '#15803d',        // green-700
-  brightYellow: '#a16207',       // yellow-700
-  brightBlue: '#1d4ed8',         // blue-700
-  brightMagenta: '#7c3aed',      // violet-600
-  brightCyan: '#0e7490',         // cyan-700
-  brightWhite: '#334155',        // slate-700 — readable, not blinding white
+  black: '#1e293b', // slate-800 — visible on light bg
+  red: '#dc2626', // red-600
+  green: '#16a34a', // green-600
+  yellow: '#ca8a04', // yellow-600 — darkened for light bg readability
+  blue: '#2563eb', // blue-600
+  magenta: '#9333ea', // purple-600
+  cyan: '#0891b2', // cyan-600
+  white: '#f1f5f9', // slate-100 — same as background (intentional: ANSI white on light bg is invisible by design, matching typical light terminal behavior)
+  brightBlack: '#64748b', // slate-500
+  brightRed: '#b91c1c', // red-700
+  brightGreen: '#15803d', // green-700
+  brightYellow: '#a16207', // yellow-700
+  brightBlue: '#1d4ed8', // blue-700
+  brightMagenta: '#7c3aed', // violet-600
+  brightCyan: '#0e7490', // cyan-700
+  brightWhite: '#334155', // slate-700 — readable, not blinding white
 }
 
 // ---------------------------------------------------------------------------
@@ -82,10 +82,7 @@ export const TERMINAL_THEME_LIGHT: ITheme = {
  * Returns the terminal theme for the given mode, with optional accent color
  * overrides for cursor and selection.
  */
-export function getTerminalTheme(
-  mode: ThemeMode,
-  accentColor?: string
-): ITheme {
+export function getTerminalTheme(mode: ThemeMode, accentColor?: string): ITheme {
   const base = mode === 'light' ? TERMINAL_THEME_LIGHT : TERMINAL_THEME_DARK
   // Always spread — xterm.js uses reference comparison for theme objects.
   // Returning the constant directly and reassigning it would be a no-op repaint.
@@ -104,5 +101,5 @@ export function getTerminalTheme(
 /** Tooltip text color for the "Ctrl+` to return to canvas" hint. */
 export const TERMINAL_TOOLTIP_COLOR = {
   dark: 'rgba(224, 224, 224, 0.4)',
-  light: 'rgba(51, 65, 85, 0.5)',    // slate-700 at 50%
+  light: 'rgba(51, 65, 85, 0.5)', // slate-700 at 50%
 } as const

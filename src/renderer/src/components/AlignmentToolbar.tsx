@@ -8,31 +8,31 @@
  * Provides alignment and distribution actions for selected nodes.
  */
 
-import { memo, useMemo, useState } from 'react'
 import {
-  AlignStartVertical,
-  AlignCenterVertical,
-  AlignEndVertical,
-  AlignStartHorizontal,
   AlignCenterHorizontal,
+  AlignCenterVertical,
   AlignEndHorizontal,
+  AlignEndVertical,
   AlignHorizontalSpaceAround,
+  AlignStartHorizontal,
+  AlignStartVertical,
   AlignVerticalSpaceAround,
-  Grid3x3,
-  LayoutGrid,
-  ArrowDownAZ,
-  Link,
-  Unlink,
-  Network,
-  ChevronDown,
   ArrowDown,
+  ArrowDownAZ,
+  ArrowLeft,
   ArrowRight,
   ArrowUp,
-  ArrowLeft,
-  Circle,
   Atom,
-  Check
+  Check,
+  ChevronDown,
+  Circle,
+  Grid3x3,
+  LayoutGrid,
+  Link,
+  Network,
+  Unlink,
 } from 'lucide-react'
+import { memo, useMemo, useState } from 'react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import type { SpacingPreset } from '../utils/layoutAlgorithms'
 
@@ -70,21 +70,23 @@ function AlignmentToolbarComponent(): JSX.Element | null {
 
   const canDistribute = selectedNodeIds.length >= 3
 
-  const buttonClass = 'p-1.5 rounded transition-colors hover:bg-[var(--surface-panel-secondary)] text-[var(--text-secondary)]'
+  const buttonClass =
+    'p-1.5 rounded transition-colors hover:bg-[var(--surface-panel-secondary)] text-[var(--text-secondary)]'
 
   const disabledClass = 'opacity-30 cursor-not-allowed'
 
   return (
     <div
-      className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 backdrop-blur-sm rounded-lg p-1.5 border shadow-lg"
+      className="absolute top-[96px] left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 backdrop-blur-sm rounded-lg p-1.5 border shadow-lg"
       style={{
         backgroundColor: 'color-mix(in srgb, var(--gui-panel-bg-secondary) 90%, transparent)',
-        borderColor: 'var(--gui-border)'
+        borderColor: 'var(--gui-border)',
       }}
     >
       {/* Horizontal Alignment */}
       <div className="flex items-center gap-0.5">
         <button
+          type="button"
           onClick={() => alignNodes(selectedNodeIds, 'left')}
           className={buttonClass}
           title="Align left edges"
@@ -92,6 +94,7 @@ function AlignmentToolbarComponent(): JSX.Element | null {
           <AlignStartVertical className="w-4 h-4" />
         </button>
         <button
+          type="button"
           onClick={() => alignNodes(selectedNodeIds, 'center')}
           className={buttonClass}
           title="Align horizontal centers"
@@ -99,6 +102,7 @@ function AlignmentToolbarComponent(): JSX.Element | null {
           <AlignCenterVertical className="w-4 h-4" />
         </button>
         <button
+          type="button"
           onClick={() => alignNodes(selectedNodeIds, 'right')}
           className={buttonClass}
           title="Align right edges"
@@ -107,14 +111,12 @@ function AlignmentToolbarComponent(): JSX.Element | null {
         </button>
       </div>
 
-      <div
-        className="w-px h-5 mx-1"
-        style={{ backgroundColor: 'var(--gui-border-strong)' }}
-      />
+      <div className="w-px h-5 mx-1" style={{ backgroundColor: 'var(--gui-border-strong)' }} />
 
       {/* Vertical Alignment */}
       <div className="flex items-center gap-0.5">
         <button
+          type="button"
           onClick={() => alignNodes(selectedNodeIds, 'top')}
           className={buttonClass}
           title="Align top edges"
@@ -122,6 +124,7 @@ function AlignmentToolbarComponent(): JSX.Element | null {
           <AlignStartHorizontal className="w-4 h-4" />
         </button>
         <button
+          type="button"
           onClick={() => alignNodes(selectedNodeIds, 'middle')}
           className={buttonClass}
           title="Align vertical centers"
@@ -129,6 +132,7 @@ function AlignmentToolbarComponent(): JSX.Element | null {
           <AlignCenterHorizontal className="w-4 h-4" />
         </button>
         <button
+          type="button"
           onClick={() => alignNodes(selectedNodeIds, 'bottom')}
           className={buttonClass}
           title="Align bottom edges"
@@ -137,14 +141,12 @@ function AlignmentToolbarComponent(): JSX.Element | null {
         </button>
       </div>
 
-      <div
-        className="w-px h-5 mx-1"
-        style={{ backgroundColor: 'var(--gui-border-strong)' }}
-      />
+      <div className="w-px h-5 mx-1" style={{ backgroundColor: 'var(--gui-border-strong)' }} />
 
       {/* Distribution */}
       <div className="flex items-center gap-0.5">
         <button
+          type="button"
           onClick={() => canDistribute && distributeNodes(selectedNodeIds, 'horizontal')}
           className={`${buttonClass} ${!canDistribute ? disabledClass : ''}`}
           title={canDistribute ? 'Distribute horizontally' : 'Select 3+ nodes to distribute'}
@@ -153,6 +155,7 @@ function AlignmentToolbarComponent(): JSX.Element | null {
           <AlignHorizontalSpaceAround className="w-4 h-4" />
         </button>
         <button
+          type="button"
           onClick={() => canDistribute && distributeNodes(selectedNodeIds, 'vertical')}
           className={`${buttonClass} ${!canDistribute ? disabledClass : ''}`}
           title={canDistribute ? 'Distribute vertically' : 'Select 3+ nodes to distribute'}
@@ -162,14 +165,12 @@ function AlignmentToolbarComponent(): JSX.Element | null {
         </button>
       </div>
 
-      <div
-        className="w-px h-5 mx-1"
-        style={{ backgroundColor: 'var(--gui-border-strong)' }}
-      />
+      <div className="w-px h-5 mx-1" style={{ backgroundColor: 'var(--gui-border-strong)' }} />
 
       {/* Grid Actions */}
       <div className="flex items-center gap-0.5">
         <button
+          type="button"
           onClick={() => snapToGrid(selectedNodeIds)}
           className={buttonClass}
           title="Snap to grid (20px)"
@@ -177,6 +178,7 @@ function AlignmentToolbarComponent(): JSX.Element | null {
           <Grid3x3 className="w-4 h-4" />
         </button>
         <button
+          type="button"
           onClick={() => arrangeInGrid(selectedNodeIds)}
           className={buttonClass}
           title="Arrange in grid"
@@ -184,6 +186,7 @@ function AlignmentToolbarComponent(): JSX.Element | null {
           <LayoutGrid className="w-4 h-4" />
         </button>
         <button
+          type="button"
           onClick={() => sortByType(selectedNodeIds)}
           className={buttonClass}
           title="Sort by type"
@@ -192,14 +195,12 @@ function AlignmentToolbarComponent(): JSX.Element | null {
         </button>
       </div>
 
-      <div
-        className="w-px h-5 mx-1"
-        style={{ backgroundColor: 'var(--gui-border-strong)' }}
-      />
+      <div className="w-px h-5 mx-1" style={{ backgroundColor: 'var(--gui-border-strong)' }} />
 
       {/* Link/Unlink */}
       <div className="flex items-center gap-0.5">
         <button
+          type="button"
           onClick={() => linkSelectedNodes(selectedNodeIds)}
           className={buttonClass}
           title="Link nodes in chain (by position)"
@@ -207,23 +208,26 @@ function AlignmentToolbarComponent(): JSX.Element | null {
           <Link className="w-4 h-4" />
         </button>
         <button
+          type="button"
           onClick={() => unlinkSelectedNodes(selectedNodeIds)}
           className={`${buttonClass} ${!hasEdgesBetweenSelected ? disabledClass : ''}`}
-          title={hasEdgesBetweenSelected ? 'Remove links between selected' : 'No links between selected nodes'}
+          title={
+            hasEdgesBetweenSelected
+              ? 'Remove links between selected'
+              : 'No links between selected nodes'
+          }
           disabled={!hasEdgesBetweenSelected}
         >
           <Unlink className="w-4 h-4" />
         </button>
       </div>
 
-      <div
-        className="w-px h-5 mx-1"
-        style={{ backgroundColor: 'var(--gui-border-strong)' }}
-      />
+      <div className="w-px h-5 mx-1" style={{ backgroundColor: 'var(--gui-border-strong)' }} />
 
       {/* Auto-Layout */}
       <div className="relative">
         <button
+          type="button"
           onClick={() => setShowLayoutMenu(!showLayoutMenu)}
           className={`${buttonClass} flex items-center gap-0.5`}
           title="Auto-arrange layout"
@@ -238,35 +242,54 @@ function AlignmentToolbarComponent(): JSX.Element | null {
             className="absolute bottom-full mb-2 left-0 rounded-lg border shadow-xl py-1 min-w-[180px]"
             style={{
               backgroundColor: 'var(--gui-panel-bg-secondary)',
-              borderColor: 'var(--gui-border)'
+              borderColor: 'var(--gui-border)',
             }}
           >
-            <div className="px-3 py-1.5 text-xs font-medium" style={{ color: 'var(--gui-text-muted)' }}>
+            <div
+              className="px-3 py-1.5 text-xs font-medium"
+              style={{ color: 'var(--text-secondary)' }}
+            >
               Hierarchical
             </div>
             <button
-              onClick={() => { applyAutoLayout('hierarchical-down', selectedNodeIds, currentSpacing); setShowLayoutMenu(false) }}
+              type="button"
+              onClick={() => {
+                applyAutoLayout('hierarchical-down', selectedNodeIds, currentSpacing)
+                setShowLayoutMenu(false)
+              }}
               className="w-full px-3 py-1.5 text-sm text-left flex items-center gap-2 hover:bg-[var(--surface-panel-secondary)]"
               style={{ color: 'var(--gui-text-primary)' }}
             >
               <ArrowDown className="w-4 h-4" /> Tree (Down)
             </button>
             <button
-              onClick={() => { applyAutoLayout('hierarchical-right', selectedNodeIds, currentSpacing); setShowLayoutMenu(false) }}
+              type="button"
+              onClick={() => {
+                applyAutoLayout('hierarchical-right', selectedNodeIds, currentSpacing)
+                setShowLayoutMenu(false)
+              }}
               className="w-full px-3 py-1.5 text-sm text-left flex items-center gap-2 hover:bg-[var(--surface-panel-secondary)]"
               style={{ color: 'var(--gui-text-primary)' }}
             >
               <ArrowRight className="w-4 h-4" /> Tree (Right)
             </button>
             <button
-              onClick={() => { applyAutoLayout('hierarchical-up', selectedNodeIds, currentSpacing); setShowLayoutMenu(false) }}
+              type="button"
+              onClick={() => {
+                applyAutoLayout('hierarchical-up', selectedNodeIds, currentSpacing)
+                setShowLayoutMenu(false)
+              }}
               className="w-full px-3 py-1.5 text-sm text-left flex items-center gap-2 hover:bg-[var(--surface-panel-secondary)]"
               style={{ color: 'var(--gui-text-primary)' }}
             >
               <ArrowUp className="w-4 h-4" /> Tree (Up)
             </button>
             <button
-              onClick={() => { applyAutoLayout('hierarchical-left', selectedNodeIds, currentSpacing); setShowLayoutMenu(false) }}
+              type="button"
+              onClick={() => {
+                applyAutoLayout('hierarchical-left', selectedNodeIds, currentSpacing)
+                setShowLayoutMenu(false)
+              }}
               className="w-full px-3 py-1.5 text-sm text-left flex items-center gap-2 hover:bg-[var(--surface-panel-secondary)]"
               style={{ color: 'var(--gui-text-primary)' }}
             >
@@ -275,18 +298,29 @@ function AlignmentToolbarComponent(): JSX.Element | null {
 
             <div className="my-1 border-t" style={{ borderColor: 'var(--gui-border)' }} />
 
-            <div className="px-3 py-1.5 text-xs font-medium" style={{ color: 'var(--gui-text-muted)' }}>
+            <div
+              className="px-3 py-1.5 text-xs font-medium"
+              style={{ color: 'var(--text-secondary)' }}
+            >
               Other
             </div>
             <button
-              onClick={() => { applyAutoLayout('force', selectedNodeIds, currentSpacing); setShowLayoutMenu(false) }}
+              type="button"
+              onClick={() => {
+                applyAutoLayout('force', selectedNodeIds, currentSpacing)
+                setShowLayoutMenu(false)
+              }}
               className="w-full px-3 py-1.5 text-sm text-left flex items-center gap-2 hover:bg-[var(--surface-panel-secondary)]"
               style={{ color: 'var(--gui-text-primary)' }}
             >
               <Atom className="w-4 h-4" /> Force-directed
             </button>
             <button
-              onClick={() => { applyAutoLayout('circular', selectedNodeIds, currentSpacing); setShowLayoutMenu(false) }}
+              type="button"
+              onClick={() => {
+                applyAutoLayout('circular', selectedNodeIds, currentSpacing)
+                setShowLayoutMenu(false)
+              }}
               className="w-full px-3 py-1.5 text-sm text-left flex items-center gap-2 hover:bg-[var(--surface-panel-secondary)]"
               style={{ color: 'var(--gui-text-primary)' }}
             >
@@ -296,31 +330,49 @@ function AlignmentToolbarComponent(): JSX.Element | null {
             <div className="my-1 border-t" style={{ borderColor: 'var(--gui-border)' }} />
 
             {/* Spacing Presets */}
-            <div className="px-3 py-1.5 text-xs font-medium" style={{ color: 'var(--gui-text-muted)' }}>
+            <div
+              className="px-3 py-1.5 text-xs font-medium"
+              style={{ color: 'var(--text-secondary)' }}
+            >
               Spacing
             </div>
             <button
+              type="button"
               onClick={() => updateThemeSettings({ layoutSpacing: 'narrow' })}
               className="w-full px-3 py-1.5 text-sm text-left flex items-center gap-2 hover:bg-[var(--surface-panel-secondary)]"
               style={{ color: 'var(--gui-text-primary)' }}
             >
-              {currentSpacing === 'narrow' ? <Check className="w-4 h-4" /> : <div className="w-4 h-4" />}
+              {currentSpacing === 'narrow' ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <div className="w-4 h-4" />
+              )}
               Narrow
             </button>
             <button
+              type="button"
               onClick={() => updateThemeSettings({ layoutSpacing: 'default' })}
               className="w-full px-3 py-1.5 text-sm text-left flex items-center gap-2 hover:bg-[var(--surface-panel-secondary)]"
               style={{ color: 'var(--gui-text-primary)' }}
             >
-              {currentSpacing === 'default' ? <Check className="w-4 h-4" /> : <div className="w-4 h-4" />}
+              {currentSpacing === 'default' ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <div className="w-4 h-4" />
+              )}
               Default
             </button>
             <button
+              type="button"
               onClick={() => updateThemeSettings({ layoutSpacing: 'wide' })}
               className="w-full px-3 py-1.5 text-sm text-left flex items-center gap-2 hover:bg-[var(--surface-panel-secondary)]"
               style={{ color: 'var(--gui-text-primary)' }}
             >
-              {currentSpacing === 'wide' ? <Check className="w-4 h-4" /> : <div className="w-4 h-4" />}
+              {currentSpacing === 'wide' ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <div className="w-4 h-4" />
+              )}
               Wide
             </button>
           </div>
@@ -332,7 +384,7 @@ function AlignmentToolbarComponent(): JSX.Element | null {
         className="ml-1 px-2 py-0.5 rounded text-xs"
         style={{
           backgroundColor: 'var(--gui-accent-primary)',
-          color: 'white'
+          color: 'white',
         }}
       >
         {selectedNodeIds.length}

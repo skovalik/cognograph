@@ -23,7 +23,7 @@ const EXTRACTION_THRESHOLDS = {
   mermaid: { minLines: 3, minChars: 50 },
   html: { minLines: 5, minChars: 200 },
   json: { minLines: 5, minChars: 100 },
-  csv: { minLines: 5, minChars: 100 }
+  csv: { minLines: 5, minChars: 100 },
 }
 
 /**
@@ -34,7 +34,7 @@ const LANGUAGE_TO_TYPE: Record<string, ArtifactContentType> = {
   html: 'html',
   svg: 'svg',
   json: 'json',
-  csv: 'csv'
+  csv: 'csv',
 }
 
 /**
@@ -73,7 +73,7 @@ export function detectArtifacts(response: string): DetectedArtifact[] {
         title,
         content: content.trim(),
         startIndex: match.index,
-        endIndex: match.index + match[0].length
+        endIndex: match.index + match[0].length,
       })
     }
   }
@@ -87,7 +87,7 @@ export function detectArtifacts(response: string): DetectedArtifact[] {
 function generateArtifactTitle(
   content: string,
   contentType: ArtifactContentType,
-  language?: string
+  language?: string,
 ): string {
   // Try to find a function/class/component name
   if (contentType === 'code') {
@@ -104,7 +104,9 @@ function generateArtifactTitle(
     }
 
     // React component
-    const componentMatch = content.match(/(?:export\s+)?(?:default\s+)?function\s+(\w+Component|\w+)/)
+    const componentMatch = content.match(
+      /(?:export\s+)?(?:default\s+)?function\s+(\w+Component|\w+)/,
+    )
     if (componentMatch?.[1]) {
       return `${componentMatch[1]}${language ? `.${language}` : ''}`
     }
@@ -138,7 +140,7 @@ function generateArtifactTitle(
     text: 'Text content',
     csv: 'CSV data',
     image: 'Image',
-    custom: 'Custom artifact'
+    custom: 'Custom artifact',
   }
 
   return defaults[contentType] || 'Artifact'
@@ -156,7 +158,7 @@ export function hasExtractableArtifacts(content: string): boolean {
  */
 export function extractAndReplace(
   content: string,
-  artifacts: DetectedArtifact[]
+  artifacts: DetectedArtifact[],
 ): { content: string; artifacts: DetectedArtifact[] } {
   // Sort by startIndex descending so we can replace from end to start
   const sorted = [...artifacts].sort((a, b) => b.startIndex - a.startIndex)

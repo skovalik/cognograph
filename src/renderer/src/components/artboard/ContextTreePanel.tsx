@@ -12,18 +12,19 @@
  * Phase 3B artboard panel.
  */
 
-import React, { memo, useCallback, useMemo } from 'react'
 import {
-  MessageSquare,
-  FolderKanban,
-  StickyNote,
   CheckSquare,
   Code,
-  Globe,
   FileText,
-  Zap,
+  FolderKanban,
+  Globe,
+  MessageSquare,
+  StickyNote,
   Workflow,
+  Zap,
 } from 'lucide-react'
+import type React from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
 import type { ContextTraversalNode } from '../../utils/contextCache'
 
@@ -66,9 +67,7 @@ export interface ContextTreePanelProps {
 }
 
 function ContextTreePanelComponent({ nodeId, className }: ContextTreePanelProps): JSX.Element {
-  const getContextTraversalForNode = useWorkspaceStore(
-    (s) => s.getContextTraversalForNode,
-  )
+  const getContextTraversalForNode = useWorkspaceStore((s) => s.getContextTraversalForNode)
   const setSelectedNodes = useWorkspaceStore((s) => s.setSelectedNodes)
 
   const traversal = useMemo(
@@ -100,7 +99,10 @@ function ContextTreePanelComponent({ nodeId, className }: ContextTreePanelProps)
       className={`context-tree-panel p-2 space-y-0.5 overflow-auto ${className ?? ''}`}
       aria-label="Context tree"
     >
-      <div className="text-[10px] uppercase tracking-wide font-medium mb-1" style={{ color: 'var(--text-muted, #888)' }}>
+      <div
+        className="text-[10px] uppercase tracking-wide font-medium mb-1"
+        style={{ color: 'var(--text-muted, #888)' }}
+      >
         Context Sources ({traversal.nodeCount})
       </div>
       {traversal.nodes.map((ctxNode: ContextTraversalNode) => {
@@ -131,10 +133,7 @@ function ContextTreePanelComponent({ nodeId, className }: ContextTreePanelProps)
                 {ctxNode.role}
               </span>
             )}
-            <span
-              className="flex-shrink-0 text-[9px]"
-              style={{ color: 'var(--text-muted, #888)' }}
-            >
+            <span className="flex-shrink-0 text-[9px]" style={{ color: 'var(--text-muted, #888)' }}>
               ~{tokens}t
             </span>
           </button>

@@ -7,15 +7,15 @@
  * Tests the pure computeDepthOfField function and DoF store actions.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
   computeDepthOfField,
-  useContextVisualizationStore,
-  selectNodeDepthRing,
-  DOF_MAX_RING,
   DOF_DISCONNECTED,
+  DOF_MAX_RING,
+  type DofEdge,
   type DofNode,
-  type DofEdge
+  selectNodeDepthRing,
+  useContextVisualizationStore,
 } from '../contextVisualizationStore'
 
 // --- Helpers ---------------------------------------------------------------
@@ -67,7 +67,7 @@ describe('computeDepthOfField -- BFS ring computation', () => {
       makeEdge('B', 'C'),
       makeEdge('C', 'D'),
       makeEdge('D', 'E'),
-      makeEdge('E', 'F')
+      makeEdge('E', 'F'),
     ]
     const rings = computeDepthOfField('A', nodes, edges)
     expect(rings.get('D')).toBe(DOF_MAX_RING)
@@ -131,7 +131,7 @@ describe('computeDepthOfField -- BFS ring computation', () => {
       makeEdge('hub', 'a'),
       makeEdge('hub', 'b'),
       makeEdge('hub', 'c'),
-      makeEdge('hub', 'd')
+      makeEdge('hub', 'd'),
     ]
     const rings = computeDepthOfField('hub', nodes, edges)
     expect(rings.get('hub')).toBe(0)

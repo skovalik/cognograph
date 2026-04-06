@@ -51,13 +51,10 @@ export function initSentry(): void {
               value.stacktrace.frames.forEach((frame) => {
                 if (frame.filename) {
                   // Normalize paths to remove user-specific directories
-                  frame.filename = frame.filename.replace(
-                    /\/Users\/[^/]+\//g,
-                    '/Users/[redacted]/'
-                  )
+                  frame.filename = frame.filename.replace(/\/Users\/[^/]+\//g, '/Users/[redacted]/')
                   frame.filename = frame.filename.replace(
                     /C:\\Users\\[^\\]+\\/g,
-                    'C:\\Users\\[redacted]\\'
+                    'C:\\Users\\[redacted]\\',
                   )
                 }
               })
@@ -72,12 +69,12 @@ export function initSentry(): void {
         // Don't log sensitive IPC messages
         if (breadcrumb.category === 'ipc' && breadcrumb.data?.channel) {
           const sensitiveChannels = ['token', 'auth', 'password', 'secret']
-          if (sensitiveChannels.some(c => breadcrumb.data?.channel?.includes(c))) {
+          if (sensitiveChannels.some((c) => breadcrumb.data?.channel?.includes(c))) {
             breadcrumb.data = { channel: '[redacted]' }
           }
         }
         return breadcrumb
-      }
+      },
     })
 
     isInitialized = true
@@ -115,7 +112,7 @@ export function addBreadcrumb(
   category: string,
   message: string,
   level: 'debug' | 'info' | 'warning' | 'error' = 'info',
-  data?: Record<string, unknown>
+  data?: Record<string, unknown>,
 ): void {
   if (!isInitialized) return
   Sentry.addBreadcrumb({
@@ -123,7 +120,7 @@ export function addBreadcrumb(
     message,
     level,
     data,
-    timestamp: Date.now() / 1000
+    timestamp: Date.now() / 1000,
   })
 }
 
@@ -137,7 +134,7 @@ export function captureException(error: Error, context?: Record<string, unknown>
   }
 
   return Sentry.captureException(error, {
-    extra: context
+    extra: context,
   })
 }
 
@@ -146,7 +143,7 @@ export function captureException(error: Error, context?: Record<string, unknown>
  */
 export function captureMessage(
   message: string,
-  level: 'debug' | 'info' | 'warning' | 'error' | 'fatal' = 'info'
+  level: 'debug' | 'info' | 'warning' | 'error' | 'fatal' = 'info',
 ): string {
   if (!isInitialized) {
     console.log('[Sentry] Not initialized, message not sent:', message)

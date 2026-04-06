@@ -11,7 +11,7 @@
  * - Tool re-registration after reconnect
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared before imports that use them
@@ -96,9 +96,12 @@ vi.mock('electron', () => ({
 
 vi.mock('../../utils/safeEnv', () => ({
   getSafeEnv: vi.fn().mockReturnValue({}),
-  mergeSafeEnv: vi.fn().mockImplementation(
-    (base: Record<string, string>, extra: Record<string, string>) => ({ ...base, ...extra })
-  ),
+  mergeSafeEnv: vi
+    .fn()
+    .mockImplementation((base: Record<string, string>, extra: Record<string, string>) => ({
+      ...base,
+      ...extra,
+    })),
 }))
 
 // ---------------------------------------------------------------------------
@@ -108,10 +111,10 @@ vi.mock('../../utils/safeEnv', () => ({
 import {
   connectMCPServer,
   disconnectMCPServer,
-  isMCPServerConnected,
-  resetCircuitBreaker,
   isCircuitBroken,
+  isMCPServerConnected,
   type MCPServerConfig,
+  resetCircuitBreaker,
 } from '../mcpClient'
 
 // ---------------------------------------------------------------------------
@@ -144,8 +147,16 @@ describe('MCP Reconnection', () => {
   afterEach(async () => {
     vi.useRealTimers()
     // Clean up any leftover connections
-    try { await disconnectMCPServer('test-server') } catch { /* ignore */ }
-    try { await disconnectMCPServer('breaker-server') } catch { /* ignore */ }
+    try {
+      await disconnectMCPServer('test-server')
+    } catch {
+      /* ignore */
+    }
+    try {
+      await disconnectMCPServer('breaker-server')
+    } catch {
+      /* ignore */
+    }
     resetCircuitBreaker('test-server')
     resetCircuitBreaker('breaker-server')
   })
@@ -249,7 +260,11 @@ describe('MCP Circuit Breaker', () => {
 
   afterEach(async () => {
     vi.useRealTimers()
-    try { await disconnectMCPServer('breaker-server') } catch { /* ignore */ }
+    try {
+      await disconnectMCPServer('breaker-server')
+    } catch {
+      /* ignore */
+    }
     resetCircuitBreaker('breaker-server')
   })
 
@@ -282,7 +297,11 @@ describe('MCP Reconnect Backoff', () => {
 
   afterEach(async () => {
     vi.useRealTimers()
-    try { await disconnectMCPServer('test-server') } catch { /* ignore */ }
+    try {
+      await disconnectMCPServer('test-server')
+    } catch {
+      /* ignore */
+    }
     resetCircuitBreaker('test-server')
   })
 
@@ -319,7 +338,7 @@ describe('MCP Reconnect Backoff', () => {
 
     const delays: number[] = []
     for (let i = 0; i < maxRetries; i++) {
-      delays.push(base * Math.pow(multiplier, i))
+      delays.push(base * multiplier ** i)
     }
 
     expect(delays).toEqual([1000, 3000, 9000])

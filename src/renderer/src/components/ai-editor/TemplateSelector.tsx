@@ -8,25 +8,29 @@
  * Supports category filtering, search, preview, and variable customization.
  */
 
-import { memo, useState, useCallback, useMemo } from 'react'
+import type { ActionTemplate, TemplateVariable } from '@shared/types'
 import {
-  Search,
-  X,
+  Calendar,
+  CheckSquare,
   ChevronDown,
   ChevronUp,
-  Play,
-  Zap,
-  Workflow,
-  Link2,
-  CheckSquare,
   FileText,
-  MessageSquare,
-  Calendar,
   Folder,
-  Sparkles
+  Link2,
+  MessageSquare,
+  Play,
+  Search,
+  Sparkles,
+  Workflow,
+  X,
+  Zap,
 } from 'lucide-react'
-import { BUILT_IN_TEMPLATES, searchTemplates, getTemplatesByCategory } from '../../data/actionTemplates'
-import type { ActionTemplate, TemplateVariable } from '@shared/types'
+import { memo, useCallback, useMemo, useState } from 'react'
+import {
+  BUILT_IN_TEMPLATES,
+  getTemplatesByCategory,
+  searchTemplates,
+} from '../../data/actionTemplates'
 
 interface TemplateSelectorProps {
   isOpen: boolean
@@ -40,7 +44,7 @@ const CATEGORY_OPTIONS: { value: TemplateCategory; label: string; icon: typeof Z
   { value: 'all', label: 'All Templates', icon: Sparkles },
   { value: 'automation', label: 'Automation', icon: Zap },
   { value: 'workflow', label: 'Workflow', icon: Workflow },
-  { value: 'integration', label: 'Integration', icon: Link2 }
+  { value: 'integration', label: 'Integration', icon: Link2 },
 ]
 
 const ICON_MAP: Record<string, typeof CheckSquare> = {
@@ -51,13 +55,13 @@ const ICON_MAP: Record<string, typeof CheckSquare> = {
   Folder,
   Sparkles,
   Zap,
-  Workflow
+  Workflow,
 }
 
 function TemplateSelectorComponent({
   isOpen,
   onClose,
-  onApply
+  onApply,
 }: TemplateSelectorProps): JSX.Element | null {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<TemplateCategory>('all')
@@ -91,7 +95,7 @@ function TemplateSelectorComponent({
 
   // Handle variable change
   const handleVariableChange = useCallback((name: string, value: unknown) => {
-    setVariableValues(prev => ({ ...prev, [name]: value }))
+    setVariableValues((prev) => ({ ...prev, [name]: value }))
   }, [])
 
   // Handle apply
@@ -208,10 +212,18 @@ function TemplateSelectorComponent({
                       <div className="template-details">
                         <p className="template-description">{template.description}</p>
                         <div className="template-meta">
-                          <span>{template.triggers.length} trigger{template.triggers.length !== 1 ? 's' : ''}</span>
-                          <span>{template.steps.length} step{template.steps.length !== 1 ? 's' : ''}</span>
+                          <span>
+                            {template.triggers.length} trigger
+                            {template.triggers.length !== 1 ? 's' : ''}
+                          </span>
+                          <span>
+                            {template.steps.length} step{template.steps.length !== 1 ? 's' : ''}
+                          </span>
                           {template.variables.length > 0 && (
-                            <span>{template.variables.length} variable{template.variables.length !== 1 ? 's' : ''}</span>
+                            <span>
+                              {template.variables.length} variable
+                              {template.variables.length !== 1 ? 's' : ''}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -266,7 +278,11 @@ function TemplateSelectorComponent({
               </div>
 
               {/* Apply Button */}
-              <button className="apply-btn" onClick={handleApply} aria-label={`Apply ${selectedTemplate.name} template`}>
+              <button
+                className="apply-btn"
+                onClick={handleApply}
+                aria-label={`Apply ${selectedTemplate.name} template`}
+              >
                 <Play className="apply-icon" />
                 Apply Template
               </button>
@@ -677,10 +693,7 @@ function VariableInput({ variable, value, onChange }: VariableInputProps): JSX.E
         return (
           <div className="variable-input select">
             <label>{variable.label}</label>
-            <select
-              value={String(value)}
-              onChange={(e) => onChange(e.target.value)}
-            >
+            <select value={String(value)} onChange={(e) => onChange(e.target.value)}>
               {variable.options.map((opt) => (
                 <option key={String(opt.value)} value={String(opt.value)}>
                   {opt.label}

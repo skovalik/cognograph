@@ -3,10 +3,10 @@
 
 import type { ActionStep, ExecutionContext } from '@shared/actionTypes'
 import type { NodeData } from '@shared/types'
-import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useConnectorStore } from '../stores/connectorStore'
-import { runAgent } from './agentService'
 import { useOrchestratorStore } from '../stores/orchestratorStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
+import { runAgent } from './agentService'
 
 export interface ExecutionResult {
   success: boolean
@@ -21,7 +21,7 @@ export interface ExecutionResult {
 export async function executeActionSteps(
   steps: ActionStep[],
   context: ExecutionContext,
-  _workspaceState: ReturnType<typeof useWorkspaceStore.getState>
+  _workspaceState: ReturnType<typeof useWorkspaceStore.getState>,
 ): Promise<ExecutionResult> {
   let stepsCompleted = 0
   let skipRemaining = 0
@@ -55,12 +55,16 @@ export async function executeActionSteps(
 
       switch (step.onError) {
         case 'stop':
-          return { success: false, error: `Step ${i + 1} (${step.type}): ${errorMessage}`, stepsCompleted }
+          return {
+            success: false,
+            error: `Step ${i + 1} (${step.type}): ${errorMessage}`,
+            stepsCompleted,
+          }
 
         case 'retry': {
           let retried = false
           for (let attempt = 1; attempt <= 3; attempt++) {
-            await delay(Math.pow(2, attempt) * 100)
+            await delay(2 ** attempt * 100)
             try {
               const retryResult = await executeStep(step, context)
               if (retryResult.skip) skipRemaining = retryResult.skip
@@ -71,7 +75,11 @@ export async function executeActionSteps(
             }
           }
           if (!retried) {
-            return { success: false, error: `Step ${i + 1} (${step.type}) failed after 3 retries: ${errorMessage}`, stepsCompleted }
+            return {
+              success: false,
+              error: `Step ${i + 1} (${step.type}) failed after 3 retries: ${errorMessage}`,
+              stepsCompleted,
+            }
           }
           stepsCompleted++
           break
@@ -108,7 +116,16 @@ async function executeStep(step: ActionStep, context: ExecutionContext): Promise
 
     case 'create-node': {
       // Validate node type
-      const validTypes = ['note', 'task', 'conversation', 'artifact', 'project', 'action', 'text', 'workspace']
+      const validTypes = [
+        'note',
+        'task',
+        'conversation',
+        'artifact',
+        'project',
+        'action',
+        'text',
+        'workspace',
+      ]
       if (!validTypes.includes(step.config.nodeType)) {
         throw new Error(`Invalid node type: ${step.config.nodeType}`)
       }
@@ -155,7 +172,7 @@ async function executeStep(step: ActionStep, context: ExecutionContext): Promise
       const targetId = resolveTarget(step.config.target, step.config.targetNodeId, context)
       if (!targetId) throw new Error('Target node not found')
 
-      const node = store.nodes.find(n => n.id === targetId)
+      const node = store.nodes.find((n) => n.id === targetId)
       if (!node) throw new Error(`Node ${targetId} not found`)
 
       let newX: number, newY: number
@@ -180,7 +197,7 @@ async function executeStep(step: ActionStep, context: ExecutionContext): Promise
         source: sourceId,
         target: targetId,
         sourceHandle: 'bottom-source',
-        targetHandle: 'top-target'
+        targetHandle: 'top-target',
       })
       return {}
     }
@@ -191,11 +208,12 @@ async function executeStep(step: ActionStep, context: ExecutionContext): Promise
       if (!sourceId || !targetId) throw new Error('Source or target node not found')
 
       const edgeIds = store.edges
-        .filter(e =>
-          (e.source === sourceId && e.target === targetId) ||
-          (e.source === targetId && e.target === sourceId)
+        .filter(
+          (e) =>
+            (e.source === sourceId && e.target === targetId) ||
+            (e.source === targetId && e.target === sourceId),
         )
-        .map(e => e.id)
+        .map((e) => e.id)
 
       if (edgeIds.length > 0) {
         store.deleteEdges(edgeIds)
@@ -212,11 +230,15 @@ async function executeStep(step: ActionStep, context: ExecutionContext): Promise
       const targetId = resolveTarget(step.config.target, step.config.targetNodeId, context)
       if (!targetId) throw new Error('Target node not found')
 
-      const node = store.nodes.find(n => n.id === targetId)
+      const node = store.nodes.find((n) => n.id === targetId)
       if (!node) throw new Error(`Node ${targetId} not found`)
 
       const fieldValue = getNestedValue(node.data, step.config.field)
-      const conditionMet = evaluateSimpleCondition(fieldValue, step.config.operator, step.config.value)
+      const conditionMet = evaluateSimpleCondition(
+        fieldValue,
+        step.config.operator,
+        step.config.value,
+      )
 
       if (!conditionMet) {
         return { skip: step.config.skipCount }
@@ -231,13 +253,17 @@ async function executeStep(step: ActionStep, context: ExecutionContext): Promise
       if (!prompt || prompt.trim().length < 5) {
         // Check if they have connected nodes but didn't use the template
         const connectedCount = store.edges.filter(
-          e => e.source === context.actionNodeId || e.target === context.actionNodeId
+          (e) => e.source === context.actionNodeId || e.target === context.actionNodeId,
         ).length
 
         if (connectedCount > 0) {
-          throw new Error(`Prompt is empty. Use {{connectedNodes}} to include context from ${connectedCount} connected node(s).`)
+          throw new Error(
+            `Prompt is empty. Use {{connectedNodes}} to include context from ${connectedCount} connected node(s).`,
+          )
         } else {
-          throw new Error('Prompt is empty. Connect nodes and use {{connectedNodes}} in your prompt.')
+          throw new Error(
+            'Prompt is empty. Connect nodes and use {{connectedNodes}} in your prompt.',
+          )
         }
       }
 
@@ -257,7 +283,7 @@ async function executeStep(step: ActionStep, context: ExecutionContext): Promise
         systemPrompt,
         userPrompt: prompt,
         model: connector.model,
-        maxTokens: step.config.maxTokens || 1024
+        maxTokens: step.config.maxTokens || 1024,
       })
 
       if (!response.success) {
@@ -274,12 +300,16 @@ async function executeStep(step: ActionStep, context: ExecutionContext): Promise
       // Auto-create output node if configured (default: true)
       if (step.config.autoCreateOutput !== false) {
         const outputType = step.config.outputNodeType || 'note'
-        const position = resolveOutputPosition(step.config.outputPosition || 'right', context, store)
+        const position = resolveOutputPosition(
+          step.config.outputPosition || 'right',
+          context,
+          store,
+        )
 
         const nodeId = store.addNode(outputType, position)
         store.updateNode(nodeId, {
           title: 'AI Output',
-          content: response.data
+          content: response.data,
         })
 
         // Connect to action node
@@ -287,7 +317,7 @@ async function executeStep(step: ActionStep, context: ExecutionContext): Promise
           source: context.actionNodeId,
           target: nodeId,
           sourceHandle: 'right-source',
-          targetHandle: 'left-target'
+          targetHandle: 'left-target',
         })
 
         context.variables._lastCreatedNodeId = nodeId
@@ -301,7 +331,9 @@ async function executeStep(step: ActionStep, context: ExecutionContext): Promise
 
       // Validate URL scheme to prevent SSRF (only allow http/https)
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        throw new Error(`Invalid URL scheme. Only http:// and https:// are allowed. Got: ${url.split(':')[0]}://`)
+        throw new Error(
+          `Invalid URL scheme. Only http:// and https:// are allowed. Got: ${url.split(':')[0]}://`,
+        )
       }
 
       const body = step.config.body ? resolveTemplate(step.config.body, context, store) : undefined
@@ -310,7 +342,7 @@ async function executeStep(step: ActionStep, context: ExecutionContext): Promise
         method: step.config.method,
         headers: step.config.headers || {},
         body: step.config.method !== 'GET' ? body : undefined,
-        signal: AbortSignal.timeout(step.config.timeout || 30000)
+        signal: AbortSignal.timeout(step.config.timeout || 30000),
       })
 
       const responseText = await response.text()
@@ -327,7 +359,7 @@ async function executeStep(step: ActionStep, context: ExecutionContext): Promise
       const targetId = resolveTarget(step.config.target, step.config.targetNodeId, context)
       if (!targetId) throw new Error('Target conversation node not found for run-agent')
 
-      const node = store.nodes.find(n => n.id === targetId)
+      const node = store.nodes.find((n) => n.id === targetId)
       if (!node) throw new Error(`Node ${targetId} not found`)
       if (node.data.type !== 'conversation') {
         throw new Error(`run-agent requires a conversation node, got: ${node.data.type}`)
@@ -348,7 +380,7 @@ async function executeStep(step: ActionStep, context: ExecutionContext): Promise
       const targetId = resolveTarget(step.config.target, step.config.targetNodeId, context)
       if (!targetId) throw new Error('Target orchestrator node not found for run-orchestrator')
 
-      const node = store.nodes.find(n => n.id === targetId)
+      const node = store.nodes.find((n) => n.id === targetId)
       if (!node) throw new Error(`Node ${targetId} not found`)
       if (node.data.type !== 'orchestrator') {
         throw new Error(`run-orchestrator requires an orchestrator node, got: ${node.data.type}`)
@@ -376,7 +408,7 @@ async function executeStep(step: ActionStep, context: ExecutionContext): Promise
 function resolveTarget(
   target: string,
   specificNodeId: string | undefined,
-  context: ExecutionContext
+  context: ExecutionContext,
 ): string | undefined {
   switch (target) {
     case 'trigger-node':
@@ -396,25 +428,25 @@ function resolvePosition(
   positionType: string,
   config: { offsetX?: number; offsetY?: number; absoluteX?: number; absoluteY?: number },
   context: ExecutionContext,
-  store: ReturnType<typeof useWorkspaceStore.getState>
+  store: ReturnType<typeof useWorkspaceStore.getState>,
 ): { x: number; y: number } {
   switch (positionType) {
     case 'near-trigger': {
-      const triggerNode = store.nodes.find(n => n.id === context.triggerNodeId)
+      const triggerNode = store.nodes.find((n) => n.id === context.triggerNodeId)
       if (triggerNode) {
         return {
           x: triggerNode.position.x + (config.offsetX ?? 300),
-          y: triggerNode.position.y + (config.offsetY ?? 0)
+          y: triggerNode.position.y + (config.offsetY ?? 0),
         }
       }
       return { x: 0, y: 0 }
     }
     case 'near-action': {
-      const actionNode = store.nodes.find(n => n.id === context.actionNodeId)
+      const actionNode = store.nodes.find((n) => n.id === context.actionNodeId)
       if (actionNode) {
         return {
           x: actionNode.position.x + (config.offsetX ?? 300),
-          y: actionNode.position.y + (config.offsetY ?? 0)
+          y: actionNode.position.y + (config.offsetY ?? 0),
         }
       }
       return { x: 0, y: 0 }
@@ -426,13 +458,12 @@ function resolvePosition(
   }
 }
 
-
 function resolveOutputPosition(
   positionType: string,
   context: ExecutionContext,
-  store: ReturnType<typeof useWorkspaceStore.getState>
+  store: ReturnType<typeof useWorkspaceStore.getState>,
 ): { x: number; y: number } {
-  const actionNode = store.nodes.find(n => n.id === context.actionNodeId)
+  const actionNode = store.nodes.find((n) => n.id === context.actionNodeId)
   if (!actionNode) return { x: 0, y: 0 }
 
   const width = actionNode.measured?.width || 280
@@ -443,7 +474,7 @@ function resolveOutputPosition(
     case 'below':
       return { x: actionNode.position.x, y: actionNode.position.y + 200 }
     case 'near-trigger': {
-      const triggerNode = store.nodes.find(n => n.id === context.triggerNodeId)
+      const triggerNode = store.nodes.find((n) => n.id === context.triggerNodeId)
       if (triggerNode) {
         return { x: triggerNode.position.x + 300, y: triggerNode.position.y }
       }
@@ -457,34 +488,38 @@ function resolveOutputPosition(
 function resolveTemplate(
   template: string,
   context: ExecutionContext,
-  store: ReturnType<typeof useWorkspaceStore.getState>
+  store: ReturnType<typeof useWorkspaceStore.getState>,
 ): string {
   return template.replace(/\{\{([^}]+)\}\}/g, (_match, path: string) => {
     const trimmed = path.trim()
 
     // Handle connected nodes context
     if (trimmed === 'connectedNodes' || trimmed.startsWith('connectedNodes.')) {
-      const actionNode = store.nodes.find(n => n.id === context.actionNodeId)
+      const actionNode = store.nodes.find((n) => n.id === context.actionNodeId)
       if (!actionNode) return ''
 
       // Get all connected node IDs (both directions)
       const connectedIds = store.edges
-        .filter(e => e.source === context.actionNodeId || e.target === context.actionNodeId)
-        .map(e => e.source === context.actionNodeId ? e.target : e.source)
+        .filter((e) => e.source === context.actionNodeId || e.target === context.actionNodeId)
+        .map((e) => (e.source === context.actionNodeId ? e.target : e.source))
 
-      const connectedNodes = store.nodes.filter(n => connectedIds.includes(n.id))
+      const connectedNodes = store.nodes.filter((n) => connectedIds.includes(n.id))
 
       if (trimmed === 'connectedNodes') {
         // Return formatted content from all connected nodes
         return connectedNodes
-          .map(n => `[${n.data.title || n.data.type}]: ${n.data.content || n.data.description || ''}`)
-          .filter(s => s.length > 10)
+          .map(
+            (n) =>
+              `[${n.data.title || n.data.type}]: ${n.data.content || n.data.description || ''}`,
+          )
+          .filter((s) => s.length > 10)
           .join('\n\n')
       }
 
       // Handle connectedNodes.count, connectedNodes.titles, etc.
       if (trimmed === 'connectedNodes.count') return String(connectedNodes.length)
-      if (trimmed === 'connectedNodes.titles') return connectedNodes.map(n => n.data.title).join(', ')
+      if (trimmed === 'connectedNodes.titles')
+        return connectedNodes.map((n) => n.data.title).join(', ')
 
       return ''
     }
@@ -498,7 +533,7 @@ function resolveTemplate(
     // Check trigger node data
     if (trimmed.startsWith('triggerNode.')) {
       const fieldPath = trimmed.slice('triggerNode.'.length)
-      const node = store.nodes.find(n => n.id === context.triggerNodeId)
+      const node = store.nodes.find((n) => n.id === context.triggerNodeId)
       if (node) {
         return String(getNestedValue(node.data, fieldPath) ?? '')
       }
@@ -534,7 +569,11 @@ function getNestedValue(obj: unknown, path: string): unknown {
   return current
 }
 
-function evaluateSimpleCondition(fieldValue: unknown, operator: string, conditionValue: unknown): boolean {
+function evaluateSimpleCondition(
+  fieldValue: unknown,
+  operator: string,
+  conditionValue: unknown,
+): boolean {
   switch (operator) {
     case 'equals':
       return String(fieldValue) === String(conditionValue)
@@ -556,5 +595,5 @@ function evaluateSimpleCondition(fieldValue: unknown, operator: string, conditio
 }
 
 function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }

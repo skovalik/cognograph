@@ -10,17 +10,17 @@
  * Created as part of Batch 0B: Split workspaceStore
  */
 
-import type { Node, Edge } from '@xyflow/react'
 import type {
-  NodeData,
+  ContextSettings,
   EdgeData,
   HistoryAction,
-  PropertySchema,
-  ContextSettings,
+  NodeData,
   PendingExtraction,
+  PropertySchema,
   ThemeSettings,
-  WorkspacePreferences
+  WorkspacePreferences,
 } from '@shared/types'
+import type { Edge, Node } from '@xyflow/react'
 
 // =============================================================================
 // Shared Types (re-exported from workspaceStore for now)
@@ -129,7 +129,14 @@ export interface UIState {
   // Left sidebar
   leftSidebarOpen: boolean
   leftSidebarWidth: number
-  leftSidebarTab: 'layers' | 'extractions' | 'activity' | 'dispatch' | 'cc-bridge' | 'agent-log' | 'console'
+  leftSidebarTab:
+    | 'layers'
+    | 'extractions'
+    | 'activity'
+    | 'dispatch'
+    | 'cc-bridge'
+    | 'agent-log'
+    | 'console'
   expandedNodeIds: Set<string>
   layersSortMode: 'hierarchy' | 'type' | 'recent' | 'manual'
   manualLayerOrder: string[] | null

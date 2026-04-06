@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { X, Settings, Info } from 'lucide-react'
-import { useWorkspaceStore } from '../stores/workspaceStore'
 import type { ContextSettings } from '@shared/types'
+import { Info, Settings, X } from 'lucide-react'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 interface ContextSettingsModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
-export function ContextSettingsModal({ isOpen, onClose }: ContextSettingsModalProps): JSX.Element | null {
+export function ContextSettingsModal({
+  isOpen,
+  onClose,
+}: ContextSettingsModalProps): JSX.Element | null {
   const contextSettings = useWorkspaceStore((state) => state.contextSettings)
 
   if (!isOpen) return null
@@ -19,14 +22,14 @@ export function ContextSettingsModal({ isOpen, onClose }: ContextSettingsModalPr
     // Update context settings in store
     useWorkspaceStore.setState((state) => ({
       contextSettings: { ...state.contextSettings, globalDepth: depth },
-      isDirty: true
+      isDirty: true,
     }))
   }
 
   const handleModeChange = (mode: ContextSettings['traversalMode']): void => {
     useWorkspaceStore.setState((state) => ({
       contextSettings: { ...state.contextSettings, traversalMode: mode },
-      isDirty: true
+      isDirty: true,
     }))
   }
 
@@ -70,8 +73,8 @@ export function ContextSettingsModal({ isOpen, onClose }: ContextSettingsModalPr
             <p className="text-xs text-[var(--text-muted)] mt-2 flex items-start gap-1.5">
               <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
               <span>
-                Controls how many "hops" away from a conversation node context is gathered.
-                Depth 2 includes direct connections and their connections.
+                Controls how many "hops" away from a conversation node context is gathered. Depth 2
+                includes direct connections and their connections.
               </span>
             </p>
           </div>
@@ -92,7 +95,9 @@ export function ContextSettingsModal({ isOpen, onClose }: ContextSettingsModalPr
                 />
                 <div>
                   <div className="text-sm text-white">All Connections</div>
-                  <div className="text-xs text-[var(--text-muted)]">Gather context from all connected nodes</div>
+                  <div className="text-xs text-[var(--text-muted)]">
+                    Gather context from all connected nodes
+                  </div>
                 </div>
               </label>
 
@@ -106,7 +111,9 @@ export function ContextSettingsModal({ isOpen, onClose }: ContextSettingsModalPr
                 />
                 <div>
                   <div className="text-sm text-white">Ancestors Only</div>
-                  <div className="text-xs text-[var(--text-muted)]">Only follow inbound edges (nodes pointing to this one)</div>
+                  <div className="text-xs text-[var(--text-muted)]">
+                    Only follow inbound edges (nodes pointing to this one)
+                  </div>
                 </div>
               </label>
             </div>
@@ -118,8 +125,8 @@ export function ContextSettingsModal({ isOpen, onClose }: ContextSettingsModalPr
             <p className="text-xs text-[var(--text-secondary)]">
               When you chat with a conversation node, context is automatically gathered from
               connected nodes. The edge direction determines flow: nodes with arrows pointing
-              <strong> toward</strong> your conversation provide context. Bidirectional edges
-              share context both ways.
+              <strong> toward</strong> your conversation provide context. Bidirectional edges share
+              context both ways.
             </p>
           </div>
         </div>

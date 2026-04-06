@@ -7,11 +7,16 @@
  * Tests for agent tool execution and tool selection.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { executeTool, getToolsForAgent } from '../agentTools'
-import { resetWorkspaceStore, getWorkspaceState, seedNode, seedNodes } from '../../../../test/storeUtils'
-import { createNoteNode, createTaskNode, resetTestCounters } from '../../../../test/utils'
 import type { AgentSettings } from '@shared/types'
+import { beforeEach, describe, expect, it } from 'vitest'
+import {
+  getWorkspaceState,
+  resetWorkspaceStore,
+  seedNode,
+  seedNodes,
+} from '../../../../test/storeUtils'
+import { createNoteNode, createTaskNode, resetTestCounters } from '../../../../test/utils'
+import { executeTool, getToolsForAgent } from '../agentTools'
 
 // Default agent settings with required fields
 const defaultSettings: AgentSettings = {
@@ -28,7 +33,7 @@ const defaultSettings: AgentSettings = {
   canExecuteCommands: false,
   allowedPaths: [],
   allowedCommands: [],
-  mcpServers: []
+  mcpServers: [],
 }
 
 describe('agentTools', () => {
@@ -99,7 +104,7 @@ describe('agentTools', () => {
         canCreateEdges: true,
         canModifyNodes: true,
         canDeleteNodes: true,
-        canDeleteEdges: true
+        canDeleteEdges: true,
       }
 
       const tools = getToolsForAgent(settings)
@@ -155,7 +160,11 @@ describe('agentTools', () => {
         note2.data.title = 'Todo List'
         seedNodes([note1, note2])
 
-        const result = await executeTool('search_nodes', { titleContains: 'Meeting' }, 'agent-conv-id')
+        const result = await executeTool(
+          'search_nodes',
+          { titleContains: 'Meeting' },
+          'agent-conv-id',
+        )
         const data = result.result as AnyResult
 
         expect(result.success).toBe(true)
@@ -165,7 +174,7 @@ describe('agentTools', () => {
 
       it('should respect limit parameter', async () => {
         const notes = Array.from({ length: 20 }, (_, i) =>
-          createNoteNode(`Note ${i}`, { id: `note-${i}` })
+          createNoteNode(`Note ${i}`, { id: `note-${i}` }),
         )
         seedNodes(notes)
 
@@ -237,7 +246,7 @@ describe('agentTools', () => {
         const result = await executeTool(
           'create_node',
           { type: 'note', title: 'New Note', content: 'Content' },
-          'agent-conv-id'
+          'agent-conv-id',
         )
         const data = result.result as AnyResult
 
@@ -253,7 +262,7 @@ describe('agentTools', () => {
         const result = await executeTool(
           'create_node',
           { type: 'note', title: 'New Note', position: { x: 500, y: 300 } },
-          'agent-conv-id'
+          'agent-conv-id',
         )
 
         expect(result.success).toBe(true)
@@ -269,7 +278,7 @@ describe('agentTools', () => {
         const result = await executeTool(
           'create_node',
           { type: 'note', title: 'New Note', connectTo: 'existing-1' },
-          'agent-conv-id'
+          'agent-conv-id',
         )
 
         expect(result.success).toBe(true)
@@ -289,7 +298,7 @@ describe('agentTools', () => {
         const result = await executeTool(
           'link_nodes',
           { source: 'note-1', target: 'note-2' },
-          'agent-conv-id'
+          'agent-conv-id',
         )
 
         expect(result.success).toBe(true)
@@ -309,7 +318,7 @@ describe('agentTools', () => {
         const result = await executeTool(
           'update_node',
           { nodeId: 'note-1', title: 'Updated Title', content: 'New content' },
-          'agent-conv-id'
+          'agent-conv-id',
         )
         const data = result.result as AnyResult
 
@@ -326,7 +335,7 @@ describe('agentTools', () => {
         const result = await executeTool(
           'update_node',
           { nodeId: 'non-existent', title: 'Test' },
-          'agent-conv-id'
+          'agent-conv-id',
         )
 
         expect(result.success).toBe(false)
@@ -342,7 +351,7 @@ describe('agentTools', () => {
         const result = await executeTool(
           'move_node',
           { nodeId: 'note-1', position: { x: 200, y: 300 } },
-          'agent-conv-id'
+          'agent-conv-id',
         )
 
         expect(result.success).toBe(true)
@@ -355,7 +364,7 @@ describe('agentTools', () => {
         const result = await executeTool(
           'move_node',
           { nodeId: 'non-existent', position: { x: 0, y: 0 } },
-          'agent-conv-id'
+          'agent-conv-id',
         )
 
         expect(result.success).toBe(false)
@@ -395,7 +404,11 @@ describe('agentTools', () => {
         const { onConnect } = getWorkspaceState()
         onConnect({ source: 'note-1', target: 'note-2', sourceHandle: null, targetHandle: null })
 
-        const result = await executeTool('unlink_nodes', { sourceId: 'note-1', targetId: 'note-2' }, 'agent-conv-id')
+        const result = await executeTool(
+          'unlink_nodes',
+          { sourceId: 'note-1', targetId: 'note-2' },
+          'agent-conv-id',
+        )
 
         expect(result.success).toBe(true)
 

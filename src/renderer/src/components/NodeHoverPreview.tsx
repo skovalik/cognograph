@@ -8,9 +8,15 @@
 // Renders as a fixed-position element near the cursor.
 // Does NOT render during: drag, context viz active, or in-place expansion.
 
-import { memo, useState, useEffect, useRef, useCallback } from 'react'
+import type {
+  ArtifactNodeData,
+  NodeData,
+  NoteNodeData,
+  ProjectNodeData,
+  TaskNodeData,
+} from '@shared/types'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import type { NodeData, NoteNodeData, TaskNodeData, ArtifactNodeData, ProjectNodeData } from '@shared/types'
 
 const HOVER_DELAY_MS = 300
 const OFFSET_X = 16
@@ -104,7 +110,7 @@ function NodeHoverPreviewComponent(): JSX.Element | null {
 
   if (!visible || !hoveredNodeId) return null
 
-  const node = nodes.find(n => n.id === hoveredNodeId)
+  const node = nodes.find((n) => n.id === hoveredNodeId)
   if (!node) return null
 
   const preview = getNodePreview(node.data)
@@ -115,10 +121,7 @@ function NodeHoverPreviewComponent(): JSX.Element | null {
   const clampedY = Math.min(position.y, window.innerHeight - 120)
 
   return (
-    <div
-      className="node-hover-preview"
-      style={{ left: clampedX, top: clampedY }}
-    >
+    <div className="node-hover-preview" style={{ left: clampedX, top: clampedY }}>
       <div className="node-hover-preview__title">{preview.title}</div>
       {preview.meta && <div className="node-hover-preview__meta">{preview.meta}</div>}
       {preview.content ? (
@@ -140,13 +143,11 @@ function getNodePreview(data: NodeData): PreviewData | null {
   switch (data.type) {
     case 'note': {
       const noteData = data as NoteNodeData
-      const content = noteData.content
-        ? stripHtml(noteData.content).slice(0, 200)
-        : undefined
+      const content = noteData.content ? stripHtml(noteData.content).slice(0, 200) : undefined
       return {
         title: noteData.title || 'Untitled Note',
         meta: noteData.noteMode ? `Note · ${noteData.noteMode}` : 'Note',
-        content
+        content,
       }
     }
     case 'task': {
@@ -154,7 +155,7 @@ function getNodePreview(data: NodeData): PreviewData | null {
       return {
         title: taskData.title || 'Untitled Task',
         meta: `Task · ${taskData.status} · ${taskData.priority}`,
-        content: taskData.description?.slice(0, 200)
+        content: taskData.description?.slice(0, 200),
       }
     }
     case 'artifact': {
@@ -163,7 +164,7 @@ function getNodePreview(data: NodeData): PreviewData | null {
       return {
         title: artData.title || 'Untitled Artifact',
         meta: `Artifact · ${artData.contentType}${artData.language ? ` · ${artData.language}` : ''}`,
-        content
+        content,
       }
     }
     case 'project': {
@@ -171,7 +172,7 @@ function getNodePreview(data: NodeData): PreviewData | null {
       return {
         title: projData.title || 'Untitled Project',
         meta: `Project · ${projData.childNodeIds.length} items`,
-        content: projData.description?.slice(0, 200)
+        content: projData.description?.slice(0, 200),
       }
     }
     default:
@@ -180,7 +181,10 @@ function getNodePreview(data: NodeData): PreviewData | null {
 }
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 export const NodeHoverPreview = memo(NodeHoverPreviewComponent)

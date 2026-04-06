@@ -8,9 +8,9 @@
  * Includes pending sync count and auto-hides when back online.
  */
 
-import { memo, useState, useEffect } from 'react'
-import { WifiOff, RefreshCw, Cloud, CloudOff, Check } from 'lucide-react'
-import { useOfflineStore, type OfflineState } from '../stores/offlineStore'
+import { Check, Cloud, CloudOff, RefreshCw, WifiOff } from 'lucide-react'
+import { memo, useEffect, useState } from 'react'
+import { type OfflineState, useOfflineStore } from '../stores/offlineStore'
 
 interface OfflineIndicatorProps {
   /** Position of the indicator */
@@ -24,7 +24,7 @@ interface OfflineIndicatorProps {
 export const OfflineIndicator = memo(function OfflineIndicator({
   position = 'bottom',
   showPendingCount = true,
-  className = ''
+  className = '',
 }: OfflineIndicatorProps) {
   const isOnline = useOfflineStore((state: OfflineState) => state.isOnline)
   const isSyncing = useOfflineStore((state: OfflineState) => state.isSyncing)
@@ -54,9 +54,10 @@ export const OfflineIndicator = memo(function OfflineIndicator({
     return null
   }
 
-  const positionClasses = position === 'top'
-    ? 'top-0 left-1/2 -translate-x-1/2 rounded-b-lg'
-    : 'bottom-4 left-1/2 -translate-x-1/2 rounded-lg'
+  const positionClasses =
+    position === 'top'
+      ? 'top-0 left-1/2 -translate-x-1/2 rounded-b-lg'
+      : 'bottom-4 left-1/2 -translate-x-1/2 rounded-lg'
 
   return (
     <div
@@ -89,9 +90,7 @@ export const OfflineIndicator = memo(function OfflineIndicator({
           <RefreshCw size={16} className="text-blue-400 animate-spin" />
           <span className="text-sm text-blue-400">Syncing...</span>
           {showPendingCount && pendingCount > 0 && (
-            <span className="text-xs text-[var(--text-secondary)]">
-              ({pendingCount} remaining)
-            </span>
+            <span className="text-xs text-[var(--text-secondary)]">({pendingCount} remaining)</span>
           )}
         </div>
       )}
@@ -108,9 +107,7 @@ export const OfflineIndicator = memo(function OfflineIndicator({
       {isOnline && !isSyncing && !showReconnected && pendingCount > 0 && (
         <div className="flex items-center gap-2">
           <Cloud size={16} className="text-[var(--text-secondary)]" />
-          <span className="text-sm text-[var(--text-secondary)]">
-            {pendingCount} pending
-          </span>
+          <span className="text-sm text-[var(--text-secondary)]">{pendingCount} pending</span>
         </div>
       )}
     </div>

@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { ProviderAdapter, type ImageGenParams, type ImageEditParams, type MediaResult } from '../providerAdapter'
+import {
+  type ImageEditParams,
+  type ImageGenParams,
+  type MediaResult,
+  ProviderAdapter,
+} from '../providerAdapter'
 
 export class StabilityAdapter extends ProviderAdapter {
   readonly name = 'stability'
@@ -18,10 +23,10 @@ export class StabilityAdapter extends ProviderAdapter {
       const res = await fetch('https://api.stability.ai/v2beta/stable-image/generate/core', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Accept': 'image/*'
+          Authorization: `Bearer ${this.apiKey}`,
+          Accept: 'image/*',
         },
-        body: fd
+        body: fd,
       })
 
       if (!res.ok) {
@@ -43,17 +48,18 @@ export class StabilityAdapter extends ProviderAdapter {
       if (params.mask) fd.append('mask', params.mask)
       fd.append('output_format', params.outputFormat || 'png')
 
-      const endpoint = params.mode === 'outpaint'
-        ? 'https://api.stability.ai/v2beta/stable-image/edit/outpaint'
-        : 'https://api.stability.ai/v2beta/stable-image/edit/inpaint'
+      const endpoint =
+        params.mode === 'outpaint'
+          ? 'https://api.stability.ai/v2beta/stable-image/edit/outpaint'
+          : 'https://api.stability.ai/v2beta/stable-image/edit/inpaint'
 
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Accept': 'image/*'
+          Authorization: `Bearer ${this.apiKey}`,
+          Accept: 'image/*',
         },
-        body: fd
+        body: fd,
       })
 
       if (!res.ok) {
@@ -63,7 +69,11 @@ export class StabilityAdapter extends ProviderAdapter {
       }
 
       const blob = await res.blob()
-      return { buffer: blob, mimeType: 'image/png', metadata: { model: 'stable-image-edit', mode: params.mode || 'inpaint' } }
+      return {
+        buffer: blob,
+        mimeType: 'image/png',
+        metadata: { model: 'stable-image-edit', mode: params.mode || 'inpaint' },
+      }
     })
   }
 
@@ -73,14 +83,17 @@ export class StabilityAdapter extends ProviderAdapter {
       fd.append('image', imageBlob)
       fd.append('output_format', 'png')
 
-      const res = await fetch('https://api.stability.ai/v2beta/stable-image/edit/remove-background', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Accept': 'image/*'
+      const res = await fetch(
+        'https://api.stability.ai/v2beta/stable-image/edit/remove-background',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            Accept: 'image/*',
+          },
+          body: fd,
         },
-        body: fd
-      })
+      )
 
       if (!res.ok) {
         const err = new Error(`Stability remove-bg error: ${res.status}`) as any
@@ -93,23 +106,27 @@ export class StabilityAdapter extends ProviderAdapter {
     })
   }
 
-  async upscaleImage(imageBlob: Blob, mode: 'creative' | 'conservative' = 'conservative'): Promise<MediaResult> {
+  async upscaleImage(
+    imageBlob: Blob,
+    mode: 'creative' | 'conservative' = 'conservative',
+  ): Promise<MediaResult> {
     return this.withRetry(async () => {
       const fd = new FormData()
       fd.append('image', imageBlob)
       fd.append('output_format', 'png')
 
-      const endpoint = mode === 'creative'
-        ? 'https://api.stability.ai/v2beta/stable-image/upscale/creative'
-        : 'https://api.stability.ai/v2beta/stable-image/upscale/conservative'
+      const endpoint =
+        mode === 'creative'
+          ? 'https://api.stability.ai/v2beta/stable-image/upscale/creative'
+          : 'https://api.stability.ai/v2beta/stable-image/upscale/conservative'
 
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Accept': 'image/*'
+          Authorization: `Bearer ${this.apiKey}`,
+          Accept: 'image/*',
         },
-        body: fd
+        body: fd,
       })
 
       if (!res.ok) {
@@ -119,7 +136,11 @@ export class StabilityAdapter extends ProviderAdapter {
       }
 
       const blob = await res.blob()
-      return { buffer: blob, mimeType: 'image/png', metadata: { model: `stable-image-upscale-${mode}` } }
+      return {
+        buffer: blob,
+        mimeType: 'image/png',
+        metadata: { model: `stable-image-upscale-${mode}` },
+      }
     })
   }
 }

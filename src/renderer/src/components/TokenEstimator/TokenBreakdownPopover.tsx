@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import { Bot, FileText, Layers, MessageSquare } from 'lucide-react'
 import { memo } from 'react'
-import { FileText, MessageSquare, Bot, Layers } from 'lucide-react'
-import { formatTokenCount, formatCost, type TokenEstimate, type TokenBreakdownItem } from '../../utils/tokenEstimator'
 import { getUsageLevel } from '../../utils/tokenEstimation'
+import {
+  formatCost,
+  formatTokenCount,
+  type TokenBreakdownItem,
+  type TokenEstimate,
+} from '../../utils/tokenEstimator'
 
 interface TokenBreakdownPopoverProps {
   estimate: TokenEstimate
@@ -22,7 +27,11 @@ function getItemIcon(item: TokenBreakdownItem): JSX.Element {
 /**
  * Expanded popover showing detailed token breakdown by source.
  */
-function TokenBreakdownPopoverComponent({ estimate, isLightMode, onClose: _onClose }: TokenBreakdownPopoverProps): JSX.Element {
+function TokenBreakdownPopoverComponent({
+  estimate,
+  isLightMode,
+  onClose: _onClose,
+}: TokenBreakdownPopoverProps): JSX.Element {
   const level = getUsageLevel(estimate.usagePercentage)
 
   const bgClass = isLightMode ? 'token-popover--light' : 'token-popover--dark'
@@ -31,7 +40,7 @@ function TokenBreakdownPopoverComponent({ estimate, isLightMode, onClose: _onClo
     low: 'Low usage',
     medium: 'Moderate usage',
     high: 'High usage',
-    critical: 'Near limit'
+    critical: 'Near limit',
   }
 
   return (
@@ -71,9 +80,7 @@ function TokenBreakdownPopoverComponent({ estimate, isLightMode, onClose: _onClo
             <span className="token-popover__item-label" title={item.label}>
               {item.label}
             </span>
-            <span className="token-popover__item-tokens">
-              {formatTokenCount(item.tokens)}
-            </span>
+            <span className="token-popover__item-tokens">{formatTokenCount(item.tokens)}</span>
           </div>
         ))}
       </div>

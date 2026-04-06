@@ -2,16 +2,16 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import type { NodeTypes } from '@xyflow/react'
-import { ConversationNode } from './ConversationNode'
-import { ProjectNode } from './ProjectNode'
-import { NoteNode } from './NoteNode'
-import { TaskNode } from './TaskNode'
-import { ArtifactNode } from './ArtifactNode'
-import { WorkspaceNode } from './WorkspaceNode'
-import { TextNode } from './TextNode'
-import { ActionNode } from './ActionNode'
-import { OrchestratorNode } from './OrchestratorNode'
 import { GhostNode } from '../bridge/GhostNode'
+import { ActionNode } from './ActionNode'
+import { ArtifactNode } from './ArtifactNode'
+import { ConversationNode } from './ConversationNode'
+import { NoteNode } from './NoteNode'
+import { OrchestratorNode } from './OrchestratorNode'
+import { ProjectNode } from './ProjectNode'
+import { TaskNode } from './TaskNode'
+import { TextNode } from './TextNode'
+import { WorkspaceNode } from './WorkspaceNode'
 
 export const nodeTypes: NodeTypes = {
   conversation: ConversationNode,

@@ -9,7 +9,7 @@
 // reduces visual detail of distant nodes, creating a focal gradient.
 
 import { create } from 'zustand'
-import type { ContextTraversalNode, ContextTraversalEdge } from '../utils/contextCache'
+import type { ContextTraversalEdge, ContextTraversalNode } from '../utils/contextCache'
 
 // --- DoF Types (Phase 6A) -------------------------------------------------
 
@@ -44,7 +44,7 @@ export const DOF_DISCONNECTED = -1
 export function computeDepthOfField(
   focusNodeId: string,
   nodes: DofNode[],
-  edges: DofEdge[]
+  edges: DofEdge[],
 ): Map<string, number> {
   const result = new Map<string, number>()
 
@@ -118,7 +118,12 @@ interface ContextVisualizationState {
   dofRings: Map<string, number>
 
   // Actions
-  activate: (nodeId: string, nodes: ContextTraversalNode[], edges: ContextTraversalEdge[], isTerminal?: boolean) => void
+  activate: (
+    nodeId: string,
+    nodes: ContextTraversalNode[],
+    edges: ContextTraversalEdge[],
+    isTerminal?: boolean,
+  ) => void
   deactivate: () => void
 
   // DoF actions (Phase 6A)
@@ -157,7 +162,7 @@ export const useContextVisualizationStore = create<ContextVisualizationState>()(
       isTerminalTarget: isTerminal,
       includedNodeIds: nodeMap,
       includedEdgeIds: edgeSet,
-      nodeCount: nodes.length
+      nodeCount: nodes.length,
     })
   },
 
@@ -168,7 +173,7 @@ export const useContextVisualizationStore = create<ContextVisualizationState>()(
       isTerminalTarget: false,
       includedNodeIds: new Map(),
       includedEdgeIds: new Set(),
-      nodeCount: 0
+      nodeCount: 0,
     })
   },
 
@@ -183,7 +188,7 @@ export const useContextVisualizationStore = create<ContextVisualizationState>()(
   updateDofRings: (focusNodeId, nodes, edges) => {
     const rings = computeDepthOfField(focusNodeId, nodes, edges)
     set({ dofRings: rings, dofFocusNodeId: focusNodeId })
-  }
+  },
 }))
 
 // --- Selectors (Phase 6A) -------------------------------------------------

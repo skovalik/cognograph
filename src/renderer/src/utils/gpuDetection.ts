@@ -31,7 +31,10 @@ export function getGPUTier(): GPUTier {
 
   // CRITICAL: Disable GPU in test/CI environments to prevent VRAM leaks and driver crashes
   // Tests run 10+ Electron instances rapidly - GPU contexts don't clean up fast enough
-  if (import.meta.env.MODE === 'test' || typeof window !== 'undefined' && (window as any).__TEST_MODE__) {
+  if (
+    import.meta.env.MODE === 'test' ||
+    (typeof window !== 'undefined' && (window as any).__TEST_MODE__)
+  ) {
     cachedTier = {
       webglAvailable: false,
       webgl2Available: false,

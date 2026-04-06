@@ -13,44 +13,195 @@
  * Created as part of Batch 0C: Store Split Migration
  */
 
-// Primary stores (legacy - keep for backward compatibility during migration)
-export { useWorkspaceStore } from './workspaceStore'
-export { useCanvasStore, selectNodes, selectEdges, selectSelectedNodeIds, selectSelectedEdgeIds, selectViewport, selectIsNodeStreaming, selectIsRecentlySpawned } from './canvasStore'
-export { useUIStore, selectActivePanel, selectActiveChatNodeId, selectLeftSidebarOpen, selectLeftSidebarTab, selectIsNodeExpanded, selectThemeSettings, selectPinnedWindows, selectIsNodePinned, selectArtboardNodeId, selectIsArtboardActive } from './uiStore'
-export { useFeaturesStore, selectWorkspaceId, selectWorkspaceName, selectIsDirty, selectIsLoading, selectSaveStatus, selectHistoryState, selectPendingExtractions, selectPendingExtractionsForSource, selectTrash, selectSyncMode } from './featuresStore'
-
-// Domain stores (Week 2 Stream B Track 2 Phase 2.2a)
-export { useNodesStore, useNodes, useNodeById, useNodeWarmth, useIsSpawning, useIsNodeSpawning } from './nodesStore'
-export { useEdgesStore, useEdges, useEdgeById } from './edgesStore'
-export { useSelectionStore, useSelectedNodeIds, useSelectedEdgeIds, useIsNodeSelected, useIsEdgeSelected, useSelectionCount, useBoxSelectRect, useLastCreatedNodeId } from './selectionStore'
-export { useHistoryStore, useCanUndo, useCanRedo, useHistoryLength, useCurrentHistoryIndex, useHistoryActions, getHistoryActionLabel } from './historyStore'
-export { usePropertiesStore, usePropertySchema, usePropertiesForNodeType, usePropertyDefinition, useAllProperties, useCustomProperties } from './propertiesStore'
-export { useExtractionStore, usePendingExtractions, useExtractionsForNode, useExtractionCountForNode, useSortedExtractionsForNode, useIsExtracting, useOpenExtractionPanelNodeId, useIsExtractionPanelOpen, useExtractionDrag, useLastAcceptedExtraction } from './extractionStore'
-export { useCanvasViewportStore, useViewport, useFocusModeNodeId, useIsFocusModeActive, useBookmarkedNodeId, useIsNodeBookmarked, useNumberedBookmarks, useNodeNumberedBookmark, useSavedViews, useLastCanvasClick } from './canvasViewportStore'
-export { usePersistenceStore, useWorkspaceName, useWorkspaceId, useWorkspacePath, useIsDirty, useIsLoading, useSaveStatus, useLastSaved, useAutoSaveEnabled, useAutoSaveInterval } from './persistenceStore'
-
+export { useActionStore } from './actionStore'
 // Feature stores
 export { useAIEditorStore } from './aiEditorStore'
-export { useActionStore } from './actionStore'
+export {
+  selectActivationScore,
+  selectAhaAchieved,
+  selectMetrics,
+  selectTemplateUsed,
+  selectTimeToFirstChat,
+  selectTimeToFirstConnection,
+  selectTimeToFirstNode,
+  selectTutorialCompleted,
+  useAnalyticsStore,
+} from './analyticsStore'
+export {
+  selectAuditEventCount,
+  selectAuditEvents,
+  selectAuditFilter,
+  selectAuditTotalCost,
+  selectIsSearching,
+  useAuditStore,
+} from './auditStore'
+export {
+  selectEdges,
+  selectIsNodeStreaming,
+  selectIsRecentlySpawned,
+  selectNodes,
+  selectSelectedEdgeIds,
+  selectSelectedNodeIds,
+  selectViewport,
+  useCanvasStore,
+} from './canvasStore'
+export {
+  useBookmarkedNodeId,
+  useCanvasViewportStore,
+  useFocusModeNodeId,
+  useIsFocusModeActive,
+  useIsNodeBookmarked,
+  useLastCanvasClick,
+  useNodeNumberedBookmark,
+  useNumberedBookmarks,
+  useSavedViews,
+  useViewport,
+} from './canvasViewportStore'
+export {
+  initCCBridgeListener,
+  selectCCBridgeConnected,
+  selectCCBridgeEvents,
+  selectCCBridgeLastEventTime,
+  selectCCBridgeSessionCount,
+  useCCBridgeStore,
+} from './ccBridgeStore'
 export { useConnectorStore } from './connectorStore'
 export { useContextMenuStore } from './contextMenuStore'
+export { useEdgeById, useEdges, useEdgesStore } from './edgesStore'
 export { useEntitlementsStore } from './entitlementsStore'
-export { useOfflineStore } from './offlineStore'
-export { usePermissionStore } from './permissionStore'
-export { useSavedViewsStore } from './savedViewsStore'
-export { useSpatialRegionStore, selectDistricts } from './spatialRegionStore'
-export { useTemplateStore } from './templateStore'
-export { useWorkflowStore } from './workflowStore'
-export { useCCBridgeStore, initCCBridgeListener, selectCCBridgeEvents, selectCCBridgeConnected, selectCCBridgeSessionCount, selectCCBridgeLastEventTime } from './ccBridgeStore'
-export { useOrchestratorStore, initOrchestratorIPC } from './orchestratorStore'
-export { useSessionStatsStore } from './sessionStatsStore'
-export { useAuditStore, selectAuditEvents, selectAuditEventCount, selectAuditTotalCost, selectAuditFilter, selectIsSearching } from './auditStore'
-export { useGraphIntelligenceStore, selectInsights, selectActiveInsights, selectInsightsByNode, selectCostHistory, selectDailyBudgetUsed, selectDailyBudgetLimit, selectCurrentSessionCost, selectIsAnalyzing } from './graphIntelligenceStore'
-export { useAnalyticsStore, selectMetrics, selectActivationScore, selectTimeToFirstNode, selectTimeToFirstConnection, selectTimeToFirstChat, selectTutorialCompleted, selectTemplateUsed, selectAhaAchieved } from './analyticsStore'
-export { useOnboardingStore, selectOnboardingStep, selectOnboardingCompleted, selectOnboardingTemplate } from './onboardingStore'
-
-// Types
-export type { CanvasState, UIState, FeaturesState, PinnedWindow, TrashedItem, ExtractionDragState, LastAcceptedExtraction } from './types'
-
+export {
+  useExtractionCountForNode,
+  useExtractionDrag,
+  useExtractionStore,
+  useExtractionsForNode,
+  useIsExtracting,
+  useIsExtractionPanelOpen,
+  useLastAcceptedExtraction,
+  useOpenExtractionPanelNodeId,
+  usePendingExtractions,
+  useSortedExtractionsForNode,
+} from './extractionStore'
+export {
+  selectHistoryState,
+  selectIsDirty,
+  selectIsLoading,
+  selectPendingExtractions,
+  selectPendingExtractionsForSource,
+  selectSaveStatus,
+  selectSyncMode,
+  selectTrash,
+  selectWorkspaceId,
+  selectWorkspaceName,
+  useFeaturesStore,
+} from './featuresStore'
+export {
+  selectActiveInsights,
+  selectCostHistory,
+  selectCurrentSessionCost,
+  selectDailyBudgetLimit,
+  selectDailyBudgetUsed,
+  selectInsights,
+  selectInsightsByNode,
+  selectIsAnalyzing,
+  useGraphIntelligenceStore,
+} from './graphIntelligenceStore'
+export {
+  getHistoryActionLabel,
+  useCanRedo,
+  useCanUndo,
+  useCurrentHistoryIndex,
+  useHistoryActions,
+  useHistoryLength,
+  useHistoryStore,
+} from './historyStore'
 // Node factories
-export { createNodeData, createConversationData, createProjectData, createNoteData, createTaskData, createArtifactData, createWorkspaceData, createTextData, createActionData, DEFAULT_NODE_DIMENSIONS } from './nodeFactories'
+export {
+  createActionData,
+  createArtifactData,
+  createConversationData,
+  createNodeData,
+  createNoteData,
+  createProjectData,
+  createTaskData,
+  createTextData,
+  createWorkspaceData,
+  DEFAULT_NODE_DIMENSIONS,
+} from './nodeFactories'
+// Domain stores (Week 2 Stream B Track 2 Phase 2.2a)
+export {
+  useIsNodeSpawning,
+  useIsSpawning,
+  useNodeById,
+  useNodes,
+  useNodesStore,
+  useNodeWarmth,
+} from './nodesStore'
+export { useOfflineStore } from './offlineStore'
+export {
+  selectOnboardingCompleted,
+  selectOnboardingStep,
+  selectOnboardingTemplate,
+  useOnboardingStore,
+} from './onboardingStore'
+export { initOrchestratorIPC, useOrchestratorStore } from './orchestratorStore'
+export { usePermissionStore } from './permissionStore'
+export {
+  useAutoSaveEnabled,
+  useAutoSaveInterval,
+  useIsDirty,
+  useIsLoading,
+  useLastSaved,
+  usePersistenceStore,
+  useSaveStatus,
+  useWorkspaceId,
+  useWorkspaceName,
+  useWorkspacePath,
+} from './persistenceStore'
+export {
+  useAllProperties,
+  useCustomProperties,
+  usePropertiesForNodeType,
+  usePropertiesStore,
+  usePropertyDefinition,
+  usePropertySchema,
+} from './propertiesStore'
+export { useSavedViewsStore } from './savedViewsStore'
+export {
+  useBoxSelectRect,
+  useIsEdgeSelected,
+  useIsNodeSelected,
+  useLastCreatedNodeId,
+  useSelectedEdgeIds,
+  useSelectedNodeIds,
+  useSelectionCount,
+  useSelectionStore,
+} from './selectionStore'
+export { useSessionStatsStore } from './sessionStatsStore'
+export { selectDistricts, useSpatialRegionStore } from './spatialRegionStore'
+export { useTemplateStore } from './templateStore'
+// Types
+export type {
+  CanvasState,
+  ExtractionDragState,
+  FeaturesState,
+  LastAcceptedExtraction,
+  PinnedWindow,
+  TrashedItem,
+  UIState,
+} from './types'
+export {
+  selectActiveChatNodeId,
+  selectActivePanel,
+  selectArtboardNodeId,
+  selectIsArtboardActive,
+  selectIsNodeExpanded,
+  selectIsNodePinned,
+  selectLeftSidebarOpen,
+  selectLeftSidebarTab,
+  selectPinnedWindows,
+  selectThemeSettings,
+  useUIStore,
+} from './uiStore'
+export { useWorkflowStore } from './workflowStore'
+// Primary stores (legacy - keep for backward compatibility during migration)
+export { useWorkspaceStore } from './workspaceStore'

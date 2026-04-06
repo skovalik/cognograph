@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useState, useEffect, useCallback } from 'react'
-import { Zap, X, Plus, Sparkles } from 'lucide-react'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { useIsWorkflowActive } from '../../stores/workflowStore'
-import { useGlassClassName } from '../../hooks/useGlassClassName'
-import { analyzeHistoryForPatterns, resetAnalysisState, type AutomationSuggestion } from '../../services/automationSuggester'
 import { createActionData } from '@shared/actionTypes'
+import { Plus, Sparkles, X, Zap } from 'lucide-react'
+import { memo, useCallback, useEffect, useState } from 'react'
+import { useGlassClassName } from '../../hooks/useGlassClassName'
+import {
+  type AutomationSuggestion,
+  analyzeHistoryForPatterns,
+  resetAnalysisState,
+} from '../../services/automationSuggester'
+import { useIsWorkflowActive } from '../../stores/workflowStore'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 
 /**
  * Floating panel that shows AI-suggested automations based on user activity patterns.
@@ -39,10 +43,10 @@ function SuggestedAutomationsComponent(): JSX.Element | null {
   useEffect(() => {
     const newSuggestions = analyzeHistoryForPatterns()
     if (newSuggestions.length > 0) {
-      setSuggestions(prev => {
+      setSuggestions((prev) => {
         // Merge new suggestions, avoiding duplicates
-        const existingIds = new Set(prev.map(s => s.id))
-        const novel = newSuggestions.filter(s => !existingIds.has(s.id))
+        const existingIds = new Set(prev.map((s) => s.id))
+        const novel = newSuggestions.filter((s) => !existingIds.has(s.id))
         if (novel.length === 0) return prev
         return [...prev, ...novel].slice(-5) // Keep last 5
       })
@@ -50,36 +54,39 @@ function SuggestedAutomationsComponent(): JSX.Element | null {
   }, [historyIndex])
 
   const handleDismiss = useCallback((id: string) => {
-    setDismissed(prev => new Set(prev).add(id))
+    setDismissed((prev) => new Set(prev).add(id))
   }, [])
 
-  const handleCreateAction = useCallback((suggestion: AutomationSuggestion) => {
-    // Create an action node at the center of the viewport
-    const viewport = useWorkspaceStore.getState().viewport
-    const position = {
-      x: (-viewport.x + window.innerWidth / 2) / viewport.zoom - 140,
-      y: (-viewport.y + window.innerHeight / 2) / viewport.zoom - 70
-    }
+  const handleCreateAction = useCallback(
+    (suggestion: AutomationSuggestion) => {
+      // Create an action node at the center of the viewport
+      const viewport = useWorkspaceStore.getState().viewport
+      const position = {
+        x: (-viewport.x + window.innerWidth / 2) / viewport.zoom - 140,
+        y: (-viewport.y + window.innerHeight / 2) / viewport.zoom - 70,
+      }
 
-    const nodeId = addNode('action', position)
+      const nodeId = addNode('action', position)
 
-    // Configure the action node with the suggested trigger and steps
-    const actionData = createActionData()
-    updateNode(nodeId, {
-      ...actionData,
-      title: suggestion.title,
-      description: suggestion.description,
-      trigger: suggestion.trigger,
-      actions: suggestion.steps,
-      enabled: false // Start disabled so user can review
-    })
+      // Configure the action node with the suggested trigger and steps
+      const actionData = createActionData()
+      updateNode(nodeId, {
+        ...actionData,
+        title: suggestion.title,
+        description: suggestion.description,
+        trigger: suggestion.trigger,
+        actions: suggestion.steps,
+        enabled: false, // Start disabled so user can review
+      })
 
-    // Dismiss the suggestion
-    handleDismiss(suggestion.id)
-  }, [addNode, updateNode, handleDismiss])
+      // Dismiss the suggestion
+      handleDismiss(suggestion.id)
+    },
+    [addNode, updateNode, handleDismiss],
+  )
 
   // Filter out dismissed suggestions
-  const visibleSuggestions = suggestions.filter(s => !dismissed.has(s.id))
+  const visibleSuggestions = suggestions.filter((s) => !dismissed.has(s.id))
 
   // Don't show suggestions during template execution - reduces cognitive load
   // (Check placed after all hooks to comply with Rules of Hooks)
@@ -115,7 +122,9 @@ function SuggestedAutomationsComponent(): JSX.Element | null {
       </button>
 
       {/* Expanded panel (opens above button) */}
-      <div className={`absolute bottom-full left-0 mb-2 w-72 max-h-80 overflow-y-auto ${glassClassName} gui-panel-bg border border-[var(--border-subtle)] rounded-lg shadow-xl`}>
+      <div
+        className={`absolute bottom-full left-0 mb-2 w-72 max-h-80 overflow-y-auto ${glassClassName} gui-panel-bg border border-[var(--border-subtle)] rounded-lg shadow-xl`}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border-subtle)]">
           <div className="flex items-center gap-1.5">
@@ -133,7 +142,7 @@ function SuggestedAutomationsComponent(): JSX.Element | null {
 
         {/* Suggestions */}
         <div className="p-2 space-y-2">
-          {visibleSuggestions.map(suggestion => (
+          {visibleSuggestions.map((suggestion) => (
             <SuggestionCard
               key={suggestion.id}
               suggestion={suggestion}
@@ -159,7 +168,9 @@ function SuggestionCard({ suggestion, onDismiss, onCreate }: SuggestionCardProps
       <div className="flex items-start justify-between gap-1">
         <div className="flex items-center gap-1.5 min-w-0">
           <Zap className="w-3 h-3 text-orange-400 shrink-0" />
-          <span className="text-[11px] font-medium gui-text-primary truncate">{suggestion.title}</span>
+          <span className="text-[11px] font-medium gui-text-primary truncate">
+            {suggestion.title}
+          </span>
         </div>
         <button
           onClick={onDismiss}

@@ -25,6 +25,31 @@
   -webkit-backdrop-filter: blur(12px);
 }
 
+/* ═══ Dismiss button ═══ */
+.welcome-screen__dismiss {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  /* Force light icon — backdrop is always dark */
+  color: #9E978D;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.welcome-screen__dismiss:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #EDE8E0;
+}
+
 /* ═══ Content area ═══ */
 .welcome-screen__content {
   position: relative;
@@ -39,25 +64,29 @@
 
 /* ═══ Heading ═══ */
 .welcome-screen__heading {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display), serif;
   font-size: clamp(32px, 5vw, 48px);
   font-style: italic;
   font-weight: 400;
-  color: var(--text-primary);
+  /* Force light text — backdrop is always dark regardless of theme */
+  color: #EDE8E0;
   text-align: center;
   line-height: 1.2;
   margin: 0;
 }
 
-.welcome-screen__heading span {
+/* Bracket logo treatment: [Cognograph] — brackets colored, not italic */
+.welcome-screen__bracket {
   color: var(--accent-glow);
+  font-style: normal;
 }
 
 /* ═══ Intro text ═══ */
 .welcome-screen__intro {
   font-family: var(--font-sans);
   font-size: 16px;
-  color: var(--text-secondary);
+  /* Force muted light text — backdrop is always dark */
+  color: #9E978D;
   text-align: center;
   line-height: 1.5;
   margin: 0;
@@ -136,7 +165,8 @@
 .welcome-screen__hint {
   font-family: var(--font-sans);
   font-size: 13px;
-  color: var(--text-muted);
+  /* Force muted light — backdrop is always dark */
+  color: #5A554E;
   line-height: 1.4;
 }
 
@@ -155,6 +185,16 @@
   .welcome-screen__submit {
     min-width: 44px;
     min-height: 44px;
+    background: var(--accent-glow, #C8963E);
+    color: var(--bg, #0A0908);
+    border-radius: 10px;
+  }
+  .welcome-screen__submit:disabled {
+    background: var(--surface-elevated, #1a1a18);
+    color: var(--text-muted, #666);
+  }
+  .welcome-screen__hint {
+    font-size: 12px;
   }
 }
 

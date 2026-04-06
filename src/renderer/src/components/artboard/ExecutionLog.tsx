@@ -117,7 +117,12 @@ function ExecutionLogComponent({ entries, className }: ExecutionLogProps): JSX.E
 
   const formatTime = useCallback((ts: number) => {
     const d = new Date(ts)
-    return d.toLocaleTimeString(undefined, { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    return d.toLocaleTimeString(undefined, {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
   }, [])
 
   return (
@@ -126,7 +131,10 @@ function ExecutionLogComponent({ entries, className }: ExecutionLogProps): JSX.E
       aria-label="Execution log"
     >
       {/* Filter bar */}
-      <div className="execution-log__filters flex items-center gap-1 px-2 py-1 border-b" style={{ borderColor: 'var(--border-subtle, #333)' }}>
+      <div
+        className="execution-log__filters flex items-center gap-1 px-2 py-1 border-b"
+        style={{ borderColor: 'var(--border-subtle, #333)' }}
+      >
         {Object.entries(LEVEL_STYLES).map(([level, style]) => (
           <button
             key={level}
@@ -173,18 +181,35 @@ function ExecutionLogComponent({ entries, className }: ExecutionLogProps): JSX.E
                     right: 0,
                   }}
                 >
-                  <span className="flex-shrink-0 text-[9px]" style={{ color: 'var(--text-muted, #666)' }}>
+                  <span
+                    className="flex-shrink-0 text-[9px]"
+                    style={{ color: 'var(--text-muted, #666)' }}
+                  >
                     {formatTime(entry.timestamp)}
                   </span>
-                  <span className="flex-shrink-0 w-8 text-center text-[9px] font-semibold uppercase" style={{ color: style.color }}>
+                  <span
+                    className="flex-shrink-0 w-8 text-center text-[9px] font-semibold uppercase"
+                    style={{ color: style.color }}
+                  >
                     {entry.level}
                   </span>
                   {entry.agentId && (
-                    <span className="flex-shrink-0 text-[9px] opacity-60" style={{ color: 'var(--text-secondary, #aaa)' }}>
+                    <span
+                      className="flex-shrink-0 text-[9px] opacity-60"
+                      style={{ color: 'var(--text-secondary, #aaa)' }}
+                    >
                       [{entry.agentId.slice(0, 8)}]
                     </span>
                   )}
-                  <span className="truncate" style={{ color: style.color === 'var(--text-muted, #888)' ? 'var(--text-secondary, #bbb)' : style.color }}>
+                  <span
+                    className="truncate"
+                    style={{
+                      color:
+                        style.color === 'var(--text-muted, #888)'
+                          ? 'var(--text-secondary, #bbb)'
+                          : style.color,
+                    }}
+                  >
                     {entry.message}
                   </span>
                 </div>
@@ -200,18 +225,35 @@ function ExecutionLogComponent({ entries, className }: ExecutionLogProps): JSX.E
                 className="execution-log__row flex items-center gap-2 px-2 hover:bg-white/5"
                 style={{ height: ROW_HEIGHT }}
               >
-                <span className="flex-shrink-0 text-[9px]" style={{ color: 'var(--text-muted, #666)' }}>
+                <span
+                  className="flex-shrink-0 text-[9px]"
+                  style={{ color: 'var(--text-muted, #666)' }}
+                >
                   {formatTime(entry.timestamp)}
                 </span>
-                <span className="flex-shrink-0 w-8 text-center text-[9px] font-semibold uppercase" style={{ color: style.color }}>
+                <span
+                  className="flex-shrink-0 w-8 text-center text-[9px] font-semibold uppercase"
+                  style={{ color: style.color }}
+                >
                   {entry.level}
                 </span>
                 {entry.agentId && (
-                  <span className="flex-shrink-0 text-[9px] opacity-60" style={{ color: 'var(--text-secondary, #aaa)' }}>
+                  <span
+                    className="flex-shrink-0 text-[9px] opacity-60"
+                    style={{ color: 'var(--text-secondary, #aaa)' }}
+                  >
                     [{entry.agentId.slice(0, 8)}]
                   </span>
                 )}
-                <span className="truncate" style={{ color: style.color === 'var(--text-muted, #888)' ? 'var(--text-secondary, #bbb)' : style.color }}>
+                <span
+                  className="truncate"
+                  style={{
+                    color:
+                      style.color === 'var(--text-muted, #888)'
+                        ? 'var(--text-secondary, #bbb)'
+                        : style.color,
+                  }}
+                >
                   {entry.message}
                 </span>
               </div>

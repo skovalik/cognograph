@@ -10,7 +10,7 @@
  */
 
 'use client'
-import React, { useRef, useEffect, useCallback, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality'
 
 interface StaticGridProps {
@@ -66,7 +66,10 @@ function StaticGridComponent({
 
     for (let x = gap / 2; x < w; x += gap) {
       for (let y = gap / 2; y < h; y += gap) {
-        let r = base.r, g2 = base.g, b = base.b, a = opacity
+        let r = base.r,
+          g2 = base.g,
+          b = base.b,
+          a = opacity
 
         // Cursor proximity brightening
         if (mouse) {

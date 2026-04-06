@@ -26,15 +26,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           className={`gui-input px-2 py-1.5 text-sm ${error ? 'border-red-500' : ''} ${className}`}
           {...props}
         />
-        {hint && !error && (
-          <span className="gui-text-secondary text-xs">{hint}</span>
-        )}
-        {error && (
-          <span className="text-red-400 text-xs">{error}</span>
-        )}
+        {hint && !error && <span className="gui-text-secondary text-xs">{hint}</span>}
+        {error && <span className="text-red-400 text-xs">{error}</span>}
       </div>
     )
-  }
+  },
 )
 
 Input.displayName = 'Input'

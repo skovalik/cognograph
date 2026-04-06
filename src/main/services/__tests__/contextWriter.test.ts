@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // ---------------------------------------------------------------------------
 // Mock electron before importing the module under test
@@ -9,8 +9,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('electron', () => ({
   app: {
-    getPath: vi.fn(() => '/mock/userData')
-  }
+    getPath: vi.fn(() => '/mock/userData'),
+  },
 }))
 
 // Mock fs — must be a complete mock (no importOriginal in jsdom env)
@@ -24,33 +24,33 @@ vi.mock('fs', () => ({
       mkdir: (...args: unknown[]) => mockMkdir(...args),
       writeFile: (...args: unknown[]) => mockWriteFile(...args),
       readFile: (...args: unknown[]) => mockReadFile(...args),
-    }
+    },
   },
   promises: {
     mkdir: (...args: unknown[]) => mockMkdir(...args),
     writeFile: (...args: unknown[]) => mockWriteFile(...args),
     readFile: (...args: unknown[]) => mockReadFile(...args),
-  }
+  },
 }))
 
+import type { ContextEntry, GeneratedContext } from '../contextWriter'
 // Import after mocking
 import {
-  bfsTraverse,
-  generateMarkdown,
-  estimateTokens,
-  buildContextForNode,
-  writeContextFile,
-  getContextFilePath,
-  fnv1aHash,
   AdjacencyIndex,
-  IncrementalXORHash,
   BFSCache,
-  invalidateBFSCaches,
+  bfsTraverse,
+  buildContextForNode,
+  estimateTokens,
+  fnv1aHash,
+  generateMarkdown,
   getAdjacencyIndex,
-  getXORHash,
   getBFSCache,
+  getContextFilePath,
+  getXORHash,
+  IncrementalXORHash,
+  invalidateBFSCaches,
+  writeContextFile,
 } from '../contextWriter'
-import type { ContextEntry, GeneratedContext } from '../contextWriter'
 
 // ---------------------------------------------------------------------------
 // Test Fixtures
@@ -61,16 +61,11 @@ function makeNode(id: string, type: string, data: Record<string, unknown> = {}) 
     id,
     type,
     position: { x: 0, y: 0 },
-    data: { type, ...data }
+    data: { type, ...data },
   }
 }
 
-function makeEdge(
-  id: string,
-  source: string,
-  target: string,
-  data?: Record<string, unknown>
-) {
+function makeEdge(id: string, source: string, target: string, data?: Record<string, unknown>) {
   return { id, source, target, data }
 }
 
@@ -111,7 +106,7 @@ describe('contextWriter', () => {
       expect(entries).toHaveLength(2)
 
       // B should be at depth 1
-      const entryB = entries.find(e => e.nodeId === 'B')
+      const entryB = entries.find((e) => e.nodeId === 'B')
       expect(entryB).toBeDefined()
       expect(entryB!.depth).toBe(1)
       expect(entryB!.nodeType).toBe('task')
@@ -119,7 +114,7 @@ describe('contextWriter', () => {
       expect(entryB!.edgeRole).toBe('reference')
 
       // A should be at depth 2
-      const entryA = entries.find(e => e.nodeId === 'A')
+      const entryA = entries.find((e) => e.nodeId === 'A')
       expect(entryA).toBeDefined()
       expect(entryA!.depth).toBe(2)
       expect(entryA!.nodeType).toBe('note')
@@ -147,10 +142,10 @@ describe('contextWriter', () => {
       const entries = bfsTraverse('E', nodes, edges)
 
       expect(entries).toHaveLength(3) // D, C, B
-      expect(entries.map(e => e.nodeId)).toContain('D')
-      expect(entries.map(e => e.nodeId)).toContain('C')
-      expect(entries.map(e => e.nodeId)).toContain('B')
-      expect(entries.map(e => e.nodeId)).not.toContain('A')
+      expect(entries.map((e) => e.nodeId)).toContain('D')
+      expect(entries.map((e) => e.nodeId)).toContain('C')
+      expect(entries.map((e) => e.nodeId)).toContain('B')
+      expect(entries.map((e) => e.nodeId)).not.toContain('A')
     })
 
     it('respects custom max depth', () => {
@@ -160,10 +155,7 @@ describe('contextWriter', () => {
         makeNode('C', 'note', { title: 'C' }),
       ]
 
-      const edges = [
-        makeEdge('e1', 'A', 'B'),
-        makeEdge('e2', 'B', 'C'),
-      ]
+      const edges = [makeEdge('e1', 'A', 'B'), makeEdge('e2', 'B', 'C')]
 
       const entries = bfsTraverse('C', nodes, edges, 1)
 
@@ -179,9 +171,7 @@ describe('contextWriter', () => {
         makeNode('B', 'note', { title: 'Node B', content: 'B content' }),
       ]
 
-      const edges = [
-        makeEdge('e1', 'A', 'B', { bidirectional: true }),
-      ]
+      const edges = [makeEdge('e1', 'A', 'B', { bidirectional: true })]
 
       const entries = bfsTraverse('A', nodes, edges)
 
@@ -196,9 +186,7 @@ describe('contextWriter', () => {
         makeNode('B', 'note', { title: 'Node B' }),
       ]
 
-      const edges = [
-        makeEdge('e1', 'A', 'B', { direction: 'bidirectional' }),
-      ]
+      const edges = [makeEdge('e1', 'A', 'B', { direction: 'bidirectional' })]
 
       const entries = bfsTraverse('A', nodes, edges)
 
@@ -207,14 +195,9 @@ describe('contextWriter', () => {
     })
 
     it('skips inactive edges', () => {
-      const nodes = [
-        makeNode('A', 'note', { title: 'A' }),
-        makeNode('B', 'note', { title: 'B' }),
-      ]
+      const nodes = [makeNode('A', 'note', { title: 'A' }), makeNode('B', 'note', { title: 'B' })]
 
-      const edges = [
-        makeEdge('e1', 'A', 'B', { active: false }),
-      ]
+      const edges = [makeEdge('e1', 'A', 'B', { active: false })]
 
       const entries = bfsTraverse('B', nodes, edges)
 
@@ -222,9 +205,7 @@ describe('contextWriter', () => {
     })
 
     it('handles isolated node (no edges)', () => {
-      const nodes = [
-        makeNode('A', 'note', { title: 'Lonely Node' }),
-      ]
+      const nodes = [makeNode('A', 'note', { title: 'Lonely Node' })]
 
       const entries = bfsTraverse('A', nodes, [])
 
@@ -239,18 +220,14 @@ describe('contextWriter', () => {
         makeNode('C', 'note', { title: 'C' }),
       ]
 
-      const edges = [
-        makeEdge('e1', 'A', 'B'),
-        makeEdge('e2', 'B', 'C'),
-        makeEdge('e3', 'C', 'A'),
-      ]
+      const edges = [makeEdge('e1', 'A', 'B'), makeEdge('e2', 'B', 'C'), makeEdge('e3', 'C', 'A')]
 
       const entries = bfsTraverse('A', nodes, edges)
 
       // Should visit C (depth 1, inbound to A) and B (depth 2, inbound to C)
       // Should NOT revisit A
       expect(entries.length).toBeLessThanOrEqual(2)
-      const ids = entries.map(e => e.nodeId)
+      const ids = entries.map((e) => e.nodeId)
       expect(ids).not.toContain('A') // Never includes the start node
     })
 
@@ -261,25 +238,19 @@ describe('contextWriter', () => {
         makeNode('note-node', 'note', { title: 'My Note', content: 'Note content here' }),
       ]
 
-      const edges = [
-        makeEdge('e1', 'task-node', 'root'),
-        makeEdge('e2', 'note-node', 'root'),
-      ]
+      const edges = [makeEdge('e1', 'task-node', 'root'), makeEdge('e2', 'note-node', 'root')]
 
       const entries = bfsTraverse('root', nodes, edges)
 
-      const taskEntry = entries.find(e => e.nodeId === 'task-node')
+      const taskEntry = entries.find((e) => e.nodeId === 'task-node')
       expect(taskEntry!.content).toBe('Task description here')
 
-      const noteEntry = entries.find(e => e.nodeId === 'note-node')
+      const noteEntry = entries.find((e) => e.nodeId === 'note-node')
       expect(noteEntry!.content).toBe('Note content here')
     })
 
     it('uses default edge role when contextRole not set', () => {
-      const nodes = [
-        makeNode('A', 'note', { title: 'A' }),
-        makeNode('B', 'note', { title: 'B' }),
-      ]
+      const nodes = [makeNode('A', 'note', { title: 'A' }), makeNode('B', 'note', { title: 'B' })]
 
       const edges = [
         makeEdge('e1', 'A', 'B'), // No data at all
@@ -339,9 +310,7 @@ describe('contextWriter', () => {
         makeNode('A', 'note', { title: 'A', content: 'Some content here' }),
       ]
 
-      const edges = [
-        makeEdge('e1', 'A', 'root'),
-      ]
+      const edges = [makeEdge('e1', 'A', 'root')]
 
       const entries = bfsTraverse('root', nodes, edges, 3, 0)
 
@@ -387,7 +356,7 @@ describe('contextWriter', () => {
           content: 'Some content',
           edgeRole: 'reference',
           depth: 1,
-          tokenEstimate: 3
+          tokenEstimate: 3,
         },
         {
           nodeId: 'n2',
@@ -396,8 +365,8 @@ describe('contextWriter', () => {
           content: 'Task desc',
           edgeRole: 'provides-context',
           depth: 2,
-          tokenEstimate: 3
-        }
+          tokenEstimate: 3,
+        },
       ]
 
       const md = generateMarkdown('Root Node', entries)
@@ -425,8 +394,8 @@ describe('contextWriter', () => {
 
   describe('estimateTokens', () => {
     it('estimates roughly 4 chars per token', () => {
-      expect(estimateTokens('abcd')).toBe(1)        // 4 chars = 1 token
-      expect(estimateTokens('abcde')).toBe(2)        // 5 chars = ceil(1.25) = 2 tokens
+      expect(estimateTokens('abcd')).toBe(1) // 4 chars = 1 token
+      expect(estimateTokens('abcde')).toBe(2) // 5 chars = ceil(1.25) = 2 tokens
       expect(estimateTokens('a'.repeat(100))).toBe(25)
     })
 
@@ -435,7 +404,8 @@ describe('contextWriter', () => {
     })
 
     it('provides reasonable estimates for typical text', () => {
-      const paragraph = 'The quick brown fox jumps over the lazy dog. This is a test sentence with some content.'
+      const paragraph =
+        'The quick brown fox jumps over the lazy dog. This is a test sentence with some content.'
       const tokens = estimateTokens(paragraph)
       // ~88 chars / 4 = ~22 tokens. Reasonable range: 15-30
       expect(tokens).toBeGreaterThan(15)
@@ -464,9 +434,7 @@ describe('contextWriter', () => {
           makeNode('root', 'note', { title: 'Root Node', content: 'Root content' }),
           makeNode('ctx1', 'note', { title: 'Context 1', content: 'Context content' }),
         ],
-        edges: [
-          makeEdge('e1', 'ctx1', 'root', { active: true }),
-        ]
+        edges: [makeEdge('e1', 'ctx1', 'root', { active: true })],
       }
 
       const result = await buildContextForNode('root', workspace)
@@ -482,7 +450,7 @@ describe('contextWriter', () => {
     it('handles node not found in workspace', async () => {
       const workspace = {
         nodes: [makeNode('other', 'note', { title: 'Other' })],
-        edges: []
+        edges: [],
       }
 
       const result = await buildContextForNode('nonexistent', workspace)
@@ -504,7 +472,7 @@ describe('contextWriter', () => {
           makeEdge('e1', 'ctx1', 'root'),
           makeEdge('e2', 'ctx2', 'root'),
           makeEdge('e3', 'ctx3', 'root'),
-        ]
+        ],
       }
 
       const result = await buildContextForNode('root', workspace, { maxTokens: 50 })
@@ -525,20 +493,15 @@ describe('contextWriter', () => {
         entries: [],
         markdown: '# Test Markdown',
         filePath: '/mock/userData/.cognograph-activity/context-test.md',
-        totalTokens: 0
+        totalTokens: 0,
       }
 
       const result = await writeContextFile(context)
 
-      expect(mockMkdir).toHaveBeenCalledWith(
-        expect.stringContaining('.cognograph-activity'),
-        { recursive: true }
-      )
-      expect(mockWriteFile).toHaveBeenCalledWith(
-        context.filePath,
-        '# Test Markdown',
-        'utf-8'
-      )
+      expect(mockMkdir).toHaveBeenCalledWith(expect.stringContaining('.cognograph-activity'), {
+        recursive: true,
+      })
+      expect(mockWriteFile).toHaveBeenCalledWith(context.filePath, '# Test Markdown', 'utf-8')
       expect(result).toBe(context.filePath)
     })
   })
@@ -582,7 +545,7 @@ describe('contextWriter', () => {
     it('returns an unsigned 32-bit integer', () => {
       const h = fnv1aHash('test string')
       expect(h).toBeGreaterThanOrEqual(0)
-      expect(h).toBeLessThanOrEqual(0xFFFFFFFF)
+      expect(h).toBeLessThanOrEqual(0xffffffff)
     })
 
     it('handles empty string', () => {
@@ -598,32 +561,24 @@ describe('contextWriter', () => {
   describe('AdjacencyIndex', () => {
     it('produces correct inbound neighbors', () => {
       const idx = new AdjacencyIndex()
-      const edges = [
-        makeEdge('e1', 'A', 'B'),
-        makeEdge('e2', 'C', 'B'),
-        makeEdge('e3', 'A', 'D'),
-      ]
+      const edges = [makeEdge('e1', 'A', 'B'), makeEdge('e2', 'C', 'B'), makeEdge('e3', 'A', 'D')]
 
       idx.build(edges)
 
       const inbound = idx.getInbound('B')
       expect(inbound).toHaveLength(2)
-      expect(inbound.map(e => e.source).sort()).toEqual(['A', 'C'])
+      expect(inbound.map((e) => e.source).sort()).toEqual(['A', 'C'])
     })
 
     it('produces correct outbound neighbors', () => {
       const idx = new AdjacencyIndex()
-      const edges = [
-        makeEdge('e1', 'A', 'B'),
-        makeEdge('e2', 'A', 'C'),
-        makeEdge('e3', 'B', 'D'),
-      ]
+      const edges = [makeEdge('e1', 'A', 'B'), makeEdge('e2', 'A', 'C'), makeEdge('e3', 'B', 'D')]
 
       idx.build(edges)
 
       const outbound = idx.getOutbound('A')
       expect(outbound).toHaveLength(2)
-      expect(outbound.map(e => e.target).sort()).toEqual(['B', 'C'])
+      expect(outbound.map((e) => e.target).sort()).toEqual(['B', 'C'])
     })
 
     it('returns empty arrays for unknown nodes', () => {
@@ -637,9 +592,9 @@ describe('contextWriter', () => {
     it('returns all neighbor IDs via getNeighborIds', () => {
       const idx = new AdjacencyIndex()
       const edges = [
-        makeEdge('e1', 'X', 'A'),   // X is inbound to A
-        makeEdge('e2', 'A', 'Y'),   // Y is outbound from A
-        makeEdge('e3', 'A', 'Z'),   // Z is outbound from A
+        makeEdge('e1', 'X', 'A'), // X is inbound to A
+        makeEdge('e2', 'A', 'Y'), // Y is outbound from A
+        makeEdge('e3', 'A', 'Z'), // Z is outbound from A
       ]
 
       idx.build(edges)
@@ -681,7 +636,7 @@ describe('contextWriter', () => {
       const withIdx = bfsTraverse('C', nodes, edges, 3, undefined, idx)
 
       expect(withIdx).toHaveLength(withoutIdx.length)
-      expect(withIdx.map(e => e.nodeId).sort()).toEqual(withoutIdx.map(e => e.nodeId).sort())
+      expect(withIdx.map((e) => e.nodeId).sort()).toEqual(withoutIdx.map((e) => e.nodeId).sort())
     })
   })
 
@@ -835,10 +790,7 @@ describe('contextWriter', () => {
     })
 
     it('computeTopologyHash is deterministic', () => {
-      const edges = [
-        makeEdge('e1', 'A', 'B'),
-        makeEdge('e2', 'B', 'C'),
-      ]
+      const edges = [makeEdge('e1', 'A', 'B'), makeEdge('e2', 'B', 'C')]
 
       const h1 = BFSCache.computeTopologyHash(edges)
       const h2 = BFSCache.computeTopologyHash(edges)
@@ -846,17 +798,13 @@ describe('contextWriter', () => {
     })
 
     it('computeTopologyHash changes when edges change', () => {
-      const edges1 = [
-        makeEdge('e1', 'A', 'B'),
-        makeEdge('e2', 'B', 'C'),
-      ]
+      const edges1 = [makeEdge('e1', 'A', 'B'), makeEdge('e2', 'B', 'C')]
       const edges2 = [
         makeEdge('e1', 'A', 'B'),
         makeEdge('e3', 'D', 'C'), // different edge
       ]
 
-      expect(BFSCache.computeTopologyHash(edges1))
-        .not.toBe(BFSCache.computeTopologyHash(edges2))
+      expect(BFSCache.computeTopologyHash(edges1)).not.toBe(BFSCache.computeTopologyHash(edges2))
     })
 
     it('evicts oldest entry when max capacity reached', () => {
@@ -876,9 +824,7 @@ describe('contextWriter', () => {
           makeNode('root', 'note', { title: 'Root', content: 'Root content' }),
           makeNode('ctx1', 'note', { title: 'Ctx1', content: 'Context 1' }),
         ],
-        edges: [
-          makeEdge('e1', 'ctx1', 'root'),
-        ],
+        edges: [makeEdge('e1', 'ctx1', 'root')],
       }
 
       // First call — cache miss, populates cache

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+import type { SessionLink } from '../../stores/sessionLinkStore'
 import {
   getSessionLinkMenuItems,
+  getSessionMappingTier,
   getSessionUnlinkMenuItems,
-  getSessionMappingTier
 } from '../sessionLinkActions'
-import type { SessionLink } from '../../stores/sessionLinkStore'
 
 describe('getSessionLinkMenuItems', () => {
   it('returns empty for non-conversation nodes', () => {
@@ -30,7 +30,7 @@ describe('getSessionLinkMenuItems', () => {
 
   it('returns unlink option when session already linked', () => {
     const links: SessionLink[] = [
-      { sessionId: 's1', nodeId: 'node-1', method: 'manual', linkedAt: Date.now() }
+      { sessionId: 's1', nodeId: 'node-1', method: 'manual', linkedAt: Date.now() },
     ]
     const items = getSessionLinkMenuItems('node-1', 'conversation', links, [])
     expect(items).toHaveLength(1)
@@ -50,7 +50,7 @@ describe('getSessionUnlinkMenuItems', () => {
 
   it('returns unlink item when link exists', () => {
     const links: SessionLink[] = [
-      { sessionId: 'session-abc12345', nodeId: 'node-1', method: 'manual', linkedAt: Date.now() }
+      { sessionId: 'session-abc12345', nodeId: 'node-1', method: 'manual', linkedAt: Date.now() },
     ]
     const items = getSessionUnlinkMenuItems('node-1', 'conversation', links)
     expect(items).toHaveLength(1)
@@ -66,7 +66,7 @@ describe('getSessionMappingTier', () => {
 
   it('returns tier2 when session already linked', () => {
     const links: SessionLink[] = [
-      { sessionId: 's1', nodeId: 'node-1', method: 'manual', linkedAt: Date.now() }
+      { sessionId: 's1', nodeId: 'node-1', method: 'manual', linkedAt: Date.now() },
     ]
     expect(getSessionMappingTier(undefined, links, 's1')).toBe('tier2')
   })

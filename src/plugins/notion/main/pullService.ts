@@ -9,12 +9,12 @@
 // auto-applies or auto-merges where possible, emits conflict events otherwise.
 // Round-robin cursor for workspaces with >50 synced nodes.
 
-import type { PluginContext } from '../../types'
 import { notionService } from '../../../main/services/notionService'
-import { notionToNodeFields, getFieldAuthority } from './propertyMapper'
-import { notionBlocksToHtml, hashContent } from './contentConverter'
-import { SyncLogger } from './syncLogger'
+import type { PluginContext } from '../../types'
+import { hashContent, notionBlocksToHtml } from './contentConverter'
 import type { NodeSyncSnapshot } from './nodeSyncEngine'
+import { getFieldAuthority, notionToNodeFields } from './propertyMapper'
+import type { SyncLogger } from './syncLogger'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -47,11 +47,11 @@ interface FieldDiff {
 // Constants
 // -----------------------------------------------------------------------------
 
-const DEFAULT_PULL_INTERVAL_MS = 5 * 60 * 1000  // 5 minutes
-const MIN_PULL_INTERVAL_MS = 60 * 1000           // 1 minute floor
-const MAX_NODES_PER_CYCLE = 50                    // Cap API calls per cycle
-const MAX_BACKOFF_MS = 60 * 60 * 1000            // 1 hour max backoff
-const MAX_BLOCK_RECURSION_DEPTH = 3              // Cap nested block fetching
+const DEFAULT_PULL_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
+const MIN_PULL_INTERVAL_MS = 60 * 1000 // 1 minute floor
+const MAX_NODES_PER_CYCLE = 50 // Cap API calls per cycle
+const MAX_BACKOFF_MS = 60 * 60 * 1000 // 1 hour max backoff
+const MAX_BLOCK_RECURSION_DEPTH = 3 // Cap nested block fetching
 
 // -----------------------------------------------------------------------------
 // PullService
@@ -74,7 +74,7 @@ export class PullService {
     ctx: PluginContext,
     logger: SyncLogger,
     getSnapshots: () => Map<string, NodeSyncSnapshot>,
-    updateSnapshot: (nodeId: string, snapshot: NodeSyncSnapshot) => void
+    updateSnapshot: (nodeId: string, snapshot: NodeSyncSnapshot) => void,
   ): void {
     this.ctx = ctx
     this.logger = logger
@@ -101,9 +101,7 @@ export class PullService {
     this.currentIntervalMs = Math.max(MIN_PULL_INTERVAL_MS, config.pullIntervalMs)
 
     this.pollTimer = setInterval(() => {
-      this.poll().catch(err =>
-        this.ctx.log.error('Pull poll error:', String(err))
-      )
+      this.poll().catch((err) => this.ctx.log.error('Pull poll error:', String(err)))
     }, this.currentIntervalMs)
   }
 
@@ -136,7 +134,7 @@ export class PullService {
     try {
       // Step 1: Collect nodes with notion_pageId
       const allNodes = await this.ctx.workspace.getNodes()
-      const syncedNodes = allNodes.filter(node => {
+      const syncedNodes = allNodes.filter((node) => {
         const data = node.data as any
         return data.properties?.notion_pageId && data.properties?.notion_syncEnabled
       })
@@ -160,7 +158,6 @@ export class PullService {
       // Success: reset backoff
       this.consecutiveFailures = 0
       this.resetInterval()
-
     } catch (err) {
       // Cycle-level failure: backoff
       this.consecutiveFailures++
@@ -175,9 +172,7 @@ export class PullService {
   // Single Node Pull (Steps 2-4)
   // ---------------------------------------------------------------------------
 
-  private async pullSingleNode(
-    node: { id: string; type: string; data: any }
-  ): Promise<PullResult> {
+  private async pullSingleNode(node: { id: string; type: string; data: any }): Promise<PullResult> {
     const nodeData = node.data as any
     const pageId = nodeData.properties?.notion_pageId
     const workspaceId = this.currentWorkspaceId!
@@ -191,7 +186,7 @@ export class PullService {
     // Step 2: Retrieve page from Notion
     const pageResult = await notionService.request(
       async (client) => client.pages.retrieve({ page_id: pageId }),
-      'pullRetrievePage'
+      'pullRetrievePage',
     )
 
     if (!pageResult.success) {
@@ -248,8 +243,12 @@ export class PullService {
 
     // Step 4c-4h: Diff and resolve
     return this.resolveChanges(
-      node, notionFields, notionEditedMs,
-      notionContentHash, notionHtml, snapshot
+      node,
+      notionFields,
+      notionEditedMs,
+      notionContentHash,
+      notionHtml,
+      snapshot,
     )
   }
 
@@ -263,7 +262,7 @@ export class PullService {
     notionEditedMs: number,
     notionContentHash: string | undefined,
     notionHtml: string | undefined,
-    snapshot: NodeSyncSnapshot | undefined
+    snapshot: NodeSyncSnapshot | undefined,
   ): PullResult {
     const nodeData = node.data as any
     const workspaceId = this.currentWorkspaceId!
@@ -276,15 +275,15 @@ export class PullService {
       return {
         nodeId: node.id,
         action: 'auto-apply',
-        fieldsUpdated: Object.keys(notionFields)
+        fieldsUpdated: Object.keys(notionFields),
       }
     }
 
     // Build field-level diff
     const diffs = this.buildFieldDiffs(node, notionFields, snapshot, notionContentHash)
 
-    const notionChangedFields = diffs.filter(d => d.changedInNotion)
-    const localChangedFields = diffs.filter(d => d.changedLocally)
+    const notionChangedFields = diffs.filter((d) => d.changedInNotion)
+    const localChangedFields = diffs.filter((d) => d.changedLocally)
 
     // Step 4e: No Notion changes
     if (notionChangedFields.length === 0) {
@@ -292,7 +291,7 @@ export class PullService {
       // (Notion may have changed something we don't track)
       const updatedSnapshot: NodeSyncSnapshot = {
         ...snapshot,
-        notionLastEditedTime: notionEditedMs
+        notionLastEditedTime: notionEditedMs,
       }
       this.updateSnapshotFn(node.id, updatedSnapshot)
       this.logger.pullSkip(workspaceId, node.id, 'no_field_changes')
@@ -307,18 +306,22 @@ export class PullService {
       }
       this.applyNotionFields(node, fieldsToApply, notionHtml)
       this.updateSnapshot(node, notionEditedMs, notionFields, notionContentHash)
-      this.logger.pullSuccess(workspaceId, node.id, notionChangedFields.map(d => d.field).join(','))
+      this.logger.pullSuccess(
+        workspaceId,
+        node.id,
+        notionChangedFields.map((d) => d.field).join(','),
+      )
       return {
         nodeId: node.id,
         action: 'auto-apply',
-        fieldsUpdated: notionChangedFields.map(d => d.field)
+        fieldsUpdated: notionChangedFields.map((d) => d.field),
       }
     }
 
     // Both sides changed — check for overlap
-    const notionFieldNames = new Set(notionChangedFields.map(d => d.field))
-    const localFieldNames = new Set(localChangedFields.map(d => d.field))
-    const conflictFieldNames = [...notionFieldNames].filter(f => localFieldNames.has(f))
+    const notionFieldNames = new Set(notionChangedFields.map((d) => d.field))
+    const localFieldNames = new Set(localChangedFields.map((d) => d.field))
+    const conflictFieldNames = [...notionFieldNames].filter((f) => localFieldNames.has(f))
 
     // Step 4g: Both changed, different fields → auto-merge
     if (conflictFieldNames.length === 0) {
@@ -341,13 +344,15 @@ export class PullService {
       nodeData.properties = nodeData.properties || {}
       nodeData.properties.notion_syncStatus = 'dirty'
 
-      this.logger.pullSuccess(workspaceId, node.id,
-        `auto-merge: notion=${notionChangedFields.map(d => d.field).join(',')}, local=${localChangedFields.map(d => d.field).join(',')}`
+      this.logger.pullSuccess(
+        workspaceId,
+        node.id,
+        `auto-merge: notion=${notionChangedFields.map((d) => d.field).join(',')}, local=${localChangedFields.map((d) => d.field).join(',')}`,
       )
       return {
         nodeId: node.id,
         action: 'auto-merge',
-        fieldsUpdated: notionChangedFields.map(d => d.field)
+        fieldsUpdated: notionChangedFields.map((d) => d.field),
       }
     }
 
@@ -358,21 +363,21 @@ export class PullService {
 
     this.ctx.sendToRenderer('node:notion-conflict', {
       nodeId: node.id,
-      conflicts: conflictFieldNames.map(field => {
-        const diff = diffs.find(d => d.field === field)!
+      conflicts: conflictFieldNames.map((field) => {
+        const diff = diffs.find((d) => d.field === field)!
         return {
           field,
           localValue: diff.localValue,
-          notionValue: diff.notionValue
+          notionValue: diff.notionValue,
         }
-      })
+      }),
     })
 
     this.logger.pullConflict(workspaceId, node.id, conflictFieldNames.join(','))
     return {
       nodeId: node.id,
       action: 'conflict',
-      conflictFields: conflictFieldNames
+      conflictFields: conflictFieldNames,
     }
   }
 
@@ -384,7 +389,7 @@ export class PullService {
     node: { id: string; data: any },
     notionFields: Record<string, unknown>,
     snapshot: NodeSyncSnapshot,
-    notionContentHash: string | undefined
+    notionContentHash: string | undefined,
   ): FieldDiff[] {
     const nodeData = node.data as any
     const s = snapshot.syncedFields
@@ -397,11 +402,31 @@ export class PullService {
       notion: unknown
       snapshot: unknown
     }> = [
-      { field: 'title', local: nodeData.title || '', notion: notionFields.title, snapshot: s.title },
+      {
+        field: 'title',
+        local: nodeData.title || '',
+        notion: notionFields.title,
+        snapshot: s.title,
+      },
       { field: 'status', local: nodeData.status, notion: notionFields.status, snapshot: s.status },
-      { field: 'priority', local: nodeData.priority, notion: notionFields.priority, snapshot: s.priority },
-      { field: 'description', local: nodeData.description || '', notion: notionFields.description, snapshot: s.description },
-      { field: 'dueDate', local: nodeData.dueDate, notion: notionFields.dueDate, snapshot: s.dueDate }
+      {
+        field: 'priority',
+        local: nodeData.priority,
+        notion: notionFields.priority,
+        snapshot: s.priority,
+      },
+      {
+        field: 'description',
+        local: nodeData.description || '',
+        notion: notionFields.description,
+        snapshot: s.description,
+      },
+      {
+        field: 'dueDate',
+        local: nodeData.dueDate,
+        notion: notionFields.dueDate,
+        snapshot: s.dueDate,
+      },
     ]
 
     // Content hash comparison for notes/artifacts
@@ -411,12 +436,12 @@ export class PullService {
         field: 'content',
         local: localContentHash,
         notion: notionContentHash,
-        snapshot: s.contentHash
+        snapshot: s.contentHash,
       })
     }
 
     for (const { field, local, notion, snapshot: snap } of fieldPairs) {
-      if (notion === undefined) continue  // Field not in Notion response
+      if (notion === undefined) continue // Field not in Notion response
 
       diffs.push({
         field,
@@ -424,7 +449,7 @@ export class PullService {
         notionValue: notion,
         snapshotValue: snap,
         changedInNotion: notion !== snap,
-        changedLocally: local !== snap
+        changedLocally: local !== snap,
       })
     }
 
@@ -438,7 +463,7 @@ export class PullService {
   private applyNotionFields(
     node: { id: string; data: any },
     fields: Record<string, unknown>,
-    contentHtml: string | undefined
+    contentHtml: string | undefined,
   ): void {
     const nodeData = node.data as any
 
@@ -454,7 +479,7 @@ export class PullService {
     // Emit update event so renderer reflects changes
     this.ctx.sendToRenderer('node:notion-updated', {
       nodeId: node.id,
-      fields: Object.keys(fields)
+      fields: Object.keys(fields),
     })
   }
 
@@ -466,7 +491,7 @@ export class PullService {
     node: { id: string; data: any },
     notionEditedMs: number,
     notionFields: Record<string, unknown>,
-    notionContentHash: string | undefined
+    notionContentHash: string | undefined,
   ): void {
     const nodeData = node.data as any
     const snapshot: NodeSyncSnapshot = {
@@ -479,11 +504,12 @@ export class PullService {
         status: (notionFields.status as string) || nodeData.status,
         priority: (notionFields.priority as string) || nodeData.priority,
         description: (notionFields.description as string) || nodeData.description,
-        contentHash: notionContentHash || (nodeData.content ? hashContent(nodeData.content) : undefined),
-        dueDate: (notionFields.dueDate as number) || nodeData.dueDate
+        contentHash:
+          notionContentHash || (nodeData.content ? hashContent(nodeData.content) : undefined),
+        dueDate: (notionFields.dueDate as number) || nodeData.dueDate,
       },
       notionLastEditedTime: notionEditedMs,
-      lossyConversion: false
+      lossyConversion: false,
     }
 
     this.updateSnapshotFn(node.id, snapshot)
@@ -498,7 +524,7 @@ export class PullService {
    */
   private async fetchAllBlocks(
     pageId: string,
-    depth = 0
+    depth = 0,
   ): Promise<{ success: boolean; blocks: any[] }> {
     if (depth >= MAX_BLOCK_RECURSION_DEPTH) {
       return { success: true, blocks: [] }
@@ -509,11 +535,12 @@ export class PullService {
 
     do {
       const result = await notionService.request(
-        async (client) => client.blocks.children.list({
-          block_id: pageId,
-          ...(cursor && { start_cursor: cursor })
-        }),
-        'pullListBlocks'
+        async (client) =>
+          client.blocks.children.list({
+            block_id: pageId,
+            ...(cursor && { start_cursor: cursor }),
+          }),
+        'pullListBlocks',
       )
 
       if (!result.success) {
@@ -544,7 +571,7 @@ export class PullService {
   // ---------------------------------------------------------------------------
 
   private getBatch(
-    nodes: Array<{ id: string; type: string; data: any }>
+    nodes: Array<{ id: string; type: string; data: any }>,
   ): Array<{ id: string; type: string; data: any }> {
     if (nodes.length <= MAX_NODES_PER_CYCLE) {
       this.roundRobinCursor = 0
@@ -578,31 +605,26 @@ export class PullService {
 
   private applyBackoff(): void {
     // Double interval on each failure (5m → 10m → 20m → max 60m)
-    this.currentIntervalMs = Math.min(
-      this.currentIntervalMs * 2,
-      MAX_BACKOFF_MS
-    )
+    this.currentIntervalMs = Math.min(this.currentIntervalMs * 2, MAX_BACKOFF_MS)
 
     // Restart timer with new interval
     if (this.pollTimer) {
       clearInterval(this.pollTimer)
       this.pollTimer = setInterval(() => {
-        this.poll().catch(err =>
-          this.ctx.log.error('Pull poll error:', String(err))
-        )
+        this.poll().catch((err) => this.ctx.log.error('Pull poll error:', String(err)))
       }, this.currentIntervalMs)
     }
 
     this.logger.backoff(
       this.currentWorkspaceId || 'unknown',
       this.currentIntervalMs,
-      this.consecutiveFailures
+      this.consecutiveFailures,
     )
 
     // Emit offline state to renderer
     this.ctx.sendToRenderer('node:notion-offline', {
       intervalMs: this.currentIntervalMs,
-      consecutiveFailures: this.consecutiveFailures
+      consecutiveFailures: this.consecutiveFailures,
     })
   }
 
@@ -614,9 +636,7 @@ export class PullService {
       this.currentIntervalMs = targetInterval
       clearInterval(this.pollTimer)
       this.pollTimer = setInterval(() => {
-        this.poll().catch(err =>
-          this.ctx.log.error('Pull poll error:', String(err))
-        )
+        this.poll().catch((err) => this.ctx.log.error('Pull poll error:', String(err)))
       }, this.currentIntervalMs)
     }
   }
@@ -628,7 +648,7 @@ export class PullService {
   private getConfig(): PullConfig {
     return {
       pullIntervalMs: this.ctx.settings.get<number>('pullIntervalMs') ?? DEFAULT_PULL_INTERVAL_MS,
-      nodeSyncEnabled: this.ctx.settings.get<boolean>('nodeSyncEnabled') ?? false
+      nodeSyncEnabled: this.ctx.settings.get<boolean>('nodeSyncEnabled') ?? false,
     }
   }
 }

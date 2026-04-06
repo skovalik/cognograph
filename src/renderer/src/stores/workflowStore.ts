@@ -8,10 +8,10 @@
  * Tracks multi-step AI operations with progress, approvals, and undo support.
  */
 
+import { nanoid } from 'nanoid'
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
-import { nanoid } from 'nanoid'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -19,7 +19,13 @@ import { nanoid } from 'nanoid'
 
 export type TrustLevel = 'auto' | 'prompt_once' | 'always_approve'
 
-export type StepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'waiting_approval'
+export type StepStatus =
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'skipped'
+  | 'waiting_approval'
 
 export interface WorkflowStep {
   id: string
@@ -37,7 +43,16 @@ export interface WorkflowEvent {
   id: string
   workflowId: string
   timestamp: number
-  type: 'step_started' | 'step_completed' | 'step_failed' | 'step_skipped' | 'approval_requested' | 'approval_granted' | 'approval_denied' | 'workflow_cancelled' | 'workflow_completed'
+  type:
+    | 'step_started'
+    | 'step_completed'
+    | 'step_failed'
+    | 'step_skipped'
+    | 'approval_requested'
+    | 'approval_granted'
+    | 'approval_denied'
+    | 'workflow_cancelled'
+    | 'workflow_completed'
   stepId?: string
   payload?: unknown
 }
@@ -74,7 +89,11 @@ interface WorkflowState {
 
 interface WorkflowActions {
   // Workflow lifecycle
-  startWorkflow: (name: string, description: string, steps: Omit<WorkflowStep, 'id' | 'status'>[]) => string
+  startWorkflow: (
+    name: string,
+    description: string,
+    steps: Omit<WorkflowStep, 'id' | 'status'>[],
+  ) => string
   cancelWorkflow: () => void
   completeWorkflow: () => void
   failWorkflow: (error: string) => void
@@ -112,7 +131,7 @@ type WorkflowStore = WorkflowState & WorkflowActions
 const initialState: WorkflowState = {
   currentWorkflow: null,
   workflowHistory: [],
-  isProgressVisible: true
+  isProgressVisible: true,
 }
 
 // -----------------------------------------------------------------------------
@@ -137,12 +156,12 @@ export const useWorkflowStore = create<WorkflowStore>()(
           steps: steps.map((step) => ({
             ...step,
             id: nanoid(),
-            status: 'pending' as StepStatus
+            status: 'pending' as StepStatus,
           })),
           currentStepIndex: 0,
           status: 'running',
           startTime: Date.now(),
-          events: []
+          events: [],
         }
 
         set((state) => {
@@ -237,7 +256,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
         const workflow = get().currentWorkflow
         if (workflow) {
           const allCompleted = workflow.steps.every(
-            (s) => s.status === 'completed' || s.status === 'skipped'
+            (s) => s.status === 'completed' || s.status === 'skipped',
           )
           if (allCompleted) {
             get().completeWorkflow()
@@ -358,7 +377,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
             timestamp: Date.now(),
             type,
             stepId,
-            payload
+            payload,
           })
         })
       },
@@ -372,7 +391,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
         if (!workflow) return { current: 0, total: 0, percent: 0 }
 
         const completed = workflow.steps.filter(
-          (s) => s.status === 'completed' || s.status === 'skipped'
+          (s) => s.status === 'completed' || s.status === 'skipped',
         ).length
         const total = workflow.steps.length
         const percent = total > 0 ? Math.round((completed / total) * 100) : 0
@@ -396,9 +415,9 @@ export const useWorkflowStore = create<WorkflowStore>()(
         const workflow = get().currentWorkflow
         if (!workflow) return []
         return workflow.steps.filter((s) => s.status === 'pending')
-      }
-    }))
-  )
+      },
+    })),
+  ),
 )
 
 // -----------------------------------------------------------------------------
@@ -417,7 +436,10 @@ export const useIsWorkflowActive = () =>
   useWorkflowStore((s) => s.currentWorkflow !== null && s.currentWorkflow.status === 'running')
 
 export const useNeedsApproval = () =>
-  useWorkflowStore((s) => s.currentWorkflow?.status === 'paused' && s.currentWorkflow?.approvalContext !== undefined)
+  useWorkflowStore(
+    (s) =>
+      s.currentWorkflow?.status === 'paused' && s.currentWorkflow?.approvalContext !== undefined,
+  )
 
 export const useApprovalContext = () => useWorkflowStore((s) => s.currentWorkflow?.approvalContext)
 

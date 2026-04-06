@@ -14,11 +14,11 @@
  */
 
 import { memo, useMemo } from 'react'
+import { toast } from 'react-hot-toast'
 import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { toast } from 'react-hot-toast'
+import remarkGfm from 'remark-gfm'
 
 // ---------------------------------------------------------------------------
 // Block splitter
@@ -78,7 +78,7 @@ interface MarkdownBlockProps {
 const MarkdownBlock = memo(function MarkdownBlock({
   content,
   inlineCodeClasses,
-  copyButtonClasses
+  copyButtonClasses,
 }: MarkdownBlockProps): JSX.Element {
   return (
     <ReactMarkdown
@@ -97,10 +97,7 @@ const MarkdownBlock = memo(function MarkdownBlock({
 
           if (isInlineCode) {
             return (
-              <code
-                className={`${inlineCodeClasses} px-1 py-0.5 rounded text-sm`}
-                {...props}
-              >
+              <code className={`${inlineCodeClasses} px-1 py-0.5 rounded text-sm`} {...props}>
                 {children}
               </code>
             )
@@ -125,7 +122,7 @@ const MarkdownBlock = memo(function MarkdownBlock({
                   margin: 0,
                   borderRadius: '0.5rem',
                   overflowX: 'auto',
-                  maxWidth: '100%'
+                  maxWidth: '100%',
                 }}
                 wrapLongLines={false}
               >
@@ -133,7 +130,7 @@ const MarkdownBlock = memo(function MarkdownBlock({
               </SyntaxHighlighter>
             </div>
           )
-        }
+        },
       }}
     >
       {content}
@@ -164,7 +161,7 @@ function StreamingMarkdownInner({
   content,
   isStreaming,
   inlineCodeClasses,
-  copyButtonClasses
+  copyButtonClasses,
 }: StreamingMarkdownProps): JSX.Element {
   const blocks = useMemo(() => splitMarkdownBlocks(content), [content])
 

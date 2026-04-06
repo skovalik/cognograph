@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { viewportPool } from '../../../../components/nodes/Artifact3DViewportPool'
 import { getAvailableMediaTools } from '../../agentToolRegistry'
 import { useJobManager } from '../../jobManager'
-import { viewportPool } from '../../../../components/nodes/Artifact3DViewportPool'
-import { isMediaArtifact, serializeArtifactForContext, serializeMediaForContext } from '../../mediaPiping'
+import {
+  isMediaArtifact,
+  serializeArtifactForContext,
+  serializeMediaForContext,
+} from '../../mediaPiping'
 
 describe('Creative pipeline (integration)', () => {
   beforeEach(() => {
@@ -25,21 +29,21 @@ describe('Creative pipeline (integration)', () => {
   it('adding Stability key makes generate_image tool available', () => {
     localStorage.setItem('cognograph:apikey:stability', 'sk-test-123')
     const tools = getAvailableMediaTools()
-    const imageTools = tools.filter(t => t.name === 'generate_image')
+    const imageTools = tools.filter((t) => t.name === 'generate_image')
     expect(imageTools.length).toBeGreaterThanOrEqual(1)
   })
 
   it('adding ElevenLabs key makes generate_audio tool available', () => {
     localStorage.setItem('cognograph:apikey:elevenlabs', 'el-test-123')
     const tools = getAvailableMediaTools()
-    const audioTools = tools.filter(t => t.name === 'generate_audio')
+    const audioTools = tools.filter((t) => t.name === 'generate_audio')
     expect(audioTools.length).toBeGreaterThanOrEqual(1)
   })
 
   it('adding Runway key makes generate_video tool available', () => {
     localStorage.setItem('cognograph:apikey:runway', 'rw-test-123')
     const tools = getAvailableMediaTools()
-    const videoTools = tools.filter(t => t.name === 'generate_video')
+    const videoTools = tools.filter((t) => t.name === 'generate_video')
     expect(videoTools.length).toBeGreaterThanOrEqual(1)
   })
 
@@ -120,16 +124,28 @@ describe('Creative pipeline (integration)', () => {
 
   it('multiple concurrent jobs tracked per node', () => {
     useJobManager.getState().addJob({
-      id: 'j1', nodeId: 'n1', toolName: 'generate_image', provider: 'stability',
-      status: 'processing', createdAt: Date.now(),
+      id: 'j1',
+      nodeId: 'n1',
+      toolName: 'generate_image',
+      provider: 'stability',
+      status: 'processing',
+      createdAt: Date.now(),
     })
     useJobManager.getState().addJob({
-      id: 'j2', nodeId: 'n1', toolName: 'generate_audio', provider: 'elevenlabs',
-      status: 'queued', createdAt: Date.now(),
+      id: 'j2',
+      nodeId: 'n1',
+      toolName: 'generate_audio',
+      provider: 'elevenlabs',
+      status: 'queued',
+      createdAt: Date.now(),
     })
     useJobManager.getState().addJob({
-      id: 'j3', nodeId: 'n2', toolName: 'generate_video', provider: 'runway',
-      status: 'processing', createdAt: Date.now(),
+      id: 'j3',
+      nodeId: 'n2',
+      toolName: 'generate_video',
+      provider: 'runway',
+      status: 'processing',
+      createdAt: Date.now(),
     })
 
     expect(useJobManager.getState().getJobsForNode('n1')).toHaveLength(2)

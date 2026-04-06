@@ -8,11 +8,11 @@
  * This panel lets users browse, search, restore, or permanently trash archived nodes.
  */
 
-import { memo, useCallback, useMemo, useState } from 'react'
-import { Archive, RotateCcw, Trash2, X, Clock, Search } from 'lucide-react'
-import { useWorkspaceStore, useNodesStore } from '../stores'
-import type { Node } from '@xyflow/react'
 import type { NodeData } from '@shared/types'
+import type { Node } from '@xyflow/react'
+import { Archive, Clock, RotateCcw, Search, Trash2, X } from 'lucide-react'
+import { memo, useCallback, useMemo, useState } from 'react'
+import { useNodesStore, useWorkspaceStore } from '../stores'
 
 // Map node types to display names
 const NODE_TYPE_NAMES: Record<string, string> = {
@@ -23,7 +23,7 @@ const NODE_TYPE_NAMES: Record<string, string> = {
   artifact: 'Artifact',
   workspace: 'Workspace',
   text: 'Text',
-  action: 'Action'
+  action: 'Action',
 }
 
 function formatRelativeTime(timestamp: number): string {
@@ -57,25 +57,31 @@ function ArchivePanelComponent({ isOpen, onClose }: ArchivePanelProps): JSX.Elem
     let result = archivedNodes
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
-      result = result.filter(n => {
-        const title = ('title' in n.data ? n.data.title as string : '') || ''
+      result = result.filter((n) => {
+        const title = ('title' in n.data ? (n.data.title as string) : '') || ''
         return title.toLowerCase().includes(q)
       })
     }
     return result.sort((a, b) => (b.data.archivedAt || 0) - (a.data.archivedAt || 0))
   }, [archivedNodes, searchQuery])
 
-  const handleRestore = useCallback((nodeId: string) => {
-    restoreFromArchive([nodeId])
-  }, [restoreFromArchive])
+  const handleRestore = useCallback(
+    (nodeId: string) => {
+      restoreFromArchive([nodeId])
+    },
+    [restoreFromArchive],
+  )
 
-  const handleMoveToTrash = useCallback((nodeId: string) => {
-    deleteNodes([nodeId])
-  }, [deleteNodes])
+  const handleMoveToTrash = useCallback(
+    (nodeId: string) => {
+      deleteNodes([nodeId])
+    },
+    [deleteNodes],
+  )
 
   const handleRestoreAll = useCallback(() => {
     if (archivedNodes.length === 0) return
-    restoreFromArchive(archivedNodes.map(n => n.id))
+    restoreFromArchive(archivedNodes.map((n) => n.id))
   }, [archivedNodes, restoreFromArchive])
 
   if (!isOpen) return null
@@ -84,7 +90,7 @@ function ArchivePanelComponent({ isOpen, onClose }: ArchivePanelProps): JSX.Elem
     <div
       className="absolute top-20 right-4 gui-z-panels w-72 rounded-lg overflow-hidden shadow-xl animate-fade-in glass-soft"
       style={{
-        border: '1px solid var(--gui-border-subtle)'
+        border: '1px solid var(--gui-border-subtle)',
       }}
     >
       {/* Header */}
@@ -102,7 +108,7 @@ function ArchivePanelComponent({ isOpen, onClose }: ArchivePanelProps): JSX.Elem
               className="text-xs px-1.5 py-0.5 rounded"
               style={{
                 backgroundColor: 'var(--gui-bg-tertiary)',
-                color: 'var(--gui-text-muted)'
+                color: 'var(--gui-text-muted)',
               }}
             >
               {archivedNodes.length}
@@ -135,7 +141,10 @@ function ArchivePanelComponent({ isOpen, onClose }: ArchivePanelProps): JSX.Elem
       {archivedNodes.length > 3 && (
         <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--gui-border-subtle)' }}>
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--gui-text-muted)' }} />
+            <Search
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
+              style={{ color: 'var(--gui-text-muted)' }}
+            />
             <input
               type="text"
               value={searchQuery}
@@ -169,7 +178,9 @@ function ArchivePanelComponent({ isOpen, onClose }: ArchivePanelProps): JSX.Elem
               {searchQuery ? 'No matches found' : 'No archived nodes'}
             </span>
             <span className="text-xs mt-1 text-center opacity-70">
-              {searchQuery ? 'Try a different search term' : 'Right-click a node and select "Archive" to move it here'}
+              {searchQuery
+                ? 'Try a different search term'
+                : 'Right-click a node and select "Archive" to move it here'}
             </span>
           </div>
         )}
@@ -220,7 +231,10 @@ function ArchiveItem({ node, onRestore, onTrash }: ArchiveItemProps): JSX.Elemen
         >
           {title}
         </div>
-        <div className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--gui-text-muted)' }}>
+        <div
+          className="flex items-center gap-1 text-[10px]"
+          style={{ color: 'var(--gui-text-muted)' }}
+        >
           <span>{typeName}</span>
           {nodeData.archivedAt && (
             <>

@@ -1,34 +1,45 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useState, useCallback, useMemo, useEffect } from 'react'
-import { type NodeProps, NodeResizer, useUpdateNodeInternals, useReactFlow, type ResizeParams } from '@xyflow/react'
-import { SpreadHandles } from './SpreadHandles'
-import { ChevronDown, ChevronRight, Plus, Link2, FolderKanban, FolderOpen } from 'lucide-react'
-import { FilePreviewSection } from '../FilePreviewSection'
 import type { ProjectNodeData } from '@shared/types'
-import * as path from 'path'
 import { DEFAULT_THEME_SETTINGS } from '@shared/types'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
-import { PropertyBadges } from '../properties/PropertyBadge'
+import {
+  type NodeProps,
+  NodeResizer,
+  type ResizeParams,
+  useReactFlow,
+  useUpdateNodeInternals,
+} from '@xyflow/react'
+import { ChevronDown, ChevronRight, FolderKanban, FolderOpen, Link2, Plus } from 'lucide-react'
+import * as path from 'path'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { CONIC_PALETTES } from '../../constants/conicPalettes'
 import { getPropertiesForNodeType } from '../../constants/properties'
-import { useIsSpawning, useIsNodePinned, useIsNodeBookmarked, useNodeNumberedBookmark } from '../../stores/workspaceStore'
-import { NodeSocketBars } from './SocketBar'
-import { AttachmentBadge } from './AttachmentBadge'
-import { EditableTitle } from '../EditableTitle'
-import { EditableText } from '../EditableText'
-import { InlineIconPicker } from '../InlineIconPicker'
-import { useContextMenuStore } from '../../stores/contextMenuStore'
-import { measureTextWidth } from '../../utils/textMeasure'
-import { ExtractionBadge, ExtractionControls } from '../extractions'
-import { FoldBadge } from './FoldBadge'
+import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
 import { useNodeResize } from '../../hooks/useNodeResize'
 import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
+import { useContextMenuStore } from '../../stores/contextMenuStore'
+import {
+  useIsNodeBookmarked,
+  useIsNodePinned,
+  useIsSpawning,
+  useNodeNumberedBookmark,
+  useWorkspaceStore,
+} from '../../stores/workspaceStore'
+import { measureTextWidth } from '../../utils/textMeasure'
+import { EditableText } from '../EditableText'
+import { EditableTitle } from '../EditableTitle'
+import { ExtractionBadge, ExtractionControls } from '../extractions'
+import { FilePreviewSection } from '../FilePreviewSection'
+import { InlineIconPicker } from '../InlineIconPicker'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
-import { StructuredContentPreview } from './StructuredContentPreview'
+import { PropertyBadges } from '../properties/PropertyBadge'
+import { AttachmentBadge } from './AttachmentBadge'
+import { FoldBadge } from './FoldBadge'
 import { NodePropertyControls } from './NodePropertyControls'
-import { CONIC_PALETTES } from '../../constants/conicPalettes'
+import { NodeSocketBars } from './SocketBar'
+import { SpreadHandles } from './SpreadHandles'
+import { StructuredContentPreview } from './StructuredContentPreview'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -77,7 +88,8 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
   }, [])
 
   // Calculate dynamic node color
-  const nodeColor = nodeData.color || themeSettings.nodeColors.project || DEFAULT_THEME_SETTINGS.nodeColors.project
+  const nodeColor =
+    nodeData.color || themeSettings.nodeColors.project || DEFAULT_THEME_SETTINGS.nodeColors.project
 
   // Glass system integration
   const transparent = nodeData.transparent
@@ -117,7 +129,7 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
     (_event: unknown, params: ResizeParams): void => {
       updateNodeDimensions(id, params.width, params.height)
     },
-    [id, updateNodeDimensions]
+    [id, updateNodeDimensions],
   )
 
   const handleResizeEnd = useCallback(() => {
@@ -135,42 +147,61 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Double-click to select; Ctrl+double-click to auto-fit width to title
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (e.ctrlKey) {
-      startNodeResize(id)
-      const titleWidth = measureTextWidth(nodeData.title, '14px Inter, sans-serif')
-      const newWidth = Math.max(250, Math.ceil(titleWidth + 80))
-      updateNodeDimensions(id, newWidth, nodeHeight)
-      updateNodeInternals(id)
-      commitNodeResize(id)
-    } else {
-      // Regular double-click selects the project node
-      onNodesChange([{ type: 'select', id, selected: true }])
-    }
-  }, [nodeData.title, id, nodeHeight, updateNodeDimensions, updateNodeInternals, startNodeResize, commitNodeResize, onNodesChange])
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      if (e.ctrlKey) {
+        startNodeResize(id)
+        const titleWidth = measureTextWidth(nodeData.title, '14px Inter, sans-serif')
+        const newWidth = Math.max(250, Math.ceil(titleWidth + 80))
+        updateNodeDimensions(id, newWidth, nodeHeight)
+        updateNodeInternals(id)
+        commitNodeResize(id)
+      } else {
+        // Regular double-click selects the project node
+        onNodesChange([{ type: 'select', id, selected: true }])
+      }
+    },
+    [
+      nodeData.title,
+      id,
+      nodeHeight,
+      updateNodeDimensions,
+      updateNodeInternals,
+      startNodeResize,
+      commitNodeResize,
+      onNodesChange,
+    ],
+  )
 
   // Right-click in body to open project-specific context menu
-  const handleBodyContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    openContextMenu(
-      { x: e.clientX, y: e.clientY },
-      { type: 'project-body', projectId: id, position: screenToFlowPosition({ x: e.clientX, y: e.clientY }) }
-    )
-  }, [id, openContextMenu, screenToFlowPosition])
+  const handleBodyContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      openContextMenu(
+        { x: e.clientX, y: e.clientY },
+        {
+          type: 'project-body',
+          projectId: id,
+          position: screenToFlowPosition({ x: e.clientX, y: e.clientY }),
+        },
+      )
+    },
+    [id, openContextMenu, screenToFlowPosition],
+  )
 
   // Get child node titles + types for display — use targeted selector returning stable primitive string
   const childNodeIds = nodeData.childNodeIds ?? []
   const childNodeInfo = useWorkspaceStore((state) => {
     if (childNodeIds.length === 0) return ''
     return childNodeIds
-      .map(cid => {
-        const n = state.nodes.find(nd => nd.id === cid)
+      .map((cid) => {
+        const n = state.nodes.find((nd) => nd.id === cid)
         return n ? `${n.data.title as string}\x01${n.type ?? 'note'}` : null
       })
       .filter(Boolean)
-      .join('\x00')  // Join as stable primitive string
+      .join('\x00') // Join as stable primitive string
   })
   const childNodes = useMemo(() => {
     if (!childNodeInfo) return []
@@ -189,13 +220,22 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
   const isPinned = useIsNodePinned(id)
   const isBookmarked = useIsNodeBookmarked(id)
   const numberedBookmark = useNodeNumberedBookmark(id)
-  const isCut = useWorkspaceStore(s => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id))
+  const isCut = useWorkspaceStore(
+    (s) => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id),
+  )
 
   // LOD (Level of Detail) rendering based on zoom level
   const {
-    showContent, showTitle, showBadges, showLede,
-    showHeader, showFooter, showInteractiveControls,
-    showPlaceholders, zoomLevel, lodLevel
+    showContent,
+    showTitle,
+    showBadges,
+    showLede,
+    showHeader,
+    showFooter,
+    showInteractiveControls,
+    showPlaceholders,
+    zoomLevel,
+    lodLevel,
   } = useNodeContentVisibility()
   const isUltraFar = zoomLevel === 'ultra-far'
   const isFar = zoomLevel === 'far'
@@ -217,8 +257,10 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
     isBookmarked && 'cognograph-node--bookmarked',
     isCut && 'cognograph-node--cut',
     nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
-    `project-node--lod-${zoomLevel}`
-  ].filter(Boolean).join(' ')
+    `project-node--lod-${zoomLevel}`,
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   // Compute child count for LOD summary display
   const childCount = (nodeData.childNodeIds ?? []).length
@@ -241,12 +283,10 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
       onDrop={() => setIsDragOver(false)}
     >
       {/* Type label: floats above node */}
-      <div className="cognograph-node__type-label">
-        PROJECT
-      </div>
+      <div className="cognograph-node__type-label">PROJECT</div>
 
       {/* Handles on all four sides — hidden at L0 (ultra-far) */}
-      <SpreadHandles hidden={isUltraFar} />
+      <SpreadHandles hidden={isUltraFar} width={nodeWidth} height={nodeHeight} />
 
       {/* Numbered bookmark badge */}
       {numberedBookmark && (
@@ -270,7 +310,7 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
               color: 'var(--node-text-primary)',
               fontFamily: 'var(--font-display)',
               fontStyle: 'italic',
-              fontWeight: 500
+              fontWeight: 500,
             }}
           >
             {nodeData.title || 'Untitled Project'}
@@ -280,7 +320,7 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
               className="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0"
               style={{
                 backgroundColor: 'var(--node-bg-secondary)',
-                color: 'var(--node-text-secondary)'
+                color: 'var(--node-text-secondary)',
               }}
             >
               {childCount}
@@ -303,7 +343,7 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
                 color: 'var(--node-text-primary)',
                 fontFamily: 'var(--font-display)',
                 fontStyle: 'italic',
-                fontWeight: 500
+                fontWeight: 500,
               }}
             >
               {nodeData.title || 'Untitled Project'}
@@ -314,7 +354,7 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
               className="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0"
               style={{
                 backgroundColor: 'var(--node-bg-secondary)',
-                color: 'var(--node-text-secondary)'
+                color: 'var(--node-text-secondary)',
               }}
             >
               {childCount} items
@@ -371,11 +411,7 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
           {/* AI Property Assist — L3+ only (interactive control) */}
           {showInteractiveControls && (
             <NodeAIErrorBoundary compact>
-              <AIPropertyAssist
-                nodeId={id}
-                nodeData={nodeData}
-                compact={true}
-              />
+              <AIPropertyAssist nodeId={id} nodeData={nodeData} compact={true} />
             </NodeAIErrorBoundary>
           )}
           {/* Extraction controls — L3+ only */}
@@ -407,7 +443,7 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
                 display: '-webkit-box',
                 WebkitLineClamp: 2,
                 WebkitBoxOrient: 'vertical',
-                overflow: 'hidden'
+                overflow: 'hidden',
               }}
             >
               {nodeData.description}
@@ -415,10 +451,7 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
           )}
           {childCount > 0 ? (
             <div className="space-y-1">
-              <span
-                className="text-xs font-medium"
-                style={{ color: 'var(--node-text-secondary)' }}
-              >
+              <span className="text-xs font-medium" style={{ color: 'var(--node-text-secondary)' }}>
                 {childCount} items
               </span>
               {childNodes.slice(0, 3).map((child) => (
@@ -427,14 +460,16 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
                   className="flex items-center gap-1.5 text-xs px-2 py-0.5 rounded truncate"
                   style={{
                     backgroundColor: 'var(--node-bg-secondary)',
-                    color: 'var(--node-text-secondary)'
+                    color: 'var(--node-text-secondary)',
                   }}
                 >
                   {/* Type-color dot */}
                   <span
                     className="w-2 h-2 rounded-full flex-shrink-0"
                     style={{
-                      backgroundColor: (themeSettings.nodeColors as Record<string, string>)[child.type] ?? 'var(--node-text-muted)'
+                      backgroundColor:
+                        (themeSettings.nodeColors as Record<string, string>)[child.type] ??
+                        'var(--node-text-muted)',
                     }}
                   />
                   <span className="truncate">{child.data.title as string}</span>
@@ -458,7 +493,10 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
           L3+ (close/ultra-close): Full description + child list (first 5) + drop zone + drag-to-add
           ================================================================ */}
       {showContent && !nodeData.collapsed && (
-        <div className="cognograph-node__body flex-1 overflow-auto" onContextMenu={handleBodyContextMenu}>
+        <div
+          className="cognograph-node__body flex-1 overflow-auto"
+          onContextMenu={handleBodyContextMenu}
+        >
           <EditableText
             value={nodeData.description || ''}
             onChange={(newDescription) => updateNode(id, { description: newDescription })}
@@ -467,7 +505,11 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
           />
 
           {/* Inline property controls */}
-          <NodePropertyControls nodeId={id} nodeType="project" data={data as Record<string, unknown>} />
+          <NodePropertyControls
+            nodeId={id}
+            nodeType="project"
+            data={data as Record<string, unknown>}
+          />
           {/* Property Badges */}
           <PropertyBadges
             properties={nodeData.properties || {}}
@@ -485,21 +527,25 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
                   className="flex items-center gap-1.5 text-xs px-2 py-1 rounded"
                   style={{
                     backgroundColor: 'var(--node-bg-secondary)',
-                    color: 'var(--node-text-secondary)'
+                    color: 'var(--node-text-secondary)',
                   }}
                 >
                   {/* Type-color dot */}
                   <span
                     className="w-2 h-2 rounded-full flex-shrink-0"
                     style={{
-                      backgroundColor: (themeSettings.nodeColors as Record<string, string>)[child.type] ?? 'var(--node-text-muted)'
+                      backgroundColor:
+                        (themeSettings.nodeColors as Record<string, string>)[child.type] ??
+                        'var(--node-text-muted)',
                     }}
                   />
                   <span className="truncate">{child.data.title as string}</span>
                 </div>
               ))}
               {childNodes.length > 5 && (
-                <div className="text-xs" style={{ color: 'var(--node-text-muted)' }}>+{childNodes.length - 5} more</div>
+                <div className="text-xs" style={{ color: 'var(--node-text-muted)' }}>
+                  +{childNodes.length - 5} more
+                </div>
               )}
             </div>
           )}
@@ -513,7 +559,9 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
           )}
 
           {childNodes.length === 0 && !isDragOver && (
-            <p className="italic text-center" style={{ color: 'var(--node-text-muted)' }}>Drag nodes here</p>
+            <p className="italic text-center" style={{ color: 'var(--node-text-muted)' }}>
+              Drag nodes here
+            </p>
           )}
 
           {/* File listing preview — only when folderPath is set and zoom >= 0.3 */}
@@ -553,7 +601,10 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
   )
 
   return (
-    <div style={{ width: nodeWidth, height: nodeHeight, position: 'relative' }} onMouseDown={handleMouseDown}>
+    <div
+      style={{ width: nodeWidth, height: nodeHeight, position: 'relative' }}
+      onMouseDown={handleMouseDown}
+    >
       {/* NodeResizer only at L3+ (interactive controls) */}
       {showInteractiveControls && (
         <NodeResizer

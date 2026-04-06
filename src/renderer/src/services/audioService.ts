@@ -43,12 +43,12 @@ export const useAudioSettings = create<AudioSettingsState>()(
       volume: 0.3, // Subtle volume
       setEnabled: (enabled) => set({ enabled }),
       setVolume: (volume) => set({ volume: Math.max(0, Math.min(1, volume)) }),
-      toggle: () => set((s) => ({ enabled: !s.enabled }))
+      toggle: () => set((s) => ({ enabled: !s.enabled })),
     }),
     {
-      name: 'cognograph-audio-settings'
-    }
-  )
+      name: 'cognograph-audio-settings',
+    },
+  ),
 )
 
 // Audio context singleton (created lazily on first use)
@@ -67,7 +67,10 @@ function getAudioContext(): AudioContext | null {
 }
 
 // Sound frequency/duration configurations
-const SOUND_CONFIGS: Record<SoundType, { frequency: number; duration: number; type: OscillatorType; decay?: number }> = {
+const SOUND_CONFIGS: Record<
+  SoundType,
+  { frequency: number; duration: number; type: OscillatorType; decay?: number }
+> = {
   click: { frequency: 800, duration: 0.05, type: 'sine' },
   success: { frequency: 880, duration: 0.15, type: 'sine', decay: 0.1 },
   error: { frequency: 220, duration: 0.2, type: 'sawtooth', decay: 0.15 },
@@ -77,7 +80,7 @@ const SOUND_CONFIGS: Record<SoundType, { frequency: number; duration: number; ty
   delete: { frequency: 330, duration: 0.12, type: 'sine', decay: 0.08 },
   create: { frequency: 660, duration: 0.08, type: 'sine' },
   connect: { frequency: 740, duration: 0.1, type: 'sine', decay: 0.06 },
-  navigate: { frequency: 500, duration: 0.06, type: 'sine' }
+  navigate: { frequency: 500, duration: 0.06, type: 'sine' },
 }
 
 /**
@@ -201,5 +204,5 @@ export default {
   playSound,
   playSuccessSound,
   playErrorSound,
-  useAudioSettings
+  useAudioSettings,
 }

@@ -10,7 +10,7 @@
  * - Audit event persistence (future: external audit log sinks)
  */
 
-import { ipcMain, BrowserWindow, dialog } from 'electron'
+import { BrowserWindow, dialog, ipcMain } from 'electron'
 import { promises as fs } from 'fs'
 
 // =============================================================================
@@ -26,7 +26,7 @@ import { promises as fs } from 'fs'
  */
 export async function undoAuditEvent(
   _eventId: string,
-  undoData: unknown
+  undoData: unknown,
 ): Promise<{ success: boolean; undoType?: string; error?: string }> {
   try {
     const data = undoData as Record<string, unknown>
@@ -86,7 +86,7 @@ export async function undoAuditEvent(
  */
 export async function exportAuditToFile(
   content: string,
-  format: 'csv' | 'json'
+  format: 'csv' | 'json',
 ): Promise<{ success: boolean; path?: string; error?: string }> {
   try {
     const win = BrowserWindow.getFocusedWindow()
@@ -123,18 +123,12 @@ export async function exportAuditToFile(
 
 export function registerAuditHandlers(): void {
   // Undo an audit event
-  ipcMain.handle(
-    'bridge:audit-undo',
-    async (_event, eventId: string, undoData: unknown) => {
-      return undoAuditEvent(eventId, undoData)
-    }
-  )
+  ipcMain.handle('bridge:audit-undo', async (_event, eventId: string, undoData: unknown) => {
+    return undoAuditEvent(eventId, undoData)
+  })
 
   // Export audit log to file
-  ipcMain.handle(
-    'bridge:audit-export',
-    async (_event, content: string, format: 'csv' | 'json') => {
-      return exportAuditToFile(content, format)
-    }
-  )
+  ipcMain.handle('bridge:audit-export', async (_event, content: string, format: 'csv' | 'json') => {
+    return exportAuditToFile(content, format)
+  })
 }

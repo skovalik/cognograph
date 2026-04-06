@@ -1279,3 +1279,36 @@
   animation: none !important;
   transition: none !important;
 }
+
+/* ── Proximity auto-connect visual feedback ── */
+/* Class "proximity-target" is added to .react-flow__node wrapper (data-id element).
+   Uses box-shadow (not outline/::after) to follow border-radius and avoid
+   ::after conflict with .is-active activity bar on conversation nodes. */
+
+.react-flow__node.proximity-target .cognograph-node {
+  box-shadow:
+    0 0 0 2px rgba(0, 212, 255, 0.9),
+    0 0 16px rgba(0, 212, 255, 0.35);
+  animation: proximity-pulse 1.5s ease-in-out infinite;
+  transition: box-shadow 150ms ease;
+}
+
+@keyframes proximity-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 2px rgba(0, 212, 255, 0.9),
+      0 0 16px rgba(0, 212, 255, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(0, 212, 255, 1.0),
+      0 0 28px rgba(0, 212, 255, 0.55);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__node.proximity-target .cognograph-node {
+    box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.9);
+    animation: none;
+  }
+}

@@ -1,51 +1,56 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import React, { useEffect, useRef } from 'react';
-import { Renderer, Program, Mesh, Triangle } from 'ogl';
-import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
+import { Mesh, Program, Renderer, Triangle } from 'ogl'
+import type React from 'react'
+import { useEffect, useRef } from 'react'
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality'
 
 interface GrainientProps {
-  timeSpeed?: number;
-  colorBalance?: number;
-  warpStrength?: number;
-  warpFrequency?: number;
-  warpSpeed?: number;
-  warpAmplitude?: number;
-  blendAngle?: number;
-  blendSoftness?: number;
-  rotationAmount?: number;
-  noiseScale?: number;
-  grainAmount?: number;
-  grainScale?: number;
-  grainAnimated?: boolean;
-  contrast?: number;
-  gamma?: number;
-  saturation?: number;
-  centerX?: number;
-  centerY?: number;
-  zoom?: number;
-  color1?: string;
-  color2?: string;
-  color3?: string;
-  opacity?: number;
-  className?: string;
-  qualityRef?: React.RefObject<AdaptiveQualityState>;
-  reportFrame?: () => void;
+  timeSpeed?: number
+  colorBalance?: number
+  warpStrength?: number
+  warpFrequency?: number
+  warpSpeed?: number
+  warpAmplitude?: number
+  blendAngle?: number
+  blendSoftness?: number
+  rotationAmount?: number
+  noiseScale?: number
+  grainAmount?: number
+  grainScale?: number
+  grainAnimated?: boolean
+  contrast?: number
+  gamma?: number
+  saturation?: number
+  centerX?: number
+  centerY?: number
+  zoom?: number
+  color1?: string
+  color2?: string
+  color3?: string
+  opacity?: number
+  className?: string
+  qualityRef?: React.RefObject<AdaptiveQualityState>
+  reportFrame?: () => void
 }
 
 const hexToRgb = (hex: string): [number, number, number] => {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) return [1, 1, 1];
-  return [parseInt(result[1], 16) / 255, parseInt(result[2], 16) / 255, parseInt(result[3], 16) / 255];
-};
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  if (!result) return [1, 1, 1]
+  return [
+    parseInt(result[1], 16) / 255,
+    parseInt(result[2], 16) / 255,
+    parseInt(result[3], 16) / 255,
+  ]
+}
 
 const vertex = `#version 300 es
 in vec2 position;
 void main() {
   gl_Position = vec4(position, 0.0, 1.0);
 }
-`;
+`
 
 const fragment = `#version 300 es
 precision highp float;
@@ -129,7 +134,7 @@ void main(){
   mainImage(o,gl_FragCoord.xy);
   fragColor=o;
 }
-`;
+`
 
 const Grainient: React.FC<GrainientProps> = ({
   timeSpeed = 0.25,
@@ -159,28 +164,28 @@ const Grainient: React.FC<GrainientProps> = ({
   qualityRef,
   reportFrame,
 }) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) return
 
     const renderer = new Renderer({
       webgl: 2,
       alpha: true,
       antialias: false,
       dpr: 1.0,
-    });
+    })
 
-    const gl = renderer.gl;
-    const canvas = gl.canvas as HTMLCanvasElement;
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    canvas.style.display = 'block';
+    const gl = renderer.gl
+    const canvas = gl.canvas as HTMLCanvasElement
+    canvas.style.width = '100%'
+    canvas.style.height = '100%'
+    canvas.style.display = 'block'
 
-    const container = containerRef.current;
-    container.appendChild(canvas);
+    const container = containerRef.current
+    container.appendChild(canvas)
 
-    const geometry = new Triangle(gl);
+    const geometry = new Triangle(gl)
     const program = new Program(gl, {
       vertex,
       fragment,
@@ -207,67 +212,67 @@ const Grainient: React.FC<GrainientProps> = ({
         uZoom: { value: zoom },
         uColor1: { value: new Float32Array(hexToRgb(color1)) },
         uColor2: { value: new Float32Array(hexToRgb(color2)) },
-        uColor3: { value: new Float32Array(hexToRgb(color3)) }
-      }
-    });
+        uColor3: { value: new Float32Array(hexToRgb(color3)) },
+      },
+    })
 
-    const mesh = new Mesh(gl, { geometry, program });
+    const mesh = new Mesh(gl, { geometry, program })
 
     const setSize = () => {
-      const rect = container.getBoundingClientRect();
-      const width = Math.max(1, Math.floor(rect.width));
-      const height = Math.max(1, Math.floor(rect.height));
-      renderer.setSize(width, height);
-      const res = program.uniforms.iResolution.value as Float32Array;
-      res[0] = gl.drawingBufferWidth;
-      res[1] = gl.drawingBufferHeight;
-    };
+      const rect = container.getBoundingClientRect()
+      const width = Math.max(1, Math.floor(rect.width))
+      const height = Math.max(1, Math.floor(rect.height))
+      renderer.setSize(width, height)
+      const res = program.uniforms.iResolution.value as Float32Array
+      res[0] = gl.drawingBufferWidth
+      res[1] = gl.drawingBufferHeight
+    }
 
-    const ro = new ResizeObserver(setSize);
-    ro.observe(container);
-    setSize();
+    const ro = new ResizeObserver(setSize)
+    ro.observe(container)
+    setSize()
 
-    let raf = 0;
-    let frameCount = 0;
-    let currentScale = -1;
-    const t0 = performance.now();
+    let raf = 0
+    let frameCount = 0
+    let currentScale = -1
+    const t0 = performance.now()
     const loop = (t: number) => {
-      raf = requestAnimationFrame(loop);
-      if (qualityRef?.current && !qualityRef.current.shouldRender) return;
-      if (reportFrame) reportFrame();
-      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
+      raf = requestAnimationFrame(loop)
+      if (qualityRef?.current && !qualityRef.current.shouldRender) return
+      if (reportFrame) reportFrame()
+      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return
       if (qualityRef?.current) {
-        const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap;
+        const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap
         if (scale !== currentScale) {
-          currentScale = scale;
-          const rect = container.getBoundingClientRect();
-          const w = Math.max(1, Math.floor(rect.width * scale));
-          const h = Math.max(1, Math.floor(rect.height * scale));
-          renderer.setSize(w, h);
+          currentScale = scale
+          const rect = container.getBoundingClientRect()
+          const w = Math.max(1, Math.floor(rect.width * scale))
+          const h = Math.max(1, Math.floor(rect.height * scale))
+          renderer.setSize(w, h)
           // OGL setSize also sets canvas CSS dimensions — force back to 100% so
           // low-res content stretches to fill container (CSS upscaling, not shrinking)
-          const c = renderer.gl.canvas as HTMLCanvasElement;
-          c.style.width = '100%';
-          c.style.height = '100%';
-          const res = program.uniforms.iResolution.value as Float32Array;
-          res[0] = gl.drawingBufferWidth;
-          res[1] = gl.drawingBufferHeight;
+          const c = renderer.gl.canvas as HTMLCanvasElement
+          c.style.width = '100%'
+          c.style.height = '100%'
+          const res = program.uniforms.iResolution.value as Float32Array
+          res[0] = gl.drawingBufferWidth
+          res[1] = gl.drawingBufferHeight
         }
       }
-      (program.uniforms.iTime as any).value = (t - t0) * 0.001;
-      renderer.render({ scene: mesh });
-    };
-    raf = requestAnimationFrame(loop);
+      ;(program.uniforms.iTime as any).value = (t - t0) * 0.001
+      renderer.render({ scene: mesh })
+    }
+    raf = requestAnimationFrame(loop)
 
     return () => {
-      cancelAnimationFrame(raf);
-      ro.disconnect();
+      cancelAnimationFrame(raf)
+      ro.disconnect()
       try {
-        container.removeChild(canvas);
+        container.removeChild(canvas)
       } catch {
         // Ignore
       }
-    };
+    }
   }, [
     timeSpeed,
     colorBalance,
@@ -290,10 +295,16 @@ const Grainient: React.FC<GrainientProps> = ({
     zoom,
     color1,
     color2,
-    color3
-  ]);
+    color3,
+  ])
 
-  return <div ref={containerRef} className={`relative h-full w-full overflow-hidden ${className}`.trim()} style={{ opacity }} />;
-};
+  return (
+    <div
+      ref={containerRef}
+      className={`relative h-full w-full overflow-hidden ${className}`.trim()}
+      style={{ opacity }}
+    />
+  )
+}
 
-export default Grainient;
+export default Grainient

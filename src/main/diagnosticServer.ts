@@ -14,10 +14,10 @@
  * Security: Token auth + rate limiting + code validation + dev-only
  */
 
-import express, { type Request, type Response, type NextFunction } from 'express'
-import rateLimit from 'express-rate-limit'
-import { type BrowserWindow } from 'electron'
 import crypto from 'crypto'
+import type { BrowserWindow } from 'electron'
+import express, { type NextFunction, type Request, type Response } from 'express'
+import rateLimit from 'express-rate-limit'
 
 // Generate ephemeral token (regenerated on every app restart)
 const DIAGNOSTIC_TOKEN = process.env.DIAGNOSTIC_TOKEN || crypto.randomBytes(32).toString('hex')
@@ -105,7 +105,7 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
       res.status(401).json({
         error: 'Unauthorized',
         code: 'AUTH_REQUIRED',
-        suggestion: 'Include x-diagnostic-token header with valid token from Cognograph console'
+        suggestion: 'Include x-diagnostic-token header with valid token from Cognograph console',
       })
       return
     }
@@ -120,10 +120,10 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
     message: {
       error: `Too many requests. Max ${maxRequests}/minute.`,
       code: 'RATE_LIMIT',
-      suggestion: 'Wait 60 seconds before retrying'
+      suggestion: 'Wait 60 seconds before retrying',
     },
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
   })
   app.use(limiter)
 
@@ -134,7 +134,7 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
       latency: 0,
       appVersion: '1.5.3', // TODO: Get from app
       electronVersion: process.versions.electron,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     })
   })
 
@@ -148,7 +148,7 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
       return res.status(400).json({
         error: validation.error,
         code: 'VALIDATION_ERROR',
-        suggestion: 'Check code for forbidden operations (require, import, Function constructor)'
+        suggestion: 'Check code for forbidden operations (require, import, Function constructor)',
       })
     }
 
@@ -156,7 +156,7 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
     if (timeout > 30000) {
       return res.status(400).json({
         error: 'Timeout too long (max 30000ms)',
-        code: 'INVALID_TIMEOUT'
+        code: 'INVALID_TIMEOUT',
       })
     }
 
@@ -165,7 +165,7 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
       // Execute with timeout
       const result = await Promise.race([
         mainWindow.webContents.executeJavaScript(code, true),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout)),
       ])
 
       const executionTime = Date.now() - startTime
@@ -178,7 +178,7 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
         executionTime,
         suggestion: error.message.includes('Timeout')
           ? 'Code may have infinite loop. Try simpler query or increase timeout.'
-          : 'Check renderer console for error details'
+          : 'Check renderer console for error details',
       })
     }
   })
@@ -199,7 +199,7 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
         return res.status(404).json({
           error: `Store '${name}' not found or path invalid`,
           code: 'STORE_NOT_FOUND',
-          suggestion: `Available stores: workspace, theme, ai, extraction, orchestrator, ccBridge`
+          suggestion: `Available stores: workspace, theme, ai, extraction, orchestrator, ccBridge`,
         })
       }
 
@@ -209,7 +209,7 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
       return res.status(500).json({
         error: error.message,
         code: 'STORE_ERROR',
-        suggestion: 'Check if store name is correct and path is valid'
+        suggestion: 'Check if store name is correct and path is valid',
       })
     }
   })
@@ -245,7 +245,7 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
       return res.status(500).json({
         error: error.message,
         code: 'DOM_ERROR',
-        suggestion: 'Check if selector is valid CSS selector syntax'
+        suggestion: 'Check if selector is valid CSS selector syntax',
       })
     }
   })
@@ -272,7 +272,7 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
         return res.status(404).json({
           error: 'Element not found',
           code: 'ELEMENT_NOT_FOUND',
-          suggestion: `Selector '${selector}' did not match any elements`
+          suggestion: `Selector '${selector}' did not match any elements`,
         })
       }
 
@@ -281,7 +281,7 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
       return res.status(500).json({
         error: error.message,
         code: 'STYLES_ERROR',
-        suggestion: 'Check if selector is valid and element exists'
+        suggestion: 'Check if selector is valid and element exists',
       })
     }
   })
@@ -299,7 +299,7 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
         res.json({
           status: 'tracing',
           traceId: `trace_${Date.now()}`,
-          duration
+          duration,
         })
 
         // Auto-stop after duration
@@ -318,7 +318,7 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
         return res.status(500).json({
           error: error.message,
           code: 'TRACE_START_ERROR',
-          suggestion: 'Debugger may already be attached. Try stopping existing trace first.'
+          suggestion: 'Debugger may already be attached. Try stopping existing trace first.',
         })
       }
     } else if (action === 'stop') {
@@ -330,20 +330,20 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
         return res.json({
           traceId: `trace_${Date.now()}`,
           profile: profile.profile, // Full profile data
-          summary: 'Profile captured successfully'
+          summary: 'Profile captured successfully',
         })
       } catch (error: any) {
         return res.status(500).json({
           error: error.message,
           code: 'TRACE_STOP_ERROR',
-          suggestion: 'No active trace. Call with action=start first.'
+          suggestion: 'No active trace. Call with action=start first.',
         })
       }
     } else {
       return res.status(400).json({
         error: 'Invalid action',
         code: 'INVALID_ACTION',
-        suggestion: 'action must be "start" or "stop"'
+        suggestion: 'action must be "start" or "stop"',
       })
     }
   })
@@ -353,7 +353,11 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
     try {
       const image = await mainWindow.webContents.capturePage()
       const pngBuffer = image.toPNG()
-      res.json({ screenshot: pngBuffer.toString('base64'), width: image.getSize().width, height: image.getSize().height })
+      res.json({
+        screenshot: pngBuffer.toString('base64'),
+        width: image.getSize().width,
+        height: image.getSize().height,
+      })
     } catch (error: any) {
       res.status(500).json({ error: error.message, code: 'SCREENSHOT_ERROR' })
     }

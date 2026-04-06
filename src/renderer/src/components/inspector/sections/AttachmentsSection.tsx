@@ -8,11 +8,11 @@
  * Renders a collapsible list of attached files with add/delete/open controls.
  */
 
-import { useState } from 'react'
-import { ChevronDown, ChevronRight, FileText, Paperclip, Plus, Trash2 } from 'lucide-react'
-import { useWorkspaceStore } from '../../../stores/workspaceStore'
-import { useAttachments } from '../../../hooks/useAttachments'
 import type { Attachment, ContextMetadata } from '@shared/types'
+import { ChevronDown, ChevronRight, FileText, Paperclip, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { useAttachments } from '../../../hooks/useAttachments'
+import { useWorkspaceStore } from '../../../stores/workspaceStore'
 
 // ---------------------------------------------------------------------------
 // Props
@@ -35,9 +35,7 @@ export function AttachmentsSection({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
   const { addAttachment, deleteAttachment, openAttachment, isLoading } = useAttachments()
 
-  const nodeData = useWorkspaceStore(
-    (state) => state.nodes.find((n) => n.id === nodeId)?.data,
-  )
+  const nodeData = useWorkspaceStore((state) => state.nodes.find((n) => n.id === nodeId)?.data)
 
   if (!nodeData) return null
 

@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
-import { LocalSyncProvider } from './LocalSyncProvider'
-import { YjsSyncProvider } from './YjsSyncProvider'
-import type { SyncProvider } from './SyncProvider'
-import type { CollaborativeSyncProvider } from './CollaborativeSyncProvider'
-import { useWorkspaceStore } from '../stores/workspaceStore'
-import type { WorkspaceData } from '@shared/types'
 import type { ConnectionStatus } from '@shared/multiplayerTypes'
+import type { WorkspaceData } from '@shared/types'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { toast } from 'react-hot-toast'
+import { useWorkspaceStore } from '../stores/workspaceStore'
+import { layoutEvents, requestFitView } from '../utils/layoutEvents'
 import { logger } from '../utils/logger'
 import { calculateAutoFitDimensions } from '../utils/textMeasure'
-import { layoutEvents, requestFitView } from '../utils/layoutEvents'
-import { toast } from 'react-hot-toast'
+import type { CollaborativeSyncProvider } from './CollaborativeSyncProvider'
+import { LocalSyncProvider } from './LocalSyncProvider'
+import type { SyncProvider } from './SyncProvider'
+import { YjsSyncProvider } from './YjsSyncProvider'
 
 interface SyncContextValue {
   provider: SyncProvider
@@ -148,7 +148,7 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
       })
       localProvider.setSaveErrorCallback(() => {
         useWorkspaceStore.getState().setSaveStatus('error')
-        toast.error("Could not save workspace. Check disk space or file permissions.")
+        toast.error('Could not save workspace. Check disk space or file permissions.')
       })
 
       // Connect to workspace (starts file watcher)
@@ -168,7 +168,9 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
           // before the 2000ms save debounce can persist the resized dimensions.
           const newNodeCount = useWorkspaceStore.getState().nodes.length
           if (newNodeCount > prevNodeCount) {
-            logger.log(`[SyncProvider] ${newNodeCount - prevNodeCount} new nodes detected, scheduling auto-fit`)
+            logger.log(
+              `[SyncProvider] ${newNodeCount - prevNodeCount} new nodes detected, scheduling auto-fit`,
+            )
             // Cancel any pending auto-fit — only the last one fires
             if (autoFitTimerRef.current) clearTimeout(autoFitTimerRef.current)
             autoFitTimerRef.current = setTimeout(() => {
@@ -183,12 +185,28 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
                   const content = nd.content || nd.description || ''
                   if (!content && !title) continue
                   const headerH = nd.type === 'note' ? 44 : 40
-                  const dims = calculateAutoFitDimensions(title, content, headerH, 36, node.width ?? 280)
+                  const dims = calculateAutoFitDimensions(
+                    title,
+                    content,
+                    headerH,
+                    36,
+                    node.width ?? 280,
+                  )
                   const isHtml = nd.contentType === 'html'
                   const contentFloor = isHtml
                     ? Math.max(480, Math.min(1200, Math.round(content.length * 0.9)))
-                    : content.length > 500 ? 400 : content.length > 200 ? 300 : 0
-                  const widthFloor = isHtml ? 680 : content.length > 300 ? 480 : content.length > 100 ? 340 : 0
+                    : content.length > 500
+                      ? 400
+                      : content.length > 200
+                        ? 300
+                        : 0
+                  const widthFloor = isHtml
+                    ? 680
+                    : content.length > 300
+                      ? 480
+                      : content.length > 100
+                        ? 340
+                        : 0
                   const finalW = Math.max(node.width ?? 280, dims.width, widthFloor)
                   const finalH = Math.max(node.height ?? 140, dims.height, contentFloor)
                   if (finalW > (node.width ?? 280) || finalH > (node.height ?? 140)) {
@@ -202,22 +220,33 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
                   // 2000ms debounced save which loses the race against rapid CLI writes.
                   // SELF_WRITE_GRACE_MS (1000ms) in workspace.ts suppresses the echo.
                   const resizedData = useWorkspaceStore.getState().getWorkspaceData()
-                  localProvider.saveImmediate(resizedData)
+                  localProvider
+                    .saveImmediate(resizedData)
                     .then(() => logger.log('[SyncProvider] Resized dims flushed to disk'))
-                    .catch((err: unknown) => logger.log('[SyncProvider] saveImmediate failed:', err))
+                    .catch((err: unknown) =>
+                      logger.log('[SyncProvider] saveImmediate failed:', err),
+                    )
                 }
               }
               // After auto-fit, dispatch layout so nodes get repositioned with proper spacing
               const convNode = store.nodes.find((n: any) => n.data?.type === 'conversation')
-              layoutEvents.dispatchEvent(new CustomEvent('run-layout', {
-                detail: {
-                  nodeIds: store.nodes.filter((n: any) => n.data?.type !== 'conversation').map((n: any) => n.id),
-                  edgeIds: [],
-                  conversationId: convNode?.id
-                }
-              }))
+              layoutEvents.dispatchEvent(
+                new CustomEvent('run-layout', {
+                  detail: {
+                    nodeIds: store.nodes
+                      .filter((n: any) => n.data?.type !== 'conversation')
+                      .map((n: any) => n.id),
+                    edgeIds: [],
+                    conversationId: convNode?.id,
+                  },
+                }),
+              )
               // Zoom to fit all nodes
-              requestFitView(store.nodes.map((n: any) => n.id), 0.15, 300)
+              requestFitView(
+                store.nodes.map((n: any) => n.id),
+                0.15,
+                300,
+              )
             }, 600) // 600ms > 500ms file watcher debounce — fires after rapid writes settle
           }
         }
@@ -234,7 +263,7 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
 
           const data = useWorkspaceStore.getState().getWorkspaceData()
           localProvider.save(data)
-        }
+        },
       )
 
       // Flush dirty state on window close to prevent data loss
@@ -258,9 +287,7 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
     }
   }, [workspaceId, isMultiplayer, multiplayerConfig, localProvider])
 
-  const activeProvider: SyncProvider = isMultiplayer
-    ? getYjsProvider()
-    : localProvider
+  const activeProvider: SyncProvider = isMultiplayer ? getYjsProvider() : localProvider
 
   const collaborativeProvider: CollaborativeSyncProvider | null = isMultiplayer
     ? getYjsProvider()
@@ -269,12 +296,8 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
   const contextValue: SyncContextValue = {
     provider: activeProvider,
     collaborativeProvider,
-    connectionStatus
+    connectionStatus,
   }
 
-  return (
-    <SyncContext.Provider value={contextValue}>
-      {children}
-    </SyncContext.Provider>
-  )
+  return <SyncContext.Provider value={contextValue}>{children}</SyncContext.Provider>
 }

@@ -32,11 +32,9 @@ Thumbs.db
 # Environment
 .env
 .env.*
-orchestrator/.env
 
 # Secrets
 .keys/
-.supabase/keys.txt
 .resend/
 
 # TypeScript
@@ -67,3 +65,17 @@ e2e/test-results/
 .cognograph-activity/events.jsonl
 .env.test
 .worktrees/
+%SystemDrive%/
+
+# Secrets vault
+.secrets/
+
+# Generated config (written by claudeConfigWriter per terminal session)
+.cognograph-context.md
+.mcp.json
+
+# Test screenshots and temp artifacts
+test-*.png
+screenshot-*.png
+*_b64.txt
+screenshot-test.mjs

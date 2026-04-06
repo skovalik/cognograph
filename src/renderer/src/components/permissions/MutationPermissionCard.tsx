@@ -8,9 +8,9 @@
  * the mutation type (create, update, delete).
  */
 
-import { memo } from 'react'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
 import type { MutationDisplay } from '@shared/transport/types'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { memo } from 'react'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -94,17 +94,13 @@ export const MutationPermissionCard = memo(function MutationPermissionCard({
       {/* Mutation type badge */}
       <div className="flex items-center gap-1.5 mb-1.5">
         <Icon className={`w-3 h-3 flex-shrink-0 ${colors.icon}`} />
-        <span
-          className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${colors.badge}`}
-        >
+        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${colors.badge}`}>
           {label}
         </span>
       </div>
 
       {/* Description */}
-      <p className="text-xs text-white/70 leading-snug mb-1">
-        {description}
-      </p>
+      <p className="text-xs text-white/70 leading-snug mb-1">{description}</p>
 
       {/* Target */}
       <div

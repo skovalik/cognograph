@@ -8,31 +8,31 @@
  * Displays steps, trust levels, approval requests, and allows user control.
  */
 
-import { memo, useEffect, useState } from 'react'
 import {
-  X,
-  Check,
-  Circle,
-  Loader2,
   AlertCircle,
-  SkipForward,
-  RefreshCw,
+  Check,
   ChevronDown,
   ChevronUp,
+  Circle,
   Eye,
+  Loader2,
   Pause,
-  XCircle
+  RefreshCw,
+  SkipForward,
+  X,
+  XCircle,
 } from 'lucide-react'
+import { memo, useEffect, useState } from 'react'
 import {
-  useWorkflowStore,
-  useCurrentWorkflow,
-  useWorkflowProgress,
-  useCurrentStep,
-  useNeedsApproval,
+  type TrustLevel,
   useApprovalContext,
+  useCurrentStep,
+  useCurrentWorkflow,
   useIsProgressVisible,
+  useNeedsApproval,
+  useWorkflowProgress,
+  useWorkflowStore,
   type WorkflowStep,
-  type TrustLevel
 } from '../../stores/workflowStore'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
 
@@ -42,7 +42,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore'
 
 const TrustIndicator = memo(function TrustIndicator({
   level,
-  status
+  status,
 }: {
   level: TrustLevel
   status: WorkflowStep['status']
@@ -50,30 +50,21 @@ const TrustIndicator = memo(function TrustIndicator({
   const colors = {
     auto: { bg: 'bg-green-500', text: 'text-green-500', label: 'Auto' },
     prompt_once: { bg: 'bg-yellow-500', text: 'text-yellow-500', label: 'Ask Once' },
-    always_approve: { bg: 'bg-red-500', text: 'text-red-500', label: 'Approve' }
+    always_approve: { bg: 'bg-red-500', text: 'text-red-500', label: 'Approve' },
   }
 
   const config = colors[level]
 
   // Override color if completed
   if (status === 'completed' || status === 'skipped') {
-    return (
-      <span className="w-2 h-2 rounded-full bg-green-500" title="Completed" />
-    )
+    return <span className="w-2 h-2 rounded-full bg-green-500" title="Completed" />
   }
 
   if (status === 'failed') {
-    return (
-      <span className="w-2 h-2 rounded-full bg-red-500" title="Failed" />
-    )
+    return <span className="w-2 h-2 rounded-full bg-red-500" title="Failed" />
   }
 
-  return (
-    <span
-      className={`w-2 h-2 rounded-full ${config.bg}`}
-      title={config.label}
-    />
-  )
+  return <span className={`w-2 h-2 rounded-full ${config.bg}`} title={config.label} />
 })
 
 // -----------------------------------------------------------------------------
@@ -82,14 +73,13 @@ const TrustIndicator = memo(function TrustIndicator({
 
 const StepItem = memo(function StepItem({
   step,
-  isActive
+  isActive,
 }: {
   step: WorkflowStep
   isActive: boolean
 }) {
-  const duration = step.endTime && step.startTime
-    ? ((step.endTime - step.startTime) / 1000).toFixed(1)
-    : null
+  const duration =
+    step.endTime && step.startTime ? ((step.endTime - step.startTime) / 1000).toFixed(1) : null
 
   const statusIcons = {
     pending: <Circle className="w-4 h-4 text-[var(--text-secondary)]" />,
@@ -97,7 +87,7 @@ const StepItem = memo(function StepItem({
     completed: <Check className="w-4 h-4 text-green-400" />,
     failed: <XCircle className="w-4 h-4 text-red-400" />,
     skipped: <SkipForward className="w-4 h-4 text-[var(--text-secondary)]" />,
-    waiting_approval: <Pause className="w-4 h-4 text-yellow-400" />
+    waiting_approval: <Pause className="w-4 h-4 text-yellow-400" />,
   }
 
   return (
@@ -121,9 +111,7 @@ const StepItem = memo(function StepItem({
       >
         {step.name}
       </span>
-      {duration && (
-        <span className="text-xs text-[var(--text-muted)]">{duration}s</span>
-      )}
+      {duration && <span className="text-xs text-[var(--text-muted)]">{duration}s</span>}
       {step.status === 'running' && (
         <span className="text-xs text-blue-400 animate-pulse">...</span>
       )}
@@ -140,7 +128,7 @@ const ApprovalPanel = memo(function ApprovalPanel({
   onApprove,
   onDeny,
   onSkip,
-  onPreview
+  onPreview,
 }: {
   context: { stepId: string; reason: string; preview?: string }
   onApprove: () => void
@@ -204,7 +192,7 @@ const ErrorPanel = memo(function ErrorPanel({
   error,
   onRetry,
   onSkip,
-  onCancel
+  onCancel,
 }: {
   error: string
   onRetry: () => void
@@ -252,7 +240,7 @@ const ErrorPanel = memo(function ErrorPanel({
 const ProgressBar = memo(function ProgressBar({
   percent,
   current,
-  total
+  total,
 }: {
   percent: number
   current: number
@@ -261,7 +249,9 @@ const ProgressBar = memo(function ProgressBar({
   return (
     <div className="mt-3">
       <div className="flex justify-between text-xs text-[var(--text-secondary)] mb-1">
-        <span>{current}/{total} steps</span>
+        <span>
+          {current}/{total} steps
+        </span>
         <span>{percent}%</span>
       </div>
       <div className="h-1.5 bg-[var(--surface-panel)] rounded-full overflow-hidden">
@@ -287,14 +277,8 @@ function WorkflowProgressComponent(): JSX.Element | null {
   const isVisible = useIsProgressVisible()
   const themeSettings = useWorkspaceStore((state) => state.themeSettings)
 
-  const {
-    cancelWorkflow,
-    approveStep,
-    denyStep,
-    skipStep,
-    retryStep,
-    dismissProgress
-  } = useWorkflowStore()
+  const { cancelWorkflow, approveStep, denyStep, skipStep, retryStep, dismissProgress } =
+    useWorkflowStore()
 
   const [isExpanded, setIsExpanded] = useState(true)
   const [showAllSteps, setShowAllSteps] = useState(false)
@@ -333,7 +317,7 @@ function WorkflowProgressComponent(): JSX.Element | null {
     ? workflow.steps
     : workflow.steps.slice(
         Math.max(0, workflow.currentStepIndex - 1),
-        Math.min(workflow.steps.length, workflow.currentStepIndex + 4)
+        Math.min(workflow.steps.length, workflow.currentStepIndex + 4),
       )
 
   const hiddenBefore = showAllSteps ? 0 : Math.max(0, workflow.currentStepIndex - 1)
@@ -345,7 +329,7 @@ function WorkflowProgressComponent(): JSX.Element | null {
     <div
       className={`fixed bottom-4 right-4 gui-z-panels w-80 ${bgClass} border ${borderClass} rounded-lg shadow-xl overflow-hidden`}
       style={{
-        transition: 'all 0.2s ease-out'
+        transition: 'all 0.2s ease-out',
       }}
     >
       {/* Header */}
@@ -357,18 +341,10 @@ function WorkflowProgressComponent(): JSX.Element | null {
           {workflow.status === 'running' && (
             <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
           )}
-          {workflow.status === 'paused' && (
-            <Pause className="w-4 h-4 text-yellow-400" />
-          )}
-          {isComplete && (
-            <Check className="w-4 h-4 text-green-400" />
-          )}
-          {(isCancelled || isFailed) && (
-            <XCircle className="w-4 h-4 text-red-400" />
-          )}
-          <span className="text-sm font-medium text-[var(--text-primary)]">
-            {workflow.name}
-          </span>
+          {workflow.status === 'paused' && <Pause className="w-4 h-4 text-yellow-400" />}
+          {isComplete && <Check className="w-4 h-4 text-green-400" />}
+          {(isCancelled || isFailed) && <XCircle className="w-4 h-4 text-red-400" />}
+          <span className="text-sm font-medium text-[var(--text-primary)]">{workflow.name}</span>
         </div>
         <div className="flex items-center gap-1">
           <span className="text-xs text-[var(--text-secondary)]">

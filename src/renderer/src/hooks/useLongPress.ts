@@ -19,10 +19,14 @@ import { useCallback, useRef } from 'react'
 interface LongPressOptions {
   /** Delay in ms before long-press fires (default: 500) */
   delay?: number
-  /** Movement threshold in px to cancel (default: 10) */
+  /** Movement threshold in px to cancel (default: 15) */
   moveThreshold?: number
   /** Whether the hook is active (default: true) */
   enabled?: boolean
+  /** Called when touch starts and timer begins — use for visual feedback */
+  onPressStart?: (target: HTMLElement) => void
+  /** Called when press is cancelled (moved, lifted, multi-touch) before firing */
+  onPressCancel?: () => void
 }
 
 interface LongPressHandlers {
@@ -32,13 +36,16 @@ interface LongPressHandlers {
   onTouchCancel: (e: React.TouchEvent) => void
 }
 
-type LongPressCallback = (position: { clientX: number; clientY: number }, target: HTMLElement) => void
+type LongPressCallback = (
+  position: { clientX: number; clientY: number },
+  target: HTMLElement,
+) => void
 
 export function useLongPress(
   callback: LongPressCallback,
-  options: LongPressOptions = {}
+  options: LongPressOptions = {},
 ): LongPressHandlers {
-  const { delay = 500, moveThreshold = 10, enabled = true } = options
+  const { delay = 500, moveThreshold = 15, enabled = true, onPressStart, onPressCancel } = options
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const startPosRef = useRef<{ x: number; y: number } | null>(null)
@@ -49,10 +56,14 @@ export function useLongPress(
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current)
       timerRef.current = null
+      // Only call onPressCancel if the press didn't fire
+      if (!firedRef.current) {
+        onPressCancel?.()
+      }
     }
     startPosRef.current = null
     targetRef.current = null
-  }, [])
+  }, [onPressCancel])
 
   const onTouchStart = useCallback(
     (e: React.TouchEvent) => {
@@ -68,6 +79,7 @@ export function useLongPress(
       startPosRef.current = { x: touch.clientX, y: touch.clientY }
       targetRef.current = e.target as HTMLElement
       firedRef.current = false
+      onPressStart?.(e.target as HTMLElement)
 
       timerRef.current = setTimeout(() => {
         if (startPosRef.current && targetRef.current) {
@@ -80,13 +92,13 @@ export function useLongPress(
 
           callback(
             { clientX: startPosRef.current.x, clientY: startPosRef.current.y },
-            targetRef.current
+            targetRef.current,
           )
         }
         timerRef.current = null
       }, delay)
     },
-    [enabled, delay, callback, clear]
+    [enabled, delay, callback, clear, onPressStart],
   )
 
   const onTouchMove = useCallback(
@@ -102,21 +114,20 @@ export function useLongPress(
         clear()
       }
     },
-    [moveThreshold, clear]
+    [moveThreshold, clear],
   )
 
   const onTouchEnd = useCallback(
     (e: React.TouchEvent) => {
       const didFire = firedRef.current
-
       clear()
-
-      // If long-press fired, prevent the ghost click / context menu that follows
+      // Clean up visual feedback regardless
       if (didFire) {
+        onPressCancel?.()
         e.preventDefault()
       }
     },
-    [clear]
+    [clear, onPressCancel],
   )
 
   const onTouchCancel = useCallback(() => {

@@ -25,38 +25,38 @@ export function getResourceList(provider: MCPSyncProvider): MCPResource[] {
       uri: 'cognograph://workspace',
       name: 'Workspace Overview',
       description: `Workspace: ${provider.getWorkspaceName()}`,
-      mimeType: 'application/json'
+      mimeType: 'application/json',
     },
     {
       uri: 'cognograph://todos',
       name: 'All Tasks',
       description: `Task nodes in workspace`,
-      mimeType: 'application/json'
+      mimeType: 'application/json',
     },
     {
       uri: 'cognograph://notes',
       name: 'All Notes',
       description: `Note nodes in workspace`,
-      mimeType: 'application/json'
+      mimeType: 'application/json',
     },
     {
       uri: 'cognograph://projects',
       name: 'All Projects',
       description: `Project nodes in workspace`,
-      mimeType: 'application/json'
+      mimeType: 'application/json',
     },
     {
       uri: 'cognograph://nodes',
       name: 'All Nodes',
       description: `${nodes.length} nodes in workspace`,
-      mimeType: 'application/json'
+      mimeType: 'application/json',
     },
     {
       uri: 'cognograph://edges',
       name: 'All Edges',
       description: `${edges.length} connections`,
-      mimeType: 'application/json'
-    }
+      mimeType: 'application/json',
+    },
   ]
 
   return resources
@@ -77,50 +77,34 @@ export function handleResourceRead(provider: MCPSyncProvider, uri: string): stri
         name: provider.getWorkspaceName(),
         nodeCount: nodes.length,
         edgeCount: edges.length,
-        nodeTypes: countNodeTypes(nodes)
+        nodeTypes: countNodeTypes(nodes),
       },
       null,
-      2
+      2,
     )
   }
 
   // Todos (task nodes)
   if (uri === 'cognograph://todos') {
     const tasks = nodes.filter((n) => n.data.type === 'task')
-    return JSON.stringify(
-      tasks.map(summarizeNode),
-      null,
-      2
-    )
+    return JSON.stringify(tasks.map(summarizeNode), null, 2)
   }
 
   // Notes
   if (uri === 'cognograph://notes') {
     const notes = nodes.filter((n) => n.data.type === 'note')
-    return JSON.stringify(
-      notes.map(summarizeNode),
-      null,
-      2
-    )
+    return JSON.stringify(notes.map(summarizeNode), null, 2)
   }
 
   // Projects
   if (uri === 'cognograph://projects') {
     const projects = nodes.filter((n) => n.data.type === 'project')
-    return JSON.stringify(
-      projects.map(summarizeNode),
-      null,
-      2
-    )
+    return JSON.stringify(projects.map(summarizeNode), null, 2)
   }
 
   // All nodes
   if (uri === 'cognograph://nodes') {
-    return JSON.stringify(
-      nodes.map(summarizeNode),
-      null,
-      2
-    )
+    return JSON.stringify(nodes.map(summarizeNode), null, 2)
   }
 
   // All edges
@@ -133,10 +117,10 @@ export function handleResourceRead(provider: MCPSyncProvider, uri: string): stri
         label: e.data?.label,
         weight: e.data?.weight,
         direction: e.data?.direction,
-        active: e.data?.active
+        active: e.data?.active,
       })),
       null,
-      2
+      2,
     )
   }
 
@@ -154,10 +138,10 @@ export function handleResourceRead(provider: MCPSyncProvider, uri: string): stri
         data: node.data,
         connectedEdges: edges
           .filter((e) => e.source === node.id || e.target === node.id)
-          .map((e) => ({ id: e.id, source: e.source, target: e.target }))
+          .map((e) => ({ id: e.id, source: e.source, target: e.target })),
       },
       null,
-      2
+      2,
     )
   }
 
@@ -181,7 +165,7 @@ function summarizeNode(node: WorkspaceNode): Record<string, unknown> {
     id: node.id,
     type: data.type,
     title: data.title || undefined,
-    position: node.position
+    position: node.position,
   }
 
   if (data.type === 'task') {

@@ -32,9 +32,9 @@ export const AGENT_PRESETS: AgentPreset[] = [
       canDeleteEdges: true,
       autoExecuteTools: true,
       maxToolCallsPerTurn: 20,
-      scopeMode: 'workspace'
+      scopeMode: 'workspace',
     },
-    suggestedConnections: ['note', 'task', 'project']
+    suggestedConnections: ['note', 'task', 'project'],
   },
   {
     id: 'code',
@@ -54,9 +54,9 @@ export const AGENT_PRESETS: AgentPreset[] = [
       canExecuteCommands: true,
       autoExecuteTools: false, // Require confirmation for destructive ops
       maxToolCallsPerTurn: 50,
-      scopeMode: 'connected'
+      scopeMode: 'connected',
     },
-    suggestedConnections: ['artifact']
+    suggestedConnections: ['artifact'],
   },
   {
     id: 'research',
@@ -73,9 +73,9 @@ export const AGENT_PRESETS: AgentPreset[] = [
       canDeleteEdges: false,
       autoExecuteTools: true,
       maxToolCallsPerTurn: 30,
-      scopeMode: 'connected'
+      scopeMode: 'connected',
     },
-    suggestedConnections: ['note', 'artifact']
+    suggestedConnections: ['note', 'artifact'],
   },
   {
     id: 'custom',
@@ -85,8 +85,8 @@ export const AGENT_PRESETS: AgentPreset[] = [
     agentSettings: {
       // Empty -- resolvePresetSettings() returns DEFAULT_AGENT_SETTINGS
     },
-    suggestedConnections: []
-  }
+    suggestedConnections: [],
+  },
 ]
 
 // -----------------------------------------------------------------------------
@@ -100,12 +100,12 @@ export const AGENT_PRESETS: AgentPreset[] = [
  */
 export function resolvePresetSettings(
   preset: AgentPreset,
-  baseSettings?: Partial<AgentSettings>
+  baseSettings?: Partial<AgentSettings>,
 ): AgentSettings {
   return {
     ...DEFAULT_AGENT_SETTINGS,
     ...(baseSettings || {}),
-    ...preset.agentSettings
+    ...preset.agentSettings,
   }
 }
 

@@ -14,20 +14,20 @@
  * (programStore 'always'/'never'/'system' + OS media query).
  */
 
+import type { GuiColors, ThemeSettings } from '@shared/types'
 import { flushSync } from 'react-dom'
-import { useWorkspaceStore } from '../stores/workspaceStore'
-import { useProgramStore } from '../stores/programStore'
-import { type GuiColors, type ThemeSettings } from '@shared/types'
 import { DEFAULT_GUI_DARK, DEFAULT_GUI_LIGHT } from '../constants/themePresets'
+import { useProgramStore } from '../stores/programStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 // =============================================================================
 // Configuration — flip USE_DITHER_REVEAL to false for instant rollback
 // =============================================================================
 
 const USE_DITHER_REVEAL = false
-const DITHER_SCALE = 0.25       // Mask resolution: 1/4 viewport (visible pixel blocks)
-const DITHER_BAND_PX = 220      // Dither band width in real pixels (wider = more visible stipple)
-const TRANSITION_DURATION = 600  // ms (slightly slower to let dither register visually)
+const DITHER_SCALE = 0.25 // Mask resolution: 1/4 viewport (visible pixel blocks)
+const DITHER_BAND_PX = 220 // Dither band width in real pixels (wider = more visible stipple)
+const TRANSITION_DURATION = 600 // ms (slightly slower to let dither register visually)
 
 // =============================================================================
 // Reduce-motion check (non-React, reads stores directly)
@@ -55,7 +55,8 @@ function applyThemeToDom(themeSettings: ThemeSettings): void {
   document.body.setAttribute('data-theme', themeSettings.mode)
 
   // 2. GUI CSS variables (App.tsx lines 285-305)
-  const guiColors: GuiColors = themeSettings.guiColors ||
+  const guiColors: GuiColors =
+    themeSettings.guiColors ||
     (themeSettings.mode === 'light' ? DEFAULT_GUI_LIGHT : DEFAULT_GUI_DARK)
 
   const root = document.documentElement
@@ -89,7 +90,9 @@ function applyThemeToDom(themeSettings: ThemeSettings): void {
   root.style.setProperty('--canvas-background', themeSettings.canvasBackground)
   root.style.setProperty(
     '--canvas-grid-color',
-    themeSettings.canvasGridColor === '#transparent' ? 'transparent' : themeSettings.canvasGridColor
+    themeSettings.canvasGridColor === '#transparent'
+      ? 'transparent'
+      : themeSettings.canvasGridColor,
   )
 }
 
@@ -120,7 +123,7 @@ function runDitherReveal(
   clickX: number,
   clickY: number,
   maxRadius: number,
-  transition: ViewTransition
+  transition: ViewTransition,
 ): void {
   const w = Math.ceil(window.innerWidth * DITHER_SCALE)
   const h = Math.ceil(window.innerHeight * DITHER_SCALE)
@@ -165,18 +168,18 @@ function runDitherReveal(
       // Without these, `animation: none` from CSS causes immediate cleanup.
       document.documentElement.animate(
         { opacity: [1, 1] },
-        { duration: TRANSITION_DURATION + 50, pseudoElement: '::view-transition-new(root)' }
+        { duration: TRANSITION_DURATION + 50, pseudoElement: '::view-transition-new(root)' },
       )
       document.documentElement.animate(
         { opacity: [1, 1] },
-        { duration: TRANSITION_DURATION + 50, pseudoElement: '::view-transition-old(root)' }
+        { duration: TRANSITION_DURATION + 50, pseudoElement: '::view-transition-old(root)' },
       )
 
       function frame(): void {
         const elapsed = performance.now() - startTime
         const t = Math.min(elapsed / TRANSITION_DURATION, 1)
         // Ease-out-expo: fast start, smooth deceleration
-        const easedT = t === 1 ? 1 : 1 - Math.pow(2, -10 * t)
+        const easedT = t === 1 ? 1 : 1 - 2 ** (-10 * t)
         const currentR = easedT * (scaledMaxR + band)
 
         for (let i = 0; i < pixelCount; i++) {
@@ -188,7 +191,7 @@ function runDitherReveal(
           if (bandPos <= -1) {
             alpha = 255 // fully revealed
           } else if (bandPos >= 1) {
-            alpha = 0   // fully hidden
+            alpha = 0 // fully hidden
           } else {
             // Dither band: threshold noise against radial position.
             // Maps bandPos from [-1, +1] to threshold [0, 255].
@@ -248,7 +251,7 @@ function runDitherReveal(
  */
 export function performThemeTransition(
   newMode: 'dark' | 'light',
-  clickEvent?: React.MouseEvent | MouseEvent
+  clickEvent?: React.MouseEvent | MouseEvent,
 ): void {
   const store = useWorkspaceStore.getState()
 
@@ -268,7 +271,7 @@ export function performThemeTransition(
   // Max radius = distance from click to farthest viewport corner
   const maxRadius = Math.hypot(
     Math.max(x, window.innerWidth - x),
-    Math.max(y, window.innerHeight - y)
+    Math.max(y, window.innerHeight - y),
   )
 
   // For click-based transitions, suppress default crossfade via CSS class
@@ -304,7 +307,7 @@ export function performThemeTransition(
               duration: TRANSITION_DURATION,
               easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
               pseudoElement: '::view-transition-new(root)',
-            }
+            },
           )
         })
         .catch(() => {})

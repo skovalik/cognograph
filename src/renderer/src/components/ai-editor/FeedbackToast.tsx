@@ -10,8 +10,8 @@
  * Respects reduced motion preferences.
  */
 
-import { memo, useState, useEffect, useCallback } from 'react'
-import { CheckCircle, XCircle, AlertTriangle, Info, Undo2, X } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Info, Undo2, X, XCircle } from 'lucide-react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 
 export type FeedbackType = 'success' | 'error' | 'warning' | 'info'
@@ -31,36 +31,39 @@ interface FeedbackToastProps {
   autoHideDelay?: number
 }
 
-const typeConfig: Record<FeedbackType, {
-  icon: typeof CheckCircle
-  color: string
-  borderColor: string
-  progressColor: string
-}> = {
+const typeConfig: Record<
+  FeedbackType,
+  {
+    icon: typeof CheckCircle
+    color: string
+    borderColor: string
+    progressColor: string
+  }
+> = {
   success: {
     icon: CheckCircle,
     color: '#22c55e',
     borderColor: 'rgba(34, 197, 94, 0.3)',
-    progressColor: 'linear-gradient(90deg, #22c55e, #4ade80)'
+    progressColor: 'linear-gradient(90deg, #22c55e, #4ade80)',
   },
   error: {
     icon: XCircle,
     color: '#ef4444',
     borderColor: 'rgba(239, 68, 68, 0.3)',
-    progressColor: 'linear-gradient(90deg, #ef4444, #f87171)'
+    progressColor: 'linear-gradient(90deg, #ef4444, #f87171)',
   },
   warning: {
     icon: AlertTriangle,
     color: '#f59e0b',
     borderColor: 'rgba(245, 158, 11, 0.3)',
-    progressColor: 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+    progressColor: 'linear-gradient(90deg, #f59e0b, #fbbf24)',
   },
   info: {
     icon: Info,
     color: 'var(--cg-accent, #F0EDE8)',
     borderColor: 'var(--accent-glow-subtle, rgba(200, 150, 62, 0.15))',
-    progressColor: 'linear-gradient(90deg, var(--accent-glow, #C8963E), var(--cg-accent, #F0EDE8))'
-  }
+    progressColor: 'linear-gradient(90deg, var(--accent-glow, #C8963E), var(--cg-accent, #F0EDE8))',
+  },
 }
 
 function FeedbackToastComponent({
@@ -70,7 +73,7 @@ function FeedbackToastComponent({
   showUndo = false,
   onUndo,
   onDismiss,
-  autoHideDelay = 5000
+  autoHideDelay = 5000,
 }: FeedbackToastProps): JSX.Element {
   const reducedMotion = useReducedMotion()
   const [isUndoing, setIsUndoing] = useState(false)
@@ -125,9 +128,7 @@ function FeedbackToastComponent({
         <Icon className="toast-icon" style={{ color: config.color }} />
         <div className="toast-text">
           <span className="toast-message">{message}</span>
-          {description && (
-            <span className="toast-description">{description}</span>
-          )}
+          {description && <span className="toast-description">{description}</span>}
         </div>
       </div>
 
@@ -144,11 +145,7 @@ function FeedbackToastComponent({
             <span>{isUndoing ? 'Undoing...' : 'Undo'}</span>
           </button>
         )}
-        <button
-          className="dismiss-button"
-          onClick={onDismiss}
-          aria-label="Dismiss notification"
-        >
+        <button className="dismiss-button" onClick={onDismiss} aria-label="Dismiss notification">
           <X className="dismiss-icon" />
         </button>
       </div>

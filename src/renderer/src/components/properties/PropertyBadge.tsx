@@ -1,20 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo } from 'react'
-import {
-  Tag,
-  Flag,
-  Circle,
-  Calendar,
-  CheckCircle2,
-  XCircle,
-  Clock
-} from 'lucide-react'
 import type { PropertyDefinition, PropertyOption } from '@shared/types'
-import { ICON_MAP } from '../IconPicker'
+import { Calendar, CheckCircle2, Circle, Clock, Flag, Tag, XCircle } from 'lucide-react'
+import { memo } from 'react'
 import { getMergedPropertyOptions } from '../../constants/properties'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { ICON_MAP } from '../IconPicker'
 
 // -----------------------------------------------------------------------------
 // PropertyBadge Component
@@ -31,7 +23,7 @@ export const PropertyBadge = memo(function PropertyBadge({
   definition,
   value,
   compact = false,
-  onCycle
+  onCycle,
 }: PropertyBadgeProps) {
   // Get propertySchema to access user-customized options
   const propertySchema = useWorkspaceStore((state) => state.propertySchema)
@@ -39,7 +31,8 @@ export const PropertyBadge = memo(function PropertyBadge({
   if (value === undefined || value === null || value === '') return null
 
   // Get merged options (user customizations + built-in defaults)
-  const mergedOptions = getMergedPropertyOptions(definition.id, propertySchema) || definition.options || []
+  const mergedOptions =
+    getMergedPropertyOptions(definition.id, propertySchema) || definition.options || []
 
   // Render based on property type
   switch (definition.type) {
@@ -95,7 +88,7 @@ const SelectBadge = memo(function SelectBadge({
   value,
   compact,
   type,
-  onCycle
+  onCycle,
 }: SelectBadgeProps) {
   const option = options.find((o) => o.value === value)
   if (!option) return null
@@ -105,25 +98,36 @@ const SelectBadge = memo(function SelectBadge({
   const DefaultIcon = type === 'status' ? Circle : type === 'priority' ? Flag : Tag
   const Icon = CustomIcon || DefaultIcon
 
-  const handleClick = onCycle ? (e: React.MouseEvent) => {
-    e.stopPropagation()
-    const currentIndex = options.findIndex((o) => o.value === value)
-    const nextIndex = (currentIndex + 1) % options.length
-    const nextOption = options[nextIndex]
-    if (nextOption) onCycle(nextOption.value)
-  } : undefined
+  const handleClick = onCycle
+    ? (e: React.MouseEvent) => {
+        e.stopPropagation()
+        const currentIndex = options.findIndex((o) => o.value === value)
+        const nextIndex = (currentIndex + 1) % options.length
+        const nextOption = options[nextIndex]
+        if (nextOption) onCycle(nextOption.value)
+      }
+    : undefined
 
   return (
     <span
       onClick={handleClick}
       onMouseDown={onCycle ? (e) => e.stopPropagation() : undefined}
-      onKeyDown={onCycle ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick?.(e as unknown as React.MouseEvent) } } : undefined}
+      onKeyDown={
+        onCycle
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                handleClick?.(e as unknown as React.MouseEvent)
+              }
+            }
+          : undefined
+      }
       className={`inline-flex items-center gap-1 rounded-full font-medium ${
         compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'
       } ${onCycle ? 'cursor-pointer hover:brightness-125 transition-all' : ''}`}
       style={{
         backgroundColor: option.color ? `${option.color}30` : 'rgba(255,255,255,0.15)',
-        color: option.color || 'inherit'
+        color: option.color || 'inherit',
       }}
       title={onCycle ? `Click to cycle ${type}` : undefined}
       role={onCycle ? 'button' : undefined}
@@ -149,7 +153,7 @@ interface MultiSelectBadgeProps {
 const MultiSelectBadge = memo(function MultiSelectBadge({
   options,
   values,
-  compact
+  compact,
 }: MultiSelectBadgeProps) {
   if (values.length === 0) return null
 
@@ -187,7 +191,7 @@ const MultiSelectBadge = memo(function MultiSelectBadge({
             }`}
             style={{
               backgroundColor: option.color ? `${option.color}30` : 'rgba(255,255,255,0.15)',
-              color: option.color || 'inherit'
+              color: option.color || 'inherit',
             }}
           >
             <Icon className={compact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
@@ -196,9 +200,7 @@ const MultiSelectBadge = memo(function MultiSelectBadge({
         )
       })}
       {hiddenCount > 0 && (
-        <span
-          className={`text-[var(--text-muted)] ${compact ? 'text-[10px]' : 'text-xs'}`}
-        >
+        <span className={`text-[var(--text-muted)] ${compact ? 'text-[10px]' : 'text-xs'}`}>
           +{hiddenCount}
         </span>
       )}
@@ -216,11 +218,7 @@ interface CheckboxBadgeProps {
   compact: boolean
 }
 
-const CheckboxBadge = memo(function CheckboxBadge({
-  checked,
-  label,
-  compact
-}: CheckboxBadgeProps) {
+const CheckboxBadge = memo(function CheckboxBadge({ checked, label, compact }: CheckboxBadgeProps) {
   const Icon = checked ? CheckCircle2 : XCircle
   const color = checked ? '#22c55e' : '#6b7280'
 
@@ -231,7 +229,7 @@ const CheckboxBadge = memo(function CheckboxBadge({
       }`}
       style={{
         backgroundColor: `${color}30`,
-        color
+        color,
       }}
     >
       <Icon className={compact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
@@ -261,7 +259,8 @@ const DateBadge = memo(function DateBadge({ date, compact }: DateBadgeProps) {
     dateObj.getFullYear() === now.getFullYear()
 
   let color = '#6b7280' // default gray
-  if (isOverdue) color = '#ef4444' // red for overdue
+  if (isOverdue)
+    color = '#ef4444' // red for overdue
   else if (isToday) color = '#f59e0b' // amber for today
 
   const Icon = isOverdue ? Clock : Calendar
@@ -269,7 +268,7 @@ const DateBadge = memo(function DateBadge({ date, compact }: DateBadgeProps) {
   // Format date as short string
   const formatted = dateObj.toLocaleDateString('en-US', {
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
   })
 
   return (
@@ -279,7 +278,7 @@ const DateBadge = memo(function DateBadge({ date, compact }: DateBadgeProps) {
       }`}
       style={{
         backgroundColor: `${color}30`,
-        color
+        color,
       }}
     >
       <Icon className={compact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
@@ -308,11 +307,17 @@ export const PropertyBadges = memo(function PropertyBadges({
   maxVisible = 6,
   showLabel = false,
   hiddenProperties,
-  onPropertyChange
+  onPropertyChange,
 }: PropertyBadgesProps & { showLabel?: boolean }) {
   // Filter to only showInCard properties that have values and aren't hidden
   const visibleProps = definitions
-    .filter((def) => def.showInCard && properties[def.id] !== undefined && properties[def.id] !== null && !hiddenProperties?.includes(def.id))
+    .filter(
+      (def) =>
+        def.showInCard &&
+        properties[def.id] !== undefined &&
+        properties[def.id] !== null &&
+        !hiddenProperties?.includes(def.id),
+    )
     .slice(0, maxVisible)
 
   if (visibleProps.length === 0) return null
@@ -324,7 +329,9 @@ export const PropertyBadges = memo(function PropertyBadges({
   return (
     <div className="property-badges flex flex-col gap-1.5">
       {showLabel && (
-        <div className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-0.5">Properties</div>
+        <div className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-0.5">
+          Properties
+        </div>
       )}
       {/* Tags in their own row */}
       {tagProps.length > 0 && (

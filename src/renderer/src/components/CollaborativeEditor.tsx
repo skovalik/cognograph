@@ -10,13 +10,13 @@
  * Falls back to the standard RichTextEditor in solo mode.
  */
 
-import { memo, useMemo, useEffect } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
-import { createEditorExtensions } from '../utils/tiptapConfig'
-import { createCollabExtensions, COLLAB_CURSOR_STYLES } from '../utils/tiptapCollabConfig'
-import { RichTextToolbar } from './RichTextToolbar'
-import { useCollaborativeProvider } from '../sync'
+import { EditorContent, useEditor } from '@tiptap/react'
+import { memo, useEffect, useMemo } from 'react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
+import { useCollaborativeProvider } from '../sync'
+import { COLLAB_CURSOR_STYLES, createCollabExtensions } from '../utils/tiptapCollabConfig'
+import { createEditorExtensions } from '../utils/tiptapConfig'
+import { RichTextToolbar } from './RichTextToolbar'
 
 interface CollaborativeEditorProps {
   /** Node ID — used to key the Y.XmlFragment */
@@ -51,7 +51,7 @@ export const CollaborativeEditor = memo(function CollaborativeEditor({
   enableFormatting = true,
   editable = true,
   minHeight = 60,
-  showToolbar = 'on-focus'
+  showToolbar = 'on-focus',
 }: CollaborativeEditorProps) {
   const collaborativeProvider = useCollaborativeProvider()
   const syncMode = useWorkspaceStore((s) => s.syncMode)
@@ -78,7 +78,7 @@ export const CollaborativeEditor = memo(function CollaborativeEditor({
       const localState = awareness.getLocalState()
       return {
         name: localState?.user?.name || 'User',
-        color: localState?.user?.color || '#6366f1'
+        color: localState?.user?.color || '#6366f1',
       }
     } catch {
       return { name: 'User', color: '#6366f1' }
@@ -91,14 +91,14 @@ export const CollaborativeEditor = memo(function CollaborativeEditor({
       enableLists,
       enableHeadings,
       enableFormatting,
-      placeholder
+      placeholder,
     })
 
     if (fragment && awareness) {
       const collabExtensions = createCollabExtensions({
         fragment,
         awareness,
-        user: localUser
+        user: localUser,
       })
       return [...baseExtensions, ...collabExtensions]
     }
@@ -106,12 +106,15 @@ export const CollaborativeEditor = memo(function CollaborativeEditor({
     return baseExtensions
   }, [fragment, awareness, localUser, enableLists, enableHeadings, enableFormatting, placeholder])
 
-  const editor = useEditor({
-    extensions,
-    editable,
-    // In collab mode, content comes from Y.XmlFragment, not from a string
-    content: fragment ? undefined : '',
-  }, [extensions, editable])
+  const editor = useEditor(
+    {
+      extensions,
+      editable,
+      // In collab mode, content comes from Y.XmlFragment, not from a string
+      content: fragment ? undefined : '',
+    },
+    [extensions, editable],
+  )
 
   // Inject collaboration cursor styles
   useEffect(() => {
@@ -128,8 +131,7 @@ export const CollaborativeEditor = memo(function CollaborativeEditor({
 
   if (!editor) return null
 
-  const shouldShowToolbar = showToolbar === true ||
-    (showToolbar === 'on-focus' && editor.isFocused)
+  const shouldShowToolbar = showToolbar === true || (showToolbar === 'on-focus' && editor.isFocused)
 
   return (
     <div className={`collaborative-editor ${className}`}>

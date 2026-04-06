@@ -47,23 +47,32 @@ import { z } from 'zod'
 const nonEmptyString = z.string().min(1, 'Must not be empty').max(10_000)
 
 /** Workspace ID: UUID-like string, no path separators, no reserved prefixes */
-const workspaceIdSchema = z.string()
+const workspaceIdSchema = z
+  .string()
   .min(1, 'Workspace ID is required')
   .max(256, 'Workspace ID too long')
-  .refine(s => !s.includes('/') && !s.includes('\\'), 'Workspace ID must not contain path separators')
-  .refine(s => !s.includes('\x00'), 'Workspace ID must not contain null bytes')
+  .refine(
+    (s) => !s.includes('/') && !s.includes('\\'),
+    'Workspace ID must not contain path separators',
+  )
+  .refine((s) => !s.includes('\x00'), 'Workspace ID must not contain null bytes')
 
 /** Credential key: alphanumeric + dashes/underscores/dots */
-const credentialKeySchema = z.string()
+const credentialKeySchema = z
+  .string()
   .min(1, 'Credential key is required')
   .max(256, 'Credential key too long')
-  .regex(/^[a-zA-Z0-9._-]+$/, 'Credential key must be alphanumeric with dots, dashes, or underscores')
+  .regex(
+    /^[a-zA-Z0-9._-]+$/,
+    'Credential key must be alphanumeric with dots, dashes, or underscores',
+  )
 
 /** Absolute file path (basic check — further validation happens at handler level) */
-const absolutePathSchema = z.string()
+const absolutePathSchema = z
+  .string()
   .min(1, 'Path is required')
   .max(4096, 'Path too long')
-  .refine(s => !s.includes('\x00'), 'Path must not contain null bytes')
+  .refine((s) => !s.includes('\x00'), 'Path must not contain null bytes')
 
 /** Array of absolute paths for allowedPaths parameter */
 const allowedPathsSchema = z.array(absolutePathSchema).min(0).max(100)
@@ -84,29 +93,37 @@ export const CredentialsGetRealSchema = z.object({
 export const CredentialsSetSchema = z.object({
   workspaceId: workspaceIdSchema,
   credentialKey: credentialKeySchema,
-  value: z.string().min(1, 'Credential value is required').max(65_536, 'Credential value too large'),
+  value: z
+    .string()
+    .min(1, 'Credential value is required')
+    .max(65_536, 'Credential value too large'),
   label: z.string().min(1, 'Label is required').max(256, 'Label too long'),
-  credentialType: z.string().min(1, 'Credential type is required').max(64, 'Credential type too long'),
+  credentialType: z
+    .string()
+    .min(1, 'Credential type is required')
+    .max(64, 'Credential type too long'),
 })
 
 // -----------------------------------------------------------------------------
 // 3. workspace:save
 // -----------------------------------------------------------------------------
 
-export const WorkspaceSaveSchema = z.object({
-  id: workspaceIdSchema,
-  name: z.string().min(1).max(512),
-  nodes: z.array(z.object({}).passthrough()),
-  edges: z.array(z.object({}).passthrough()),
-  viewport: z.object({
-    x: z.number(),
-    y: z.number(),
-    zoom: z.number(),
-  }),
-  createdAt: z.number(),
-  updatedAt: z.number(),
-  version: z.number().int().nonnegative(),
-}).passthrough() // Allow propertySchema, contextSettings, etc.
+export const WorkspaceSaveSchema = z
+  .object({
+    id: workspaceIdSchema,
+    name: z.string().min(1).max(512),
+    nodes: z.array(z.object({}).passthrough()),
+    edges: z.array(z.object({}).passthrough()),
+    viewport: z.object({
+      x: z.number(),
+      y: z.number(),
+      zoom: z.number(),
+    }),
+    createdAt: z.number(),
+    updatedAt: z.number(),
+    version: z.number().int().nonnegative(),
+  })
+  .passthrough() // Allow propertySchema, contextSettings, etc.
 
 // -----------------------------------------------------------------------------
 // 4. workspace:loadFromPath
@@ -163,8 +180,8 @@ export const FsEditFileSchema = z.object({
 
 export const FolderListInputSchema = z.object({
   folderPath: absolutePathSchema.refine(
-    s => s.trim().length > 0,
-    'Path must not be empty or whitespace'
+    (s) => s.trim().length > 0,
+    'Path must not be empty or whitespace',
   ),
 })
 
@@ -175,10 +192,14 @@ export const FolderListInputSchema = z.object({
 export const LlmSendSchema = z.object({
   conversationId: z.string().min(1, 'Conversation ID is required').max(256),
   provider: z.enum(['anthropic', 'gemini', 'openai']),
-  messages: z.array(z.object({
-    role: z.enum(['user', 'assistant', 'system']),
-    content: z.string(),
-  })).min(1, 'At least one message is required'),
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'assistant', 'system']),
+        content: z.string(),
+      }),
+    )
+    .min(1, 'At least one message is required'),
   systemPrompt: z.string().max(500_000).optional(),
   model: z.string().max(128).optional(),
   maxTokens: z.number().int().positive().max(1_000_000).optional(),

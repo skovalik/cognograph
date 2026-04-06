@@ -11,23 +11,23 @@
  * because Radix keeps the DOM mounted while the popover is simply hidden).
  */
 
-import { useState, useMemo } from 'react'
-import { Popover, PopoverContent } from '@/components/ui/popover'
 import * as PopoverPrimitive from '@radix-ui/react-popover'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { useMemo, useState } from 'react'
+import { Popover, PopoverContent } from '@/components/ui/popover'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
+// Cloud features disabled in open-source build (src/web/ not included)
+const isAuthEnabled = (): boolean => false
+import { getAvailableMediaTools } from '../../services/media/agentToolRegistry'
+import { hasTerminalAccess } from '../../utils/terminalAccess'
+import { AccountTab } from './AccountTab'
+import { AgentToolsTab } from './AgentToolsTab'
+import { ApiKeysTab } from './ApiKeysTab'
 import { AppearanceTab } from './AppearanceTab'
 import { CanvasTab } from './CanvasTab'
 import { EffectsTab } from './EffectsTab'
-import { TypographyTab } from './TypographyTab'
-import { ApiKeysTab } from './ApiKeysTab'
 import { TerminalTab } from './TerminalTab'
-import { AccountTab } from './AccountTab'
-import { AgentToolsTab } from './AgentToolsTab'
-import { hasTerminalAccess } from '../../utils/terminalAccess'
-// Cloud auth not available in open-source build
-const isAuthEnabled = (): boolean => false
-import { getAvailableMediaTools } from '../../services/media/agentToolRegistry'
+import { TypographyTab } from './TypographyTab'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -92,9 +92,7 @@ export function SettingsPopover({
     <Popover open={open} onOpenChange={onOpenChange}>
       {/* Virtual anchor — the real trigger button lives in the Toolbar and
           forwards its ref here so Radix can position the popover correctly. */}
-      {triggerRef ? (
-        <PopoverPrimitive.Anchor virtualRef={triggerRef} />
-      ) : null}
+      {triggerRef ? <PopoverPrimitive.Anchor virtualRef={triggerRef} /> : null}
 
       <PopoverContent
         side="bottom"
@@ -114,11 +112,7 @@ export function SettingsPopover({
           e.preventDefault()
         }}
       >
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="flex flex-col h-full"
-        >
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
           {/* ---- Tab triggers ---- */}
           <TabsList
             className={cn(
@@ -195,4 +189,3 @@ export function SettingsPopover({
     </Popover>
   )
 }
-

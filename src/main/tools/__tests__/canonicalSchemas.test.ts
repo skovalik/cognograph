@@ -1,33 +1,33 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-  CreateNodeSchema,
+  AddCommentSchema,
+  AddMemorySchema,
   BatchCreateSchema,
-  UpdateNodeSchema,
+  CANONICAL_SCHEMAS,
+  CreateNodeSchema,
+  DeleteMemorySchema,
   DeleteNodeSchema,
-  LinkNodesSchema,
-  UnlinkNodesSchema,
-  SearchNodesSchema,
-  GetNodeSchema,
-  GetInitialContextSchema,
+  EditFileSchema,
+  ExecuteCommandSchema,
   GetContextChainSchema,
+  GetInitialContextSchema,
+  GetMemorySchema,
+  GetNodeSchema,
   GetSelectionSchema,
   GetTodosSchema,
-  AddCommentSchema,
+  LinkNodesSchema,
+  ListDirectorySchema,
+  ListMemoriesSchema,
   MoveNodeSchema,
   ReadFileSchema,
-  WriteFileSchema,
-  EditFileSchema,
-  ListDirectorySchema,
   SearchFilesSchema,
-  ExecuteCommandSchema,
-  AddMemorySchema,
-  GetMemorySchema,
-  ListMemoriesSchema,
-  DeleteMemorySchema,
-  CANONICAL_SCHEMAS,
+  SearchNodesSchema,
+  UnlinkNodesSchema,
+  UpdateNodeSchema,
+  WriteFileSchema,
 } from '../canonicalSchemas'
 
 // ---------------------------------------------------------------------------
@@ -64,20 +64,18 @@ describe('CreateNodeSchema', () => {
   })
 
   it('rejects invalid node type', () => {
-    expect(() =>
-      CreateNodeSchema.parse({ type: 'invalid', title: 'Bad' })
-    ).toThrow()
+    expect(() => CreateNodeSchema.parse({ type: 'invalid', title: 'Bad' })).toThrow()
   })
 
   it('rejects invalid contentType', () => {
     expect(() =>
-      CreateNodeSchema.parse({ type: 'artifact', title: 'X', contentType: 'pdf' })
+      CreateNodeSchema.parse({ type: 'artifact', title: 'X', contentType: 'pdf' }),
     ).toThrow()
   })
 
   it('rejects invalid position shape', () => {
     expect(() =>
-      CreateNodeSchema.parse({ type: 'note', title: 'X', position: { x: 'bad' } })
+      CreateNodeSchema.parse({ type: 'note', title: 'X', position: { x: 'bad' } }),
     ).toThrow()
   })
 })
@@ -112,9 +110,7 @@ describe('BatchCreateSchema', () => {
   })
 
   it('rejects node missing temp_id', () => {
-    expect(() =>
-      BatchCreateSchema.parse({ nodes: [{ type: 'note', title: 'X' }] })
-    ).toThrow()
+    expect(() => BatchCreateSchema.parse({ nodes: [{ type: 'note', title: 'X' }] })).toThrow()
   })
 
   it('rejects edge missing source', () => {
@@ -122,7 +118,7 @@ describe('BatchCreateSchema', () => {
       BatchCreateSchema.parse({
         nodes: [{ temp_id: 'a', type: 'note', title: 'A' }],
         edges: [{ target: 'a' }],
-      })
+      }),
     ).toThrow()
   })
 })
@@ -147,9 +143,7 @@ describe('UpdateNodeSchema', () => {
   })
 
   it('rejects invalid status', () => {
-    expect(() =>
-      UpdateNodeSchema.parse({ nodeId: 'x', status: 'archived' })
-    ).toThrow()
+    expect(() => UpdateNodeSchema.parse({ nodeId: 'x', status: 'archived' })).toThrow()
   })
 })
 
@@ -373,15 +367,11 @@ describe('AddMemorySchema', () => {
   })
 
   it('rejects key over 100 chars', () => {
-    expect(() =>
-      AddMemorySchema.parse({ key: 'a'.repeat(101), value: 'v' })
-    ).toThrow()
+    expect(() => AddMemorySchema.parse({ key: 'a'.repeat(101), value: 'v' })).toThrow()
   })
 
   it('rejects value over 10000 chars', () => {
-    expect(() =>
-      AddMemorySchema.parse({ key: 'k', value: 'x'.repeat(10001) })
-    ).toThrow()
+    expect(() => AddMemorySchema.parse({ key: 'k', value: 'x'.repeat(10001) })).toThrow()
   })
 })
 

@@ -10,8 +10,8 @@
  * Renders as a full-viewport overlay that follows the cursor.
  */
 
-import { useRef, useEffect, useCallback, forwardRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { forwardRef, useCallback, useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { useUIStore } from '../../../stores/uiStore'
 
@@ -185,13 +185,13 @@ void main() {
 // ---------------------------------------------------------------------------
 
 export interface DitherCursorProps {
-  color?: number[]      // RGB 0-1 float array [r, g, b]
-  radius?: number       // Brush radius (0.01-0.5)
-  decay?: number        // Fade speed (0.001-0.05)
-  intensity?: number    // Brush strength (0.05-1.0)
-  ditherSize?: number   // Dither pattern scale (1-8)
-  exponent?: number     // Contrast curve (1-4)
-  opacity?: number      // Overall opacity (0-1)
+  color?: number[] // RGB 0-1 float array [r, g, b]
+  radius?: number // Brush radius (0.01-0.5)
+  decay?: number // Fade speed (0.001-0.05)
+  intensity?: number // Brush strength (0.05-1.0)
+  ditherSize?: number // Dither pattern scale (1-8)
+  exponent?: number // Contrast curve (1-4)
+  opacity?: number // Overall opacity (0-1)
 }
 
 // ---------------------------------------------------------------------------
@@ -298,18 +298,12 @@ function DitherCursorScene({
   // Mouse tracking
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
-      mouseRef.current.set(
-        e.clientX / window.innerWidth,
-        1.0 - e.clientY / window.innerHeight
-      )
+      mouseRef.current.set(e.clientX / window.innerWidth, 1.0 - e.clientY / window.innerHeight)
     }
     const onTouch = (e: TouchEvent) => {
       const t = e.touches[0]
       if (t) {
-        mouseRef.current.set(
-          t.clientX / window.innerWidth,
-          1.0 - t.clientY / window.innerHeight
-        )
+        mouseRef.current.set(t.clientX / window.innerWidth, 1.0 - t.clientY / window.innerHeight)
       }
     }
     document.addEventListener('mousemove', onMove)
@@ -387,27 +381,29 @@ function DitherCursorScene({
 // Wrapper (provides Canvas context)
 // ---------------------------------------------------------------------------
 
-const DitherCursor = forwardRef<HTMLDivElement, DitherCursorProps>(function DitherCursor(props, ref) {
-  return (
-    <div
-      ref={ref}
-      style={{
-        position: 'absolute',
-        inset: 0,
-        pointerEvents: 'none',
-        zIndex: 0,
-      }}
-    >
-      <Canvas
-        gl={{ alpha: true, antialias: false, premultipliedAlpha: false }}
-        dpr={[1, 1]}
-        style={{ background: 'transparent' }}
-        resize={{ scroll: false }}
+const DitherCursor = forwardRef<HTMLDivElement, DitherCursorProps>(
+  function DitherCursor(props, ref) {
+    return (
+      <div
+        ref={ref}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
       >
-        <DitherCursorScene {...props} />
-      </Canvas>
-    </div>
-  )
-})
+        <Canvas
+          gl={{ alpha: true, antialias: false, premultipliedAlpha: false }}
+          dpr={[1, 1]}
+          style={{ background: 'transparent' }}
+          resize={{ scroll: false }}
+        >
+          <DitherCursorScene {...props} />
+        </Canvas>
+      </div>
+    )
+  },
+)
 
 export default DitherCursor

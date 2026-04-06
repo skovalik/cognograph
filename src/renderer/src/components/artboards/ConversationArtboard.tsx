@@ -14,19 +14,19 @@
  * Reads node data from workspaceStore via nodeId prop.
  */
 
-import { memo, useState, useCallback, useRef, useEffect, useMemo, type CSSProperties } from 'react'
+import type { ConversationNodeData, Message } from '@shared/types'
 import {
-  Send,
-  Terminal,
-  MessageSquare,
   Bot,
   ChevronDown,
   Cpu,
   DollarSign,
-  Hash
+  Hash,
+  MessageSquare,
+  Send,
+  Terminal,
 } from 'lucide-react'
+import { type CSSProperties, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
-import type { ConversationNodeData, Message } from '@shared/types'
 import { formatCost } from '../../utils/tokenEstimator'
 
 // =============================================================================
@@ -42,7 +42,7 @@ type Provider = 'anthropic' | 'gemini' | 'openai'
 const PROVIDER_LABELS: Record<Provider, string> = {
   anthropic: 'Anthropic',
   openai: 'OpenAI',
-  gemini: 'Gemini'
+  gemini: 'Gemini',
 }
 
 // =============================================================================
@@ -54,7 +54,7 @@ const PROVIDER_LABELS: Record<Provider, string> = {
  */
 const ChatMessage = memo(function ChatMessage({
   message,
-  accentColor
+  accentColor,
 }: {
   message: Message
   accentColor?: string
@@ -67,13 +67,7 @@ const ChatMessage = memo(function ChatMessage({
   // Skip tool messages in the chat view for cleanliness
   if (isTool) return null
 
-  const roleLabel = isUser
-    ? 'You'
-    : isAssistant
-      ? 'Assistant'
-      : isSystem
-        ? 'System'
-        : message.role
+  const roleLabel = isUser ? 'You' : isAssistant ? 'Assistant' : isSystem ? 'System' : message.role
 
   const bubbleClass = isUser ? 'chat-bubble--user' : 'chat-bubble--assistant'
 
@@ -82,13 +76,11 @@ const ChatMessage = memo(function ChatMessage({
       className={`chat-bubble ${bubbleClass}`}
       style={
         {
-          '--ring-color': accentColor
+          '--ring-color': accentColor,
         } as CSSProperties
       }
     >
-      <span
-        className={`chat-bubble__role chat-bubble__role--${isUser ? 'user' : 'assistant'}`}
-      >
+      <span className={`chat-bubble__role chat-bubble__role--${isUser ? 'user' : 'assistant'}`}>
         {roleLabel}
       </span>
       <p
@@ -103,12 +95,8 @@ const ChatMessage = memo(function ChatMessage({
           className="flex items-center gap-2 mt-1.5 text-[10px]"
           style={{ color: 'var(--gui-text-muted)' }}
         >
-          {message.inputTokens && (
-            <span>{message.inputTokens.toLocaleString()} in</span>
-          )}
-          {message.outputTokens && (
-            <span>{message.outputTokens.toLocaleString()} out</span>
-          )}
+          {message.inputTokens && <span>{message.inputTokens.toLocaleString()} in</span>}
+          {message.outputTokens && <span>{message.outputTokens.toLocaleString()} out</span>}
           {message.costUSD != null && message.costUSD > 0 && (
             <span>{formatCost(message.costUSD)}</span>
           )}
@@ -122,11 +110,7 @@ const ChatMessage = memo(function ChatMessage({
  * Terminal output pane — shows command history / agent output
  * Renders terminal preview lines in a monospace dark inset.
  */
-const TerminalPane = memo(function TerminalPane({
-  nodeData
-}: {
-  nodeData: ConversationNodeData
-}) {
+const TerminalPane = memo(function TerminalPane({ nodeData }: { nodeData: ConversationNodeData }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const terminalLines = (nodeData as any).terminalPreviewLines as string[] | undefined
   const messages = nodeData.messages
@@ -147,14 +131,14 @@ const TerminalPane = memo(function TerminalPane({
       style={{
         backgroundColor: 'var(--terminal-bg)',
         borderRadius: '8px',
-        overflow: 'hidden'
+        overflow: 'hidden',
       }}
     >
       {/* Terminal header */}
       <div
         className="flex items-center gap-2 px-3 py-2 shrink-0"
         style={{
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)'
+          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
         }}
       >
         <Terminal
@@ -165,14 +149,10 @@ const TerminalPane = memo(function TerminalPane({
           className="text-[11px] font-medium"
           style={{
             color: 'var(--terminal-text)',
-            fontFamily: 'var(--font-mono, "Space Mono", monospace)'
+            fontFamily: 'var(--font-mono, "Space Mono", monospace)',
           }}
         >
-          {isTerminalMode
-            ? 'Terminal'
-            : isAgentMode
-              ? 'Agent Output'
-              : 'History'}
+          {isTerminalMode ? 'Terminal' : isAgentMode ? 'Agent Output' : 'History'}
         </span>
         {nodeData.terminal?.workingDirectory && (
           <span
@@ -180,7 +160,7 @@ const TerminalPane = memo(function TerminalPane({
             style={{
               color: 'var(--terminal-text-muted)',
               fontFamily: 'var(--font-mono, "Space Mono", monospace)',
-              maxWidth: '200px'
+              maxWidth: '200px',
             }}
           >
             {nodeData.terminal.workingDirectory}
@@ -189,18 +169,14 @@ const TerminalPane = memo(function TerminalPane({
       </div>
 
       {/* Terminal content */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-auto p-3"
-        style={{ minHeight: 0 }}
-      >
+      <div ref={scrollRef} className="flex-1 overflow-auto p-3" style={{ minHeight: 0 }}>
         {isTerminalMode && terminalLines && terminalLines.length > 0 ? (
           <pre
             className="text-[11px] leading-snug whitespace-pre-wrap break-all"
             style={{
               fontFamily: 'var(--font-mono, "Space Mono", monospace)',
               color: 'var(--terminal-text)',
-              margin: 0
+              margin: 0,
             }}
           >
             {terminalLines.join('\n')}
@@ -219,7 +195,7 @@ const TerminalPane = memo(function TerminalPane({
                         msg.role === 'user'
                           ? 'var(--terminal-prompt)'
                           : 'var(--terminal-text-muted)',
-                      fontFamily: 'var(--font-mono, "Space Mono", monospace)'
+                      fontFamily: 'var(--font-mono, "Space Mono", monospace)',
                     }}
                   >
                     {msg.role === 'user' ? '> ' : '  '}
@@ -228,12 +204,10 @@ const TerminalPane = memo(function TerminalPane({
                     className="text-[11px]"
                     style={{
                       color: 'var(--terminal-text)',
-                      fontFamily: 'var(--font-mono, "Space Mono", monospace)'
+                      fontFamily: 'var(--font-mono, "Space Mono", monospace)',
                     }}
                   >
-                    {msg.content.length > 120
-                      ? msg.content.slice(0, 120) + '...'
-                      : msg.content}
+                    {msg.content.length > 120 ? msg.content.slice(0, 120) + '...' : msg.content}
                   </span>
                 </div>
               ))}
@@ -244,7 +218,7 @@ const TerminalPane = memo(function TerminalPane({
             style={{
               fontFamily: 'var(--font-mono, "Space Mono", monospace)',
               color: 'var(--terminal-text-muted)',
-              margin: 0
+              margin: 0,
             }}
           >
             {'$ _'}
@@ -260,7 +234,7 @@ const TerminalPane = memo(function TerminalPane({
  */
 const ProviderSelector = memo(function ProviderSelector({
   value,
-  onChange
+  onChange,
 }: {
   value: Provider
   onChange: (provider: Provider) => void
@@ -289,7 +263,7 @@ const ProviderSelector = memo(function ProviderSelector({
           backgroundColor: 'var(--gui-bg-secondary)',
           color: 'var(--gui-text-secondary)',
           border: '1px solid var(--gui-border)',
-          cursor: 'pointer'
+          cursor: 'pointer',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = 'var(--gui-bg-tertiary)'
@@ -310,7 +284,7 @@ const ProviderSelector = memo(function ProviderSelector({
             backgroundColor: 'var(--gui-bg-secondary)',
             border: '1px solid var(--gui-border)',
             zIndex: 10,
-            minWidth: '140px'
+            minWidth: '140px',
           }}
         >
           {(Object.keys(PROVIDER_LABELS) as Provider[]).map((provider) => (
@@ -323,12 +297,10 @@ const ProviderSelector = memo(function ProviderSelector({
               className="w-full text-left px-3 py-2 text-xs transition-colors duration-150"
               style={{
                 color:
-                  provider === value
-                    ? 'var(--gui-accent-primary)'
-                    : 'var(--gui-text-secondary)',
+                  provider === value ? 'var(--gui-accent-primary)' : 'var(--gui-text-secondary)',
                 backgroundColor: 'transparent',
                 cursor: 'pointer',
-                borderBottom: '1px solid var(--gui-border)'
+                borderBottom: '1px solid var(--gui-border)',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = 'var(--gui-bg-tertiary)'
@@ -354,9 +326,7 @@ function ConversationArtboardComponent({ nodeId }: ConversationArtboardProps): J
   const nodes = useWorkspaceStore((s) => s.nodes)
   const addMessage = useWorkspaceStore((s) => s.addMessage)
   const updateNode = useWorkspaceStore((s) => s.updateNode)
-  const showTokenEstimates = useWorkspaceStore(
-    (s) => s.workspacePreferences.showTokenEstimates
-  )
+  const showTokenEstimates = useWorkspaceStore((s) => s.workspacePreferences.showTokenEstimates)
 
   const node = nodes.find((n) => n.id === nodeId)
   const nodeData = node?.data as ConversationNodeData | undefined
@@ -373,19 +343,19 @@ function ConversationArtboardComponent({ nodeId }: ConversationArtboardProps): J
 
   const totalTokensIn = useMemo(
     () => messages.reduce((sum, m) => sum + (m.inputTokens ?? 0), 0),
-    [messages]
+    [messages],
   )
   const totalTokensOut = useMemo(
     () => messages.reduce((sum, m) => sum + (m.outputTokens ?? 0), 0),
-    [messages]
+    [messages],
   )
   const totalCost = useMemo(
     () => messages.reduce((sum, m) => sum + (m.costUSD ?? 0), 0),
-    [messages]
+    [messages],
   )
   const visibleMessages = useMemo(
     () => messages.filter((m) => m.role === 'user' || m.role === 'assistant'),
-    [messages]
+    [messages],
   )
 
   // Auto-scroll chat to bottom on new messages
@@ -423,27 +393,24 @@ function ConversationArtboardComponent({ nodeId }: ConversationArtboardProps): J
         handleSend()
       }
     },
-    [handleSend]
+    [handleSend],
   )
 
   const handleProviderChange = useCallback(
     (newProvider: Provider) => {
       updateNode(nodeId, { provider: newProvider })
     },
-    [nodeId, updateNode]
+    [nodeId, updateNode],
   )
 
   // Auto-resize textarea
-  const handleTextareaInput = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setInputValue(e.target.value)
-      // Auto-resize
-      const el = e.target
-      el.style.height = 'auto'
-      el.style.height = Math.min(el.scrollHeight, 120) + 'px'
-    },
-    []
-  )
+  const handleTextareaInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputValue(e.target.value)
+    // Auto-resize
+    const el = e.target
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+  }, [])
 
   if (!nodeData) {
     return (
@@ -477,17 +444,14 @@ function ConversationArtboardComponent({ nodeId }: ConversationArtboardProps): J
           style={{
             width: '40%',
             borderRight: '1px solid var(--gui-border)',
-            minWidth: 0
+            minWidth: 0,
           }}
         >
           <TerminalPane nodeData={nodeData} />
         </div>
 
         {/* Right pane: Chat history (60%) */}
-        <div
-          className="flex flex-col"
-          style={{ width: '60%', minWidth: 0 }}
-        >
+        <div className="flex flex-col" style={{ width: '60%', minWidth: 0 }}>
           {/* Chat messages */}
           <div
             ref={chatScrollRef}
@@ -505,11 +469,7 @@ function ConversationArtboardComponent({ nodeId }: ConversationArtboardProps): J
               </div>
             ) : (
               visibleMessages.map((msg, i) => (
-                <ChatMessage
-                  key={msg.id || i}
-                  message={msg}
-                  accentColor={nodeColor}
-                />
+                <ChatMessage key={msg.id || i} message={msg} accentColor={nodeColor} />
               ))
             )}
           </div>
@@ -524,7 +484,7 @@ function ConversationArtboardComponent({ nodeId }: ConversationArtboardProps): J
         style={{
           borderTop: '1px solid var(--gui-border)',
           color: 'var(--gui-text-muted)',
-          fontSize: '11px'
+          fontSize: '11px',
         }}
       >
         <div className="flex items-center gap-3">
@@ -557,7 +517,7 @@ function ConversationArtboardComponent({ nodeId }: ConversationArtboardProps): J
             className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px]"
             style={{
               backgroundColor: `color-mix(in srgb, ${nodeColor} 12%, transparent)`,
-              color: nodeColor
+              color: nodeColor,
             }}
           >
             {modeIcon}
@@ -567,7 +527,7 @@ function ConversationArtboardComponent({ nodeId }: ConversationArtboardProps): J
             className="px-1.5 py-0.5 rounded text-[10px]"
             style={{
               backgroundColor: 'var(--gui-bg-secondary)',
-              color: 'var(--gui-text-muted)'
+              color: 'var(--gui-text-muted)',
             }}
           >
             {PROVIDER_LABELS[provider]}
@@ -582,7 +542,7 @@ function ConversationArtboardComponent({ nodeId }: ConversationArtboardProps): J
         className="flex items-end gap-2 px-4 py-3 shrink-0"
         style={{
           borderTop: '1px solid var(--gui-border)',
-          backgroundColor: 'color-mix(in srgb, var(--gui-bg-secondary) 50%, transparent)'
+          backgroundColor: 'color-mix(in srgb, var(--gui-bg-secondary) 50%, transparent)',
         }}
       >
         <ProviderSelector value={provider} onChange={handleProviderChange} />
@@ -592,7 +552,7 @@ function ConversationArtboardComponent({ nodeId }: ConversationArtboardProps): J
           style={{
             backgroundColor: 'var(--gui-bg-secondary)',
             borderRadius: '8px',
-            border: '1px solid var(--gui-border)'
+            border: '1px solid var(--gui-border)',
           }}
         >
           <textarea
@@ -606,7 +566,7 @@ function ConversationArtboardComponent({ nodeId }: ConversationArtboardProps): J
             style={{
               color: 'var(--gui-text-primary)',
               maxHeight: '120px',
-              lineHeight: '1.5'
+              lineHeight: '1.5',
             }}
           />
         </div>
@@ -616,14 +576,10 @@ function ConversationArtboardComponent({ nodeId }: ConversationArtboardProps): J
           disabled={!inputValue.trim()}
           className="p-2 rounded-md transition-colors duration-150 shrink-0"
           style={{
-            backgroundColor: inputValue.trim()
-              ? nodeColor
-              : 'var(--gui-bg-tertiary)',
-            color: inputValue.trim()
-              ? '#fff'
-              : 'var(--gui-text-muted)',
+            backgroundColor: inputValue.trim() ? nodeColor : 'var(--gui-bg-tertiary)',
+            color: inputValue.trim() ? '#fff' : 'var(--gui-text-muted)',
             cursor: inputValue.trim() ? 'pointer' : 'default',
-            opacity: inputValue.trim() ? 1 : 0.5
+            opacity: inputValue.trim() ? 1 : 0.5,
           }}
           aria-label="Send message"
         >

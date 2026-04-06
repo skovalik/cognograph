@@ -804,6 +804,8 @@ export interface TerminalAPI {
   onExit: (nodeId: string, callback: (exitCode: number) => void) => () => void
   /** Subscribe to PTY data events for ALL nodes. Used by App.tsx for persistent card preview tee. */
   onDataGlobal: (callback: (nodeId: string, data: string) => void) => () => void
+  /** Subscribe to PTY status transitions for ALL nodes (running/idle/exited). */
+  onStatusChangeGlobal: (callback: (nodeId: string, status: string) => void) => () => void
 }
 
 export interface ElectronAPI {
@@ -1233,6 +1235,14 @@ const api: ElectronAPI = {
       }
       ipcRenderer.on('terminal:data', handler)
       return () => ipcRenderer.removeListener('terminal:data', handler)
+    },
+    // Global listener for ALL terminal status transitions (running/idle/exited)
+    onStatusChangeGlobal: (callback: (nodeId: string, status: string) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, id: string, status: string): void => {
+        callback(id, status)
+      }
+      ipcRenderer.on('terminal:statusChange', handler)
+      return () => ipcRenderer.removeListener('terminal:statusChange', handler)
     },
   },
   plugin: {

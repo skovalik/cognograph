@@ -38,7 +38,7 @@ export enum EscapePriority {
   PRESENTATION = 20,
   POPOVER = 30,
   DIALOG = 40,
-  MODAL = 50
+  MODAL = 50,
 }
 
 // =============================================================================

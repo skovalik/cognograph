@@ -8,10 +8,10 @@
  * in the Bridge Log audit trail.
  */
 
-import { memo } from 'react'
-import { User, Bot, Cpu } from 'lucide-react'
-import { Badge } from '../ui/Badge'
 import type { AuditActor } from '@shared/types/bridge'
+import { Bot, Cpu, User } from 'lucide-react'
+import { memo } from 'react'
+import { Badge } from '../ui/Badge'
 
 interface ActorBadgeProps {
   actor: AuditActor

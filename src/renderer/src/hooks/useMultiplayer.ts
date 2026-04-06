@@ -11,11 +11,11 @@
  * - Permission level
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import type { ConnectionStatus, TokenPermission, UserPresence } from '@shared/multiplayerTypes'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useCollaborativeProvider, useConnectionStatus } from '../sync'
-import { YjsSyncProvider } from '../sync/YjsSyncProvider'
-import type { ConnectionStatus, UserPresence, TokenPermission } from '@shared/multiplayerTypes'
+import type { YjsSyncProvider } from '../sync/YjsSyncProvider'
 
 interface MultiplayerState {
   isMultiplayer: boolean
@@ -29,7 +29,9 @@ interface MultiplayerState {
 interface MultiplayerActions {
   shareWorkspace: () => Promise<{ success: boolean; inviteUrl?: string; error?: string }>
   joinWorkspace: (inviteLink: string) => Promise<{ success: boolean; error?: string }>
-  createInvite: (permissions?: TokenPermission) => Promise<{ success: boolean; inviteUrl?: string; error?: string }>
+  createInvite: (
+    permissions?: TokenPermission,
+  ) => Promise<{ success: boolean; inviteUrl?: string; error?: string }>
   disconnect: () => void
   goOffline: () => void
   goOnline: () => Promise<void>
@@ -67,7 +69,7 @@ export function useMultiplayer(): MultiplayerState & MultiplayerActions {
             cursor: state.cursor || null,
             selectedNodeIds: state.selectedNodeIds || [],
             viewportBounds: state.viewportBounds || { x: 0, y: 0, width: 0, height: 0 },
-            lastActive: Date.now()
+            lastActive: Date.now(),
           })
         }
       })
@@ -83,9 +85,9 @@ export function useMultiplayer(): MultiplayerState & MultiplayerActions {
   }, [collaborativeProvider])
 
   // Listen for deep link join events (uses ref to avoid stale closure)
-  const handleJoinRef = useRef<(wsId: string, token: string) => Promise<{ success: boolean; error?: string }>>(
-    async () => ({ success: false, error: 'Not initialized' })
-  )
+  const handleJoinRef = useRef<
+    (wsId: string, token: string) => Promise<{ success: boolean; error?: string }>
+  >(async () => ({ success: false, error: 'Not initialized' }))
 
   useEffect(() => {
     const unsub = window.api.multiplayer.onDeepLink(async (data) => {
@@ -118,7 +120,7 @@ export function useMultiplayer(): MultiplayerState & MultiplayerActions {
       workspaceId,
       token: result.token || '',
       userName: 'Host',
-      userColor: '#4f46e5'
+      userColor: '#4f46e5',
     }
     useWorkspaceStore.getState().setMultiplayerConfig(config)
 
@@ -129,11 +131,14 @@ export function useMultiplayer(): MultiplayerState & MultiplayerActions {
     const inviteResult = await window.api.multiplayer.createInvite(workspaceId, 'write')
     return {
       success: true,
-      inviteUrl: inviteResult.inviteUrl
+      inviteUrl: inviteResult.inviteUrl,
     }
   }, [workspaceId, workspaceName])
 
-  const handleJoin = async (wsId: string, wsToken: string): Promise<{ success: boolean; error?: string }> => {
+  const handleJoin = async (
+    wsId: string,
+    wsToken: string,
+  ): Promise<{ success: boolean; error?: string }> => {
     // Get WebSocket URL
     const urlResult = await window.api.multiplayer.getServerUrl()
     const wsUrl = urlResult.wsUrl || 'ws://localhost:3001'
@@ -147,7 +152,16 @@ export function useMultiplayer(): MultiplayerState & MultiplayerActions {
 
     // Generate random guest identity
     const guestHex = Math.random().toString(16).slice(2, 6)
-    const guestColors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16']
+    const guestColors = [
+      '#4f46e5',
+      '#10b981',
+      '#f59e0b',
+      '#ef4444',
+      '#8b5cf6',
+      '#06b6d4',
+      '#ec4899',
+      '#84cc16',
+    ]
     const guestColor = guestColors[Math.floor(Math.random() * guestColors.length)]
 
     // Store multiplayer config in Zustand store
@@ -156,7 +170,7 @@ export function useMultiplayer(): MultiplayerState & MultiplayerActions {
       workspaceId: wsId,
       token: wsToken,
       userName: `Guest-${guestHex}`,
-      userColor: guestColor
+      userColor: guestColor,
     }
     useWorkspaceStore.getState().setMultiplayerConfig(config)
 
@@ -179,18 +193,21 @@ export function useMultiplayer(): MultiplayerState & MultiplayerActions {
     return handleJoin(parsed.workspaceId, parsed.token)
   }, [])
 
-  const createInvite = useCallback(async (invitePermissions: TokenPermission = 'write') => {
-    if (!workspaceId) {
-      return { success: false, error: 'No workspace loaded' }
-    }
+  const createInvite = useCallback(
+    async (invitePermissions: TokenPermission = 'write') => {
+      if (!workspaceId) {
+        return { success: false, error: 'No workspace loaded' }
+      }
 
-    const result = await window.api.multiplayer.createInvite(workspaceId, invitePermissions)
-    return {
-      success: result.success,
-      inviteUrl: result.inviteUrl,
-      error: result.error
-    }
-  }, [workspaceId])
+      const result = await window.api.multiplayer.createInvite(workspaceId, invitePermissions)
+      return {
+        success: result.success,
+        inviteUrl: result.inviteUrl,
+        error: result.error,
+      }
+    },
+    [workspaceId],
+  )
 
   const disconnect = useCallback(async () => {
     // Remove stored token on disconnect
@@ -231,6 +248,6 @@ export function useMultiplayer(): MultiplayerState & MultiplayerActions {
     createInvite,
     disconnect,
     goOffline,
-    goOnline
+    goOnline,
   }
 }

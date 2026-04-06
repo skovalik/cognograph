@@ -36,9 +36,9 @@ interface ShowMembersClassResult {
  * @param parentId The parent project ID of the current node (if any)
  */
 export function useShowMembersClass(nodeId: string, parentId?: string): ShowMembersClassResult {
-  const showMembersProjectId = useWorkspaceStore(state => state.showMembersProjectId)
-  const focusModeNodeId = useWorkspaceStore(state => state.focusModeNodeId)
-  const edges = useWorkspaceStore(state => state.edges)
+  const showMembersProjectId = useWorkspaceStore((state) => state.showMembersProjectId)
+  const focusModeNodeId = useWorkspaceStore((state) => state.focusModeNodeId)
+  const edges = useWorkspaceStore((state) => state.edges)
 
   return useMemo(() => {
     // Focus mode takes priority
@@ -49,15 +49,15 @@ export function useShowMembersClass(nodeId: string, parentId?: string): ShowMemb
           memberHighlightClass: 'cognograph-node--member-highlight',
           isDimmed: false,
           isHighlighted: true,
-          isNeighbor: false
+          isNeighbor: false,
         }
       }
 
       // Check if this node is connected to the focused node (neighbor)
       const isNeighbor = edges.some(
-        edge =>
+        (edge) =>
           (edge.source === focusModeNodeId && edge.target === nodeId) ||
-          (edge.target === focusModeNodeId && edge.source === nodeId)
+          (edge.target === focusModeNodeId && edge.source === nodeId),
       )
 
       if (isNeighbor) {
@@ -67,7 +67,7 @@ export function useShowMembersClass(nodeId: string, parentId?: string): ShowMemb
           memberHighlightClass: '',
           isDimmed: true,
           isHighlighted: false,
-          isNeighbor: true
+          isNeighbor: true,
         }
       }
 
@@ -77,7 +77,7 @@ export function useShowMembersClass(nodeId: string, parentId?: string): ShowMemb
         memberHighlightClass: '',
         isDimmed: true,
         isHighlighted: false,
-        isNeighbor: false
+        isNeighbor: false,
       }
     }
 
@@ -88,7 +88,7 @@ export function useShowMembersClass(nodeId: string, parentId?: string): ShowMemb
         memberHighlightClass: '',
         isDimmed: false,
         isHighlighted: false,
-        isNeighbor: false
+        isNeighbor: false,
       }
     }
 
@@ -99,7 +99,7 @@ export function useShowMembersClass(nodeId: string, parentId?: string): ShowMemb
         memberHighlightClass: '',
         isDimmed: false,
         isHighlighted: false,
-        isNeighbor: false
+        isNeighbor: false,
       }
     }
 
@@ -112,7 +112,7 @@ export function useShowMembersClass(nodeId: string, parentId?: string): ShowMemb
         memberHighlightClass: 'cognograph-node--member-highlight',
         isDimmed: false,
         isHighlighted: true,
-        isNeighbor: false
+        isNeighbor: false,
       }
     }
 
@@ -122,7 +122,7 @@ export function useShowMembersClass(nodeId: string, parentId?: string): ShowMemb
       memberHighlightClass: '',
       isDimmed: true,
       isHighlighted: false,
-      isNeighbor: false
+      isNeighbor: false,
     }
   }, [nodeId, parentId, showMembersProjectId, focusModeNodeId, edges])
 }
@@ -130,10 +130,13 @@ export function useShowMembersClass(nodeId: string, parentId?: string): ShowMemb
 /**
  * Version for TextNode which uses different class names
  */
-export function useShowMembersClassForTextNode(nodeId: string, parentId?: string): ShowMembersClassResult {
-  const showMembersProjectId = useWorkspaceStore(state => state.showMembersProjectId)
-  const focusModeNodeId = useWorkspaceStore(state => state.focusModeNodeId)
-  const edges = useWorkspaceStore(state => state.edges)
+export function useShowMembersClassForTextNode(
+  nodeId: string,
+  parentId?: string,
+): ShowMembersClassResult {
+  const showMembersProjectId = useWorkspaceStore((state) => state.showMembersProjectId)
+  const focusModeNodeId = useWorkspaceStore((state) => state.focusModeNodeId)
+  const edges = useWorkspaceStore((state) => state.edges)
 
   return useMemo(() => {
     // Focus mode takes priority
@@ -144,15 +147,15 @@ export function useShowMembersClassForTextNode(nodeId: string, parentId?: string
           memberHighlightClass: '',
           isDimmed: false,
           isHighlighted: true,
-          isNeighbor: false
+          isNeighbor: false,
         }
       }
 
       // Check if this node is connected to the focused node (neighbor)
       const isNeighbor = edges.some(
-        edge =>
+        (edge) =>
           (edge.source === focusModeNodeId && edge.target === nodeId) ||
-          (edge.target === focusModeNodeId && edge.source === nodeId)
+          (edge.target === focusModeNodeId && edge.source === nodeId),
       )
 
       if (isNeighbor) {
@@ -161,7 +164,7 @@ export function useShowMembersClassForTextNode(nodeId: string, parentId?: string
           memberHighlightClass: '',
           isDimmed: true,
           isHighlighted: false,
-          isNeighbor: true
+          isNeighbor: true,
         }
       }
 
@@ -170,7 +173,7 @@ export function useShowMembersClassForTextNode(nodeId: string, parentId?: string
         memberHighlightClass: '',
         isDimmed: true,
         isHighlighted: false,
-        isNeighbor: false
+        isNeighbor: false,
       }
     }
 
@@ -180,7 +183,7 @@ export function useShowMembersClassForTextNode(nodeId: string, parentId?: string
         memberHighlightClass: '',
         isDimmed: false,
         isHighlighted: false,
-        isNeighbor: false
+        isNeighbor: false,
       }
     }
 
@@ -190,7 +193,7 @@ export function useShowMembersClassForTextNode(nodeId: string, parentId?: string
         memberHighlightClass: '',
         isDimmed: false,
         isHighlighted: false,
-        isNeighbor: false
+        isNeighbor: false,
       }
     }
 
@@ -202,7 +205,7 @@ export function useShowMembersClassForTextNode(nodeId: string, parentId?: string
         memberHighlightClass: '',
         isDimmed: false,
         isHighlighted: true,
-        isNeighbor: false
+        isNeighbor: false,
       }
     }
 
@@ -211,7 +214,7 @@ export function useShowMembersClassForTextNode(nodeId: string, parentId?: string
       memberHighlightClass: '',
       isDimmed: true,
       isHighlighted: false,
-      isNeighbor: false
+      isNeighbor: false,
     }
   }, [nodeId, parentId, showMembersProjectId, focusModeNodeId, edges])
 }

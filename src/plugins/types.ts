@@ -53,13 +53,13 @@ export interface PluginManifest {
 
 /** Explicit capability declarations */
 export type PluginCapability =
-  | 'ipc'              // Can register IPC handlers (plugin:<id>:*)
-  | 'settings'         // Can read/write settings (scoped to plugin.<id>.*)
-  | 'credentials'      // Can store encrypted credentials via safeStorage
-  | 'network'          // Makes external HTTP requests
-  | 'settings-tab'     // Adds a tab to Settings modal
-  | 'filesystem'       // Reads/writes to plugin data directory
-  | 'workspace-read'   // Can query workspace nodes and edges (read-only)
+  | 'ipc' // Can register IPC handlers (plugin:<id>:*)
+  | 'settings' // Can read/write settings (scoped to plugin.<id>.*)
+  | 'credentials' // Can store encrypted credentials via safeStorage
+  | 'network' // Makes external HTTP requests
+  | 'settings-tab' // Adds a tab to Settings modal
+  | 'filesystem' // Reads/writes to plugin data directory
+  | 'workspace-read' // Can query workspace nodes and edges (read-only)
 
 // ============================================================================
 // Plugin Event System
@@ -102,9 +102,7 @@ export type MethodMap = Record<string, { args: unknown[]; return: unknown }>
  * Each handler's args and return type are checked at compile time.
  */
 export type TypedIpcHandlers<M extends MethodMap> = {
-  [K in keyof M & string]: (
-    ...args: M[K]['args']
-  ) => Promise<M[K]['return']>
+  [K in keyof M & string]: (...args: M[K]['args']) => Promise<M[K]['return']>
 }
 
 /**
@@ -112,10 +110,7 @@ export type TypedIpcHandlers<M extends MethodMap> = {
  * Provides full autocomplete and type checking.
  */
 export interface TypedPluginBridge<M extends MethodMap> {
-  call<K extends keyof M & string>(
-    method: K,
-    ...args: M[K]['args']
-  ): Promise<M[K]['return']>
+  call<K extends keyof M & string>(method: K, ...args: M[K]['args']): Promise<M[K]['return']>
   on(event: string, callback: (...args: unknown[]) => void): () => void
 }
 
@@ -151,9 +146,13 @@ export interface PluginContext {
 
   /** Read-only workspace access (requires 'workspace-read' capability) */
   workspace: {
-    getNodes(filter?: { type?: string }): Promise<Array<{ id: string; type: string; data: unknown }>>
+    getNodes(filter?: {
+      type?: string
+    }): Promise<Array<{ id: string; type: string; data: unknown }>>
     getNodeById(id: string): Promise<{ id: string; type: string; data: unknown } | null>
-    getEdges(nodeId?: string): Promise<Array<{ id: string; source: string; target: string; data: unknown }>>
+    getEdges(
+      nodeId?: string,
+    ): Promise<Array<{ id: string; source: string; target: string; data: unknown }>>
   }
 
   /** Send a message to this plugin's renderer component */

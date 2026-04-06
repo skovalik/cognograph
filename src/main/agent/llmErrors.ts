@@ -8,12 +8,12 @@
  */
 
 export type LLMErrorCategory =
-  | 'rate_limit'      // 429 — throttled, retryable after backoff
-  | 'auth'            // 401/403 — bad key or permissions, NOT retryable
-  | 'server'          // 500+ — transient server error, retryable
-  | 'context_length'  // context window exceeded, NOT retryable
-  | 'network'         // connection/timeout, retryable
-  | 'unknown'         // unclassifiable
+  | 'rate_limit' // 429 — throttled, retryable after backoff
+  | 'auth' // 401/403 — bad key or permissions, NOT retryable
+  | 'server' // 500+ — transient server error, retryable
+  | 'context_length' // context window exceeded, NOT retryable
+  | 'network' // connection/timeout, retryable
+  | 'unknown' // unclassifiable
 
 export interface ClassifiedLLMError {
   category: LLMErrorCategory
@@ -41,7 +41,7 @@ const CONTEXT_LENGTH_PATTERNS = [
 ]
 
 function isContextLengthError(message: string): boolean {
-  return CONTEXT_LENGTH_PATTERNS.some(pattern => pattern.test(message))
+  return CONTEXT_LENGTH_PATTERNS.some((pattern) => pattern.test(message))
 }
 
 // ---------------------------------------------------------------------------
@@ -121,34 +121,83 @@ function classifyAnthropicOrOpenAI(error: unknown): ClassifiedLLMError {
       constructor === 'APIConnectionTimeoutError' ||
       /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|ECONNRESET|fetch.?fail/i.test(message)
     ) {
-      return { category: 'network', retryable: true, status, retryAfterMs, originalError: error, message }
+      return {
+        category: 'network',
+        retryable: true,
+        status,
+        retryAfterMs,
+        originalError: error,
+        message,
+      }
     }
   }
 
   if (status === 429) {
-    return { category: 'rate_limit', retryable: true, status, retryAfterMs, originalError: error, message }
+    return {
+      category: 'rate_limit',
+      retryable: true,
+      status,
+      retryAfterMs,
+      originalError: error,
+      message,
+    }
   }
 
   if (status === 401 || status === 403) {
-    return { category: 'auth', retryable: false, status, retryAfterMs: undefined, originalError: error, message }
+    return {
+      category: 'auth',
+      retryable: false,
+      status,
+      retryAfterMs: undefined,
+      originalError: error,
+      message,
+    }
   }
 
   // === Phase 3A addition — 413 is context_length (retryable with compaction) ===
   if (status === 413) {
-    return { category: 'context_length', retryable: true, status, retryAfterMs: undefined, originalError: error, message }
+    return {
+      category: 'context_length',
+      retryable: true,
+      status,
+      retryAfterMs: undefined,
+      originalError: error,
+      message,
+    }
   }
   // === end Phase 3A addition ===
 
   if (status !== undefined && status >= 500) {
-    return { category: 'server', retryable: true, status, retryAfterMs, originalError: error, message }
+    return {
+      category: 'server',
+      retryable: true,
+      status,
+      retryAfterMs,
+      originalError: error,
+      message,
+    }
   }
 
   // Context length can come as 400 with a descriptive message
   if (isContextLengthError(message)) {
-    return { category: 'context_length', retryable: false, status, retryAfterMs: undefined, originalError: error, message }
+    return {
+      category: 'context_length',
+      retryable: false,
+      status,
+      retryAfterMs: undefined,
+      originalError: error,
+      message,
+    }
   }
 
-  return { category: 'unknown', retryable: false, status, retryAfterMs: undefined, originalError: error, message }
+  return {
+    category: 'unknown',
+    retryable: false,
+    status,
+    retryAfterMs: undefined,
+    originalError: error,
+    message,
+  }
 }
 
 function classifyGemini(error: unknown): ClassifiedLLMError {
@@ -175,33 +224,82 @@ function classifyGemini(error: unknown): ClassifiedLLMError {
       /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|ECONNRESET|fetch.?fail/i.test(message) ||
       name === 'GoogleGenerativeAIFetchError'
     ) {
-      return { category: 'network', retryable: true, status, retryAfterMs: undefined, originalError: error, message }
+      return {
+        category: 'network',
+        retryable: true,
+        status,
+        retryAfterMs: undefined,
+        originalError: error,
+        message,
+      }
     }
   }
 
   if (status === 429) {
-    return { category: 'rate_limit', retryable: true, status, retryAfterMs: undefined, originalError: error, message }
+    return {
+      category: 'rate_limit',
+      retryable: true,
+      status,
+      retryAfterMs: undefined,
+      originalError: error,
+      message,
+    }
   }
 
   if (status === 401 || status === 403) {
-    return { category: 'auth', retryable: false, status, retryAfterMs: undefined, originalError: error, message }
+    return {
+      category: 'auth',
+      retryable: false,
+      status,
+      retryAfterMs: undefined,
+      originalError: error,
+      message,
+    }
   }
 
   // === Phase 3A addition — 413 is context_length (retryable with compaction) ===
   if (status === 413) {
-    return { category: 'context_length', retryable: true, status, retryAfterMs: undefined, originalError: error, message }
+    return {
+      category: 'context_length',
+      retryable: true,
+      status,
+      retryAfterMs: undefined,
+      originalError: error,
+      message,
+    }
   }
   // === end Phase 3A addition ===
 
   if (status !== undefined && status >= 500) {
-    return { category: 'server', retryable: true, status, retryAfterMs: undefined, originalError: error, message }
+    return {
+      category: 'server',
+      retryable: true,
+      status,
+      retryAfterMs: undefined,
+      originalError: error,
+      message,
+    }
   }
 
   if (isContextLengthError(message)) {
-    return { category: 'context_length', retryable: false, status, retryAfterMs: undefined, originalError: error, message }
+    return {
+      category: 'context_length',
+      retryable: false,
+      status,
+      retryAfterMs: undefined,
+      originalError: error,
+      message,
+    }
   }
 
-  return { category: 'unknown', retryable: false, status, retryAfterMs: undefined, originalError: error, message }
+  return {
+    category: 'unknown',
+    retryable: false,
+    status,
+    retryAfterMs: undefined,
+    originalError: error,
+    message,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -214,10 +312,7 @@ function classifyGemini(error: unknown): ClassifiedLLMError {
  * @param error - The raw error thrown by the SDK
  * @param provider - 'anthropic' | 'openai' | 'gemini'
  */
-export function classifyLLMError(
-  error: unknown,
-  provider: string,
-): ClassifiedLLMError {
+export function classifyLLMError(error: unknown, provider: string): ClassifiedLLMError {
   switch (provider) {
     case 'anthropic':
     case 'openai':

@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as fs from 'node:fs'
-import * as path from 'node:path'
 import * as os from 'node:os'
+import * as path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  ContextBudgetManager,
+  _resetErrorRetryStates,
   AGGREGATE_TOKEN_CAP,
-  MAX_CONTEXT_RETRIES,
-  recordContextError,
+  ContextBudgetManager,
   clearContextErrorState,
   getContextErrorState,
-  _resetErrorRetryStates,
+  MAX_CONTEXT_RETRIES,
+  recordContextError,
 } from '../contextBudget'
 
 // ---------------------------------------------------------------------------
@@ -304,16 +304,12 @@ describe('ContextBudgetManager', () => {
       manager.spillToDisk('conv-2', 'content 2')
 
       const spillDir = path.join(tempDir, '.cognograph', 'temp')
-      const filesBefore = fs.readdirSync(spillDir).filter((f) =>
-        f.startsWith('context-spill-'),
-      )
+      const filesBefore = fs.readdirSync(spillDir).filter((f) => f.startsWith('context-spill-'))
       expect(filesBefore.length).toBe(2)
 
       manager.pruneSpillFiles()
 
-      const filesAfter = fs.readdirSync(spillDir).filter((f) =>
-        f.startsWith('context-spill-'),
-      )
+      const filesAfter = fs.readdirSync(spillDir).filter((f) => f.startsWith('context-spill-'))
       expect(filesAfter.length).toBe(0)
     })
 

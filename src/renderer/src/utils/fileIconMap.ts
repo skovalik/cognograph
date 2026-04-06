@@ -15,21 +15,73 @@ export type FileIconName =
   | 'Folder'
 
 const CODE_EXTS = new Set([
-  '.ts', '.tsx', '.js', '.jsx', '.py', '.rs', '.go', '.java',
-  '.c', '.cpp', '.h', '.hpp', '.cs', '.rb', '.php', '.swift',
-  '.kt', '.scala', '.sh', '.bash', '.zsh', '.ps1', '.lua',
-  '.r', '.sql', '.graphql', '.gql', '.wasm', '.zig', '.ex', '.exs',
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.py',
+  '.rs',
+  '.go',
+  '.java',
+  '.c',
+  '.cpp',
+  '.h',
+  '.hpp',
+  '.cs',
+  '.rb',
+  '.php',
+  '.swift',
+  '.kt',
+  '.scala',
+  '.sh',
+  '.bash',
+  '.zsh',
+  '.ps1',
+  '.lua',
+  '.r',
+  '.sql',
+  '.graphql',
+  '.gql',
+  '.wasm',
+  '.zig',
+  '.ex',
+  '.exs',
 ])
 
 const TEXT_EXTS = new Set([
-  '.md', '.txt', '.csv', '.json', '.yaml', '.yml', '.toml',
-  '.xml', '.html', '.htm', '.css', '.scss', '.less', '.ini',
-  '.cfg', '.conf', '.env', '.log', '.lock', '.gitignore',
+  '.md',
+  '.txt',
+  '.csv',
+  '.json',
+  '.yaml',
+  '.yml',
+  '.toml',
+  '.xml',
+  '.html',
+  '.htm',
+  '.css',
+  '.scss',
+  '.less',
+  '.ini',
+  '.cfg',
+  '.conf',
+  '.env',
+  '.log',
+  '.lock',
+  '.gitignore',
 ])
 
 const IMAGE_EXTS = new Set([
-  '.png', '.jpg', '.jpeg', '.svg', '.gif', '.webp', '.ico',
-  '.bmp', '.tiff', '.avif',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.svg',
+  '.gif',
+  '.webp',
+  '.ico',
+  '.bmp',
+  '.tiff',
+  '.avif',
 ])
 
 const VIDEO_EXTS = new Set(['.mp4', '.mov', '.webm', '.avi', '.mkv', '.flv'])
@@ -38,9 +90,7 @@ const AUDIO_EXTS = new Set(['.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a'])
 export function getFileIconName(filename: string, isDirectory: boolean): FileIconName {
   if (isDirectory) return 'Folder'
 
-  const ext = filename.includes('.')
-    ? '.' + filename.split('.').pop()!.toLowerCase()
-    : ''
+  const ext = filename.includes('.') ? '.' + filename.split('.').pop()!.toLowerCase() : ''
 
   if (CODE_EXTS.has(ext)) return 'FileCode'
   if (TEXT_EXTS.has(ext)) return 'FileText'
@@ -59,11 +109,11 @@ export function normalizeFileFilter(filter: string | undefined): string[] {
   if (!filter || !filter.trim()) return []
   return filter
     .split(',')
-    .map(ext => {
+    .map((ext) => {
       const trimmed = ext.trim().toLowerCase()
       return trimmed.startsWith('.') ? trimmed : '.' + trimmed
     })
-    .filter(ext => ext.length > 1) // reject bare "."
+    .filter((ext) => ext.length > 1) // reject bare "."
 }
 
 /**
@@ -72,8 +122,6 @@ export function normalizeFileFilter(filter: string | undefined): string[] {
  */
 export function matchesFileFilter(filename: string, normalizedFilter: string[]): boolean {
   if (normalizedFilter.length === 0) return true
-  const ext = filename.includes('.')
-    ? '.' + filename.split('.').pop()!.toLowerCase()
-    : ''
+  const ext = filename.includes('.') ? '.' + filename.split('.').pop()!.toLowerCase() : ''
   return normalizedFilter.includes(ext)
 }

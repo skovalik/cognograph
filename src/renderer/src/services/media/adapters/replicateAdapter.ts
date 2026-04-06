@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { ProviderAdapter, type ImageGenParams, type MediaResult, type Model3DGenParams } from '../providerAdapter'
+import {
+  type ImageGenParams,
+  type MediaResult,
+  type Model3DGenParams,
+  ProviderAdapter,
+} from '../providerAdapter'
 
 export class ReplicateAdapter extends ProviderAdapter {
   readonly name = 'replicate'
@@ -12,16 +17,16 @@ export class ReplicateAdapter extends ProviderAdapter {
       const res = await fetch('https://api.replicate.com/v1/predictions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           model: 'black-forest-labs/flux-1.1-pro',
           input: {
             prompt: params.prompt,
-            aspect_ratio: params.aspectRatio || '1:1'
-          }
-        })
+            aspect_ratio: params.aspectRatio || '1:1',
+          },
+        }),
       })
 
       if (!res.ok) {
@@ -48,13 +53,13 @@ export class ReplicateAdapter extends ProviderAdapter {
       const res = await fetch('https://api.replicate.com/v1/predictions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           model: 'aiuni-tech/hier-meshgen',
-          input
-        })
+          input,
+        }),
       })
 
       if (!res.ok) {
@@ -76,7 +81,7 @@ export class ReplicateAdapter extends ProviderAdapter {
     const start = Date.now()
     while (Date.now() - start < maxWait) {
       const res = await fetch(`https://api.replicate.com/v1/predictions/${id}`, {
-        headers: { 'Authorization': `Bearer ${this.apiKey}` }
+        headers: { Authorization: `Bearer ${this.apiKey}` },
       })
       const data = await res.json()
       if (data.status === 'succeeded') {
@@ -84,7 +89,7 @@ export class ReplicateAdapter extends ProviderAdapter {
         return output
       }
       if (data.status === 'failed') throw new Error(`Replicate prediction failed: ${data.error}`)
-      await new Promise(r => setTimeout(r, 2000))
+      await new Promise((r) => setTimeout(r, 2000))
     }
     throw new Error('Replicate prediction timed out')
   }

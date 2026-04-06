@@ -23,7 +23,7 @@ export function BridgeStatusBar() {
   const [expanded, setExpanded] = useState(false)
 
   // Get all active runs
-  const activeRuns = useOrchestratorStore(state => {
+  const activeRuns = useOrchestratorStore((state) => {
     const runs: Array<{ id: string; tokens: number; cost: number }> = []
 
     state.activeRuns.forEach((run, orchestratorId) => {
@@ -31,7 +31,7 @@ export function BridgeStatusBar() {
         runs.push({
           id: orchestratorId,
           tokens: run.tokensUsed || 0,
-          cost: run.costUSD || 0
+          cost: run.costUSD || 0,
         })
       }
     })
@@ -87,7 +87,9 @@ export function BridgeStatusBar() {
       aria-label={`${activeRuns.length} agents running, ${totalTokens} tokens, $${totalCost.toFixed(4)} cost. Click to collapse`}
     >
       <span className="text-sm">🤖</span>
-      <span>{activeRuns.length} agent{activeRuns.length !== 1 ? 's' : ''} running</span>
+      <span>
+        {activeRuns.length} agent{activeRuns.length !== 1 ? 's' : ''} running
+      </span>
       <span className="opacity-75">•</span>
       <span>{totalTokens} tokens</span>
       <span className="opacity-75">•</span>

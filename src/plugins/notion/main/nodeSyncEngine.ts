@@ -8,18 +8,26 @@
 // duplication detection, schema initialization.
 // All Notion API calls go through UpsertService → NotionService.
 
+import { createHash } from 'crypto'
 import { promises as fs } from 'fs'
 import { join } from 'path'
-import { createHash } from 'crypto'
-import type { PluginContext } from '../../types'
-import { nodeToNotionProperties, notionToNodeFields, getTargetDbId, noteToNotionPageProperties, artifactToNotionPageProperties, getPageIcon, getFieldAuthority } from './propertyMapper'
-import type { MappedCognographFields } from './propertyMapper'
-import { upsertService } from './upsertService'
-import { htmlToNotionBlocks, hashContent } from './contentConverter'
-import { SyncLogger } from './syncLogger'
-import { NodeSyncQueue } from './nodeSyncQueue'
-import { pullService } from './pullService'
 import { notionService } from '../../../main/services/notionService'
+import type { PluginContext } from '../../types'
+import { hashContent, htmlToNotionBlocks } from './contentConverter'
+import { NodeSyncQueue } from './nodeSyncQueue'
+import type { MappedCognographFields } from './propertyMapper'
+import {
+  artifactToNotionPageProperties,
+  getFieldAuthority,
+  getPageIcon,
+  getTargetDbId,
+  nodeToNotionProperties,
+  noteToNotionPageProperties,
+  notionToNodeFields,
+} from './propertyMapper'
+import { pullService } from './pullService'
+import { SyncLogger } from './syncLogger'
+import { upsertService } from './upsertService'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -29,16 +37,16 @@ export interface NodeSyncSnapshot {
   nodeId: string
   notionPageId: string
   workspaceId: string
-  syncedAt: number                 // Unix ms
+  syncedAt: number // Unix ms
   syncedFields: {
     title: string
     status?: string
     priority?: string
     description?: string
-    contentHash?: string           // SHA-256 of HTML content
+    contentHash?: string // SHA-256 of HTML content
     dueDate?: number
   }
-  notionLastEditedTime: number     // Unix ms
+  notionLastEditedTime: number // Unix ms
   lossyConversion: boolean
 }
 
@@ -52,12 +60,12 @@ interface SyncConfig {
 
 // Error codes for Section 9f translation
 const ERROR_MESSAGES: Record<string, string> = {
-  'validation_error': 'Sync failed: property mismatch. Check Notion DB schema.',
-  'unauthorized': 'Notion token expired. Re-authenticate in Settings > Connectors.',
-  'object_not_found': 'Notion page not found. Click to re-link or remove sync.',
-  'rate_limited': 'Sync delayed: Notion rate limit. Will retry automatically.',
-  'internal_server_error': 'Notion server error. Will retry automatically.',
-  'service_unavailable': 'Notion is temporarily unavailable. Will retry automatically.',
+  validation_error: 'Sync failed: property mismatch. Check Notion DB schema.',
+  unauthorized: 'Notion token expired. Re-authenticate in Settings > Connectors.',
+  object_not_found: 'Notion page not found. Click to re-link or remove sync.',
+  rate_limited: 'Sync delayed: Notion rate limit. Will retry automatically.',
+  internal_server_error: 'Notion server error. Will retry automatically.',
+  service_unavailable: 'Notion is temporarily unavailable. Will retry automatically.',
 }
 
 // -----------------------------------------------------------------------------
@@ -68,12 +76,12 @@ export class NodeSyncEngine {
   private ctx!: PluginContext
   private logger!: SyncLogger
   private queue!: NodeSyncQueue
-  private snapshots = new Map<string, NodeSyncSnapshot>()  // nodeId → snapshot
+  private snapshots = new Map<string, NodeSyncSnapshot>() // nodeId → snapshot
   private snapshotsLoaded = false
   private currentWorkspaceId: string | null = null
   private syncInProgress = false
   private pendingSave: any | null = null
-  private schemaValidated = new Map<string, boolean>()  // dbId → validated
+  private schemaValidated = new Map<string, boolean>() // dbId → validated
 
   async init(ctx: PluginContext): Promise<void> {
     this.ctx = ctx
@@ -83,7 +91,7 @@ export class NodeSyncEngine {
       ctx,
       this.logger,
       () => this.snapshots,
-      (nodeId, snapshot) => this.snapshots.set(nodeId, snapshot)
+      (nodeId, snapshot) => this.snapshots.set(nodeId, snapshot),
     )
   }
 
@@ -108,7 +116,7 @@ export class NodeSyncEngine {
     const syncEnabledNodes = await this.getSyncEnabledNodes()
     if (syncEnabledNodes.length > 0 && this.snapshots.size === 0) {
       this.ctx.sendToRenderer('node:sync-snapshot-missing', {
-        nodeCount: syncEnabledNodes.length
+        nodeCount: syncEnabledNodes.length,
       })
     }
 
@@ -128,7 +136,11 @@ export class NodeSyncEngine {
    * Handle workspace:saved — push changed nodes to Notion.
    * Section 5c push flow with concurrency guard.
    */
-  async onWorkspaceSaved(data: { filePath: string; canvasId: string; version: number }): Promise<void> {
+  async onWorkspaceSaved(data: {
+    filePath: string
+    canvasId: string
+    version: number
+  }): Promise<void> {
     const config = this.getConfig()
     if (!config.nodeSyncEnabled) return
 
@@ -163,11 +175,11 @@ export class NodeSyncEngine {
       if (duplicated.length > 0) {
         this.logger.duplication(data.canvasId, duplicated.length)
         this.ctx.sendToRenderer('node:sync-duplication-detected', {
-          nodeIds: duplicated.map(n => n.id)
+          nodeIds: duplicated.map((n) => n.id),
         })
         // Skip sync for duplicated nodes
-        const duplicatedIds = new Set(duplicated.map(n => n.id))
-        const cleanNodes = syncNodes.filter(n => !duplicatedIds.has(n.id))
+        const duplicatedIds = new Set(duplicated.map((n) => n.id))
+        const cleanNodes = syncNodes.filter((n) => !duplicatedIds.has(n.id))
         await this.pushNodes(cleanNodes, data.canvasId, config)
       } else {
         await this.pushNodes(syncNodes, data.canvasId, config)
@@ -178,7 +190,6 @@ export class NodeSyncEngine {
 
       // After push, drain queue (trigger 2: post-save)
       await this.drainQueue(10)
-
     } catch (err) {
       this.ctx.log.error('Sync error:', String(err))
     } finally {
@@ -210,9 +221,11 @@ export class NodeSyncEngine {
   private async pushNodes(
     nodes: Array<{ id: string; type: string; data: any }>,
     workspaceId: string,
-    config: SyncConfig
+    config: SyncConfig,
   ): Promise<void> {
-    let pushed = 0, skipped = 0, failed = 0
+    let pushed = 0,
+      skipped = 0,
+      failed = 0
 
     // Sequential processing (Section 5c: "Why sequential, not concurrent?")
     for (const node of nodes) {
@@ -235,7 +248,7 @@ export class NodeSyncEngine {
             workspaceId,
             queuedAt: Date.now(),
             failureReason: 'circuit_breaker_open',
-            retryCount: 0
+            retryCount: 0,
           })
           this.logger.queueAdd(workspaceId, r.id, 'circuit_breaker_open')
         }
@@ -259,7 +272,13 @@ export class NodeSyncEngine {
           }
 
           // Update snapshot
-          await this.updateSnapshot(node, workspaceId, result.pageId!, result.lastEditedTime!, result.lossyConversion || false)
+          await this.updateSnapshot(
+            node,
+            workspaceId,
+            result.pageId!,
+            result.lastEditedTime!,
+            result.lossyConversion || false,
+          )
 
           this.logger.pushSuccess(workspaceId, node.id, result.pageId!, Date.now() - pushStart)
           pushed++
@@ -288,7 +307,7 @@ export class NodeSyncEngine {
               workspaceId,
               queuedAt: Date.now(),
               failureReason: result.error || 'unknown',
-              retryCount: 0
+              retryCount: 0,
             })
             this.logger.pushFailed(workspaceId, node.id, result.error || 'unknown', true)
           }
@@ -302,7 +321,7 @@ export class NodeSyncEngine {
           workspaceId,
           queuedAt: Date.now(),
           failureReason: String(err),
-          retryCount: 0
+          retryCount: 0,
         })
         this.logger.pushFailed(workspaceId, node.id, String(err), true)
         failed++
@@ -319,7 +338,7 @@ export class NodeSyncEngine {
   private async pushSingleNode(
     node: { id: string; type: string; data: any },
     workspaceId: string,
-    config: SyncConfig
+    config: SyncConfig,
   ): Promise<{
     success: boolean
     pageId?: string
@@ -345,7 +364,11 @@ export class NodeSyncEngine {
       }
 
       const result = await upsertService.upsertDatabaseRow(
-        dbId, node.id, mapped, node.type, nodeData
+        dbId,
+        node.id,
+        mapped,
+        node.type,
+        nodeData,
       )
 
       return {
@@ -354,9 +377,8 @@ export class NodeSyncEngine {
         lastEditedTime: result.lastEditedTime,
         error: result.error,
         is404: result.is404,
-        shouldSuspend: result.shouldSuspend
+        shouldSuspend: result.shouldSuspend,
       }
-
     } else if (node.type === 'note' || node.type === 'artifact') {
       // Page upsert (Section 4c/4d)
       const existingPageId = nodeData.properties?.notion_pageId
@@ -367,9 +389,10 @@ export class NodeSyncEngine {
       }
 
       // Build page properties
-      const pageProps = node.type === 'note'
-        ? noteToNotionPageProperties(node.id, nodeData)
-        : artifactToNotionPageProperties(node.id, nodeData)
+      const pageProps =
+        node.type === 'note'
+          ? noteToNotionPageProperties(node.id, nodeData)
+          : artifactToNotionPageProperties(node.id, nodeData)
 
       // Convert content if present
       let contentBlocks: unknown[] | undefined
@@ -384,7 +407,12 @@ export class NodeSyncEngine {
       if (existingPageId) {
         // Update existing page properties
         const propResult = await upsertService.upsertPage(
-          parentPageId, node.id, pageProps, node.type, nodeData, existingPageId
+          parentPageId,
+          node.id,
+          pageProps,
+          node.type,
+          nodeData,
+          existingPageId,
         )
 
         if (!propResult.success) {
@@ -397,7 +425,8 @@ export class NodeSyncEngine {
           const currentHash = hashContent(nodeData.content || '')
           if (!snapshot || currentHash !== snapshot.syncedFields.contentHash) {
             const contentResult = await upsertService.replacePageContent(
-              existingPageId, contentBlocks
+              existingPageId,
+              contentBlocks,
             )
             if (!contentResult.success) {
               return contentResult
@@ -407,7 +436,7 @@ export class NodeSyncEngine {
               success: true,
               pageId: existingPageId,
               lastEditedTime: contentResult.lastEditedTime,
-              lossyConversion
+              lossyConversion,
             }
           }
         }
@@ -416,12 +445,18 @@ export class NodeSyncEngine {
           success: true,
           pageId: existingPageId,
           lastEditedTime: propResult.lastEditedTime,
-          lossyConversion
+          lossyConversion,
         }
       } else {
         // Create new page (content blocks included in create call)
         const result = await upsertService.upsertPage(
-          parentPageId, node.id, pageProps, node.type, nodeData, undefined, contentBlocks
+          parentPageId,
+          node.id,
+          pageProps,
+          node.type,
+          nodeData,
+          undefined,
+          contentBlocks,
         )
 
         return {
@@ -431,7 +466,7 @@ export class NodeSyncEngine {
           parentPath: `Notion > ${parentPageId.slice(0, 8)}...`,
           lossyConversion,
           error: result.error,
-          shouldSuspend: result.shouldSuspend
+          shouldSuspend: result.shouldSuspend,
         }
       }
     }
@@ -445,7 +480,7 @@ export class NodeSyncEngine {
 
   private hasLocalChanges(
     node: { id: string; type: string; data: any },
-    snapshot: NodeSyncSnapshot
+    snapshot: NodeSyncSnapshot,
   ): boolean {
     const data = node.data as any
     const s = snapshot.syncedFields
@@ -520,7 +555,7 @@ export class NodeSyncEngine {
     workspaceId: string,
     notionPageId: string,
     lastEditedTime: number,
-    lossyConversion: boolean
+    lossyConversion: boolean,
   ): Promise<void> {
     const data = node.data as any
 
@@ -535,10 +570,10 @@ export class NodeSyncEngine {
         priority: data.priority,
         description: data.description,
         contentHash: data.content ? hashContent(data.content) : undefined,
-        dueDate: data.dueDate
+        dueDate: data.dueDate,
       },
       notionLastEditedTime: lastEditedTime,
-      lossyConversion
+      lossyConversion,
     }
 
     this.snapshots.set(node.id, snapshot)
@@ -589,9 +624,7 @@ export class NodeSyncEngine {
       }
 
       // Attempt sync
-      const result = await this.pushSingleNode(
-        node, entry.workspaceId, config
-      )
+      const result = await this.pushSingleNode(node, entry.workspaceId, config)
 
       if (result.success) {
         await this.queue.deleteEntry(entry)
@@ -600,8 +633,10 @@ export class NodeSyncEngine {
         const { dropped } = await this.queue.incrementRetry(entry)
         if (dropped) {
           this.logger.queueDrop(
-            entry.workspaceId, entry.nodeId,
-            entry.retryCount + 1, 'max retries exceeded'
+            entry.workspaceId,
+            entry.nodeId,
+            entry.retryCount + 1,
+            'max retries exceeded',
           )
         } else {
           this.logger.queueDrain(entry.workspaceId, entry.nodeId, false)
@@ -619,9 +654,9 @@ export class NodeSyncEngine {
 
   private detectDuplication(
     nodes: Array<{ id: string; data: any }>,
-    currentWorkspaceId: string
+    currentWorkspaceId: string,
   ): Array<{ id: string; data: any }> {
-    return nodes.filter(node => {
+    return nodes.filter((node) => {
       const props = node.data?.properties
       if (!props?.notion_pageId) return false
       if (!props.notion_sourceWorkspaceId) return false
@@ -636,7 +671,7 @@ export class NodeSyncEngine {
   private async ensureSchema(config: SyncConfig): Promise<void> {
     const dbs = [
       { id: config.tasksDbId, name: 'Tasks' },
-      { id: config.projectsDbId, name: 'Projects' }
+      { id: config.projectsDbId, name: 'Projects' },
     ]
 
     for (const db of dbs) {
@@ -646,7 +681,7 @@ export class NodeSyncEngine {
       try {
         const result = await notionService.request(
           async (client) => client.databases.retrieve({ database_id: db.id! }),
-          'schemaCheck'
+          'schemaCheck',
         )
 
         if (!result.success) {
@@ -660,28 +695,33 @@ export class NodeSyncEngine {
         if (!existingProp) {
           // Add the property
           const addResult = await notionService.request(
-            async (client) => client.databases.update({
-              database_id: db.id!,
-              properties: {
-                'Cognograph Node ID': { rich_text: {} }
-              }
-            }),
-            'schemaInit'
+            async (client) =>
+              client.databases.update({
+                database_id: db.id!,
+                properties: {
+                  'Cognograph Node ID': { rich_text: {} },
+                },
+              }),
+            'schemaInit',
           )
 
           if (addResult.success) {
-            this.logger.schemaInit(this.currentWorkspaceId || 'unknown', db.id, 'Cognograph Node ID')
+            this.logger.schemaInit(
+              this.currentWorkspaceId || 'unknown',
+              db.id,
+              'Cognograph Node ID',
+            )
           } else {
             this.logger.schemaError(this.currentWorkspaceId || 'unknown', db.id, addResult.error)
           }
         } else if (existingProp.type !== 'rich_text') {
           // Wrong type — warn but don't overwrite
           this.ctx.log.warn(
-            `"Cognograph Node ID" in ${db.name} DB is type "${existingProp.type}", expected "rich_text". Please rename or delete it.`
+            `"Cognograph Node ID" in ${db.name} DB is type "${existingProp.type}", expected "rich_text". Please rename or delete it.`,
           )
           this.ctx.sendToRenderer('node:sync-schema-warning', {
             dbName: db.name,
-            propertyType: existingProp.type
+            propertyType: existingProp.type,
           })
         }
 
@@ -696,9 +736,7 @@ export class NodeSyncEngine {
   // Reconciliation (Section 7e)
   // ---------------------------------------------------------------------------
 
-  private async reconcileOnStartup(
-    nodes: Array<{ id: string; data: any }>
-  ): Promise<void> {
+  private async reconcileOnStartup(nodes: Array<{ id: string; data: any }>): Promise<void> {
     for (const node of nodes) {
       const snapshot = this.snapshots.get(node.id)
       if (!snapshot) continue
@@ -724,7 +762,7 @@ export class NodeSyncEngine {
 
   private async resolveParentPage(
     node: { id: string; type: string; data: any },
-    config: SyncConfig
+    config: SyncConfig,
   ): Promise<string | undefined> {
     // 1. Check if node has edge to a project with notion_pageId
     try {
@@ -757,13 +795,18 @@ export class NodeSyncEngine {
       projectsDbId: this.ctx.settings.get<string>('projectsDbId'),
       hubPageId: this.ctx.settings.get<string>('hubPageId'),
       nodeSyncEnabled: this.ctx.settings.get<boolean>('nodeSyncEnabled') ?? false,
-      syncNodeTypes: this.ctx.settings.get<string[]>('syncNodeTypes') ?? ['task', 'project', 'note', 'artifact']
+      syncNodeTypes: this.ctx.settings.get<string[]>('syncNodeTypes') ?? [
+        'task',
+        'project',
+        'note',
+        'artifact',
+      ],
     }
   }
 
   private async getSyncEnabledNodes(): Promise<Array<{ id: string; type: string; data: any }>> {
     const allNodes = await this.ctx.workspace.getNodes()
-    return allNodes.filter(node => {
+    return allNodes.filter((node) => {
       const data = node.data as any
       return data.properties?.notion_syncEnabled === true
     })

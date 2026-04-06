@@ -6,9 +6,9 @@
 // =============================================================================
 // Shows a plain-English summary of the AI's plan for user approval
 
+import type { ActionStep, ActionTrigger, AIGeneratedConfig } from '@shared/actionTypes'
+import { Check, ChevronRight, FileText, MessageSquare } from 'lucide-react'
 import { memo, useState } from 'react'
-import { FileText, MessageSquare, Check, ChevronRight } from 'lucide-react'
-import type { AIGeneratedConfig, ActionTrigger, ActionStep } from '@shared/actionTypes'
 
 interface AIConfigPlanReviewProps {
   config: AIGeneratedConfig
@@ -25,7 +25,7 @@ function AIConfigPlanReviewComponent({
   warnings,
   onApprove,
   onRequestClarification,
-  onCancel
+  onCancel,
 }: AIConfigPlanReviewProps): JSX.Element {
   const [showFeedback, setShowFeedback] = useState(false)
   const [feedback, setFeedback] = useState('')
@@ -49,9 +49,7 @@ function AIConfigPlanReviewComponent({
 
       {/* AI's Understanding */}
       <div className="p-3 bg-purple-900/20 border border-purple-500/30 rounded">
-        <div className="text-xs font-medium text-purple-300 mb-1">
-          Here's what I understood:
-        </div>
+        <div className="text-xs font-medium text-purple-300 mb-1">Here's what I understood:</div>
         <p className="text-xs gui-text-secondary">{planSummary}</p>
       </div>
 
@@ -83,7 +81,7 @@ function AIConfigPlanReviewComponent({
           <label className="text-xs gui-text">What would you like to change?</label>
           <textarea
             value={feedback}
-            onChange={e => setFeedback(e.target.value)}
+            onChange={(e) => setFeedback(e.target.value)}
             placeholder="Describe what's different from what you expected..."
             className="w-full text-xs gui-input rounded px-2 py-1.5 resize-none h-20"
             autoFocus
@@ -120,8 +118,7 @@ function AIConfigPlanReviewComponent({
               onClick={() => setShowFeedback(true)}
               className="flex items-center gap-1 px-3 py-1.5 text-xs bg-[var(--surface-panel-secondary)] hover:bg-[var(--surface-panel-secondary)] rounded"
             >
-              <MessageSquare className="w-3 h-3" />
-              I have questions
+              <MessageSquare className="w-3 h-3" />I have questions
             </button>
             <button
               onClick={onApprove}
@@ -149,7 +146,7 @@ function generatePlanDescription(config: AIGeneratedConfig): string[] {
   // Conditions
   if (config.conditions.length > 0) {
     const conds = config.conditions
-      .map(c => `${c.field} ${c.operator} "${c.value}"`)
+      .map((c) => `${c.field} ${c.operator} "${c.value}"`)
       .join(' AND ')
     lines.push(`**If:** ${conds}`)
   }

@@ -8,13 +8,13 @@
  * action buttons (approve once / approve session / deny).
  */
 
-import { memo, useEffect, useState, useCallback } from 'react'
-import { Shield, ShieldAlert, Terminal, X, Check, Clock } from 'lucide-react'
-import type { PermissionRequest, PermissionDuration } from '../../stores/permissionStore'
+import { Check, Clock, Shield, ShieldAlert, Terminal, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useState } from 'react'
+import type { PermissionDuration, PermissionRequest } from '../../stores/permissionStore'
 import { PERMISSION_TIMEOUT_MS } from '../../stores/permissionStore'
-import { ShellPermissionCard } from './ShellPermissionCard'
 import { EditPermissionCard } from './EditPermissionCard'
 import { MutationPermissionCard } from './MutationPermissionCard'
+import { ShellPermissionCard } from './ShellPermissionCard'
 
 // ---------------------------------------------------------------------------
 // Props
@@ -74,10 +74,10 @@ function getTypeLabel(type: PermissionRequest['type']): string {
 export const PermissionCard = memo(function PermissionCard({
   request,
   onApprove,
-  onDeny
+  onDeny,
 }: PermissionCardProps) {
   const [remainingMs, setRemainingMs] = useState(
-    Math.max(0, PERMISSION_TIMEOUT_MS - (Date.now() - request.createdAt))
+    Math.max(0, PERMISSION_TIMEOUT_MS - (Date.now() - request.createdAt)),
   )
 
   // Countdown timer
@@ -126,28 +126,29 @@ export const PermissionCard = memo(function PermissionCard({
     <div
       className={`
         rounded-lg border px-3 py-2.5 transition-all duration-200
-        ${isDenied
-          ? 'border-red-500/30 bg-red-500/5 opacity-60'
-          : isExpiring
-            ? 'border-amber-500/40 bg-amber-500/5 animate-pulse'
-            : 'border-violet-500/30 bg-violet-500/5'
+        ${
+          isDenied
+            ? 'border-red-500/30 bg-red-500/5 opacity-60'
+            : isExpiring
+              ? 'border-amber-500/40 bg-amber-500/5 animate-pulse'
+              : 'border-violet-500/30 bg-violet-500/5'
         }
       `}
     >
       {/* Header row */}
       <div className="flex items-center gap-2 mb-1.5">
-        <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${
-          isDenied ? 'text-red-400' : 'text-violet-400'
-        }`} />
-        <span className={`text-xs font-medium ${
-          isDenied ? 'text-red-400' : 'text-violet-400'
-        }`}>
+        <Icon
+          className={`w-3.5 h-3.5 flex-shrink-0 ${isDenied ? 'text-red-400' : 'text-violet-400'}`}
+        />
+        <span className={`text-xs font-medium ${isDenied ? 'text-red-400' : 'text-violet-400'}`}>
           {displayName}
         </span>
         <span className="flex-1" />
-        <span className={`text-[10px] flex items-center gap-1 ${
-          isExpiring ? 'text-amber-400' : 'text-white/30'
-        }`}>
+        <span
+          className={`text-[10px] flex items-center gap-1 ${
+            isExpiring ? 'text-amber-400' : 'text-white/30'
+          }`}
+        >
           <Clock className="w-2.5 h-2.5" />
           {remainingSec}s
         </span>
@@ -170,9 +171,7 @@ export const PermissionCard = memo(function PermissionCard({
 
       {/* Reason (if different from preview) */}
       {request.reason && request.reason !== previewText && (
-        <p className="text-[10px] text-white/40 mb-2 leading-tight">
-          {request.reason}
-        </p>
+        <p className="text-[10px] text-white/40 mb-2 leading-tight">{request.reason}</p>
       )}
 
       {/* Action buttons */}

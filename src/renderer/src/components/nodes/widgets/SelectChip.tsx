@@ -20,13 +20,16 @@ export const SelectChip = memo(function SelectChip({
 }: SelectChipProps) {
   const displayLabel = labels?.[value] || value
 
-  const cycle = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    const idx = options.indexOf(value)
-    const next = options[(idx + 1) % options.length]
-    onChange(next)
-  }, [value, options, onChange])
+  const cycle = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      e.preventDefault()
+      const idx = options.indexOf(value)
+      const next = options[(idx + 1) % options.length]
+      onChange(next)
+    },
+    [value, options, onChange],
+  )
 
   return (
     <button

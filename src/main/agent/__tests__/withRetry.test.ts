@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { withRetry, type RetryOptions, type RetryInfo } from '../withRetry'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { type RetryInfo, type RetryOptions, withRetry } from '../withRetry'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -27,7 +27,7 @@ function makeSDKError(opts: {
 const defaultOpts: RetryOptions = {
   provider: 'anthropic',
   maxRetries: 3,
-  baseDelayMs: 1,   // 1ms for fast tests
+  baseDelayMs: 1, // 1ms for fast tests
   maxDelayMs: 10,
 }
 
@@ -56,7 +56,8 @@ describe('withRetry', () => {
   // -------------------------------------------------------------------------
 
   it('retries on rate_limit (429) and succeeds', async () => {
-    const fn = vi.fn()
+    const fn = vi
+      .fn()
       .mockRejectedValueOnce(makeSDKError({ status: 429 }))
       .mockRejectedValueOnce(makeSDKError({ status: 429 }))
       .mockResolvedValue('ok')
@@ -67,7 +68,8 @@ describe('withRetry', () => {
   })
 
   it('retries on server error (500) and succeeds', async () => {
-    const fn = vi.fn()
+    const fn = vi
+      .fn()
       .mockRejectedValueOnce(makeSDKError({ status: 500 }))
       .mockResolvedValue('ok')
 
@@ -77,7 +79,8 @@ describe('withRetry', () => {
   })
 
   it('retries on network error and succeeds', async () => {
-    const fn = vi.fn()
+    const fn = vi
+      .fn()
       .mockRejectedValueOnce(makeSDKError({ message: 'ECONNREFUSED', name: 'APIConnectionError' }))
       .mockResolvedValue('ok')
 
@@ -106,9 +109,9 @@ describe('withRetry', () => {
   })
 
   it('does NOT retry on context_length error', async () => {
-    const fn = vi.fn().mockRejectedValue(
-      makeSDKError({ status: 400, message: 'context length exceeded' })
-    )
+    const fn = vi
+      .fn()
+      .mockRejectedValue(makeSDKError({ status: 400, message: 'context length exceeded' }))
 
     await expect(withRetry(fn, defaultOpts)).rejects.toThrow()
     expect(fn).toHaveBeenCalledTimes(1)
@@ -135,11 +138,9 @@ describe('withRetry', () => {
     const err = makeSDKError({
       status: 429,
       message: 'rate limited',
-      headers: { 'retry-after': '1' }  // 1 second
+      headers: { 'retry-after': '1' }, // 1 second
     })
-    const fn = vi.fn()
-      .mockRejectedValueOnce(err)
-      .mockResolvedValue('ok')
+    const fn = vi.fn().mockRejectedValueOnce(err).mockResolvedValue('ok')
 
     const onRetry = vi.fn()
 
@@ -159,7 +160,8 @@ describe('withRetry', () => {
   // -------------------------------------------------------------------------
 
   it('calls onRetry with correct info before each retry', async () => {
-    const fn = vi.fn()
+    const fn = vi
+      .fn()
       .mockRejectedValueOnce(makeSDKError({ status: 429 }))
       .mockRejectedValueOnce(makeSDKError({ status: 500 }))
       .mockResolvedValue('ok')
@@ -189,9 +191,7 @@ describe('withRetry', () => {
 
     const fn = vi.fn().mockRejectedValue(makeSDKError({ status: 429 }))
 
-    await expect(
-      withRetry(fn, { ...defaultOpts, signal: controller.signal })
-    ).rejects.toThrow()
+    await expect(withRetry(fn, { ...defaultOpts, signal: controller.signal })).rejects.toThrow()
 
     expect(fn).toHaveBeenCalledTimes(1)
   })
@@ -212,7 +212,8 @@ describe('withRetry', () => {
   // -------------------------------------------------------------------------
 
   it('uses exponential backoff with jitter', async () => {
-    const fn = vi.fn()
+    const fn = vi
+      .fn()
       .mockRejectedValueOnce(makeSDKError({ status: 429 }))
       .mockRejectedValueOnce(makeSDKError({ status: 429 }))
       .mockResolvedValue('ok')
@@ -241,12 +242,15 @@ describe('withRetry', () => {
   // -------------------------------------------------------------------------
 
   it('works with gemini provider errors', async () => {
-    const fn = vi.fn()
-      .mockRejectedValueOnce(makeSDKError({
-        status: 429,
-        message: 'Resource exhausted',
-        name: 'GoogleGenerativeAIFetchError'
-      }))
+    const fn = vi
+      .fn()
+      .mockRejectedValueOnce(
+        makeSDKError({
+          status: 429,
+          message: 'Resource exhausted',
+          name: 'GoogleGenerativeAIFetchError',
+        }),
+      )
       .mockResolvedValue('ok')
 
     const result = await withRetry(fn, { ...defaultOpts, provider: 'gemini' })

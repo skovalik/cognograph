@@ -9,12 +9,8 @@
  * Uses RAF batching (Optimization #8) to prevent re-render storms.
  */
 
+import type { AuditAction, AuditActor, CanvasAuditEvent } from '@shared/types/bridge'
 import { useAuditStore } from '../stores/auditStore'
-import type {
-  CanvasAuditEvent,
-  AuditAction,
-  AuditActor,
-} from '@shared/types/bridge'
 
 // =============================================================================
 // Core Emit Function
@@ -36,7 +32,7 @@ export function emitAuditEvent(
     undoable?: boolean
     undoData?: unknown
     batched?: boolean
-  } = {}
+  } = {},
 ): void {
   const event: CanvasAuditEvent = {
     id: crypto.randomUUID(),
@@ -71,7 +67,7 @@ export function emitNodeCreated(
   nodeId: string,
   nodeType: string,
   title: string,
-  actor?: AuditActor
+  actor?: AuditActor,
 ): void {
   emitAuditEvent('node-created', nodeId, nodeType, {
     actor,
@@ -91,7 +87,7 @@ export function emitNodeDeleted(
   nodeType: string,
   title: string,
   nodeSnapshot?: unknown,
-  actor?: AuditActor
+  actor?: AuditActor,
 ): void {
   emitAuditEvent('node-deleted', nodeId, nodeType, {
     actor,
@@ -110,7 +106,7 @@ export function emitNodeUpdated(
   nodeType: string,
   title: string,
   changes: Record<string, { before: unknown; after: unknown }>,
-  actor?: AuditActor
+  actor?: AuditActor,
 ): void {
   emitAuditEvent('node-updated', nodeId, nodeType, {
     actor,
@@ -129,7 +125,7 @@ export function emitEdgeCreated(
   edgeId: string,
   sourceId: string,
   targetId: string,
-  actor?: AuditActor
+  actor?: AuditActor,
 ): void {
   emitAuditEvent('edge-created', edgeId, 'edge', {
     actor,
@@ -143,11 +139,7 @@ export function emitEdgeCreated(
 /**
  * Emit audit event for edge deletion.
  */
-export function emitEdgeDeleted(
-  edgeId: string,
-  edgeSnapshot?: unknown,
-  actor?: AuditActor
-): void {
+export function emitEdgeDeleted(edgeId: string, edgeSnapshot?: unknown, actor?: AuditActor): void {
   emitAuditEvent('edge-deleted', edgeId, 'edge', {
     actor,
     undoable: !!edgeSnapshot,
@@ -164,10 +156,7 @@ export function emitEdgeDeleted(
  * Emit audit event for orchestration lifecycle.
  * These use batched mode since they can come in rapid bursts.
  */
-export function emitOrchestrationStarted(
-  orchestratorId: string,
-  runId: string
-): void {
+export function emitOrchestrationStarted(orchestratorId: string, runId: string): void {
   emitAuditEvent('orchestration-started', orchestratorId, 'orchestrator', {
     actor: { type: 'user' },
     context: { orchestrationId: orchestratorId, runId },
@@ -179,7 +168,7 @@ export function emitOrchestrationCompleted(
   orchestratorId: string,
   runId: string,
   costUSD?: number,
-  tokensUsed?: number
+  tokensUsed?: number,
 ): void {
   emitAuditEvent('orchestration-completed', orchestratorId, 'orchestrator', {
     actor: { type: 'system', service: 'orchestrator' },
@@ -191,7 +180,7 @@ export function emitOrchestrationCompleted(
 export function emitOrchestrationFailed(
   orchestratorId: string,
   runId: string,
-  error?: string
+  error?: string,
 ): void {
   emitAuditEvent('orchestration-failed', orchestratorId, 'orchestrator', {
     actor: { type: 'system', service: 'orchestrator' },
@@ -205,7 +194,7 @@ export function emitAgentStarted(
   agentNodeId: string,
   agentName: string,
   orchestratorId: string,
-  runId: string
+  runId: string,
 ): void {
   emitAuditEvent('agent-started', agentNodeId, 'conversation', {
     actor: {
@@ -225,7 +214,7 @@ export function emitAgentCompleted(
   orchestratorId: string,
   runId: string,
   costUSD?: number,
-  tokensUsed?: number
+  tokensUsed?: number,
 ): void {
   emitAuditEvent('agent-completed', agentNodeId, 'conversation', {
     actor: {
@@ -244,7 +233,7 @@ export function emitAgentFailed(
   agentName: string,
   orchestratorId: string,
   runId: string,
-  error?: string
+  error?: string,
 ): void {
   emitAuditEvent('agent-failed', agentNodeId, 'conversation', {
     actor: {

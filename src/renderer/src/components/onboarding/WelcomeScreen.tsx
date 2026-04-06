@@ -15,8 +15,9 @@
  */
 
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowUp } from 'lucide-react'
+import { ArrowUp, X } from 'lucide-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { EscapePriority, escapeManager } from '../../utils/escapeManager'
 import '../../styles/welcome-screen.css'
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -24,6 +25,9 @@ import '../../styles/welcome-screen.css'
 interface WelcomeScreenProps {
   visible: boolean
   onComplete: (savedInput: string) => void
+  onDismiss: () => void
+  /** True when an existing workspace is loaded (not a fresh/new workspace) */
+  hasExistingWorkspace?: boolean
 }
 
 type Phase = 'welcome' | 'morphing' | 'done'
@@ -45,7 +49,12 @@ const EASE_MORPH: [number, number, number, number] = [0.16, 1, 0.3, 1]
 
 // ── Component ───────────────────────────────────────────────────────────────
 
-function WelcomeScreenComponent({ visible, onComplete }: WelcomeScreenProps): JSX.Element {
+function WelcomeScreenComponent({
+  visible,
+  onComplete,
+  onDismiss,
+  hasExistingWorkspace,
+}: WelcomeScreenProps): JSX.Element {
   const [phase, setPhase] = useState<Phase>('welcome')
   const [input, setInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -110,6 +119,14 @@ function WelcomeScreenComponent({ visible, onComplete }: WelcomeScreenProps): JS
     computeMorphTarget()
   }, [input, isSubmitting, computeMorphTarget])
 
+  // ── Escape key — dismiss without submitting (via EscapeManager at MODAL priority) ──
+
+  useEffect(() => {
+    if (!visible || phase !== 'welcome') return
+    escapeManager.register('welcome-screen-dismiss', EscapePriority.MODAL, onDismiss)
+    return () => escapeManager.unregister('welcome-screen-dismiss')
+  }, [visible, phase, onDismiss])
+
   // ── Textarea key handler ──────────────────────────────────────────────────
 
   const handleKeyDown = useCallback(
@@ -143,18 +160,34 @@ function WelcomeScreenComponent({ visible, onComplete }: WelcomeScreenProps): JS
           className="welcome-screen"
           role="dialog"
           aria-modal="true"
-          aria-label="Welcome to Cognograph"
+          aria-label="Welcome to [Cognograph]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0 } }}
           transition={{ duration: DURATION_FADE }}
         >
-          {/* ═══ Backdrop ═══ */}
+          {/* ═══ Backdrop — click to dismiss ═══ */}
           <motion.div
             className="welcome-screen__backdrop"
             animate={{ opacity: isMorphing ? 0 : 1 }}
             transition={{ duration: DURATION_FADE }}
+            onClick={isMorphing ? undefined : onDismiss}
           />
+
+          {/* ═══ Dismiss button ═══ */}
+          {!isMorphing && (
+            <motion.button
+              className="welcome-screen__dismiss"
+              onClick={onDismiss}
+              aria-label="Dismiss"
+              type="button"
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: DURATION_FADE }}
+            >
+              <X size={18} />
+            </motion.button>
+          )}
 
           {/* ═══ Content wrapper ═══ */}
           <div className="welcome-screen__content">
@@ -164,7 +197,14 @@ function WelcomeScreenComponent({ visible, onComplete }: WelcomeScreenProps): JS
               animate={{ opacity: isMorphing ? 0 : 1 }}
               transition={{ duration: DURATION_FADE }}
             >
-              Welcome to <span>Cognograph</span>
+              {hasExistingWorkspace ? (
+                <>Your canvas is empty</>
+              ) : (
+                <>
+                  Welcome to <span className="welcome-screen__bracket">[</span>Cognograph
+                  <span className="welcome-screen__bracket">]</span>
+                </>
+              )}
             </motion.h1>
 
             {/* ── Intro ── */}
@@ -173,8 +213,9 @@ function WelcomeScreenComponent({ visible, onComplete }: WelcomeScreenProps): JS
               animate={{ opacity: isMorphing ? 0 : 1 }}
               transition={{ duration: DURATION_FADE }}
             >
-              Think with nodes and LLMs. Every conversation becomes a node on your canvas — connect
-              them to build context, visualize your thinking, and orchestrate AI workflows.
+              {hasExistingWorkspace
+                ? 'Describe what you want to build, or drop a file onto the canvas to get started.'
+                : 'Think with nodes and LLMs. Every conversation becomes a node on your canvas \u2014 connect them to build context, visualize your thinking, and orchestrate AI workflows.'}
             </motion.p>
 
             {/* ── Input container (morphs to BottomCommandBar position) ── */}
@@ -209,11 +250,16 @@ function WelcomeScreenComponent({ visible, onComplete }: WelcomeScreenProps): JS
                 disabled={isSubmitting}
                 rows={3}
                 tabIndex={0}
+                enterKeyHint="send"
               />
 
               <div className="welcome-screen__input-footer">
                 <span className="welcome-screen__hint">
-                  {isMorphing ? '' : 'Press Enter to begin \u00B7 Shift+Enter for new line'}
+                  {isMorphing
+                    ? ''
+                    : window.matchMedia('(pointer: coarse)').matches
+                      ? 'Tap Send to begin'
+                      : 'Enter to send \u00B7 Esc to dismiss'}
                 </span>
                 <button
                   className="welcome-screen__submit"

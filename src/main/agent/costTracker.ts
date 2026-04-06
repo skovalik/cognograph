@@ -48,20 +48,20 @@ const MODEL_PRICING: Record<string, ModelPricing> = {
   // Cache read = 0.1x input price, cache write = 1.25x input price
   'claude-opus-4': {
     input: 15.0,
-    cachedInput: 1.5,     // 0.1x input
-    cacheWrite: 18.75,    // 1.25x input
+    cachedInput: 1.5, // 0.1x input
+    cacheWrite: 18.75, // 1.25x input
     output: 75.0,
   },
   'claude-sonnet-4': {
     input: 3.0,
-    cachedInput: 0.3,     // 0.1x input
-    cacheWrite: 3.75,     // 1.25x input
+    cachedInput: 0.3, // 0.1x input
+    cacheWrite: 3.75, // 1.25x input
     output: 15.0,
   },
   'claude-haiku-4': {
     input: 0.8,
-    cachedInput: 0.08,    // 0.1x input
-    cacheWrite: 1.0,      // 1.25x input
+    cachedInput: 0.08, // 0.1x input
+    cacheWrite: 1.0, // 1.25x input
     output: 4.0,
   },
 
@@ -69,26 +69,26 @@ const MODEL_PRICING: Record<string, ModelPricing> = {
   // Cached = 0.5x input price, no separate cache write tier
   'gpt-4.1': {
     input: 2.0,
-    cachedInput: 0.5,     // 0.25x input (per OpenAI April 2025)
-    cacheWrite: 2.0,      // same as input (automatic caching)
+    cachedInput: 0.5, // 0.25x input (per OpenAI April 2025)
+    cacheWrite: 2.0, // same as input (automatic caching)
     output: 8.0,
   },
   'gpt-4.1-mini': {
     input: 0.4,
-    cachedInput: 0.1,     // 0.25x input
-    cacheWrite: 0.4,      // same as input
+    cachedInput: 0.1, // 0.25x input
+    cacheWrite: 0.4, // same as input
     output: 1.6,
   },
-  'o3': {
+  o3: {
     input: 2.0,
-    cachedInput: 0.5,     // 0.25x input
-    cacheWrite: 2.0,      // same as input
+    cachedInput: 0.5, // 0.25x input
+    cacheWrite: 2.0, // same as input
     output: 8.0,
   },
   'o3-mini': {
     input: 1.1,
-    cachedInput: 0.275,   // 0.25x input
-    cacheWrite: 1.1,      // same as input
+    cachedInput: 0.275, // 0.25x input
+    cacheWrite: 1.1, // same as input
     output: 4.4,
   },
 
@@ -96,14 +96,14 @@ const MODEL_PRICING: Record<string, ModelPricing> = {
   // Gemini has explicit cache pricing tiers
   'gemini-2.5-pro': {
     input: 1.25,
-    cachedInput: 0.3125,  // explicit cache price
-    cacheWrite: 4.5,      // cache storage write
+    cachedInput: 0.3125, // explicit cache price
+    cacheWrite: 4.5, // cache storage write
     output: 10.0,
   },
   'gemini-2.5-flash': {
     input: 0.15,
-    cachedInput: 0.0375,  // explicit cache price
-    cacheWrite: 1.0,      // cache storage write
+    cachedInput: 0.0375, // explicit cache price
+    cacheWrite: 1.0, // cache storage write
     output: 0.6,
   },
 }
@@ -281,7 +281,14 @@ function aggregateRecords(records: TokenUsageRecord[]): {
     estimatedCostUSD += r.estimatedCostUSD
   }
 
-  return { uncachedInput, cachedInput, cacheWrite, output, estimatedCostUSD, recordCount: records.length }
+  return {
+    uncachedInput,
+    cachedInput,
+    cacheWrite,
+    output,
+    estimatedCostUSD,
+    recordCount: records.length,
+  }
 }
 
 // ---------------------------------------------------------------------------

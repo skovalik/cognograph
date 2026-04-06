@@ -7,13 +7,13 @@
 // Phase 6E: Rich Node Depth System - Dispatch Workflow Integration
 // =============================================================================
 
-import { describe, it, expect } from 'vitest'
-import {
-  createDispatchNodeData,
-  createDispatchEdge,
-  buildDispatchContext,
-} from '../dispatchWorkflow'
 import type { TaskNodeData } from '@shared/types'
+import { describe, expect, it } from 'vitest'
+import {
+  buildDispatchContext,
+  createDispatchEdge,
+  createDispatchNodeData,
+} from '../dispatchWorkflow'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -98,8 +98,8 @@ describe('createDispatchNodeData', () => {
     const task = makeTaskNode()
     const result = createDispatchNodeData(task, { x: -200, y: -100 })
 
-    expect(result.position.x).toBe(150)  // -200 + 350
-    expect(result.position.y).toBe(-50)  // -100 + 50
+    expect(result.position.x).toBe(150) // -200 + 350
+    expect(result.position.y).toBe(-50) // -100 + 50
   })
 })
 

@@ -10,13 +10,13 @@
  */
 
 import { useCallback, useMemo } from 'react'
-import { useWorkspaceStore } from '../../../stores/workspaceStore'
 import { BUILTIN_PROPERTIES } from '../../../constants/properties'
-import { SelectField, type SelectOption } from './SelectField'
-import { TextField } from './TextField'
-import { DateField } from './DateField'
-import { TagsField } from './TagsField'
+import { useWorkspaceStore } from '../../../stores/workspaceStore'
 import { BooleanField } from './BooleanField'
+import { DateField } from './DateField'
+import { SelectField, type SelectOption } from './SelectField'
+import { TagsField } from './TagsField'
+import { TextField } from './TextField'
 
 /** Lightweight property definition accepted via extraDefs prop. */
 export interface ExtraPropertyDef {
@@ -130,11 +130,7 @@ export function PropertyField({ nodeId, fieldId, extraDefs }: PropertyFieldProps
   // --------------------------------------------------------------------------
   if (typeof value === 'boolean') {
     return (
-      <BooleanField
-        label={label}
-        value={value}
-        onChange={handleChange as (v: boolean) => void}
-      />
+      <BooleanField label={label} value={value} onChange={handleChange as (v: boolean) => void} />
     )
   }
 

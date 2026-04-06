@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import type { ActionEvent, ActionNodeData, ScheduleTrigger } from '@shared/actionTypes'
 import { useEffect, useRef } from 'react'
-import type { ActionEvent, ScheduleTrigger, ActionNodeData } from '@shared/actionTypes'
 import { useActionStore } from '../stores/actionStore'
 
 /**
@@ -39,10 +39,15 @@ export function parseCronToMs(cron: string): number | null {
     const minNum = parseInt(min, 10)
     const hourNum = parseInt(hour, 10)
     if (
-      !isNaN(minNum) && !isNaN(hourNum) &&
-      minNum >= 0 && minNum <= 59 &&
-      hourNum >= 0 && hourNum <= 23 &&
-      parts[2] === '*' && parts[3] === '*' && parts[4] === '*'
+      !isNaN(minNum) &&
+      !isNaN(hourNum) &&
+      minNum >= 0 &&
+      minNum <= 59 &&
+      hourNum >= 0 &&
+      hourNum <= 23 &&
+      parts[2] === '*' &&
+      parts[3] === '*' &&
+      parts[4] === '*'
     ) {
       return 24 * 60 * 60 * 1000 // 24 hours
     }
@@ -122,7 +127,7 @@ export function useScheduleService(): void {
       const event: ActionEvent = {
         type: 'schedule-tick',
         nodeId: actionNodeId,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       }
       useActionStore.getState().handleEvent(event)
     }
@@ -147,7 +152,7 @@ export function useScheduleService(): void {
             actionNodeId,
             intervalMs,
             timerId: intervalId,
-            isDailyTimeout: false
+            isDailyTimeout: false,
           })
         }, initialDelay!)
 
@@ -155,7 +160,7 @@ export function useScheduleService(): void {
           actionNodeId,
           intervalMs,
           timerId: timeoutId,
-          isDailyTimeout: true
+          isDailyTimeout: true,
         })
       } else {
         // For interval-based schedules, just use setInterval
@@ -164,7 +169,7 @@ export function useScheduleService(): void {
           actionNodeId,
           intervalMs,
           timerId: intervalId,
-          isDailyTimeout: false
+          isDailyTimeout: false,
         })
       }
     }
@@ -214,7 +219,7 @@ export function useScheduleService(): void {
     const unsub = useActionStore.subscribe(
       (state) => state.activeActions,
       () => syncSchedules(),
-      { equalityFn: Object.is }
+      { equalityFn: Object.is },
     )
 
     return () => {

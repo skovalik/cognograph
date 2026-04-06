@@ -12,23 +12,19 @@
  * 2. Pass 2: Execute updates, moves, edges, and deletions
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { executeMutationPlan, dryRunMutationPlan } from '../mutationExecutor'
-import {
-  resetWorkspaceStore,
-  resetAIEditorStore,
-  getWorkspaceState,
-  getAIEditorState,
-  seedNodes,
-  seedEdges,
-  getHistoryState
-} from '../../../../test/storeUtils'
-import {
-  createNoteNode,
-  createTestEdge,
-  resetTestCounters
-} from '../../../../test/utils'
 import type { MutationPlan, NodeData, NoteNodeData } from '@shared/types'
+import { beforeEach, describe, expect, it } from 'vitest'
+import {
+  getAIEditorState,
+  getHistoryState,
+  getWorkspaceState,
+  resetAIEditorStore,
+  resetWorkspaceStore,
+  seedEdges,
+  seedNodes,
+} from '../../../../test/storeUtils'
+import { createNoteNode, createTestEdge, resetTestCounters } from '../../../../test/utils'
+import { dryRunMutationPlan, executeMutationPlan } from '../mutationExecutor'
 
 describe('mutationExecutor', () => {
   beforeEach(() => {
@@ -50,10 +46,10 @@ describe('mutationExecutor', () => {
             tempId: 'temp-1',
             type: 'note',
             position: { type: 'absolute', x: 100, y: 200 },
-            data: { title: 'Created Note', content: 'Hello world' }
-          }
+            data: { title: 'Created Note', content: 'Hello world' },
+          },
         ],
-        explanation: 'Create a note'
+        explanation: 'Create a note',
       }
 
       const result = await executeMutationPlan(plan)
@@ -77,17 +73,17 @@ describe('mutationExecutor', () => {
             tempId: 'temp-1',
             type: 'note',
             position: { type: 'absolute', x: 0, y: 0 },
-            data: { title: 'Note A' }
+            data: { title: 'Note A' },
           },
           {
             op: 'create-node',
             tempId: 'temp-2',
             type: 'task',
             position: { type: 'absolute', x: 300, y: 0 },
-            data: { title: 'Task B', status: 'todo', priority: 'medium' }
-          }
+            data: { title: 'Task B', status: 'todo', priority: 'medium' },
+          },
         ],
-        explanation: 'Create note and task'
+        explanation: 'Create note and task',
       }
 
       const result = await executeMutationPlan(plan)
@@ -108,10 +104,10 @@ describe('mutationExecutor', () => {
             tempId: 'temp-abc',
             type: 'note',
             position: { type: 'absolute', x: 0, y: 0 },
-            data: { title: 'Mapped Node' }
-          }
+            data: { title: 'Mapped Node' },
+          },
         ],
-        explanation: 'Test mapping'
+        explanation: 'Test mapping',
       }
 
       const result = await executeMutationPlan(plan)
@@ -133,7 +129,7 @@ describe('mutationExecutor', () => {
 
       const plan: MutationPlan = {
         operations: [{ op: 'delete-node', nodeId: 'note-del' }],
-        explanation: 'Delete note'
+        explanation: 'Delete note',
       }
 
       const result = await executeMutationPlan(plan)
@@ -153,7 +149,7 @@ describe('mutationExecutor', () => {
 
       const plan: MutationPlan = {
         operations: [{ op: 'delete-node', nodeId: 'note-1' }],
-        explanation: 'Delete note with edge'
+        explanation: 'Delete note with edge',
       }
 
       const result = await executeMutationPlan(plan)
@@ -176,7 +172,7 @@ describe('mutationExecutor', () => {
     it('should update node data properties', async () => {
       const note = createNoteNode('Original content', {
         id: 'note-1',
-        data: { title: 'Original Title' } as Partial<NoteNodeData>
+        data: { title: 'Original Title' } as Partial<NoteNodeData>,
       })
       seedNodes([note])
 
@@ -185,10 +181,10 @@ describe('mutationExecutor', () => {
           {
             op: 'update-node',
             nodeId: 'note-1',
-            data: { title: 'Updated Title', content: 'Updated content' }
-          }
+            data: { title: 'Updated Title', content: 'Updated content' },
+          },
         ],
-        explanation: 'Update note'
+        explanation: 'Update note',
       }
 
       const result = await executeMutationPlan(plan)
@@ -217,10 +213,10 @@ describe('mutationExecutor', () => {
           {
             op: 'move-node',
             nodeId: 'note-1',
-            position: { type: 'absolute', x: 500, y: 300 }
-          }
+            position: { type: 'absolute', x: 500, y: 300 },
+          },
         ],
-        explanation: 'Move note'
+        explanation: 'Move note',
       }
 
       const result = await executeMutationPlan(plan)
@@ -249,10 +245,10 @@ describe('mutationExecutor', () => {
             op: 'create-edge',
             source: 'note-1',
             target: 'note-2',
-            data: { label: 'related' }
-          }
+            data: { label: 'related' },
+          },
         ],
-        explanation: 'Connect notes'
+        explanation: 'Connect notes',
       }
 
       const result = await executeMutationPlan(plan)
@@ -277,15 +273,15 @@ describe('mutationExecutor', () => {
             tempId: 'temp-new',
             type: 'note',
             position: { type: 'absolute', x: 300, y: 0 },
-            data: { title: 'New Note' }
+            data: { title: 'New Note' },
           },
           {
             op: 'create-edge',
             source: 'existing-1',
-            target: 'temp-new'
-          }
+            target: 'temp-new',
+          },
         ],
-        explanation: 'Create and connect'
+        explanation: 'Create and connect',
       }
 
       const result = await executeMutationPlan(plan)
@@ -309,7 +305,7 @@ describe('mutationExecutor', () => {
 
       const plan: MutationPlan = {
         operations: [{ op: 'delete-edge', edgeId: 'edge-to-delete' }],
-        explanation: 'Remove connection'
+        explanation: 'Remove connection',
       }
 
       const result = await executeMutationPlan(plan)
@@ -335,10 +331,10 @@ describe('mutationExecutor', () => {
             tempId: 'temp-1',
             type: 'note',
             position: { type: 'absolute', x: 0, y: 0 },
-            data: { title: 'History Test' }
-          }
+            data: { title: 'History Test' },
+          },
         ],
-        explanation: 'Test history'
+        explanation: 'Test history',
       }
 
       await executeMutationPlan(plan)
@@ -356,22 +352,22 @@ describe('mutationExecutor', () => {
             tempId: 'temp-1',
             type: 'note',
             position: { type: 'absolute', x: 0, y: 0 },
-            data: { title: 'Note 1' }
+            data: { title: 'Note 1' },
           },
           {
             op: 'create-node',
             tempId: 'temp-2',
             type: 'task',
             position: { type: 'absolute', x: 300, y: 0 },
-            data: { title: 'Task 1' }
+            data: { title: 'Task 1' },
           },
           {
             op: 'create-edge',
             source: 'temp-1',
-            target: 'temp-2'
-          }
+            target: 'temp-2',
+          },
         ],
-        explanation: 'Multi-op batch'
+        explanation: 'Multi-op batch',
       }
 
       await executeMutationPlan(plan)
@@ -397,22 +393,22 @@ describe('mutationExecutor', () => {
             tempId: 'temp-a',
             type: 'note',
             position: { type: 'absolute', x: 0, y: 0 },
-            data: { title: 'Node A' }
+            data: { title: 'Node A' },
           },
           {
             op: 'create-node',
             tempId: 'temp-b',
             type: 'note',
             position: { type: 'absolute', x: 300, y: 0 },
-            data: { title: 'Node B' }
+            data: { title: 'Node B' },
           },
           {
             op: 'create-edge',
             source: 'temp-a',
-            target: 'temp-b'
-          }
+            target: 'temp-b',
+          },
         ],
-        explanation: 'Create graph fragment'
+        explanation: 'Create graph fragment',
       }
 
       const result = await executeMutationPlan(plan)
@@ -442,19 +438,17 @@ describe('mutationExecutor', () => {
             tempId: 'temp-1',
             type: 'note',
             position: { type: 'absolute', x: 100, y: 200 },
-            data: { title: 'Preview Node' }
-          }
+            data: { title: 'Preview Node' },
+          },
         ],
-        explanation: 'Preview'
+        explanation: 'Preview',
       }
 
-      const { resolvedPositions, tempIdToType } = dryRunMutationPlan(
-        plan,
-        [],
-        [],
-        [],
-        { x: 0, y: 0, zoom: 1 }
-      )
+      const { resolvedPositions, tempIdToType } = dryRunMutationPlan(plan, [], [], [], {
+        x: 0,
+        y: 0,
+        zoom: 1,
+      })
 
       // Should have position for temp-1
       expect(resolvedPositions.get('temp-1')).toEqual({ x: 100, y: 200 })
@@ -479,10 +473,10 @@ describe('mutationExecutor', () => {
             tempId: 'temp-1',
             type: 'bogus' as NodeData['type'],
             position: { type: 'absolute', x: 0, y: 0 },
-            data: {}
-          }
+            data: {},
+          },
         ],
-        explanation: 'Bad type'
+        explanation: 'Bad type',
       }
 
       const result = await executeMutationPlan(plan)

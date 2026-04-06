@@ -1,94 +1,100 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
-import { subscribeWithSelector } from 'zustand/middleware'
 import { enableMapSet } from 'immer'
+import { create } from 'zustand'
+import { subscribeWithSelector } from 'zustand/middleware'
+import { immer } from 'zustand/middleware/immer'
 
 // Enable Immer support for Map and Set (needed for streamingConversations and recentlySpawnedNodes)
 enableMapSet()
-import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react'
-import { applyNodeChanges, applyEdgeChanges } from '@xyflow/react'
-import { v4 as uuid } from 'uuid'
-import { calculateOptimalHandles } from '../utils/positionResolver'
+
+import { createActionData } from '@shared/actionTypes'
 import type {
-  NodeData,
-  WorkspaceData,
-  HistoryAction,
-  ConversationNodeData,
-  ProjectNodeData,
-  NoteNodeData,
-  TaskNodeData,
-  TextNodeData,
-  ArtifactNodeData,
-  WorkspaceNodeData,
   ActionNodeData,
-  WorkspaceLLMSettings,
-  WorkspaceContextRules,
   ArtifactContentType,
-  ArtifactSource,
+  ArtifactNodeData,
   ArtifactVersion,
-  PropertySchema,
-  PropertyDefinition,
-  PropertyOption,
+  ChatDisplayMode,
+  CommandLogEntry,
+  ContextMetadata,
+  ContextSettings,
+  ConversationNodeData,
   EdgeData,
   EdgeWaypoint,
-  ContextSettings,
-  PendingExtraction,
   ExtractionSettings,
-  ThemeSettings,
-  WorkspacePreferences,
-  PropertiesDisplayMode,
-  ChatDisplayMode,
-  ContextMetadata,
+  HistoryAction,
   Message,
-  CommandLogEntry,
+  NodeData,
+  NoteNodeData,
+  PendingExtraction,
+  ProjectNodeData,
+  PropertiesDisplayMode,
+  PropertyDefinition,
+  PropertyOption,
+  PropertySchema,
+  TaskNodeData,
+  TextNodeData,
+  ThemeSettings,
+  WorkspaceContextRules,
+  WorkspaceData,
+  WorkspaceLLMSettings,
+  WorkspaceNodeData,
+  WorkspacePreferences,
 } from '@shared/types'
-import { createActionData } from '@shared/actionTypes'
-import { DEFAULT_EDGE_DATA, DEFAULT_CONTEXT_SETTINGS, DEFAULT_EXTRACTION_SETTINGS, DEFAULT_THEME_SETTINGS, DEFAULT_WORKSPACE_PREFERENCES, DEFAULT_WORKSPACE_LLM_SETTINGS, DEFAULT_WORKSPACE_CONTEXT_RULES, migrateEdgeStrength } from '@shared/types'
-import { DEFAULT_GUI_DARK, DEFAULT_GUI_LIGHT } from '../constants/themePresets'
 import {
-  DEFAULT_PROPERTY_SCHEMA,
+  DEFAULT_CONTEXT_SETTINGS,
+  DEFAULT_EDGE_DATA,
+  DEFAULT_EXTRACTION_SETTINGS,
+  DEFAULT_THEME_SETTINGS,
+  DEFAULT_WORKSPACE_CONTEXT_RULES,
+  DEFAULT_WORKSPACE_LLM_SETTINGS,
+  DEFAULT_WORKSPACE_PREFERENCES,
+  migrateEdgeStrength,
+} from '@shared/types'
+import type { Connection, Edge, EdgeChange, Node, NodeChange } from '@xyflow/react'
+import { applyEdgeChanges, applyNodeChanges } from '@xyflow/react'
+import { v4 as uuid } from 'uuid'
+import {
   BUILTIN_PROPERTIES,
-  getPropertiesForNodeType
+  DEFAULT_PROPERTY_SCHEMA,
+  getPropertiesForNodeType,
 } from '../constants/properties'
-import { getPresetColors } from '../constants/themePresets'
-import { useSpatialRegionStore } from './spatialRegionStore'
-import { computeGraphHash, getCachedContext, getCachedTraversal, invalidateContextCache } from '../utils/contextCache'
-import type { ContextTraversalResult } from '../utils/contextCache'
-import { emitNodeCreated, emitNodeUpdated, emitNodeDeleted, emitEdgeCreated, emitEdgeDeleted } from '../utils/auditHooks'
+import { DEFAULT_GUI_DARK, DEFAULT_GUI_LIGHT, getPresetColors } from '../constants/themePresets'
 import type { ZoomPerfTier } from '../hooks/useZoomPerformanceTier'
-
-// Import store types from dedicated types file
-import type {
-  TrashedItem,
-  PinnedWindow,
-  ExtractionDragState,
-  LastAcceptedExtraction,
-  CanvasState,
-  UIState,
-  FeaturesState,
-  WorkspaceStateShape
-} from './types'
-
+import {
+  emitEdgeCreated,
+  emitEdgeDeleted,
+  emitNodeCreated,
+  emitNodeDeleted,
+  emitNodeUpdated,
+} from '../utils/auditHooks'
+import type { ContextTraversalResult } from '../utils/contextCache'
+import {
+  computeGraphHash,
+  getCachedContext,
+  getCachedTraversal,
+  invalidateContextCache,
+} from '../utils/contextCache'
+import { calculateOptimalHandles } from '../utils/positionResolver'
 // Import node factories
 import {
-  createConversationData,
-  createProjectData,
-  createNoteData,
-  createTaskData,
   createArtifactData,
-  createWorkspaceData,
-  createTextData,
+  createConversationData,
+  createNoteData,
   createOrchestratorData,
-  DEFAULT_NODE_DIMENSIONS
+  createProjectData,
+  createTaskData,
+  createTextData,
+  createWorkspaceData,
 } from './nodeFactories'
+import { useSpatialRegionStore } from './spatialRegionStore'
+// Import store types from dedicated types file
+import type { PinnedWindow, TrashedItem } from './types'
 
 // Re-export for backwards compatibility
-export type { TrashedItem, PinnedWindow }
 // Re-export CommandLogEntry for consumers that import from this module
-export type { CommandLogEntry }
+export type { CommandLogEntry, PinnedWindow, TrashedItem }
 
 // -----------------------------------------------------------------------------
 // Index Helpers (STORE-INDEX task — Phase 1)
@@ -104,10 +110,13 @@ export type { CommandLogEntry }
  * TODO: Future optimization can replace rebuild-from-scratch with
  * incremental updates at each of the 42+ mutation sites.
  */
-function rebuildNodeIndex(state: { nodes: Array<{ id: string }>; nodeIndex: Map<string, number> }): void {
+function rebuildNodeIndex(state: {
+  nodes: Array<{ id: string }>
+  nodeIndex: Map<string, number>
+}): void {
   state.nodeIndex.clear()
   for (let i = 0; i < state.nodes.length; i++) {
-    state.nodeIndex.set(state.nodes[i]!.id, i)
+    state.nodeIndex.set(state.nodes[i]?.id, i)
   }
 }
 
@@ -120,7 +129,10 @@ function rebuildNodeIndex(state: { nodes: Array<{ id: string }>; nodeIndex: Map<
  * TODO: Future optimization can replace rebuild-from-scratch with
  * incremental updates at each edge mutation site.
  */
-function rebuildEdgesByTarget(state: { edges: Array<{ id: string; target: string }>; edgesByTarget: Map<string, string[]> }): void {
+function rebuildEdgesByTarget(state: {
+  edges: Array<{ id: string; target: string }>
+  edgesByTarget: Map<string, string[]>
+}): void {
   state.edgesByTarget.clear()
   for (const edge of state.edges) {
     const existing = state.edgesByTarget.get(edge.target)
@@ -138,7 +150,7 @@ function rebuildEdgesByTarget(state: { edges: Array<{ id: string; target: string
  */
 function getNodeById<T extends { id: string }>(
   state: { nodes: T[]; nodeIndex: Map<string, number> },
-  id: string
+  id: string,
 ): T | undefined {
   const idx = state.nodeIndex.get(id)
   if (idx !== undefined && idx < state.nodes.length) {
@@ -153,13 +165,15 @@ function getNodeById<T extends { id: string }>(
  * Wrap a selector with performance profiling.
  * Logs a warning if the selector exceeds 16ms (one frame budget).
  */
-function profileSelector<T>(name: string, selector: (state: WorkspaceState) => T): (state: WorkspaceState) => T {
+function profileSelector<T>(
+  _name: string,
+  selector: (state: WorkspaceState) => T,
+): (state: WorkspaceState) => T {
   return (state: WorkspaceState): T => {
     const start = performance.now()
     const result = selector(state)
     const elapsed = performance.now() - start
     if (elapsed > 16) {
-      console.warn(`[PERF] Selector "${name}" took ${elapsed.toFixed(1)}ms (>16ms frame budget)`)
     }
     return result
   }
@@ -178,8 +192,8 @@ interface WorkspaceState {
   viewport: { x: number; y: number; zoom: number }
 
   // Indexes (STORE-INDEX — Phase 1)
-  nodeIndex: Map<string, number>    // nodeId -> index in nodes array (O(1) lookup)
-  edgesByTarget: Map<string, string[]>  // targetNodeId -> [edgeIds] (O(1) incoming edges)
+  nodeIndex: Map<string, number> // nodeId -> index in nodes array (O(1) lookup)
+  edgesByTarget: Map<string, string[]> // targetNodeId -> [edgeIds] (O(1) incoming edges)
   propertySchema: PropertySchema
   contextSettings: ContextSettings
   themeSettings: ThemeSettings
@@ -210,7 +224,11 @@ interface WorkspaceState {
   numberedBookmarks: Record<number, string | null> // 1-9 numbered bookmarks for instant spatial anchors
 
   // PFD Phase 6C: Session interaction log for re-entry navigation
-  sessionInteractions: Array<{ nodeId: string; timestamp: number; action: 'select' | 'edit' | 'chat' }>
+  sessionInteractions: Array<{
+    nodeId: string
+    timestamp: number
+    action: 'select' | 'edit' | 'chat'
+  }>
   lastSessionNodeId: string | null // Last node user interacted with (for "resume where you left off")
 
   // Extraction state
@@ -257,11 +275,18 @@ interface WorkspaceState {
 
   // Multiplayer
   syncMode: 'local' | 'multiplayer'
-  multiplayerConfig: { serverUrl: string; workspaceId: string; token: string; userName: string; userColor: string } | null
+  multiplayerConfig: {
+    serverUrl: string
+    workspaceId: string
+    token: string
+    userName: string
+    userColor: string
+  } | null
   _syncSource: 'local' | 'yjs' // Prevents infinite sync loops
 
   // Status
   isDirty: boolean
+  _isDragging: boolean
   isLoading: boolean
   createdAt: number | null
   lastSaved: number | null
@@ -296,15 +321,24 @@ interface WorkspaceState {
   updateNodeDimensions: (nodeId: string, width: number, height: number) => void
 
   // Actions - Alignment & Distribution
-  alignNodes: (nodeIds: string[], alignment: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => void
+  alignNodes: (
+    nodeIds: string[],
+    alignment: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom',
+  ) => void
   distributeNodes: (nodeIds: string[], direction: 'horizontal' | 'vertical') => void
   snapToGrid: (nodeIds: string[], gridSize?: number) => void
   arrangeInGrid: (nodeIds: string[], columns?: number) => void
   sortByType: (nodeIds: string[]) => void
   applyAutoLayout: (
-    layoutType: 'hierarchical-down' | 'hierarchical-right' | 'hierarchical-up' | 'hierarchical-left' | 'force' | 'circular',
+    layoutType:
+      | 'hierarchical-down'
+      | 'hierarchical-right'
+      | 'hierarchical-up'
+      | 'hierarchical-left'
+      | 'force'
+      | 'circular',
     nodeIds?: string[],
-    spacing?: 'narrow' | 'default' | 'wide'
+    spacing?: 'narrow' | 'default' | 'wide',
   ) => void
 
   // Actions - Clipboard
@@ -327,8 +361,14 @@ interface WorkspaceState {
   // Actions - Edges
   addEdge: (connection: Connection) => void
   updateEdge: (edgeId: string, data: Partial<EdgeData>, options?: { skipHistory?: boolean }) => void
-  updateEdgeHandlesBatch: (updates: Array<{edgeId: string, sourceHandle: string, targetHandle: string}>) => void
-  commitEdgeWaypointDrag: (edgeId: string, beforeWaypoints: EdgeWaypoint[] | undefined, afterWaypoints: EdgeWaypoint[] | undefined) => void
+  updateEdgeHandlesBatch: (
+    updates: Array<{ edgeId: string; sourceHandle: string; targetHandle: string }>,
+  ) => void
+  commitEdgeWaypointDrag: (
+    edgeId: string,
+    beforeWaypoints: EdgeWaypoint[] | undefined,
+    afterWaypoints: EdgeWaypoint[] | undefined,
+  ) => void
   deleteEdges: (edgeIds: string[]) => void
   reverseEdge: (edgeId: string) => void
   reconnectEdge: (oldEdge: Edge<EdgeData>, newConnection: Connection) => void
@@ -425,7 +465,10 @@ interface WorkspaceState {
   // Actions - Messages
   addMessage: (nodeId: string, role: 'user' | 'assistant', content: string) => void
   updateLastMessage: (nodeId: string, content: string) => void
-  setLastMessageUsage: (nodeId: string, usage: { inputTokens: number; outputTokens: number; costUSD?: number }) => void
+  setLastMessageUsage: (
+    nodeId: string,
+    usage: { inputTokens: number; outputTokens: number; costUSD?: number },
+  ) => void
   removeLastMessage: (nodeId: string) => void
   deleteMessage: (nodeId: string, messageIndex: number) => void
   addToolMessage: (nodeId: string, message: Message) => void
@@ -438,9 +481,18 @@ interface WorkspaceState {
   setViewport: (viewport: { x: number; y: number; zoom: number }) => void
   markDirty: () => void
   markClean: () => void
+  setDragging: (dragging: boolean) => void
   setSaveStatus: (status: 'saved' | 'saving' | 'unsaved' | 'error') => void
   setSyncMode: (mode: 'local' | 'multiplayer') => void
-  setMultiplayerConfig: (config: { serverUrl: string; workspaceId: string; token: string; userName: string; userColor: string } | null) => void
+  setMultiplayerConfig: (
+    config: {
+      serverUrl: string
+      workspaceId: string
+      token: string
+      userName: string
+      userColor: string
+    } | null,
+  ) => void
 
   // Actions - History
   undo: () => void
@@ -473,7 +525,12 @@ interface WorkspaceState {
   setAIPaletteEnabled: (enabled: boolean) => void
   setEdgeStyle: (style: import('@shared/types').EdgeStyle) => void
   setGuiColors: (colors: import('@shared/types').GuiColors) => void
-  setLinkColors: (colors: { default: string; active: string; inactive: string; selected: string }) => void
+  setLinkColors: (colors: {
+    default: string
+    active: string
+    inactive: string
+    selected: string
+  }) => void
   setLinkGradientEnabled: (enabled: boolean) => void
   updateThemeSettings: (settings: Partial<import('@shared/types').ThemeSettings>) => void
   updateContextSettings: (updates: Partial<ContextSettings>) => void
@@ -503,7 +560,7 @@ interface WorkspaceState {
   updatePropertyOption: (
     propertyId: string,
     value: string,
-    updates: Partial<PropertyOption>
+    updates: Partial<PropertyOption>,
   ) => void
   deletePropertyOption: (propertyId: string, value: string) => void
   addPropertyToNodeType: (nodeType: NodeData['type'], propertyId: string) => void
@@ -522,7 +579,8 @@ interface WorkspaceState {
   // Actions - Artifacts
   createArtifactFromFile: (
     file: { name: string; content: string; isBase64?: boolean },
-    position: { x: number; y: number }
+    position: { x: number; y: number },
+    dimensions?: { width: number; height: number },
   ) => string
   spawnArtifactFromLLM: (
     conversationNodeId: string,
@@ -532,9 +590,13 @@ interface WorkspaceState {
       language?: string
       title?: string
       content: string
-    }
+    },
   ) => string
-  updateArtifactContent: (artifactId: string, content: string, source: 'user-edit' | 'llm-update') => void
+  updateArtifactContent: (
+    artifactId: string,
+    content: string,
+    source: 'user-edit' | 'llm-update',
+  ) => void
 
   // Actions - Workspace Nodes
   addNodesToWorkspace: (workspaceNodeId: string, nodeIds: string[]) => void
@@ -546,8 +608,14 @@ interface WorkspaceState {
   getWorkspaceNodesForNode: (nodeId: string) => Node<WorkspaceNodeData>[]
   getEffectiveLLMSettings: (nodeId: string) => WorkspaceLLMSettings | null
   getEffectiveContextRules: (nodeId: string) => WorkspaceContextRules | null
-  updateWorkspaceLLMSettings: (workspaceNodeId: string, settings: Partial<WorkspaceLLMSettings>) => void
-  updateWorkspaceContextRules: (workspaceNodeId: string, rules: Partial<WorkspaceContextRules>) => void
+  updateWorkspaceLLMSettings: (
+    workspaceNodeId: string,
+    settings: Partial<WorkspaceLLMSettings>,
+  ) => void
+  updateWorkspaceContextRules: (
+    workspaceNodeId: string,
+    rules: Partial<WorkspaceContextRules>,
+  ) => void
 
   // State - Command Bar
   commandLog: CommandLogEntry[]
@@ -629,7 +697,7 @@ const getContentTypeFromExtension = (ext: string): ArtifactContentType => {
     yaml: 'text',
     yml: 'text',
     toml: 'text',
-    xml: 'text'
+    xml: 'text',
   }
   return typeMap[ext] || 'text'
 }
@@ -673,7 +741,7 @@ const getLanguageFromExtension = (ext: string): string | undefined => {
     bash: 'bash',
     zsh: 'bash',
     ps1: 'powershell',
-    dockerfile: 'dockerfile'
+    dockerfile: 'dockerfile',
   }
   return langMap[ext]
 }
@@ -861,9 +929,22 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       focusModeNodeId: null,
       inPlaceExpandedNodeId: null,
       calmMode: false,
-      reducedMotion: typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false,
+      reducedMotion:
+        (typeof window !== 'undefined' &&
+          window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) ||
+        false,
       bookmarkedNodeId: null,
-      numberedBookmarks: { 1: null, 2: null, 3: null, 4: null, 5: null, 6: null, 7: null, 8: null, 9: null },
+      numberedBookmarks: {
+        1: null,
+        2: null,
+        3: null,
+        4: null,
+        5: null,
+        6: null,
+        7: null,
+        8: null,
+        9: null,
+      },
       sessionInteractions: [],
       lastSessionNodeId: null,
       pendingExtractions: [],
@@ -888,6 +969,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       multiplayerConfig: null,
       _syncSource: 'local' as const,
       isDirty: false,
+      _isDragging: false,
       isLoading: false,
       createdAt: null,
       lastSaved: null,
@@ -899,7 +981,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       clipboardState: null,
       trash: [],
       demoMode: false,
-      setDemoMode: (enabled: boolean) => set((state) => { state.demoMode = enabled }),
+      setDemoMode: (enabled: boolean) =>
+        set((state) => {
+          state.demoMode = enabled
+        }),
 
       // Command bar
       commandLog: [] as CommandLogEntry[],
@@ -915,46 +1000,46 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       addNode: (type, position) => {
         const id = uuid()
         let data: NodeData
-        let dimensions = { width: 280, height: 120 }
+        let dimensions = { width: 380, height: 140 }
 
         switch (type) {
           case 'conversation':
             data = createConversationData()
-            dimensions = { width: 300, height: 160 }
+            dimensions = { width: 380, height: 180 }
             break
           case 'project': {
             const projectColor = get().themeSettings?.nodeColors?.project || '#64748b'
             data = createProjectData(projectColor)
-            dimensions = { width: 400, height: 320 }
+            dimensions = { width: 420, height: 320 }
             break
           }
           case 'note':
             data = createNoteData()
-            dimensions = { width: 280, height: 180 }
+            dimensions = { width: 380, height: 200 }
             break
           case 'task':
             data = createTaskData()
-            dimensions = { width: 260, height: 200 }
+            dimensions = { width: 380, height: 220 }
             break
           case 'artifact':
             data = createArtifactData()
-            dimensions = { width: 320, height: 220 }
+            dimensions = { width: 420, height: 280 }
             break
           case 'workspace':
             data = createWorkspaceData()
-            dimensions = { width: 320, height: 240 }
+            dimensions = { width: 400, height: 260 }
             break
           case 'text':
             data = createTextData()
-            dimensions = { width: 200, height: 104 }
+            dimensions = { width: 280, height: 120 }
             break
           case 'action':
             data = createActionData()
-            dimensions = { width: 280, height: 160 }
+            dimensions = { width: 340, height: 180 }
             break
           case 'orchestrator':
             data = createOrchestratorData()
-            dimensions = { width: 360, height: 300 }
+            dimensions = { width: 400, height: 320 }
             break
           default:
             throw new Error(`Unknown node type: ${type}`)
@@ -989,11 +1074,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             width: dimensions.width,
             height: dimensions.height,
             selected: true,
-            zIndex: maxZ + 1
+            zIndex: maxZ + 1,
           }
 
           // Deselect all other nodes
-          state.nodes.forEach(n => { n.selected = false })
+          state.nodes.forEach((n) => {
+            n.selected = false
+          })
           state.nodes.push(node)
           state.selectedNodeIds = [id]
           state.lastCreatedNodeId = id
@@ -1010,7 +1097,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         })
 
         // Audit hook: node created (non-critical)
-        try { emitNodeCreated(id, type, data.title || 'Untitled') } catch { /* audit non-critical */ }
+        try {
+          emitNodeCreated(id, type, data.title || 'Untitled')
+        } catch {
+          /* audit non-critical */
+        }
 
         // Auto-clear spawn state after animation completes
         setTimeout(() => {
@@ -1030,7 +1121,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         // Immediately set mode to 'agent' and preset to 'general'
         get().updateNode(id, {
           mode: 'agent',
-          agentPreset: 'general'
+          agentPreset: 'general',
         })
         return id
       },
@@ -1052,7 +1143,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               type: 'UPDATE_NODE',
               nodeId,
               before,
-              after: JSON.parse(JSON.stringify(node.data))
+              after: JSON.parse(JSON.stringify(node.data)),
             })
             state.historyIndex++
             if (state.history.length > 100) {
@@ -1069,9 +1160,16 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             for (const key of Object.keys(data)) {
               changedFields[key] = { before: '(redacted)', after: '(redacted)' }
             }
-            emitNodeUpdated(nodeId, node.type || 'unknown', node.data.title || 'Untitled', changedFields)
+            emitNodeUpdated(
+              nodeId,
+              node.type || 'unknown',
+              node.data.title || 'Untitled',
+              changedFields,
+            )
           }
-        } catch { /* audit non-critical */ }
+        } catch {
+          /* audit non-critical */
+        }
         // If enabled state changed, evaluate dependent node activations
         if (enabledChanged) {
           // Schedule evaluation for next tick to allow state to settle
@@ -1094,7 +1192,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               updates.push({
                 nodeId,
                 before,
-                after: JSON.parse(JSON.stringify(node.data))
+                after: JSON.parse(JSON.stringify(node.data)),
               })
             }
           }
@@ -1105,7 +1203,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             // Push a batch update action for undo/redo
             state.history.push({
               type: 'BULK_UPDATE_NODES',
-              updates
+              updates,
             } as HistoryAction)
             state.historyIndex++
             if (state.history.length > 100) {
@@ -1140,15 +1238,26 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 minY: Math.min(acc.minY, node.position.y),
                 maxY: Math.max(acc.maxY, node.position.y + height),
                 centerX: 0,
-                centerY: 0
+                centerY: 0,
               }
             },
-            { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity, centerX: 0, centerY: 0 }
+            {
+              minX: Infinity,
+              maxX: -Infinity,
+              minY: Infinity,
+              maxY: -Infinity,
+              centerX: 0,
+              centerY: 0,
+            },
           )
           bounds.centerX = (bounds.minX + bounds.maxX) / 2
           bounds.centerY = (bounds.minY + bounds.maxY) / 2
 
-          const updates: Array<{ nodeId: string; before: { x: number; y: number }; after: { x: number; y: number } }> = []
+          const updates: Array<{
+            nodeId: string
+            before: { x: number; y: number }
+            after: { x: number; y: number }
+          }> = []
 
           targetNodes.forEach((node) => {
             const width = (node.data as { width?: number }).width || 260
@@ -1202,44 +1311,48 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
           // Sort nodes by position
           const sorted = [...targetNodes].sort((a, b) =>
-            direction === 'horizontal'
-              ? a.position.x - b.position.x
-              : a.position.y - b.position.y
+            direction === 'horizontal' ? a.position.x - b.position.x : a.position.y - b.position.y,
           )
 
           // Calculate total span
           const first = sorted[0]!
           const last = sorted[sorted.length - 1]!
           // firstSize reserved for future offset calculation
-          const lastSize = direction === 'horizontal'
-            ? ((last.data as { width?: number }).width || 260)
-            : ((last.data as { height?: number }).height || 140)
+          const lastSize =
+            direction === 'horizontal'
+              ? (last.data as { width?: number }).width || 260
+              : (last.data as { height?: number }).height || 140
 
           const start = direction === 'horizontal' ? first.position.x : first.position.y
-          const end = direction === 'horizontal'
-            ? last.position.x + lastSize
-            : last.position.y + lastSize
+          const end =
+            direction === 'horizontal' ? last.position.x + lastSize : last.position.y + lastSize
 
           // Calculate total node sizes (excluding gaps)
           const totalNodeSize = sorted.reduce((sum, node) => {
-            const size = direction === 'horizontal'
-              ? ((node.data as { width?: number }).width || 260)
-              : ((node.data as { height?: number }).height || 140)
+            const size =
+              direction === 'horizontal'
+                ? (node.data as { width?: number }).width || 260
+                : (node.data as { height?: number }).height || 140
             return sum + size
           }, 0)
 
           // Calculate gap between nodes
-          const totalGap = (end - start) - totalNodeSize
+          const totalGap = end - start - totalNodeSize
           const gap = totalGap / (sorted.length - 1)
 
-          const updates: Array<{ nodeId: string; before: { x: number; y: number }; after: { x: number; y: number } }> = []
+          const updates: Array<{
+            nodeId: string
+            before: { x: number; y: number }
+            after: { x: number; y: number }
+          }> = []
           let currentPos = start
 
           sorted.forEach((node, index) => {
             const before = { x: node.position.x, y: node.position.y }
-            const size = direction === 'horizontal'
-              ? ((node.data as { width?: number }).width || 260)
-              : ((node.data as { height?: number }).height || 140)
+            const size =
+              direction === 'horizontal'
+                ? (node.data as { width?: number }).width || 260
+                : (node.data as { height?: number }).height || 140
 
             if (index === 0 || index === sorted.length - 1) {
               // Keep first and last in place
@@ -1247,9 +1360,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               return
             }
 
-            const newPos = direction === 'horizontal'
-              ? { x: currentPos, y: node.position.y }
-              : { x: node.position.x, y: currentPos }
+            const newPos =
+              direction === 'horizontal'
+                ? { x: currentPos, y: node.position.y }
+                : { x: node.position.x, y: currentPos }
 
             if (newPos.x !== before.x || newPos.y !== before.y) {
               node.position = newPos
@@ -1275,7 +1389,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const targetNodes = state.nodes.filter((n) => nodeIds.includes(n.id))
           if (targetNodes.length < 1) return
 
-          const updates: Array<{ nodeId: string; before: { x: number; y: number }; after: { x: number; y: number } }> = []
+          const updates: Array<{
+            nodeId: string
+            before: { x: number; y: number }
+            after: { x: number; y: number }
+          }> = []
 
           targetNodes.forEach((node) => {
             const before = { x: node.position.x, y: node.position.y }
@@ -1317,12 +1435,20 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const anchorY = Math.min(...sorted.map((n) => n.position.y))
 
           // Calculate spacing based on average node dimensions + gap
-          const avgWidth = sorted.reduce((sum, n) => sum + ((n.data as { width?: number }).width || 260), 0) / sorted.length
-          const avgHeight = sorted.reduce((sum, n) => sum + ((n.data as { height?: number }).height || 140), 0) / sorted.length
+          const avgWidth =
+            sorted.reduce((sum, n) => sum + ((n.data as { width?: number }).width || 260), 0) /
+            sorted.length
+          const avgHeight =
+            sorted.reduce((sum, n) => sum + ((n.data as { height?: number }).height || 140), 0) /
+            sorted.length
           const gapX = 40
           const gapY = 40
 
-          const updates: Array<{ nodeId: string; before: { x: number; y: number }; after: { x: number; y: number } }> = []
+          const updates: Array<{
+            nodeId: string
+            before: { x: number; y: number }
+            after: { x: number; y: number }
+          }> = []
 
           sorted.forEach((node, index) => {
             const col = index % columns
@@ -1369,12 +1495,20 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const anchorX = Math.min(...targetNodes.map((n) => n.position.x))
           const anchorY = Math.min(...targetNodes.map((n) => n.position.y))
           const columns = Math.ceil(Math.sqrt(sorted.length))
-          const avgWidth = sorted.reduce((sum, n) => sum + ((n.data as { width?: number }).width || 260), 0) / sorted.length
-          const avgHeight = sorted.reduce((sum, n) => sum + ((n.data as { height?: number }).height || 140), 0) / sorted.length
+          const avgWidth =
+            sorted.reduce((sum, n) => sum + ((n.data as { width?: number }).width || 260), 0) /
+            sorted.length
+          const avgHeight =
+            sorted.reduce((sum, n) => sum + ((n.data as { height?: number }).height || 140), 0) /
+            sorted.length
           const gapX = 40
           const gapY = 40
 
-          const updates: Array<{ nodeId: string; before: { x: number; y: number }; after: { x: number; y: number } }> = []
+          const updates: Array<{
+            nodeId: string
+            before: { x: number; y: number }
+            after: { x: number; y: number }
+          }> = []
 
           sorted.forEach((node, index) => {
             const col = index % columns
@@ -1401,15 +1535,17 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       applyAutoLayout: (layoutType, nodeIds, spacing = 'default') => {
         const state = get()
         // If no node IDs provided, use all nodes (excluding workspace nodes)
-        const targetNodeIds = nodeIds && nodeIds.length > 0
-          ? nodeIds
-          : state.nodes.filter(n => n.data.type !== 'workspace').map(n => n.id)
+        const targetNodeIds =
+          nodeIds && nodeIds.length > 0
+            ? nodeIds
+            : state.nodes.filter((n) => n.data.type !== 'workspace').map((n) => n.id)
 
         if (targetNodeIds.length < 2) return
 
         // Filter to only nodes that are not pinned (flexible positioning)
-        const targetNodes = state.nodes.filter(n =>
-          targetNodeIds.includes(n.id) && (n.data as ContextMetadata).layoutMode !== 'pinned'
+        const targetNodes = state.nodes.filter(
+          (n) =>
+            targetNodeIds.includes(n.id) && (n.data as ContextMetadata).layoutMode !== 'pinned',
         )
         if (targetNodes.length < 2) return
 
@@ -1418,9 +1554,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const newPositions = applyLayout(layoutType, targetNodes, state.edges, { spacing })
 
           set((s) => {
-            const updates: Array<{ nodeId: string; before: { x: number; y: number }; after: { x: number; y: number } }> = []
+            const updates: Array<{
+              nodeId: string
+              before: { x: number; y: number }
+              after: { x: number; y: number }
+            }> = []
 
-            s.nodes.forEach(node => {
+            s.nodes.forEach((node) => {
               // Skip pinned nodes
               if ((node.data as ContextMetadata).layoutMode === 'pinned') return
 
@@ -1446,18 +1586,28 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const freshState = get()
           const movedIds = new Set(Array.from(newPositions.keys()))
           const affectedEdges = freshState.edges.filter(
-            e => movedIds.has(e.source) || movedIds.has(e.target)
+            (e) => movedIds.has(e.source) || movedIds.has(e.target),
           )
-          const handleUpdates: Array<{ edgeId: string; sourceHandle: string; targetHandle: string }> = []
+          const handleUpdates: Array<{
+            edgeId: string
+            sourceHandle: string
+            targetHandle: string
+          }> = []
           for (const edge of affectedEdges) {
-            const src = freshState.nodes.find(n => n.id === edge.source)
-            const tgt = freshState.nodes.find(n => n.id === edge.target)
+            const src = freshState.nodes.find((n) => n.id === edge.source)
+            const tgt = freshState.nodes.find((n) => n.id === edge.target)
             if (!src || !tgt) continue
             const { sourceHandle, targetHandle } = calculateOptimalHandles(
               src.position,
-              { width: src.measured?.width ?? (src.width as number) ?? 280, height: src.measured?.height ?? (src.height as number) ?? 140 },
+              {
+                width: src.measured?.width ?? (src.width as number) ?? 280,
+                height: src.measured?.height ?? (src.height as number) ?? 140,
+              },
               tgt.position,
-              { width: tgt.measured?.width ?? (tgt.width as number) ?? 280, height: tgt.measured?.height ?? (tgt.height as number) ?? 140 }
+              {
+                width: tgt.measured?.width ?? (tgt.width as number) ?? 280,
+                height: tgt.measured?.height ?? (tgt.height as number) ?? 140,
+              },
             )
             if (edge.sourceHandle !== sourceHandle || edge.targetHandle !== targetHandle) {
               handleUpdates.push({ edgeId: edge.id, sourceHandle, targetHandle })
@@ -1528,16 +1678,16 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       archiveNodes: (nodeIds) => {
         set((state) => {
           const now = Date.now()
-          const nodeIdSet = new Set(nodeIds)
+          const _nodeIdSet = new Set(nodeIds)
 
           // Also archive children of any project nodes
           const allArchiveIds = new Set(nodeIds)
           for (const nodeId of nodeIds) {
-            const node = state.nodes.find(n => n.id === nodeId)
+            const node = state.nodes.find((n) => n.id === nodeId)
             if (node?.data.type === 'project') {
               // Recursively find children
               const findChildren = (parentId: string): void => {
-                state.nodes.forEach(n => {
+                state.nodes.forEach((n) => {
                   if ((n.data as { parentId?: string }).parentId === parentId) {
                     allArchiveIds.add(n.id)
                     findChildren(n.id)
@@ -1548,7 +1698,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             }
           }
 
-          state.nodes = state.nodes.map(n => {
+          state.nodes = state.nodes.map((n) => {
             if (allArchiveIds.has(n.id)) {
               return {
                 ...n,
@@ -1556,23 +1706,23 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                   ...n.data,
                   isArchived: true,
                   archivedAt: now,
-                  archivedFromPosition: { x: n.position.x, y: n.position.y }
-                }
+                  archivedFromPosition: { x: n.position.x, y: n.position.y },
+                },
               }
             }
             return n
           })
 
           // Deselect archived nodes
-          state.selectedNodeIds = state.selectedNodeIds.filter(id => !allArchiveIds.has(id))
+          state.selectedNodeIds = state.selectedNodeIds.filter((id) => !allArchiveIds.has(id))
 
           // Close panels for archived nodes
           if (state.activeChatNodeId && allArchiveIds.has(state.activeChatNodeId)) {
             state.activeChatNodeId = null
             state.activePanel = 'none'
           }
-          state.openChatNodeIds = state.openChatNodeIds.filter(id => !allArchiveIds.has(id))
-          state.pinnedWindows = state.pinnedWindows.filter(w => !allArchiveIds.has(w.nodeId))
+          state.openChatNodeIds = state.openChatNodeIds.filter((id) => !allArchiveIds.has(id))
+          state.pinnedWindows = state.pinnedWindows.filter((w) => !allArchiveIds.has(w.nodeId))
 
           state.isDirty = true
         })
@@ -1581,7 +1731,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       restoreFromArchive: (nodeIds) => {
         set((state) => {
           const nodeIdSet = new Set(nodeIds)
-          state.nodes = state.nodes.map(n => {
+          state.nodes = state.nodes.map((n) => {
             if (nodeIdSet.has(n.id) && n.data.isArchived) {
               const restoredPos = n.data.archivedFromPosition || n.position
               return {
@@ -1591,8 +1741,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                   ...n.data,
                   isArchived: undefined,
                   archivedAt: undefined,
-                  archivedFromPosition: undefined
-                }
+                  archivedFromPosition: undefined,
+                },
               }
             }
             return n
@@ -1602,7 +1752,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       },
 
       getArchivedNodes: () => {
-        return get().nodes.filter(n => n.data.isArchived === true)
+        return get().nodes.filter((n) => n.data.isArchived === true)
       },
 
       softDeleteNodes: (nodeIds) => {
@@ -1611,14 +1761,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const nodesToTrash = state.nodes.filter((n) => nodeIds.includes(n.id))
 
           // For each node, collect its connected edges
-          const trashedItems: TrashedItem[] = nodesToTrash.map(node => {
+          const trashedItems: TrashedItem[] = nodesToTrash.map((node) => {
             const connectedEdges = state.edges.filter(
-              (e) => e.source === node.id || e.target === node.id
+              (e) => e.source === node.id || e.target === node.id,
             )
             return {
               node: JSON.parse(JSON.stringify(node)),
               edges: JSON.parse(JSON.stringify(connectedEdges)),
-              deletedAt: now
+              deletedAt: now,
             }
           })
 
@@ -1633,7 +1783,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           // Remove nodes from canvas
           state.nodes = state.nodes.filter((n) => !nodeIds.includes(n.id))
           state.edges = state.edges.filter(
-            (e) => !nodeIds.includes(e.source) && !nodeIds.includes(e.target)
+            (e) => !nodeIds.includes(e.source) && !nodeIds.includes(e.target),
           )
           state.selectedNodeIds = state.selectedNodeIds.filter((id) => !nodeIds.includes(id))
           state.isDirty = true
@@ -1645,7 +1795,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           }
 
           // Close pinned windows for deleted nodes
-          state.pinnedWindows = state.pinnedWindows.filter(w => !nodeIds.includes(w.nodeId))
+          state.pinnedWindows = state.pinnedWindows.filter((w) => !nodeIds.includes(w.nodeId))
         })
       },
 
@@ -1658,9 +1808,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           state.nodes.push(item.node)
 
           // Restore edges only if both source and target exist
-          const existingNodeIds = new Set(state.nodes.map(n => n.id))
+          const existingNodeIds = new Set(state.nodes.map((n) => n.id))
           const validEdges = item.edges.filter(
-            e => existingNodeIds.has(e.source) && existingNodeIds.has(e.target)
+            (e) => existingNodeIds.has(e.source) && existingNodeIds.has(e.target),
           )
           state.edges = [...state.edges, ...validEdges]
 
@@ -1695,9 +1845,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             minX: Math.min(acc.minX, node.position.x),
             minY: Math.min(acc.minY, node.position.y),
             maxX: Math.max(acc.maxX, node.position.x),
-            maxY: Math.max(acc.maxY, node.position.y)
+            maxY: Math.max(acc.maxY, node.position.y),
           }),
-          { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+          { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
         )
         const centerX = (bounds.minX + bounds.maxX) / 2
         const centerY = (bounds.minY + bounds.maxY) / 2
@@ -1721,16 +1871,19 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               id: newId,
               position: {
                 x: position.x + offsetX,
-                y: position.y + offsetY
+                y: position.y + offsetY,
               },
-              selected: true
+              selected: true,
             }
             s.nodes.push(newNode)
             newNodeIds.push(newId)
 
             // Add to history
             s.history = s.history.slice(0, s.historyIndex + 1)
-            s.history.push({ type: 'ADD_NODE', node: JSON.parse(JSON.stringify(newNode)) } as HistoryAction)
+            s.history.push({
+              type: 'ADD_NODE',
+              node: JSON.parse(JSON.stringify(newNode)),
+            } as HistoryAction)
             s.historyIndex++
           }
 
@@ -1743,11 +1896,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 ...JSON.parse(JSON.stringify(edge)),
                 id: uuid(),
                 source: newSource,
-                target: newTarget
+                target: newTarget,
               }
               s.edges.push(newEdge)
               s.history = s.history.slice(0, s.historyIndex + 1)
-              s.history.push({ type: 'ADD_EDGE', edge: JSON.parse(JSON.stringify(newEdge)) } as HistoryAction)
+              s.history.push({
+                type: 'ADD_EDGE',
+                edge: JSON.parse(JSON.stringify(newEdge)),
+              } as HistoryAction)
               s.historyIndex++
             }
           }
@@ -1792,9 +1948,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           // update to the new type's theme color
           const oldTypeThemeColor = state.themeSettings?.nodeColors?.[oldType]
           const newTypeThemeColor = state.themeSettings?.nodeColors?.[newType]
-          const resolvedColor = (!oldData.color || oldData.color === oldTypeThemeColor)
-            ? newTypeThemeColor
-            : oldData.color
+          const resolvedColor =
+            !oldData.color || oldData.color === oldTypeThemeColor
+              ? newTypeThemeColor
+              : oldData.color
 
           // Preserve common fields from ContextMetadata
           const commonFields = {
@@ -1812,7 +1969,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             activationCondition: oldData.activationCondition,
             enabled: oldData.enabled,
             width: (oldData as { width?: number }).width,
-            height: (oldData as { height?: number }).height
+            height: (oldData as { height?: number }).height,
           }
 
           // Map content between types (description <-> content)
@@ -1827,7 +1984,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               newData = {
                 ...commonFields,
                 type: 'note',
-                content: textContent
+                content: textContent,
               } as NoteNodeData
               break
             case 'task':
@@ -1836,7 +1993,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 type: 'task',
                 description: textContent,
                 status: 'todo',
-                priority: 'none'
+                priority: 'none',
               } as TaskNodeData
               break
             case 'project':
@@ -1846,22 +2003,23 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 description: textContent,
                 collapsed: false,
                 childNodeIds: (oldData as { childNodeIds?: string[] }).childNodeIds || [],
-                color: oldData.color || '#8b5cf6'
+                color: oldData.color || '#8b5cf6',
               } as ProjectNodeData
               break
             case 'conversation': {
               // If converting from a type with text content, seed it as the first system message
               const existingMessages = (oldData as { messages?: unknown[] }).messages || []
-              const seedMessages = existingMessages.length > 0
-                ? existingMessages
-                : textContent
-                  ? [{ role: 'user', content: textContent, timestamp: Date.now() }]
-                  : []
+              const seedMessages =
+                existingMessages.length > 0
+                  ? existingMessages
+                  : textContent
+                    ? [{ role: 'user', content: textContent, timestamp: Date.now() }]
+                    : []
               newData = {
                 ...commonFields,
                 type: 'conversation',
                 messages: seedMessages,
-                provider: 'anthropic'
+                provider: 'anthropic',
               } as ConversationNodeData
               break
             }
@@ -1872,7 +2030,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 content: textContent,
                 contentType: 'markdown',
                 source: { type: 'created', method: 'manual' },
-                version: 1
+                version: 1,
               } as ArtifactNodeData
               break
             case 'workspace':
@@ -1882,14 +2040,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 description: textContent,
                 memberNodeIds: [],
                 workspaceId: null,
-                workspacePath: null
+                workspacePath: null,
               } as unknown as WorkspaceNodeData
               break
             case 'text':
               newData = {
                 ...commonFields,
                 type: 'text',
-                content: textContent
+                content: textContent,
               } as TextNodeData
               break
             case 'action':
@@ -1902,7 +2060,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 conditions: [],
                 actions: [],
                 runCount: 0,
-                errorCount: 0
+                errorCount: 0,
               } as ActionNodeData
               break
             default:
@@ -1921,7 +2079,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             type: 'UPDATE_NODE',
             nodeId,
             before: before.data,
-            after: JSON.parse(JSON.stringify(node.data))
+            after: JSON.parse(JSON.stringify(node.data)),
           })
           state.historyIndex++
           if (state.history.length > 100) {
@@ -1933,19 +2091,19 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       deleteNodes: (nodeIds) => {
         // Capture node metadata before deletion for audit hooks
-        const deletedNodeMeta = get().nodes
-          .filter((n) => nodeIds.includes(n.id))
+        const deletedNodeMeta = get()
+          .nodes.filter((n) => nodeIds.includes(n.id))
           .map((n) => ({ id: n.id, type: n.type || 'unknown', title: n.data.title || 'Untitled' }))
 
         set((state) => {
           const deletedNodes = state.nodes.filter((n) => nodeIds.includes(n.id))
           const deletedEdges = state.edges.filter(
-            (e) => nodeIds.includes(e.source) || nodeIds.includes(e.target)
+            (e) => nodeIds.includes(e.source) || nodeIds.includes(e.target),
           )
 
           state.nodes = state.nodes.filter((n) => !nodeIds.includes(n.id))
           state.edges = state.edges.filter(
-            (e) => !nodeIds.includes(e.source) && !nodeIds.includes(e.target)
+            (e) => !nodeIds.includes(e.source) && !nodeIds.includes(e.target),
           )
           state.selectedNodeIds = state.selectedNodeIds.filter((id) => !nodeIds.includes(id))
           state.isDirty = true
@@ -1954,12 +2112,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const actions: HistoryAction[] = [
             ...deletedNodes.map((node) => ({
               type: 'DELETE_NODE' as const,
-              node: JSON.parse(JSON.stringify(node))
+              node: JSON.parse(JSON.stringify(node)),
             })),
             ...deletedEdges.map((edge) => ({
               type: 'DELETE_EDGE' as const,
-              edge: JSON.parse(JSON.stringify(edge))
-            }))
+              edge: JSON.parse(JSON.stringify(edge)),
+            })),
           ]
           if (actions.length > 0) {
             state.history = state.history.slice(0, state.historyIndex + 1)
@@ -1978,11 +2136,15 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           }
 
           // Close pinned windows for deleted nodes
-          state.pinnedWindows = state.pinnedWindows.filter(w => !nodeIds.includes(w.nodeId))
+          state.pinnedWindows = state.pinnedWindows.filter((w) => !nodeIds.includes(w.nodeId))
         })
         // Audit hooks: node deleted (non-critical)
         for (const meta of deletedNodeMeta) {
-          try { emitNodeDeleted(meta.id, meta.type, meta.title) } catch { /* audit non-critical */ }
+          try {
+            emitNodeDeleted(meta.id, meta.type, meta.title)
+          } catch {
+            /* audit non-critical */
+          }
         }
       },
 
@@ -1999,7 +2161,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       applyPositionsBatch: (positions) => {
         set((state) => {
           for (const [id, pos] of positions) {
-            const node = state.nodes.find(n => n.id === id)
+            const node = state.nodes.find((n) => n.id === id)
             if (node) {
               node.position = { x: pos.x, y: pos.y }
             }
@@ -2021,7 +2183,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               type: 'RESIZE_NODE',
               nodeId,
               before,
-              after: { width: node.width!, height: node.height! }
+              after: { width: node.width!, height: node.height! },
             })
             state.historyIndex++
             if (state.history.length > 100) {
@@ -2052,14 +2214,19 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
         // Check if both nodes share the same parentId (intra-project edge)
         const state = get()
-        const sourceNode = state.nodes.find(n => n.id === connection.source)
-        const targetNode = state.nodes.find(n => n.id === connection.target)
+        const sourceNode = state.nodes.find((n) => n.id === connection.source)
+        const targetNode = state.nodes.find((n) => n.id === connection.target)
         const sourceParentId = sourceNode?.data?.parentId as string | undefined
         const targetParentId = targetNode?.data?.parentId as string | undefined
-        const isIntraProject = !!(sourceParentId && targetParentId && sourceParentId === targetParentId)
+        const isIntraProject = !!(
+          sourceParentId &&
+          targetParentId &&
+          sourceParentId === targetParentId
+        )
 
         // Get source node's outgoing edge color if set
-        const outgoingEdgeColor = (sourceNode?.data as ContextMetadata | undefined)?.outgoingEdgeColor
+        const outgoingEdgeColor = (sourceNode?.data as ContextMetadata | undefined)
+          ?.outgoingEdgeColor
 
         const edgeId = `${connection.source}-${connection.target}`
         const edge: Edge<EdgeData> = {
@@ -2073,15 +2240,15 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           data: {
             ...DEFAULT_EDGE_DATA,
             intraProject: isIntraProject,
-            color: outgoingEdgeColor // Will be undefined if not set, using default
-          }
+            color: outgoingEdgeColor, // Will be undefined if not set, using default
+          },
           // Note: Project nodes have z-index: -1 so all edges render above them automatically
         }
 
         set((state) => {
           // Prevent duplicate edges
           const exists = state.edges.some(
-            (e) => e.source === edge.source && e.target === edge.target
+            (e) => e.source === edge.source && e.target === edge.target,
           )
           if (!exists) {
             state.edges.push(edge)
@@ -2096,7 +2263,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           }
         })
         // Audit hook: edge created (non-critical)
-        try { emitEdgeCreated(edgeId, connection.source, connection.target) } catch { /* audit non-critical */ }
+        try {
+          emitEdgeCreated(edgeId, connection.source, connection.target)
+        } catch {
+          /* audit non-critical */
+        }
         // Evaluate activations when edge is added
         setTimeout(() => get().evaluateAllNodeActivations(), 0)
 
@@ -2121,7 +2292,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             // Create new edge object to ensure React Flow detects the change
             const updatedEdge = {
               ...edge,
-              data: { ...(edge.data || DEFAULT_EDGE_DATA), ...data }
+              data: { ...(edge.data || DEFAULT_EDGE_DATA), ...data },
             }
             state.edges[edgeIndex] = updatedEdge
             state.isDirty = true
@@ -2133,7 +2304,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 type: 'UPDATE_EDGE',
                 edgeId,
                 before,
-                after: { ...updatedEdge.data }
+                after: { ...updatedEdge.data },
               })
               state.historyIndex++
               if (state.history.length > 100) {
@@ -2150,8 +2321,15 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       // Batch update edge source/target handles — single re-render regardless of edge count
       updateEdgeHandlesBatch: (updates) => {
         if (updates.length === 0) return
+        // Filter to only edges that actually need changes (prevents infinite re-render loops)
+        const currentEdges = get().edges
+        const realUpdates = updates.filter(({ edgeId, sourceHandle, targetHandle }) => {
+          const edge = currentEdges.find((e) => e.id === edgeId)
+          return edge && (edge.sourceHandle !== sourceHandle || edge.targetHandle !== targetHandle)
+        })
+        if (realUpdates.length === 0) return
         set((state) => {
-          for (const { edgeId, sourceHandle, targetHandle } of updates) {
+          for (const { edgeId, sourceHandle, targetHandle } of realUpdates) {
             const idx = state.edges.findIndex((e) => e.id === edgeId)
             if (idx !== -1) {
               state.edges[idx] = { ...state.edges[idx]!, sourceHandle, targetHandle }
@@ -2175,7 +2353,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               type: 'UPDATE_EDGE',
               edgeId,
               before: { waypoints: before },
-              after: { waypoints: after }
+              after: { waypoints: after },
             })
             state.historyIndex++
             if (state.history.length > 100) {
@@ -2208,7 +2386,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         })
         // Audit hooks: edge deleted (non-critical)
         for (const eid of edgeIdsToAudit) {
-          try { emitEdgeDeleted(eid) } catch { /* audit non-critical */ }
+          try {
+            emitEdgeDeleted(eid)
+          } catch {
+            /* audit non-critical */
+          }
         }
         // Evaluate activations when edges are deleted
         setTimeout(() => get().evaluateAllNodeActivations(), 0)
@@ -2224,9 +2406,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           .filter((n) => n !== undefined)
           .sort((a, b) => {
             // Sort by Y first (top to bottom), then by X (left to right)
-            const yDiff = a!.position.y - b!.position.y
+            const yDiff = a?.position.y - b?.position.y
             if (Math.abs(yDiff) > 50) return yDiff
-            return a!.position.x - b!.position.x
+            return a?.position.x - b?.position.x
           })
 
         // Create edges between consecutive nodes
@@ -2237,14 +2419,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
           // Check if edge already exists
           const existingEdge = state.edges.find(
-            (e) => e.id === edgeId || (e.source === source.id && e.target === target.id)
+            (e) => e.id === edgeId || (e.source === source.id && e.target === target.id),
           )
           if (!existingEdge) {
             get().addEdge({
               source: source.id,
               target: target.id,
               sourceHandle: null,
-              targetHandle: null
+              targetHandle: null,
             })
           }
         }
@@ -2266,13 +2448,16 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
             // Check if edge already exists in either direction
             const exists = state.edges.some(
-              (e) => e.id === edgeId || e.id === reverseId ||
+              (e) =>
+                e.id === edgeId ||
+                e.id === reverseId ||
                 (e.source === sourceId && e.target === targetId) ||
-                (e.source === targetId && e.target === sourceId)
+                (e.source === targetId && e.target === sourceId),
             )
             if (!exists) {
-              const sourceNode = state.nodes.find(n => n.id === sourceId)
-              const outgoingEdgeColor = (sourceNode?.data as ContextMetadata | undefined)?.outgoingEdgeColor
+              const sourceNode = state.nodes.find((n) => n.id === sourceId)
+              const outgoingEdgeColor = (sourceNode?.data as ContextMetadata | undefined)
+                ?.outgoingEdgeColor
               newEdges.push({
                 id: edgeId,
                 type: 'custom',
@@ -2280,7 +2465,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 target: targetId,
                 sourceHandle: null,
                 targetHandle: null,
-                data: { ...DEFAULT_EDGE_DATA, color: outgoingEdgeColor }
+                data: { ...DEFAULT_EDGE_DATA, color: outgoingEdgeColor },
               })
             }
           }
@@ -2295,7 +2480,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             s.history = s.history.slice(0, s.historyIndex + 1)
             s.history.push({
               type: 'BATCH',
-              actions: newEdges.map(edge => ({ type: 'ADD_EDGE', edge: JSON.parse(JSON.stringify(edge)) }))
+              actions: newEdges.map((edge) => ({
+                type: 'ADD_EDGE',
+                edge: JSON.parse(JSON.stringify(edge)),
+              })),
             } as HistoryAction)
             s.historyIndex++
             s.isDirty = true
@@ -2346,14 +2534,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             target: edge.source,
             sourceHandle: newSourceHandle,
             targetHandle: newTargetHandle,
-            data: edge.data ? { ...edge.data } : undefined
+            data: edge.data ? { ...edge.data } : undefined,
           }
 
           // Replace the entire edges array to ensure React Flow detects the change
           state.edges = [
             ...state.edges.slice(0, edgeIndex),
             reversedEdge,
-            ...state.edges.slice(edgeIndex + 1)
+            ...state.edges.slice(edgeIndex + 1),
           ]
 
           state.isDirty = true
@@ -2362,7 +2550,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             type: 'REVERSE_EDGE',
             edgeId: edge.id,
             before,
-            after: JSON.parse(JSON.stringify(reversedEdge))
+            after: JSON.parse(JSON.stringify(reversedEdge)),
           })
           state.historyIndex++
           if (state.history.length > 100) {
@@ -2399,7 +2587,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             source: newConnection.source!,
             target: newConnection.target!,
             sourceHandle: newConnection.sourceHandle,
-            targetHandle: newConnection.targetHandle
+            targetHandle: newConnection.targetHandle,
           }
 
           state.edges[edgeIndex] = reconnectedEdge
@@ -2416,7 +2604,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             type: 'RECONNECT_EDGE',
             edgeId: before.id,
             before,
-            after: JSON.parse(JSON.stringify(reconnectedEdge))
+            after: JSON.parse(JSON.stringify(reconnectedEdge)),
           })
           state.historyIndex++
           if (state.history.length > 100) {
@@ -2497,8 +2685,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             }
           }
 
-          // Mark dirty for position/dimension changes
-          if (changes.some((c) => c.type === 'position' || c.type === 'dimensions')) {
+          // Mark dirty for position/dimension changes — but NOT during drag
+          // (drag commits isDirty at drag-end via commitNodeDrag)
+          if (
+            !state._isDragging &&
+            changes.some((c) => c.type === 'position' || c.type === 'dimensions')
+          ) {
             state.isDirty = true
           }
           // STORE-INDEX: rebuild after applyNodeChanges (may add/remove nodes)
@@ -2640,7 +2832,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         set((state) => {
           if (nodeId) {
             // Close specific modal
-            state.floatingPropertiesNodeIds = state.floatingPropertiesNodeIds.filter(id => id !== nodeId)
+            state.floatingPropertiesNodeIds = state.floatingPropertiesNodeIds.filter(
+              (id) => id !== nodeId,
+            )
           } else {
             // Close all modals and deselect
             state.floatingPropertiesNodeIds = []
@@ -2655,10 +2849,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       pinNode: (nodeId) => {
         set((state) => {
-          const node = state.nodes.find(n => n.id === nodeId)
+          const node = state.nodes.find((n) => n.id === nodeId)
           if (!node) return
           // Don't pin if already pinned
-          if (state.pinnedWindows.some(w => w.nodeId === nodeId)) return
+          if (state.pinnedWindows.some((w) => w.nodeId === nodeId)) return
 
           // Cascade position for multiple pinned windows
           const viewportWidth = window.innerWidth
@@ -2667,11 +2861,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             nodeId,
             position: {
               x: viewportWidth - 440,
-              y: 80 + (offsetIndex * 50)
+              y: 80 + offsetIndex * 50,
             },
             size: { width: 400, height: 350 },
             minimized: false,
-            zIndex: state.nextPinnedZIndex
+            zIndex: state.nextPinnedZIndex,
           })
           state.nextPinnedZIndex++
           state.isDirty = true
@@ -2680,13 +2874,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       unpinNode: (nodeId) => {
         set((state) => {
-          state.pinnedWindows = state.pinnedWindows.filter(w => w.nodeId !== nodeId)
+          state.pinnedWindows = state.pinnedWindows.filter((w) => w.nodeId !== nodeId)
         })
       },
 
       updatePinnedWindow: (nodeId, updates) => {
         set((state) => {
-          const window = state.pinnedWindows.find(w => w.nodeId === nodeId)
+          const window = state.pinnedWindows.find((w) => w.nodeId === nodeId)
           if (window) {
             Object.assign(window, updates)
           }
@@ -2695,7 +2889,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       bringPinnedToFront: (nodeId) => {
         set((state) => {
-          const window = state.pinnedWindows.find(w => w.nodeId === nodeId)
+          const window = state.pinnedWindows.find((w) => w.nodeId === nodeId)
           if (window) {
             window.zIndex = state.nextPinnedZIndex
             state.nextPinnedZIndex++
@@ -2776,7 +2970,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       hideAllNodeTypes: () => {
         set((state) => {
           state.hiddenNodeTypes = new Set([
-            'conversation', 'note', 'task', 'project', 'artifact', 'workspace', 'text', 'action'
+            'conversation',
+            'note',
+            'task',
+            'project',
+            'artifact',
+            'workspace',
+            'text',
+            'action',
           ] as NodeData['type'][])
         })
       },
@@ -2840,11 +3041,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             childIds = (node.data as ProjectNodeData).childNodeIds || []
           } else {
             // For other nodes, children are outgoing edge targets
-            childIds = state.edges
-              .filter((e) => e.source === nodeId)
-              .map((e) => e.target)
+            childIds = state.edges.filter((e) => e.source === nodeId).map((e) => e.target)
           }
-
           // Update the node's collapsed state
           ;(node.data as ContextMetadata).collapsed = isCollapsed
 
@@ -2926,7 +3124,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       toggleLandmark: (nodeId) => {
         set((state) => {
-          const node = state.nodes.find(n => n.id === nodeId)
+          const node = state.nodes.find((n) => n.id === nodeId)
           if (node) {
             node.data.isLandmark = !node.data.isLandmark
           }
@@ -2952,14 +3150,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       reorderLayers: (nodeIds, targetIndex) => {
         set((state) => {
-          const currentOrder = state.nodes.map(n => n.id)
+          const currentOrder = state.nodes.map((n) => n.id)
           const draggedSet = new Set(nodeIds)
           // Count how many dragged items were before targetIndex in original order
           let adjustment = 0
           for (let i = 0; i < Math.min(targetIndex, currentOrder.length); i++) {
             if (draggedSet.has(currentOrder[i]!)) adjustment++
           }
-          const remaining = currentOrder.filter(id => !draggedSet.has(id))
+          const remaining = currentOrder.filter((id) => !draggedSet.has(id))
           const insertAt = Math.min(targetIndex - adjustment, remaining.length)
           remaining.splice(insertAt, 0, ...nodeIds)
           state.manualLayerOrder = remaining
@@ -2969,7 +3167,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           // This makes the Outline panel the source of truth for canvas z-order
           const zIndexUpdates: Array<{ nodeId: string; before: number; after: number }> = []
           remaining.forEach((id, index) => {
-            const node = state.nodes.find(n => n.id === id)
+            const node = state.nodes.find((n) => n.id === id)
             if (node) {
               const newZIndex = remaining.length - index // Top of list = highest z
               const oldZIndex = node.zIndex || 0
@@ -2986,7 +3184,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             state.history = state.history.slice(0, state.historyIndex + 1)
             state.history.push({
               type: 'REORDER_LAYERS',
-              updates: zIndexUpdates
+              updates: zIndexUpdates,
             } as HistoryAction)
             state.historyIndex++
             if (state.history.length > 100) {
@@ -3002,7 +3200,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
         const state = get()
         // Get current layer order (or default to nodes array order)
-        const currentOrder = state.manualLayerOrder ?? state.nodes.map(n => n.id)
+        const currentOrder = state.manualLayerOrder ?? state.nodes.map((n) => n.id)
 
         // Find the highest index among selected nodes
         let maxIndex = -1
@@ -3024,7 +3222,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
         const state = get()
         // Get current layer order (or default to nodes array order)
-        const currentOrder = state.manualLayerOrder ?? state.nodes.map(n => n.id)
+        const currentOrder = state.manualLayerOrder ?? state.nodes.map((n) => n.id)
 
         // Find the lowest index among selected nodes
         let minIndex = currentOrder.length
@@ -3052,7 +3250,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             ...extraction,
             id,
             status: 'pending',
-            createdAt: Date.now()
+            createdAt: Date.now(),
           })
         })
       },
@@ -3066,7 +3264,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         const sourceNode = state.nodes.find((n) => n.id === extraction.sourceNodeId)
         const finalPosition = position || {
           x: (sourceNode?.position.x || 0) + (sourceNode?.width || 300) + 50,
-          y: sourceNode?.position.y || 0
+          y: sourceNode?.position.y || 0,
         }
 
         // Create the node
@@ -3078,7 +3276,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           get().updateNode(nodeId, {
             title: suggestedData.title || 'Extracted Note',
             content: (suggestedData as Partial<NoteNodeData>).content || '',
-            tags: suggestedData.tags
+            tags: suggestedData.tags,
           } as Partial<NoteNodeData>)
         } else if (extraction.type === 'task') {
           get().updateNode(nodeId, {
@@ -3086,7 +3284,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             description: (suggestedData as Partial<TaskNodeData>).description || '',
             priority: (suggestedData as Partial<TaskNodeData>).priority || 'none',
             status: 'todo',
-            tags: suggestedData.tags
+            tags: suggestedData.tags,
           } as Partial<TaskNodeData>)
         }
 
@@ -3096,7 +3294,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             source: extraction.sourceNodeId,
             target: nodeId,
             sourceHandle: 'bottom-source',
-            targetHandle: 'top-target'
+            targetHandle: 'top-target',
           })
           // Update edge label to 'extracted'
           const edgeId = `${extraction.sourceNodeId}-${nodeId}`
@@ -3108,9 +3306,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
         // Remove from pending
         set((state) => {
-          state.pendingExtractions = state.pendingExtractions.filter(
-            (e) => e.id !== extractionId
-          )
+          state.pendingExtractions = state.pendingExtractions.filter((e) => e.id !== extractionId)
         })
       },
 
@@ -3126,9 +3322,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       dismissExtraction: (extractionId) => {
         set((state) => {
-          state.pendingExtractions = state.pendingExtractions.filter(
-            (e) => e.id !== extractionId
-          )
+          state.pendingExtractions = state.pendingExtractions.filter((e) => e.id !== extractionId)
         })
       },
 
@@ -3136,7 +3330,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         set((state) => {
           if (sourceNodeId) {
             state.pendingExtractions = state.pendingExtractions.filter(
-              (e) => e.sourceNodeId !== sourceNodeId
+              (e) => e.sourceNodeId !== sourceNodeId,
             )
           } else {
             state.pendingExtractions = []
@@ -3174,7 +3368,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             const convData = node.data as ConversationNodeData
             convData.extractionSettings = {
               ...(convData.extractionSettings || DEFAULT_EXTRACTION_SETTINGS),
-              ...settings
+              ...settings,
             }
             state.isDirty = true
           }
@@ -3223,7 +3417,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             extractionId,
             position,
             type: extraction.type ?? 'note',
-            title: extraction.suggestedData.title ?? 'Untitled'
+            title: extraction.suggestedData.title ?? 'Untitled',
           }
         })
       },
@@ -3262,14 +3456,15 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 data: {
                   type: 'task' as const,
                   title: extraction.suggestedData.title,
-                  description: extraction.suggestedData.description || extraction.suggestedData.content || '',
+                  description:
+                    extraction.suggestedData.description || extraction.suggestedData.content || '',
                   status: extraction.suggestedData.status || 'todo',
                   priority: extraction.suggestedData.priority || 'medium',
                   createdAt: Date.now(),
                   updatedAt: Date.now(),
                   tags: extraction.suggestedData.tags || [],
-                  properties: {}
-                }
+                  properties: {},
+                },
               }
             : {
                 id: nodeId,
@@ -3282,8 +3477,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                   createdAt: Date.now(),
                   updatedAt: Date.now(),
                   tags: extraction.suggestedData.tags || [],
-                  properties: {}
-                }
+                  properties: {},
+                },
               }
 
         // Create edge from source to new node
@@ -3294,23 +3489,25 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           sourceHandle: 'right-source',
           targetHandle: 'left-target',
           type: 'custom',
-          data: { label: 'extracted' }
+          data: { label: 'extracted' },
         }
 
         set((state) => {
           // Add node and edge
-          state.nodes.push(newNode as typeof state.nodes[0])
-          state.edges.push(newEdge as typeof state.edges[0])
+          state.nodes.push(newNode as (typeof state.nodes)[0])
+          state.edges.push(newEdge as (typeof state.edges)[0])
 
           // Remove from pending extractions
-          state.pendingExtractions = state.pendingExtractions.filter((e) => e.id !== drag.extractionId)
+          state.pendingExtractions = state.pendingExtractions.filter(
+            (e) => e.id !== drag.extractionId,
+          )
 
           // Store for undo
           state.lastAcceptedExtraction = {
             extractionData: extraction,
             createdNodeId: nodeId,
             createdEdgeId: edgeId,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           }
 
           // Clear drag state
@@ -3359,7 +3556,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
           const position = {
             x: baseX,
-            y: baseY + index * spacing
+            y: baseY + index * spacing,
           }
 
           const newNode =
@@ -3371,14 +3568,17 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                   data: {
                     type: 'task' as const,
                     title: extraction.suggestedData.title,
-                    description: extraction.suggestedData.description || extraction.suggestedData.content || '',
+                    description:
+                      extraction.suggestedData.description ||
+                      extraction.suggestedData.content ||
+                      '',
                     status: extraction.suggestedData.status || 'todo',
                     priority: extraction.suggestedData.priority || 'medium',
                     createdAt: Date.now(),
                     updatedAt: Date.now(),
                     tags: extraction.suggestedData.tags || [],
-                    properties: {}
-                  }
+                    properties: {},
+                  },
                 }
               : {
                   id: nodeId,
@@ -3391,11 +3591,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                     createdAt: Date.now(),
                     updatedAt: Date.now(),
                     tags: extraction.suggestedData.tags || [],
-                    properties: {}
-                  }
+                    properties: {},
+                  },
                 }
 
-          newNodes.push(newNode as typeof state.nodes[0])
+          newNodes.push(newNode as (typeof state.nodes)[0])
           newEdges.push({
             id: edgeId,
             source: sourceNodeId,
@@ -3403,14 +3603,16 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             sourceHandle: 'right-source',
             targetHandle: 'left-target',
             type: 'custom',
-            data: { label: 'extracted' }
-          } as typeof state.edges[0])
+            data: { label: 'extracted' },
+          } as (typeof state.edges)[0])
         })
 
         set((state) => {
           state.nodes.push(...newNodes)
           state.edges.push(...newEdges)
-          state.pendingExtractions = state.pendingExtractions.filter((e) => e.sourceNodeId !== sourceNodeId)
+          state.pendingExtractions = state.pendingExtractions.filter(
+            (e) => e.sourceNodeId !== sourceNodeId,
+          )
           state.spawningNodeIds.push(...nodeIds)
           state.openExtractionPanelNodeId = null
           state.isDirty = true
@@ -3470,16 +3672,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               id: uuid(),
               role,
               content,
-              timestamp: Date.now()
+              timestamp: Date.now(),
             }
             convData.messages.push(newMessage)
 
             // Persist to JSONL sidecar (fire-and-forget — queue handles ordering)
             const wsId = state.workspaceId
             if (wsId && window.api?.conversation?.appendMessage) {
-              window.api.conversation.appendMessage(wsId, nodeId, newMessage).catch(err => {
-                console.warn('[WorkspaceStore] Failed to persist message to JSONL:', err)
-              })
+              window.api.conversation.appendMessage(wsId, nodeId, newMessage).catch((_err) => {})
             }
 
             convData.updatedAt = Date.now()
@@ -3492,7 +3692,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             // Record in undo history (only user messages — assistant messages are streaming-generated)
             if (role === 'user') {
               state.history = state.history.slice(0, state.historyIndex + 1)
-              state.history.push({ type: 'ADD_MESSAGE', nodeId, message: JSON.parse(JSON.stringify(newMessage)) })
+              state.history.push({
+                type: 'ADD_MESSAGE',
+                nodeId,
+                message: JSON.parse(JSON.stringify(newMessage)),
+              })
               state.historyIndex++
               if (state.history.length > 100) {
                 state.history.shift()
@@ -3539,7 +3743,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 type: 'DELETE_MESSAGE',
                 nodeId,
                 message: JSON.parse(JSON.stringify(deleted)),
-                index: messageIndex
+                index: messageIndex,
               })
               state.historyIndex++
               if (state.history.length > 100) {
@@ -3576,7 +3780,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           // Create new node data
           const newNodeData = {
             ...convData,
-            messages: newMessages
+            messages: newMessages,
           }
 
           // Create new nodes array
@@ -3584,7 +3788,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           newNodes[nodeIndex] = {
             ...node,
             id: node.id, // Ensure id is not undefined
-            data: newNodeData
+            data: newNodeData,
           } as typeof node
 
           state.nodes = newNodes
@@ -3615,9 +3819,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             // Persist to JSONL sidecar — same path as addMessage
             const wsId = state.workspaceId
             if (wsId && window.api?.conversation?.appendMessage) {
-              window.api.conversation.appendMessage(wsId, nodeId, message).catch((err: unknown) => {
-                console.warn('[WorkspaceStore] Failed to persist tool message to JSONL:', err)
-              })
+              window.api.conversation
+                .appendMessage(wsId, nodeId, message)
+                .catch((_err: unknown) => {})
             }
 
             convData.updatedAt = Date.now()
@@ -3670,6 +3874,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           state.spawningNodeIds = []
           state.nodeUpdatedAt = new Map()
           // Drag/resize state
+          state._isDragging = false
           state.dragStartPositions = new Map()
           state.resizeStartDimensions = new Map()
           // UI state that should reset
@@ -3681,7 +3886,17 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           state.lastCanvasClick = null
           state.lastCreatedNodeId = null
           state.bookmarkedNodeId = null
-          state.numberedBookmarks = { 1: null, 2: null, 3: null, 4: null, 5: null, 6: null, 7: null, 8: null, 9: null }
+          state.numberedBookmarks = {
+            1: null,
+            2: null,
+            3: null,
+            4: null,
+            5: null,
+            6: null,
+            7: null,
+            8: null,
+            9: null,
+          }
           // Multiplayer state — reset connection config on workspace switch
           state.multiplayerConfig = null
           state._syncSource = 'local'
@@ -3731,12 +3946,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             sourceHandle,
             targetHandle,
             type: edge.type || 'custom',
-            data: migratedData
+            data: migratedData,
           }
         })
 
         // Prepare valid node IDs set for session restoration
-        const validNodeIds = new Set(migratedNodes.map(n => n.id))
+        const validNodeIds = new Set(migratedNodes.map((n) => n.id))
 
         set((state) => {
           state.workspaceId = data.id
@@ -3752,20 +3967,20 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             ...savedTheme,
             nodeColors: {
               ...DEFAULT_THEME_SETTINGS.nodeColors,
-              ...(savedTheme.nodeColors || {})
+              ...(savedTheme.nodeColors || {}),
             },
             linkColors: {
               ...DEFAULT_THEME_SETTINGS.linkColors,
-              ...(savedTheme.linkColors || {})
+              ...(savedTheme.linkColors || {}),
             },
             linkColorsDark: {
               ...DEFAULT_THEME_SETTINGS.linkColorsDark,
-              ...(savedTheme.linkColorsDark || {})
+              ...(savedTheme.linkColorsDark || {}),
             },
             linkColorsLight: {
               ...DEFAULT_THEME_SETTINGS.linkColorsLight,
-              ...(savedTheme.linkColorsLight || {})
-            }
+              ...(savedTheme.linkColorsLight || {}),
+            },
           }
 
           // Migrate legacy ambient effect settings (pre-React Bits era)
@@ -3773,12 +3988,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           // New format uses: effectProps (per-effect native props)
           if (state.themeSettings.ambientEffect) {
             const ae = state.themeSettings.ambientEffect as Record<string, unknown>
-            const hasLegacyProps = 'intensity' in ae || 'speed' in ae || 'density' in ae || 'cursorInteraction' in ae
+            const hasLegacyProps =
+              'intensity' in ae || 'speed' in ae || 'density' in ae || 'cursorInteraction' in ae
             if (hasLegacyProps) {
               state.themeSettings.ambientEffect = {
-                enabled: ae.enabled as boolean ?? false,
-                effect: 'none',  // Old effect types no longer exist
-                bloomIntensity: ae.bloomIntensity as number ?? 30,
+                enabled: (ae.enabled as boolean) ?? false,
+                effect: 'none', // Old effect types no longer exist
+                bloomIntensity: (ae.bloomIntensity as number) ?? 30,
                 effectProps: {},
               }
             }
@@ -3788,7 +4004,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             }
           }
 
-          state.workspacePreferences = { ...DEFAULT_WORKSPACE_PREFERENCES, ...(data.workspacePreferences || {}) }
+          state.workspacePreferences = {
+            ...DEFAULT_WORKSPACE_PREFERENCES,
+            ...(data.workspacePreferences || {}),
+          }
           state.layersSortMode = data.layersSortMode || 'hierarchy'
           state.manualLayerOrder = data.manualLayerOrder || null
           state.syncMode = data.syncMode || 'local'
@@ -3797,26 +4016,31 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const session = data.sessionState
           if (session) {
             // Restore selection, filtering out deleted nodes
-            const validSelection = (session.selectedNodeIds || []).filter(id => validNodeIds.has(id))
+            const validSelection = (session.selectedNodeIds || []).filter((id) =>
+              validNodeIds.has(id),
+            )
             state.selectedNodeIds = validSelection
             // Mark selected nodes
-            migratedNodes.forEach(n => { n.selected = validSelection.includes(n.id) })
+            migratedNodes.forEach((n) => {
+              n.selected = validSelection.includes(n.id)
+            })
 
             // Restore sidebar state
             state.leftSidebarOpen = session.leftSidebarOpen ?? false
             state.leftSidebarTab = session.leftSidebarTab ?? 'layers'
 
             // Restore expanded nodes, filtering out deleted nodes
-            const validExpanded = (session.expandedNodeIds || []).filter(id => validNodeIds.has(id))
+            const validExpanded = (session.expandedNodeIds || []).filter((id) =>
+              validNodeIds.has(id),
+            )
             state.expandedNodeIds = new Set(validExpanded)
 
             // PFD Phase 6C: Restore session interactions (filter to valid nodes)
             state.sessionInteractions = (session.interactions || []).filter(
-              (i: { nodeId: string }) => validNodeIds.has(i.nodeId)
+              (i: { nodeId: string }) => validNodeIds.has(i.nodeId),
             )
-            state.lastSessionNodeId = session.lastNodeId && validNodeIds.has(session.lastNodeId)
-              ? session.lastNodeId
-              : null
+            state.lastSessionNodeId =
+              session.lastNodeId && validNodeIds.has(session.lastNodeId) ? session.lastNodeId : null
           } else {
             state.selectedNodeIds = []
             state.leftSidebarOpen = false
@@ -3825,7 +4049,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           }
 
           // Restore hidden node types (Issue 14 fix: Set serialized as array)
-          state.hiddenNodeTypes = new Set((data as Record<string, unknown>).hiddenNodeTypes as string[] || [])
+          state.hiddenNodeTypes = new Set(
+            ((data as Record<string, unknown>).hiddenNodeTypes as string[]) || [],
+          )
 
           // Command bar persistence
           state.commandLog = data.commandLog || []
@@ -3862,6 +4088,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           state.spawningNodeIds = []
           state.nodeUpdatedAt = new Map()
           // Drag/resize state
+          state._isDragging = false
           state.dragStartPositions = new Map()
           state.resizeStartDimensions = new Map()
           // UI state that should reset
@@ -3873,7 +4100,17 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           state.lastCanvasClick = null
           state.lastCreatedNodeId = null
           state.bookmarkedNodeId = null
-          state.numberedBookmarks = { 1: null, 2: null, 3: null, 4: null, 5: null, 6: null, 7: null, 8: null, 9: null }
+          state.numberedBookmarks = {
+            1: null,
+            2: null,
+            3: null,
+            4: null,
+            5: null,
+            6: null,
+            7: null,
+            8: null,
+            9: null,
+          }
           // Multiplayer state — reset connection config on workspace switch
           state.multiplayerConfig = null
           state._syncSource = 'local'
@@ -3886,51 +4123,56 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         // Migrate inline messages to JSONL then load from JSONL
         // Migration is idempotent — safe to call every load
         if (data.id && window.api?.conversation) {
-          window.api.conversation.migrate(data.id).then(() => {
-            return window.api.conversation!.loadAllMessages(data.id)
-          }).then((result) => {
-            if (!result?.success || !result.data || result.data.length === 0) return
-            const allMessages = result.data as Array<{ conversationId?: string; [key: string]: unknown }>
+          window.api.conversation
+            .migrate(data.id)
+            .then(() => {
+              return window.api.conversation?.loadAllMessages(data.id)
+            })
+            .then((result) => {
+              if (!result?.success || !result.data || result.data.length === 0) return
+              const allMessages = result.data as Array<{
+                conversationId?: string
+                [key: string]: unknown
+              }>
 
-            // Group messages by conversationId
-            const byConversation = new Map<string, any[]>()
-            for (const msg of allMessages) {
-              const convId = msg.conversationId
-              if (!convId) continue
-              const existing = byConversation.get(convId) || []
-              existing.push(msg)
-              byConversation.set(convId, existing)
-            }
+              // Group messages by conversationId
+              const byConversation = new Map<string, any[]>()
+              for (const msg of allMessages) {
+                const convId = msg.conversationId
+                if (!convId) continue
+                const existing = byConversation.get(convId) || []
+                existing.push(msg)
+                byConversation.set(convId, existing)
+              }
 
-            // Merge into conversation nodes — only replace if JSONL has more messages
-            // (prevents data loss if JSONL has partial data)
-            set((state) => {
-              for (const [convId, messages] of byConversation) {
-                const idx = state.nodeIndex.get(convId)
-                const node = idx !== undefined ? state.nodes[idx] : undefined
-                if (node && node.data.type === 'conversation') {
-                  const convData = node.data as ConversationNodeData
-                  if (messages.length >= (convData.messages?.length || 0)) {
-                    convData.messages = messages
+              // Merge into conversation nodes — only replace if JSONL has more messages
+              // (prevents data loss if JSONL has partial data)
+              set((state) => {
+                for (const [convId, messages] of byConversation) {
+                  const idx = state.nodeIndex.get(convId)
+                  const node = idx !== undefined ? state.nodes[idx] : undefined
+                  if (node && node.data.type === 'conversation') {
+                    const convData = node.data as ConversationNodeData
+                    if (messages.length >= (convData.messages?.length || 0)) {
+                      convData.messages = messages
+                    }
                   }
                 }
-              }
+              })
             })
-          }).catch(err => {
-            console.warn('[WorkspaceStore] JSONL migration/load failed (non-fatal):', err)
-          })
+            .catch((_err) => {})
         }
 
         // Invalidate BFS context cache on workspace load (Optimization #9)
         invalidateContextCache()
 
-        // Restore spatial regions
-        useSpatialRegionStore.getState().loadRegions(data.spatialRegions || [])
+        // Spatial regions disconnected — clear any stale data on load
+        useSpatialRegionStore.getState().loadRegions([])
       },
 
       getWorkspaceData: () => {
         const state = get()
-        const spatialRegions = useSpatialRegionStore.getState().regions
+        // Spatial regions disconnected from persistence — clear on save
         return {
           id: state.workspaceId || uuid(),
           name: state.workspaceName,
@@ -3943,27 +4185,34 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           workspacePreferences: state.workspacePreferences,
           layersSortMode: state.layersSortMode,
           manualLayerOrder: state.manualLayerOrder,
-          spatialRegions: spatialRegions.length > 0 ? spatialRegions : undefined,
           syncMode: state.syncMode !== 'local' ? state.syncMode : undefined,
           // Session state restoration (ND feature)
           sessionState: {
             selectedNodeIds: state.selectedNodeIds.length > 0 ? state.selectedNodeIds : undefined,
             leftSidebarOpen: state.leftSidebarOpen || undefined,
             leftSidebarTab: state.leftSidebarTab !== 'layers' ? state.leftSidebarTab : undefined,
-            expandedNodeIds: state.expandedNodeIds.size > 0 ? Array.from(state.expandedNodeIds) : undefined,
+            expandedNodeIds:
+              state.expandedNodeIds.size > 0 ? Array.from(state.expandedNodeIds) : undefined,
             // PFD Phase 6C: Session interaction log (capped, 7-day rolling)
-            interactions: state.sessionInteractions.length > 0 ? state.sessionInteractions.filter(
-              i => Date.now() - i.timestamp < 7 * 24 * 60 * 60 * 1000 // 7-day retention
-            ) : undefined,
-            lastNodeId: state.lastSessionNodeId || undefined
+            interactions:
+              state.sessionInteractions.length > 0
+                ? state.sessionInteractions.filter(
+                    (i) => Date.now() - i.timestamp < 7 * 24 * 60 * 60 * 1000, // 7-day retention
+                  )
+                : undefined,
+            lastNodeId: state.lastSessionNodeId || undefined,
           },
-          hiddenNodeTypes: state.hiddenNodeTypes.size > 0 ? Array.from(state.hiddenNodeTypes) : undefined,
+          hiddenNodeTypes:
+            state.hiddenNodeTypes.size > 0 ? Array.from(state.hiddenNodeTypes) : undefined,
           createdAt: state.createdAt || Date.now(),
           updatedAt: Date.now(),
           version: 1,
           // Command bar persistence
           commandLog: state.commandLog.length > 0 ? state.commandLog : undefined,
-          workspaceConversation: state.workspaceConversation.messages.length > 0 ? state.workspaceConversation : undefined,
+          workspaceConversation:
+            state.workspaceConversation.messages.length > 0
+              ? state.workspaceConversation
+              : undefined,
         }
       },
 
@@ -3992,6 +4241,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           state.isDirty = false
           state.lastSaved = Date.now()
           state.saveStatus = 'saved'
+        })
+      },
+
+      setDragging: (dragging: boolean) => {
+        set((state) => {
+          state._isDragging = dragging
         })
       },
 
@@ -4044,7 +4299,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 if (node) {
                   // Clear existing properties and restore before state
                   // (Object.assign alone doesn't remove newly-added properties)
-                  Object.keys(node.data).forEach((key) => delete (node.data as Record<string, unknown>)[key])
+                  Object.keys(node.data).forEach(
+                    (key) => delete (node.data as Record<string, unknown>)[key],
+                  )
                   Object.assign(node.data, act.before)
                   // Also restore React Flow node type if data.type changed (e.g. changeNodeType)
                   if (act.before.type && node.type !== act.before.type) {
@@ -4059,7 +4316,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                   if (node) {
                     // Clear existing properties and restore before state
                     // (Object.assign alone doesn't remove newly-added properties)
-                    Object.keys(node.data).forEach((key) => delete (node.data as Record<string, unknown>)[key])
+                    Object.keys(node.data).forEach(
+                      (key) => delete (node.data as Record<string, unknown>)[key],
+                    )
                     Object.assign(node.data, update.before)
                   }
                 }
@@ -4098,7 +4357,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 break
               case 'UPDATE_EDGE': {
                 const edge = state.edges.find((e) => e.id === act.edgeId)
-                if (edge && edge.data) {
+                if (edge?.data) {
                   Object.assign(edge.data, act.before)
                 }
                 break
@@ -4229,7 +4488,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 break
               case 'UPDATE_EDGE': {
                 const edge = state.edges.find((e) => e.id === act.edgeId)
-                if (edge && edge.data) {
+                if (edge?.data) {
                   Object.assign(edge.data, act.after)
                 }
                 break
@@ -4323,13 +4582,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 type: 'MOVE_NODE',
                 nodeId,
                 before,
-                after: { x: node.position.x, y: node.position.y }
+                after: { x: node.position.x, y: node.position.y },
               })
             }
           })
           state.dragStartPositions.clear()
 
           if (actions.length > 0) {
+            state.isDirty = true
             state.history = state.history.slice(0, state.historyIndex + 1)
             state.history.push(actions.length === 1 ? actions[0]! : { type: 'BATCH', actions })
             state.historyIndex++
@@ -4367,7 +4627,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 type: 'RESIZE_NODE',
                 nodeId,
                 before,
-                after: { width, height }
+                after: { width, height },
               })
               state.historyIndex++
               if (state.history.length > 100) {
@@ -4404,7 +4664,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               type: 'RESIZE_NODE',
               nodeId,
               before: { width: beforeW, height: beforeH },
-              after: { width: afterW, height: afterH }
+              after: { width: afterW, height: afterH },
             })
           }
 
@@ -4456,12 +4716,19 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         // while BFS traversal is O(n*d) with 5-20ms per call. Cache saves 10-50x BFS calls.
         const { workspaceId, historyIndex, isDirty } = get()
         // Include node IDs and a content hint (first 20 chars of title) to detect content changes
-        const nodeFingerprint = nodes.map(n => {
-          const title = (n.data as { title?: string }).title || ''
-          const content = (n.data as { content?: string }).content || ''
-          return `${n.id}:${title.slice(0, 20)}:${content.length}`
-        }).join(',')
-        const edgeFingerprint = edges.map(e => `${e.source}>${e.target}:${e.data?.active !== false ? '1' : '0'}:${e.data?.direction || 'd'}:${e.data?.strength || 'n'}`).join(',')
+        const nodeFingerprint = nodes
+          .map((n) => {
+            const title = (n.data as { title?: string }).title || ''
+            const content = (n.data as { content?: string }).content || ''
+            return `${n.id}:${title.slice(0, 20)}:${content.length}`
+          })
+          .join(',')
+        const edgeFingerprint = edges
+          .map(
+            (e) =>
+              `${e.source}>${e.target}:${e.data?.active !== false ? '1' : '0'}:${e.data?.direction || 'd'}:${e.data?.strength || 'n'}`,
+          )
+          .join(',')
         const graphHash = [
           computeGraphHash(nodes.length, edges.length, get().lastSaved || 0),
           workspaceId || '',
@@ -4470,388 +4737,443 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           maxDepth,
           tokenBudget,
           nodeFingerprint,
-          edgeFingerprint
+          edgeFingerprint,
         ].join('|')
         return getCachedContext(nodeId, graphHash, () => {
-
-        // BFS traversal to collect context nodes
-        interface TraversalNode {
-          node: Node<NodeData>
-          depth: number
-          strengthPriority: number // 3=strong, 2=normal, 1=light
-          path: string[] // for cycle detection
-        }
-
-        // Derive numeric priority from edge strength (uses migrateEdgeStrength for legacy weight)
-        const getEdgeStrengthPriority = (edge: Edge<EdgeData>): number => {
-          const migrated = edge.data ? migrateEdgeStrength(edge.data) : null
-          switch (migrated?.strength) {
-            case 'strong': return 3
-            case 'normal': return 2
-            case 'light': return 1
-            default: return 2
+          // BFS traversal to collect context nodes
+          interface TraversalNode {
+            node: Node<NodeData>
+            depth: number
+            strengthPriority: number // 3=strong, 2=normal, 1=light
+            path: string[] // for cycle detection
           }
-        }
 
-        const visited = new Set<string>()
-        const result: TraversalNode[] = []
-        const queue: TraversalNode[] = []
+          // Derive numeric priority from edge strength (uses migrateEdgeStrength for legacy weight)
+          const getEdgeStrengthPriority = (edge: Edge<EdgeData>): number => {
+            const migrated = edge.data ? migrateEdgeStrength(edge.data) : null
+            switch (migrated?.strength) {
+              case 'strong':
+                return 3
+              case 'normal':
+                return 2
+              case 'light':
+                return 1
+              default:
+                return 2
+            }
+          }
 
-        // Get initial connected nodes (only INBOUND edges provide context)
-        const getInboundEdges = (targetId: string) =>
-          edges.filter((e) => {
-            if (e.target !== targetId) return false
-            if (e.data?.active === false) return false // Skip inactive edges
-            return true
+          const visited = new Set<string>()
+          const result: TraversalNode[] = []
+          const queue: TraversalNode[] = []
+
+          // Get initial connected nodes (only INBOUND edges provide context)
+          const getInboundEdges = (targetId: string) =>
+            edges.filter((e) => {
+              if (e.target !== targetId) return false
+              if (e.data?.active === false) return false // Skip inactive edges
+              return true
+            })
+
+          // Also consider bidirectional edges where this node is the source
+          const getBidirectionalEdges = (targetId: string) =>
+            edges.filter((e) => {
+              if (e.source !== targetId) return false
+              if (e.data?.active === false) return false
+              if (e.data?.direction !== 'bidirectional') return false
+              return true
+            })
+
+          // Seed the queue with depth-1 nodes
+          const initialInbound = getInboundEdges(nodeId)
+          const initialBidirectional = getBidirectionalEdges(nodeId)
+
+          initialInbound.forEach((edge) => {
+            const sourceNode = nodes.find((n) => n.id === edge.source)
+            if (sourceNode && sourceNode.data.includeInContext !== false) {
+              queue.push({
+                node: sourceNode,
+                depth: 1,
+                strengthPriority: getEdgeStrengthPriority(edge),
+                path: [nodeId, sourceNode.id],
+              })
+            }
           })
 
-        // Also consider bidirectional edges where this node is the source
-        const getBidirectionalEdges = (targetId: string) =>
-          edges.filter((e) => {
-            if (e.source !== targetId) return false
-            if (e.data?.active === false) return false
-            if (e.data?.direction !== 'bidirectional') return false
-            return true
+          initialBidirectional.forEach((edge) => {
+            const targetNode = nodes.find((n) => n.id === edge.target)
+            if (
+              targetNode &&
+              targetNode.data.includeInContext !== false &&
+              !visited.has(edge.target)
+            ) {
+              queue.push({
+                node: targetNode,
+                depth: 1,
+                strengthPriority: getEdgeStrengthPriority(edge),
+                path: [nodeId, targetNode.id],
+              })
+            }
           })
 
-        // Seed the queue with depth-1 nodes
-        const initialInbound = getInboundEdges(nodeId)
-        const initialBidirectional = getBidirectionalEdges(nodeId)
+          // BFS traversal
+          while (queue.length > 0) {
+            const current = queue.shift()!
 
-        initialInbound.forEach((edge) => {
-          const sourceNode = nodes.find((n) => n.id === edge.source)
-          if (sourceNode && sourceNode.data.includeInContext !== false) {
-            queue.push({
-              node: sourceNode,
-              depth: 1,
-              strengthPriority: getEdgeStrengthPriority(edge),
-              path: [nodeId, sourceNode.id]
-            })
-          }
-        })
+            // Debug: Log processing for depth tests (disabled)
+            // console.log(`[BFS] Processing ${current.node.id} at depth ${current.depth}, maxDepth=${maxDepth}`)
 
-        initialBidirectional.forEach((edge) => {
-          const targetNode = nodes.find((n) => n.id === edge.target)
-          if (targetNode && targetNode.data.includeInContext !== false && !visited.has(edge.target)) {
-            queue.push({
-              node: targetNode,
-              depth: 1,
-              strengthPriority: getEdgeStrengthPriority(edge),
-              path: [nodeId, targetNode.id]
-            })
-          }
-        })
+            if (visited.has(current.node.id)) continue
+            if (current.depth > maxDepth) {
+              // console.log(`[BFS] Skipping ${current.node.id} - depth ${current.depth} > maxDepth ${maxDepth}`)
+              continue
+            }
 
-        // BFS traversal
-        while (queue.length > 0) {
-          const current = queue.shift()!
+            visited.add(current.node.id)
+            result.push(current)
+            // console.log(`[BFS] Added ${current.node.id} to results at depth ${current.depth}`)
 
-          // Debug: Log processing for depth tests (disabled)
-          // console.log(`[BFS] Processing ${current.node.id} at depth ${current.depth}, maxDepth=${maxDepth}`)
+            // Continue traversal for next depth (only if next depth would be within limit)
+            // Don't queue if we're already at maxDepth (next would exceed limit)
+            if (current.depth < maxDepth) {
+              const nextInbound = getInboundEdges(current.node.id)
+              const nextBidirectional = getBidirectionalEdges(current.node.id)
 
-          if (visited.has(current.node.id)) continue
-          if (current.depth > maxDepth) {
-            // console.log(`[BFS] Skipping ${current.node.id} - depth ${current.depth} > maxDepth ${maxDepth}`)
-            continue
-          }
-
-          visited.add(current.node.id)
-          result.push(current)
-          // console.log(`[BFS] Added ${current.node.id} to results at depth ${current.depth}`)
-
-          // Continue traversal for next depth (only if next depth would be within limit)
-          // Don't queue if we're already at maxDepth (next would exceed limit)
-          if (current.depth < maxDepth) {
-            const nextInbound = getInboundEdges(current.node.id)
-            const nextBidirectional = getBidirectionalEdges(current.node.id)
-
-            nextInbound.forEach((edge) => {
-              if (!visited.has(edge.source) && !current.path.includes(edge.source)) {
-                const sourceNode = nodes.find((n) => n.id === edge.source)
-                if (sourceNode && sourceNode.data.includeInContext !== false) {
-                  const nextDepth = current.depth + 1
-                  // console.log(`[BFS] Queueing ${sourceNode.id} at depth ${nextDepth} (from ${current.node.id} at depth ${current.depth})`)
-                  queue.push({
-                    node: sourceNode,
-                    depth: nextDepth,
-                    strengthPriority: getEdgeStrengthPriority(edge),
-                    path: [...current.path, sourceNode.id]
-                  })
+              nextInbound.forEach((edge) => {
+                if (!visited.has(edge.source) && !current.path.includes(edge.source)) {
+                  const sourceNode = nodes.find((n) => n.id === edge.source)
+                  if (sourceNode && sourceNode.data.includeInContext !== false) {
+                    const nextDepth = current.depth + 1
+                    // console.log(`[BFS] Queueing ${sourceNode.id} at depth ${nextDepth} (from ${current.node.id} at depth ${current.depth})`)
+                    queue.push({
+                      node: sourceNode,
+                      depth: nextDepth,
+                      strengthPriority: getEdgeStrengthPriority(edge),
+                      path: [...current.path, sourceNode.id],
+                    })
+                  }
                 }
-              }
-            })
+              })
 
-            nextBidirectional.forEach((edge) => {
-              if (!visited.has(edge.target) && !current.path.includes(edge.target)) {
-                const targetNode = nodes.find((n) => n.id === edge.target)
-                if (targetNode && targetNode.data.includeInContext !== false) {
-                  queue.push({
-                    node: targetNode,
-                    depth: current.depth + 1,
-                    strengthPriority: getEdgeStrengthPriority(edge),
-                    path: [...current.path, targetNode.id]
-                  })
+              nextBidirectional.forEach((edge) => {
+                if (!visited.has(edge.target) && !current.path.includes(edge.target)) {
+                  const targetNode = nodes.find((n) => n.id === edge.target)
+                  if (targetNode && targetNode.data.includeInContext !== false) {
+                    queue.push({
+                      node: targetNode,
+                      depth: current.depth + 1,
+                      strengthPriority: getEdgeStrengthPriority(edge),
+                      path: [...current.path, targetNode.id],
+                    })
+                  }
                 }
-              }
-            })
-          }
-        }
-
-        // Node type priority for sorting
-        const getTypePriority = (node: Node<NodeData>): number => {
-          const priorities: Record<string, number> = {
-            workspace: 0, // Workspace configuration should come first
-            orchestrator: 1, // Controller that provides context
-            project: 1,
-            note: 2,
-            task: 3,
-            artifact: 4,
-            conversation: 5
-          }
-          return priorities[node.data.type] ?? 10
-        }
-
-        // Sort by: depth (closer first), then strength (higher first), then type priority
-        const sortedResult = result.sort((a, b) => {
-          if (a.depth !== b.depth) return a.depth - b.depth
-          if (a.strengthPriority !== b.strengthPriority) return b.strengthPriority - a.strengthPriority
-          return getTypePriority(a.node) - getTypePriority(b.node)
-        })
-
-        const contextNodes = sortedResult.map((item) => item.node)
-
-        // Helper to get role label
-        const getRoleLabel = (role: string | undefined, defaultRole: string): string => {
-          const roleLabels: Record<string, string> = {
-            reference: 'Reference',
-            instruction: 'INSTRUCTION - Follow this guidance',
-            example: 'Example/Template',
-            background: 'Background Context',
-            scope: 'Project Scope'
-          }
-          return roleLabels[role || defaultRole] || defaultRole
-        }
-
-        // Helper to get relationship label
-        const getRelationshipLabel = (relationship: string | undefined): string => {
-          const labels: Record<string, string> = {
-            'depends-on': 'depends on',
-            'related-to': 'related to',
-            'implements': 'implements',
-            'references': 'references',
-            'blocks': 'blocks/blocked by'
-          }
-          return labels[relationship || ''] || ''
-        }
-
-        // Context nodes are already sorted by depth, strength, and type from BFS
-        // Additionally sort by contextPriority within the same depth/strength/type
-        const priorityOrder = { high: 0, medium: 1, low: 2 }
-        const finalSortedNodes = [...contextNodes].sort((a, b) => {
-          const aPriority = (a.data as { contextPriority?: string }).contextPriority || 'medium'
-          const bPriority = (b.data as { contextPriority?: string }).contextPriority || 'medium'
-          return (priorityOrder[aPriority as keyof typeof priorityOrder] || 1) -
-                 (priorityOrder[bPriority as keyof typeof priorityOrder] || 1)
-        })
-
-        const contextParts: string[] = []
-        let accumulatedTokens = 0
-        const effectiveBudget = Math.floor(tokenBudget * TOKEN_SAFETY_MARGIN)
-
-        finalSortedNodes.forEach((node) => {
-          // Token budget enforcement:
-          // Stop adding nodes once accumulated tokens reach the budget
-          if (accumulatedTokens >= effectiveBudget) return
-          const nodeData = node.data as {
-            contextLabel?: string
-            contextRole?: string
-            contextPriority?: string
-            tags?: string[]
-            summary?: string
-            keyEntities?: string[]
-            relationshipType?: string
-          }
-          const customLabel = nodeData.contextLabel
-          const priority = nodeData.contextPriority || 'medium'
-          const priorityMarker = priority === 'high' ? ' [HIGH PRIORITY]' : ''
-
-          // Build metadata section
-          const metaParts: string[] = []
-          const nodeTags = ((nodeData as Record<string, unknown>).properties as Record<string, unknown> | undefined)?.tags as string[] | undefined || nodeData.tags
-          if (nodeTags && nodeTags.length > 0) {
-            metaParts.push(`Tags: ${nodeTags.join(', ')}`)
-          }
-          if (nodeData.keyEntities && nodeData.keyEntities.length > 0) {
-            metaParts.push(`Key concepts: ${nodeData.keyEntities.join(', ')}`)
-          }
-          if (nodeData.relationshipType) {
-            metaParts.push(`Relationship: ${getRelationshipLabel(nodeData.relationshipType)}`)
-          }
-          const metaBlock = metaParts.length > 0 ? `\nMetadata: ${metaParts.join(' | ')}` : ''
-
-          switch (node.data.type) {
-            case 'note': {
-              const noteData = node.data as NoteNodeData
-              const role = getRoleLabel(nodeData.contextRole, 'Reference')
-              const label = customLabel || noteData.title
-              const summary = nodeData.summary ? `\nSummary: ${nodeData.summary}` : ''
-              
-              if (noteData.content) {
-                contextParts.push(`[${role}: ${label}]${priorityMarker}${metaBlock}${summary}\n${noteData.content}`)
-              } else {
-                // Include metadata even if content is empty
-                contextParts.push(`[${role}: ${label}]${priorityMarker}${metaBlock}${summary}\n(Empty note)`)
-              }
-              break
-            }
-            case 'project': {
-              const projectData = node.data as ProjectNodeData
-              const role = getRoleLabel(nodeData.contextRole, 'Project Scope')
-              const label = customLabel || projectData.title
-              const summary = nodeData.summary ? `\nSummary: ${nodeData.summary}` : ''
-              const childCount = projectData.childNodeIds.length
-              const childInfo = childCount > 0 ? `\nContains ${childCount} items` : ''
-              
-              if (projectData.description) {
-                contextParts.push(`[${role}: ${label}]${priorityMarker}${metaBlock}${summary}${childInfo}\n${projectData.description}`)
-              } else {
-                // Include metadata even if description is empty
-                contextParts.push(`[${role}: ${label}]${priorityMarker}${metaBlock}${summary}${childInfo}\n(No description)`)
-              }
-              break
-            }
-            case 'task': {
-              const taskData = node.data as TaskNodeData
-              const dueInfo = taskData.dueDate ? `\nDue: ${new Date(taskData.dueDate).toLocaleDateString()}` : ''
-              contextParts.push(
-                `[Task: ${taskData.title}]${metaBlock}\nStatus: ${taskData.status}\nPriority: ${taskData.priority}${dueInfo}\n${taskData.description || ''}`
-              )
-              break
-            }
-            case 'conversation': {
-              const convData = node.data as ConversationNodeData
-              const recentMessages = convData.messages.slice(-5)
-              
-              if (recentMessages.length > 0) {
-                const msgText = recentMessages.map((m) => `${m.role}: ${m.content}`).join('\n')
-                contextParts.push(`[Related Conversation: ${convData.title}]${metaBlock}\nProvider: ${convData.provider}\n${msgText}`)
-              } else {
-                // Include metadata even if no messages yet
-                contextParts.push(`[Related Conversation: ${convData.title}]${metaBlock}\nProvider: ${convData.provider}\n(No messages yet)`)
-              }
-              break
-            }
-            case 'artifact': {
-              const artifactData = node.data as ArtifactNodeData
-              const format = artifactData.injectionFormat || 'full'
-              let injectedContent: string
-
-              switch (format) {
-                case 'full':
-                  injectedContent = artifactData.content
-                  break
-                case 'summary':
-                  injectedContent = nodeData.summary || `[${artifactData.contentType} artifact: ${artifactData.title}]`
-                  break
-                case 'chunked':
-                  // Truncate to maxInjectionTokens (rough estimate: 4 chars per token)
-                  const maxChars = (artifactData.maxInjectionTokens || 2000) * 4
-                  injectedContent = artifactData.content.length > maxChars
-                    ? artifactData.content.slice(0, maxChars) + '\n[...truncated]'
-                    : artifactData.content
-                  break
-                case 'reference-only':
-                  injectedContent = `[Reference: ${artifactData.title} (${artifactData.contentType})]`
-                  break
-                default:
-                  injectedContent = artifactData.content
-              }
-
-              const role = getRoleLabel(nodeData.contextRole, 'Artifact')
-              const label = customLabel || artifactData.title
-              const langInfo = artifactData.language ? ` (${artifactData.language})` : ''
-              contextParts.push(`[${role}: ${label}]${langInfo}${priorityMarker}${metaBlock}\n${injectedContent}`)
-              break
-            }
-            case 'workspace': {
-              const wsData = node.data as WorkspaceNodeData
-              const role = getRoleLabel(nodeData.contextRole, 'Workspace Configuration')
-              const label = customLabel || wsData.title
-              const summary = nodeData.summary ? `\nSummary: ${nodeData.summary}` : ''
-              const memberCount = wsData.includedNodeIds?.length || 0
-              const memberInfo = memberCount > 0 ? `\nMembers: ${memberCount} nodes included` : ''
-
-              // Include LLM settings if configured
-              const llmInfo: string[] = []
-              if (wsData.llmSettings?.provider) {
-                llmInfo.push(`Provider: ${wsData.llmSettings.provider}`)
-              }
-              if (wsData.llmSettings?.model) {
-                llmInfo.push(`Model: ${wsData.llmSettings.model}`)
-              }
-              if (wsData.llmSettings?.systemPrompt) {
-                llmInfo.push(`System instructions: ${wsData.llmSettings.systemPrompt}`)
-              }
-              const llmBlock = llmInfo.length > 0 ? `\nLLM Configuration: ${llmInfo.join(' | ')}` : ''
-
-              // Include context rules if configured
-              const contextInfo: string[] = []
-              if (wsData.contextRules?.maxDepth !== undefined) {
-                contextInfo.push(`Max context depth: ${wsData.contextRules.maxDepth}`)
-              }
-              if (wsData.contextRules?.maxTokens !== undefined) {
-                contextInfo.push(`Max tokens: ${wsData.contextRules.maxTokens}`)
-              }
-              if (wsData.contextRules?.traversalMode) {
-                contextInfo.push(`Traversal: ${wsData.contextRules.traversalMode}`)
-              }
-              const contextBlock = contextInfo.length > 0 ? `\nContext rules: ${contextInfo.join(' | ')}` : ''
-
-              contextParts.push(`[${role}: ${label}]${priorityMarker}${metaBlock}${summary}${memberInfo}${llmBlock}${contextBlock}\n${wsData.description || ''}`)
-              break
-            }
-            case 'text': {
-              const textData = node.data as TextNodeData
-              const role = getRoleLabel(nodeData.contextRole, 'Text')
-              const label = customLabel || 'Text'
-              const summary = nodeData.summary ? `\nSummary: ${nodeData.summary}` : ''
-              
-              if (textData.content) {
-                contextParts.push(`[${role}: ${label}]${priorityMarker}${metaBlock}${summary}\n${textData.content}`)
-              } else {
-                // Include metadata even if content is empty
-                contextParts.push(`[${role}: ${label}]${priorityMarker}${metaBlock}${summary}\n(Empty)`)
-              }
-              break
-            }
-            case 'orchestrator': {
-              const orchData = node.data as { title: string; strategy: string; connectedAgents: unknown[]; description?: string }
-              const role = getRoleLabel(nodeData.contextRole, 'Orchestrator')
-              const label = customLabel || orchData.title
-              contextParts.push(`[${role}: ${label}]${priorityMarker}${metaBlock}\nStrategy: ${orchData.strategy}\nAgents: ${orchData.connectedAgents.length}\n${orchData.description || ''}`)
-              break
+              })
             }
           }
 
-          // Append attachment info if node has attachments (always as separate context part with attribution)
-          const attachments = (node.data as { attachments?: { filename: string; mimeType: string; size: number }[] }).attachments
-          if (attachments && attachments.length > 0) {
-            const attachmentList = attachments.map((a) =>
-              `  - ${a.filename} (${a.mimeType}, ${a.size > 1024 ? `${(a.size / 1024).toFixed(0)}KB` : `${a.size}B`})`
-            ).join('\n')
-            const nodeTitle = (node.data as { title?: string }).title || node.data.type || 'Node'
-            contextParts.push(`[Attached files: ${nodeTitle}]\n${attachmentList}`)
+          // Node type priority for sorting
+          const getTypePriority = (node: Node<NodeData>): number => {
+            const priorities: Record<string, number> = {
+              workspace: 0, // Workspace configuration should come first
+              orchestrator: 1, // Controller that provides context
+              project: 1,
+              note: 2,
+              task: 3,
+              artifact: 4,
+              conversation: 5,
+            }
+            return priorities[node.data.type] ?? 10
           }
 
-          // Track accumulated tokens after adding this node's context
-          // Uses ~4 chars/token estimate (same as tokenEstimation.ts)
-          const lastPart = contextParts[contextParts.length - 1]
-          if (lastPart) {
-            accumulatedTokens += Math.ceil(lastPart.length / 4)
-          }
-        })
+          // Sort by: depth (closer first), then strength (higher first), then type priority
+          const sortedResult = result.sort((a, b) => {
+            if (a.depth !== b.depth) return a.depth - b.depth
+            if (a.strengthPriority !== b.strengthPriority)
+              return b.strengthPriority - a.strengthPriority
+            return getTypePriority(a.node) - getTypePriority(b.node)
+          })
 
-        return contextParts.join('\n\n---\n\n')
+          const contextNodes = sortedResult.map((item) => item.node)
+
+          // Helper to get role label
+          const getRoleLabel = (role: string | undefined, defaultRole: string): string => {
+            const roleLabels: Record<string, string> = {
+              reference: 'Reference',
+              instruction: 'INSTRUCTION - Follow this guidance',
+              example: 'Example/Template',
+              background: 'Background Context',
+              scope: 'Project Scope',
+            }
+            return roleLabels[role || defaultRole] || defaultRole
+          }
+
+          // Helper to get relationship label
+          const getRelationshipLabel = (relationship: string | undefined): string => {
+            const labels: Record<string, string> = {
+              'depends-on': 'depends on',
+              'related-to': 'related to',
+              implements: 'implements',
+              references: 'references',
+              blocks: 'blocks/blocked by',
+            }
+            return labels[relationship || ''] || ''
+          }
+
+          // Context nodes are already sorted by depth, strength, and type from BFS
+          // Additionally sort by contextPriority within the same depth/strength/type
+          const priorityOrder = { high: 0, medium: 1, low: 2 }
+          const finalSortedNodes = [...contextNodes].sort((a, b) => {
+            const aPriority = (a.data as { contextPriority?: string }).contextPriority || 'medium'
+            const bPriority = (b.data as { contextPriority?: string }).contextPriority || 'medium'
+            return (
+              (priorityOrder[aPriority as keyof typeof priorityOrder] || 1) -
+              (priorityOrder[bPriority as keyof typeof priorityOrder] || 1)
+            )
+          })
+
+          const contextParts: string[] = []
+          let accumulatedTokens = 0
+          const effectiveBudget = Math.floor(tokenBudget * TOKEN_SAFETY_MARGIN)
+
+          finalSortedNodes.forEach((node) => {
+            // Token budget enforcement:
+            // Stop adding nodes once accumulated tokens reach the budget
+            if (accumulatedTokens >= effectiveBudget) return
+            const nodeData = node.data as {
+              contextLabel?: string
+              contextRole?: string
+              contextPriority?: string
+              tags?: string[]
+              summary?: string
+              keyEntities?: string[]
+              relationshipType?: string
+            }
+            const customLabel = nodeData.contextLabel
+            const priority = nodeData.contextPriority || 'medium'
+            const priorityMarker = priority === 'high' ? ' [HIGH PRIORITY]' : ''
+
+            // Build metadata section
+            const metaParts: string[] = []
+            const nodeTags =
+              ((
+                (nodeData as Record<string, unknown>).properties as
+                  | Record<string, unknown>
+                  | undefined
+              )?.tags as string[] | undefined) || nodeData.tags
+            if (nodeTags && nodeTags.length > 0) {
+              metaParts.push(`Tags: ${nodeTags.join(', ')}`)
+            }
+            if (nodeData.keyEntities && nodeData.keyEntities.length > 0) {
+              metaParts.push(`Key concepts: ${nodeData.keyEntities.join(', ')}`)
+            }
+            if (nodeData.relationshipType) {
+              metaParts.push(`Relationship: ${getRelationshipLabel(nodeData.relationshipType)}`)
+            }
+            const metaBlock = metaParts.length > 0 ? `\nMetadata: ${metaParts.join(' | ')}` : ''
+
+            switch (node.data.type) {
+              case 'note': {
+                const noteData = node.data as NoteNodeData
+                const role = getRoleLabel(nodeData.contextRole, 'Reference')
+                const label = customLabel || noteData.title
+                const summary = nodeData.summary ? `\nSummary: ${nodeData.summary}` : ''
+
+                if (noteData.content) {
+                  contextParts.push(
+                    `[${role}: ${label}]${priorityMarker}${metaBlock}${summary}\n${noteData.content}`,
+                  )
+                } else {
+                  // Include metadata even if content is empty
+                  contextParts.push(
+                    `[${role}: ${label}]${priorityMarker}${metaBlock}${summary}\n(Empty note)`,
+                  )
+                }
+                break
+              }
+              case 'project': {
+                const projectData = node.data as ProjectNodeData
+                const role = getRoleLabel(nodeData.contextRole, 'Project Scope')
+                const label = customLabel || projectData.title
+                const summary = nodeData.summary ? `\nSummary: ${nodeData.summary}` : ''
+                const childCount = projectData.childNodeIds.length
+                const childInfo = childCount > 0 ? `\nContains ${childCount} items` : ''
+
+                if (projectData.description) {
+                  contextParts.push(
+                    `[${role}: ${label}]${priorityMarker}${metaBlock}${summary}${childInfo}\n${projectData.description}`,
+                  )
+                } else {
+                  // Include metadata even if description is empty
+                  contextParts.push(
+                    `[${role}: ${label}]${priorityMarker}${metaBlock}${summary}${childInfo}\n(No description)`,
+                  )
+                }
+                break
+              }
+              case 'task': {
+                const taskData = node.data as TaskNodeData
+                const dueInfo = taskData.dueDate
+                  ? `\nDue: ${new Date(taskData.dueDate).toLocaleDateString()}`
+                  : ''
+                contextParts.push(
+                  `[Task: ${taskData.title}]${metaBlock}\nStatus: ${taskData.status}\nPriority: ${taskData.priority}${dueInfo}\n${taskData.description || ''}`,
+                )
+                break
+              }
+              case 'conversation': {
+                const convData = node.data as ConversationNodeData
+                const recentMessages = convData.messages.slice(-5)
+
+                if (recentMessages.length > 0) {
+                  const msgText = recentMessages.map((m) => `${m.role}: ${m.content}`).join('\n')
+                  contextParts.push(
+                    `[Related Conversation: ${convData.title}]${metaBlock}\nProvider: ${convData.provider}\n${msgText}`,
+                  )
+                } else {
+                  // Include metadata even if no messages yet
+                  contextParts.push(
+                    `[Related Conversation: ${convData.title}]${metaBlock}\nProvider: ${convData.provider}\n(No messages yet)`,
+                  )
+                }
+                break
+              }
+              case 'artifact': {
+                const artifactData = node.data as ArtifactNodeData
+                const format = artifactData.injectionFormat || 'full'
+                let injectedContent: string
+
+                switch (format) {
+                  case 'full':
+                    injectedContent = artifactData.content
+                    break
+                  case 'summary':
+                    injectedContent =
+                      nodeData.summary ||
+                      `[${artifactData.contentType} artifact: ${artifactData.title}]`
+                    break
+                  case 'chunked': {
+                    // Truncate to maxInjectionTokens (rough estimate: 4 chars per token)
+                    const maxChars = (artifactData.maxInjectionTokens || 2000) * 4
+                    injectedContent =
+                      artifactData.content.length > maxChars
+                        ? `${artifactData.content.slice(0, maxChars)}\n[...truncated]`
+                        : artifactData.content
+                    break
+                  }
+                  case 'reference-only':
+                    injectedContent = `[Reference: ${artifactData.title} (${artifactData.contentType})]`
+                    break
+                  default:
+                    injectedContent = artifactData.content
+                }
+
+                const role = getRoleLabel(nodeData.contextRole, 'Artifact')
+                const label = customLabel || artifactData.title
+                const langInfo = artifactData.language ? ` (${artifactData.language})` : ''
+                contextParts.push(
+                  `[${role}: ${label}]${langInfo}${priorityMarker}${metaBlock}\n${injectedContent}`,
+                )
+                break
+              }
+              case 'workspace': {
+                const wsData = node.data as WorkspaceNodeData
+                const role = getRoleLabel(nodeData.contextRole, 'Workspace Configuration')
+                const label = customLabel || wsData.title
+                const summary = nodeData.summary ? `\nSummary: ${nodeData.summary}` : ''
+                const memberCount = wsData.includedNodeIds?.length || 0
+                const memberInfo = memberCount > 0 ? `\nMembers: ${memberCount} nodes included` : ''
+
+                // Include LLM settings if configured
+                const llmInfo: string[] = []
+                if (wsData.llmSettings?.provider) {
+                  llmInfo.push(`Provider: ${wsData.llmSettings.provider}`)
+                }
+                if (wsData.llmSettings?.model) {
+                  llmInfo.push(`Model: ${wsData.llmSettings.model}`)
+                }
+                if (wsData.llmSettings?.systemPrompt) {
+                  llmInfo.push(`System instructions: ${wsData.llmSettings.systemPrompt}`)
+                }
+                const llmBlock =
+                  llmInfo.length > 0 ? `\nLLM Configuration: ${llmInfo.join(' | ')}` : ''
+
+                // Include context rules if configured
+                const contextInfo: string[] = []
+                if (wsData.contextRules?.maxDepth !== undefined) {
+                  contextInfo.push(`Max context depth: ${wsData.contextRules.maxDepth}`)
+                }
+                if (wsData.contextRules?.maxTokens !== undefined) {
+                  contextInfo.push(`Max tokens: ${wsData.contextRules.maxTokens}`)
+                }
+                if (wsData.contextRules?.traversalMode) {
+                  contextInfo.push(`Traversal: ${wsData.contextRules.traversalMode}`)
+                }
+                const contextBlock =
+                  contextInfo.length > 0 ? `\nContext rules: ${contextInfo.join(' | ')}` : ''
+
+                contextParts.push(
+                  `[${role}: ${label}]${priorityMarker}${metaBlock}${summary}${memberInfo}${llmBlock}${contextBlock}\n${wsData.description || ''}`,
+                )
+                break
+              }
+              case 'text': {
+                const textData = node.data as TextNodeData
+                const role = getRoleLabel(nodeData.contextRole, 'Text')
+                const label = customLabel || 'Text'
+                const summary = nodeData.summary ? `\nSummary: ${nodeData.summary}` : ''
+
+                if (textData.content) {
+                  contextParts.push(
+                    `[${role}: ${label}]${priorityMarker}${metaBlock}${summary}\n${textData.content}`,
+                  )
+                } else {
+                  // Include metadata even if content is empty
+                  contextParts.push(
+                    `[${role}: ${label}]${priorityMarker}${metaBlock}${summary}\n(Empty)`,
+                  )
+                }
+                break
+              }
+              case 'orchestrator': {
+                const orchData = node.data as {
+                  title: string
+                  strategy: string
+                  connectedAgents: unknown[]
+                  description?: string
+                }
+                const role = getRoleLabel(nodeData.contextRole, 'Orchestrator')
+                const label = customLabel || orchData.title
+                contextParts.push(
+                  `[${role}: ${label}]${priorityMarker}${metaBlock}\nStrategy: ${orchData.strategy}\nAgents: ${orchData.connectedAgents.length}\n${orchData.description || ''}`,
+                )
+                break
+              }
+            }
+
+            // Append attachment info if node has attachments (always as separate context part with attribution)
+            const attachments = (
+              node.data as { attachments?: { filename: string; mimeType: string; size: number }[] }
+            ).attachments
+            if (attachments && attachments.length > 0) {
+              const attachmentList = attachments
+                .map(
+                  (a) =>
+                    `  - ${a.filename} (${a.mimeType}, ${a.size > 1024 ? `${(a.size / 1024).toFixed(0)}KB` : `${a.size}B`})`,
+                )
+                .join('\n')
+              const nodeTitle = (node.data as { title?: string }).title || node.data.type || 'Node'
+              contextParts.push(`[Attached files: ${nodeTitle}]\n${attachmentList}`)
+            }
+
+            // Track accumulated tokens after adding this node's context
+            // Uses ~4 chars/token estimate (same as tokenEstimation.ts)
+            const lastPart = contextParts[contextParts.length - 1]
+            if (lastPart) {
+              accumulatedTokens += Math.ceil(lastPart.length / 4)
+            }
+          })
+
+          return contextParts.join('\n\n---\n\n')
         }) // end getCachedContext
       },
 
@@ -4865,12 +5187,19 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
         // Same graph hash as getContextForNode for cache parity
         const { workspaceId, historyIndex, isDirty } = get()
-        const nodeFingerprint = nodes.map(n => {
-          const title = (n.data as { title?: string }).title || ''
-          const content = (n.data as { content?: string }).content || ''
-          return `${n.id}:${title.slice(0, 20)}:${content.length}`
-        }).join(',')
-        const edgeFingerprint = edges.map(e => `${e.source}>${e.target}:${e.data?.active !== false ? '1' : '0'}:${e.data?.direction || 'd'}:${e.data?.strength || 'n'}`).join(',')
+        const nodeFingerprint = nodes
+          .map((n) => {
+            const title = (n.data as { title?: string }).title || ''
+            const content = (n.data as { content?: string }).content || ''
+            return `${n.id}:${title.slice(0, 20)}:${content.length}`
+          })
+          .join(',')
+        const edgeFingerprint = edges
+          .map(
+            (e) =>
+              `${e.source}>${e.target}:${e.data?.active !== false ? '1' : '0'}:${e.data?.direction || 'd'}:${e.data?.strength || 'n'}`,
+          )
+          .join(',')
         const graphHash = [
           computeGraphHash(nodes.length, edges.length, get().lastSaved || 0),
           workspaceId || '',
@@ -4878,7 +5207,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           isDirty ? '1' : '0',
           maxDepth,
           nodeFingerprint,
-          edgeFingerprint
+          edgeFingerprint,
         ].join('|')
 
         return getCachedTraversal(nodeId, graphHash, () => {
@@ -4892,10 +5221,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const getEdgeStrengthPriority = (edge: Edge<EdgeData>): number => {
             const migrated = edge.data ? migrateEdgeStrength(edge.data) : null
             switch (migrated?.strength) {
-              case 'strong': return 3
-              case 'normal': return 2
-              case 'light': return 1
-              default: return 2
+              case 'strong':
+                return 3
+              case 'normal':
+                return 2
+              case 'light':
+                return 1
+              default:
+                return 2
             }
           }
 
@@ -4930,7 +5263,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 node: sourceNode,
                 depth: 1,
                 strengthPriority: getEdgeStrengthPriority(edge),
-                path: [nodeId, sourceNode.id]
+                path: [nodeId, sourceNode.id],
               })
               traversedEdgeIds.add(edge.id)
             }
@@ -4938,12 +5271,16 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
           initialBidirectional.forEach((edge) => {
             const targetNode = nodes.find((n) => n.id === edge.target)
-            if (targetNode && targetNode.data.includeInContext !== false && !visited.has(edge.target)) {
+            if (
+              targetNode &&
+              targetNode.data.includeInContext !== false &&
+              !visited.has(edge.target)
+            ) {
               queue.push({
                 node: targetNode,
                 depth: 1,
                 strengthPriority: getEdgeStrengthPriority(edge),
-                path: [nodeId, targetNode.id]
+                path: [nodeId, targetNode.id],
               })
               traversedEdgeIds.add(edge.id)
             }
@@ -4971,7 +5308,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                       node: sourceNode,
                       depth: current.depth + 1,
                       strengthPriority: getEdgeStrengthPriority(edge),
-                      path: [...current.path, sourceNode.id]
+                      path: [...current.path, sourceNode.id],
                     })
                     traversedEdgeIds.add(edge.id)
                   }
@@ -4986,7 +5323,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                       node: targetNode,
                       depth: current.depth + 1,
                       strengthPriority: getEdgeStrengthPriority(edge),
-                      path: [...current.path, targetNode.id]
+                      path: [...current.path, targetNode.id],
                     })
                     traversedEdgeIds.add(edge.id)
                   }
@@ -4996,7 +5333,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           }
 
           // Build structured traversal data
-          const traversalNodes = result.map(item => {
+          const traversalNodes = result.map((item) => {
             const nodeData = item.node.data as {
               contextRole?: string
               contextPriority?: string
@@ -5009,19 +5346,19 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               priority: nodeData.contextPriority || 'medium',
               strengthPriority: item.strengthPriority,
               type: item.node.data.type,
-              title: nodeData.title || item.node.data.type
+              title: nodeData.title || item.node.data.type,
             }
           })
 
           const traversalEdges = edges
-            .filter(e => traversedEdgeIds.has(e.id))
-            .map(e => {
+            .filter((e) => traversedEdgeIds.has(e.id))
+            .map((e) => {
               const migrated = e.data ? migrateEdgeStrength(e.data) : null
               return {
                 id: e.id,
                 source: e.source,
                 target: e.target,
-                strength: migrated?.strength || 'normal'
+                strength: migrated?.strength || 'normal',
               }
             })
 
@@ -5033,7 +5370,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             nodes: traversalNodes,
             edges: traversalEdges,
             text,
-            nodeCount: traversalNodes.length
+            nodeCount: traversalNodes.length,
           }
         })
       },
@@ -5073,8 +5410,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 state.themeSettings.guiColorsLight = state.themeSettings.guiColors
               }
               // Load dark colors
-              state.themeSettings.canvasBackground = state.themeSettings.canvasBackgroundDark || 'linear-gradient(135deg, #0d0d14 0%, #0f0f1a 50%, #0d0d14 100%)'
-              state.themeSettings.canvasGridColor = state.themeSettings.canvasGridColorDark || '#1e1e2e'
+              state.themeSettings.canvasBackground =
+                state.themeSettings.canvasBackgroundDark ||
+                'linear-gradient(135deg, #0d0d14 0%, #0f0f1a 50%, #0d0d14 100%)'
+              state.themeSettings.canvasGridColor =
+                state.themeSettings.canvasGridColorDark || '#1e1e2e'
               state.themeSettings.guiColors = state.themeSettings.guiColorsDark || DEFAULT_GUI_DARK
             } else {
               // Save current colors to dark before switching
@@ -5084,9 +5424,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 state.themeSettings.guiColorsDark = state.themeSettings.guiColors
               }
               // Load light colors
-              state.themeSettings.canvasBackground = state.themeSettings.canvasBackgroundLight || 'linear-gradient(135deg, #fafbff 0%, #f5f3ff 50%, #fafbff 100%)'
-              state.themeSettings.canvasGridColor = state.themeSettings.canvasGridColorLight || '#e2e4f0'
-              state.themeSettings.guiColors = state.themeSettings.guiColorsLight || DEFAULT_GUI_LIGHT
+              state.themeSettings.canvasBackground =
+                state.themeSettings.canvasBackgroundLight ||
+                'linear-gradient(135deg, #fafbff 0%, #f5f3ff 50%, #fafbff 100%)'
+              state.themeSettings.canvasGridColor =
+                state.themeSettings.canvasGridColorLight || '#e2e4f0'
+              state.themeSettings.guiColors =
+                state.themeSettings.guiColorsLight || DEFAULT_GUI_LIGHT
             }
           }
           state.isDirty = true
@@ -5199,7 +5543,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             state.themeSettings.customColors = []
           }
           // Only add if not already present and valid hex
-          if (/^#[0-9A-Fa-f]{6}$/.test(color) && !state.themeSettings.customColors.includes(color)) {
+          if (
+            /^#[0-9A-Fa-f]{6}$/.test(color) &&
+            !state.themeSettings.customColors.includes(color)
+          ) {
             // Limit to 12 custom colors, remove oldest if at limit
             if (state.themeSettings.customColors.length >= 12) {
               state.themeSettings.customColors.shift()
@@ -5213,7 +5560,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       removeCustomColor: (color) => {
         set((state) => {
           if (state.themeSettings.customColors) {
-            state.themeSettings.customColors = state.themeSettings.customColors.filter(c => c !== color)
+            state.themeSettings.customColors = state.themeSettings.customColors.filter(
+              (c) => c !== color,
+            )
             state.isDirty = true
           }
         })
@@ -5242,7 +5591,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             canvasBackgroundDark: state.themeSettings.canvasBackgroundDark,
             canvasGridColorDark: state.themeSettings.canvasGridColorDark,
             canvasBackgroundLight: state.themeSettings.canvasBackgroundLight,
-            canvasGridColorLight: state.themeSettings.canvasGridColorLight
+            canvasGridColorLight: state.themeSettings.canvasGridColorLight,
           })
           state.isDirty = true
         })
@@ -5252,7 +5601,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       deleteCustomPreset: (presetId) => {
         set((state) => {
           if (state.themeSettings.customPresets) {
-            state.themeSettings.customPresets = state.themeSettings.customPresets.filter(p => p.id !== presetId)
+            state.themeSettings.customPresets = state.themeSettings.customPresets.filter(
+              (p) => p.id !== presetId,
+            )
             state.isDirty = true
           }
         })
@@ -5260,23 +5611,31 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       applyCustomPreset: (presetId) => {
         set((state) => {
-          const preset = state.themeSettings.customPresets?.find(p => p.id === presetId)
+          const preset = state.themeSettings.customPresets?.find((p) => p.id === presetId)
           if (preset) {
             state.themeSettings.nodeColors = { ...preset.nodeColors }
             // Apply per-mode canvas colors if available, otherwise use legacy colors
             const mode = state.themeSettings.mode
             if (mode === 'dark') {
-              state.themeSettings.canvasBackground = preset.canvasBackgroundDark || preset.canvasBackground
-              state.themeSettings.canvasGridColor = preset.canvasGridColorDark || preset.canvasGridColor
+              state.themeSettings.canvasBackground =
+                preset.canvasBackgroundDark || preset.canvasBackground
+              state.themeSettings.canvasGridColor =
+                preset.canvasGridColorDark || preset.canvasGridColor
             } else {
-              state.themeSettings.canvasBackground = preset.canvasBackgroundLight || preset.canvasBackground
-              state.themeSettings.canvasGridColor = preset.canvasGridColorLight || preset.canvasGridColor
+              state.themeSettings.canvasBackground =
+                preset.canvasBackgroundLight || preset.canvasBackground
+              state.themeSettings.canvasGridColor =
+                preset.canvasGridColorLight || preset.canvasGridColor
             }
             // Store all per-mode colors
-            state.themeSettings.canvasBackgroundDark = preset.canvasBackgroundDark || preset.canvasBackground
-            state.themeSettings.canvasGridColorDark = preset.canvasGridColorDark || preset.canvasGridColor
-            state.themeSettings.canvasBackgroundLight = preset.canvasBackgroundLight || preset.canvasBackground
-            state.themeSettings.canvasGridColorLight = preset.canvasGridColorLight || preset.canvasGridColor
+            state.themeSettings.canvasBackgroundDark =
+              preset.canvasBackgroundDark || preset.canvasBackground
+            state.themeSettings.canvasGridColorDark =
+              preset.canvasGridColorDark || preset.canvasGridColor
+            state.themeSettings.canvasBackgroundLight =
+              preset.canvasBackgroundLight || preset.canvasBackground
+            state.themeSettings.canvasGridColorLight =
+              preset.canvasGridColorLight || preset.canvasGridColor
             state.themeSettings.currentPresetId = null // Mark as custom since it's a user preset
             state.isDirty = true
           }
@@ -5308,7 +5667,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       setLinkColors: (colors) => {
         set((state) => {
-          const modeKey = state.themeSettings.mode === 'light' ? 'linkColorsLight' : 'linkColorsDark'
+          const modeKey =
+            state.themeSettings.mode === 'light' ? 'linkColorsLight' : 'linkColorsDark'
           state.themeSettings.linkColors = colors
           state.themeSettings[modeKey] = colors
           state.isDirty = true
@@ -5332,21 +5692,39 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           state.themeSettings = {
             ...state.themeSettings,
             ...settings,
-            ...(settings.nodeColors ? { nodeColors: { ...state.themeSettings.nodeColors, ...settings.nodeColors } } : {}),
-            ...(settings.linkColors ? { linkColors: { ...state.themeSettings.linkColors, ...settings.linkColors } } : {}),
-            ...(settings.linkColorsDark ? { linkColorsDark: { ...state.themeSettings.linkColorsDark, ...settings.linkColorsDark } } : {}),
-            ...(settings.linkColorsLight ? { linkColorsLight: { ...state.themeSettings.linkColorsLight, ...settings.linkColorsLight } } : {})
+            ...(settings.nodeColors
+              ? { nodeColors: { ...state.themeSettings.nodeColors, ...settings.nodeColors } }
+              : {}),
+            ...(settings.linkColors
+              ? { linkColors: { ...state.themeSettings.linkColors, ...settings.linkColors } }
+              : {}),
+            ...(settings.linkColorsDark
+              ? {
+                  linkColorsDark: {
+                    ...state.themeSettings.linkColorsDark,
+                    ...settings.linkColorsDark,
+                  },
+                }
+              : {}),
+            ...(settings.linkColorsLight
+              ? {
+                  linkColorsLight: {
+                    ...state.themeSettings.linkColorsLight,
+                    ...settings.linkColorsLight,
+                  },
+                }
+              : {}),
           }
           state.isDirty = true
         })
       },
 
-    // Update context settings (for testing and dynamic depth changes)
-    updateContextSettings: (updates: Partial<ContextSettings>) => {
-      set((state) => {
-        state.contextSettings = { ...state.contextSettings, ...updates }
-      })
-    },
+      // Update context settings (for testing and dynamic depth changes)
+      updateContextSettings: (updates: Partial<ContextSettings>) => {
+        set((state) => {
+          state.contextSettings = { ...state.contextSettings, ...updates }
+        })
+      },
 
       // ---------------------------------------------------------------------
       // Workspace Preferences Actions
@@ -5444,7 +5822,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               if (condition.sourceNodeId) {
                 const sourceNode = state.nodes.find((n) => n.id === condition.sourceNodeId)
                 const isConnected = incomingEdges.some((e) => e.source === condition.sourceNodeId)
-                conditionMet = !!(isConnected && sourceNode && (sourceNode.data as ContextMetadata).enabled !== false)
+                conditionMet = !!(
+                  isConnected &&
+                  sourceNode &&
+                  (sourceNode.data as ContextMetadata).enabled !== false
+                )
               }
               break
             }
@@ -5512,7 +5894,6 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           if (!projectData.childNodeIds.includes(nodeId)) {
             projectData.childNodeIds.push(nodeId)
           }
-
           // Update node's parentId
           ;(node.data as { parentId?: string }).parentId = projectId
 
@@ -5532,11 +5913,15 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           // Note: Project nodes have z-index: -1 so all edges render above them automatically
           state.edges.forEach((edge) => {
             if (edge.source === nodeId || edge.target === nodeId) {
-              const sourceNode = state.nodes.find(n => n.id === edge.source)
-              const targetNode = state.nodes.find(n => n.id === edge.target)
+              const sourceNode = state.nodes.find((n) => n.id === edge.source)
+              const targetNode = state.nodes.find((n) => n.id === edge.target)
               const sourceParent = (sourceNode?.data as { parentId?: string })?.parentId
               const targetParent = (targetNode?.data as { parentId?: string })?.parentId
-              const isIntraProject = !!(sourceParent && targetParent && sourceParent === targetParent)
+              const isIntraProject = !!(
+                sourceParent &&
+                targetParent &&
+                sourceParent === targetParent
+              )
               if (edge.data) {
                 edge.data.intraProject = isIntraProject
               }
@@ -5560,7 +5945,6 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             const projectData = parent.data as ProjectNodeData
             projectData.childNodeIds = projectData.childNodeIds.filter((id) => id !== nodeId)
           }
-
           // Clear node's parentId
           ;(node.data as { parentId?: string }).parentId = undefined
 
@@ -5594,7 +5978,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         set((state) => {
           state.propertySchema.customProperties.push({
             ...definition,
-            id
+            id,
           })
           state.isDirty = true
         })
@@ -5610,7 +5994,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               state.propertySchema.customProperties[index] = {
                 ...existing,
                 ...updates,
-                id: existing.id // Ensure id is always present
+                id: existing.id, // Ensure id is always present
               } as PropertyDefinition
               state.isDirty = true
             }
@@ -5621,14 +6005,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       deleteCustomProperty: (propertyId) => {
         set((state) => {
           state.propertySchema.customProperties = state.propertySchema.customProperties.filter(
-            (p) => p.id !== propertyId
+            (p) => p.id !== propertyId,
           )
           // Also remove from all node type mappings
           for (const nodeType of Object.keys(state.propertySchema.nodeTypeProperties)) {
             const props = state.propertySchema.nodeTypeProperties[nodeType]
             if (props) {
               state.propertySchema.nodeTypeProperties[nodeType] = props.filter(
-                (id) => id !== propertyId
+                (id) => id !== propertyId,
               )
             }
           }
@@ -5656,7 +6040,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             }
             state.propertySchema.builtinPropertyOptions[propertyId].push({
               ...option,
-              value
+              value,
             })
           } else {
             // Custom property
@@ -5688,7 +6072,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 value: existing.value,
                 label: updates.label ?? existing.label,
                 color: updates.color ?? existing.color,
-                icon: updates.icon !== undefined ? updates.icon : existing.icon
+                icon: updates.icon !== undefined ? updates.icon : existing.icon,
               }
             } else {
               // Option is a built-in default - copy it to user customizations with updates
@@ -5699,7 +6083,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                   value: builtinOption.value,
                   label: updates.label ?? builtinOption.label,
                   color: updates.color ?? builtinOption.color,
-                  icon: updates.icon !== undefined ? updates.icon : builtinOption.icon
+                  icon: updates.icon !== undefined ? updates.icon : builtinOption.icon,
                 })
               }
             }
@@ -5713,7 +6097,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                   value: existing.value,
                   label: updates.label ?? existing.label,
                   color: updates.color ?? existing.color,
-                  icon: updates.icon !== undefined ? updates.icon : existing.icon
+                  icon: updates.icon !== undefined ? updates.icon : existing.icon,
                 }
               }
             }
@@ -5728,7 +6112,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             const options = state.propertySchema.builtinPropertyOptions[propertyId]
             if (options) {
               state.propertySchema.builtinPropertyOptions[propertyId] = options.filter(
-                (o) => o.value !== value
+                (o) => o.value !== value,
               )
             }
           } else {
@@ -5790,9 +6174,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           if (!node) return
 
           if (!(node.data as Record<string, unknown>).properties) {
-            (node.data as Record<string, unknown>).properties = {}
+            ;(node.data as Record<string, unknown>).properties = {}
           }
-          ((node.data as Record<string, unknown>).properties as Record<string, unknown>)[propertyId] = value
+          ;((node.data as Record<string, unknown>).properties as Record<string, unknown>)[
+            propertyId
+          ] = value
 
           // Sync tags to legacy location for backward compatibility
           if (propertyId === 'tags') {
@@ -5820,7 +6206,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           state.lastCanvasClick = {
             x: position.x,
             y: position.y,
-            time: Date.now()
+            time: Date.now(),
           }
         })
       },
@@ -5829,7 +6215,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       // Artifact Actions
       // ---------------------------------------------------------------------
 
-      createArtifactFromFile: (file, position) => {
+      createArtifactFromFile: (file, position, dimensions) => {
         const id = uuid()
         const extension = file.name.split('.').pop()?.toLowerCase() || ''
         const contentType = getContentTypeFromExtension(extension)
@@ -5838,11 +6224,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         const data: ArtifactNodeData = {
           ...createArtifactData(contentType, {
             type: 'file-drop',
-            filename: file.name
+            filename: file.name,
           }),
           title: file.name,
           content: file.content,
-          language
+          language,
         }
 
         const node: Node<NodeData> = {
@@ -5850,9 +6236,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           type: 'artifact',
           position,
           data,
-          width: 320,
-          height: 200,
-          selected: false
+          width: dimensions?.width || 420,
+          height: Math.min(dimensions?.height || 280, 5000),
+          selected: false,
         }
 
         set((state) => {
@@ -5878,20 +6264,20 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         // Calculate position to the right of conversation node
         const position = {
           x: convNode.position.x + (convNode.width || 300) + 50,
-          y: convNode.position.y
+          y: convNode.position.y,
         }
 
         const data: ArtifactNodeData = {
           ...createArtifactData(artifact.type, {
             type: 'llm-response',
             conversationId: conversationNodeId,
-            messageId
+            messageId,
           }),
           title: artifact.title || `${artifact.type} artifact`,
           content: artifact.content,
           language: artifact.language,
           sourceNodeId: conversationNodeId,
-          sourceMessageId: messageId
+          sourceMessageId: messageId,
         }
 
         const node: Node<NodeData> = {
@@ -5899,9 +6285,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           type: 'artifact',
           position,
           data,
-          width: 320,
-          height: 200,
-          selected: false
+          width: 420,
+          height: 280,
+          selected: false,
         }
 
         set((state) => {
@@ -5915,7 +6301,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             target: id,
             sourceHandle: 'bottom-source',
             targetHandle: 'top-target',
-            data: { ...DEFAULT_EDGE_DATA, label: 'spawned' }
+            data: { ...DEFAULT_EDGE_DATA, label: 'spawned' },
           }
           state.edges.push(edge)
 
@@ -5925,8 +6311,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             type: 'BATCH',
             actions: [
               { type: 'ADD_NODE', node: JSON.parse(JSON.stringify(node)) },
-              { type: 'ADD_EDGE', edge: JSON.parse(JSON.stringify(edge)) }
-            ]
+              { type: 'ADD_EDGE', edge: JSON.parse(JSON.stringify(edge)) },
+            ],
           })
           state.historyIndex++
           if (state.history.length > 100) {
@@ -5957,8 +6343,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               version: artifactData.version,
               content: artifactData.content,
               timestamp: Date.now(),
-              changeSource: source
-            }
+              changeSource: source,
+            },
           ]
 
           // Update artifact
@@ -5982,7 +6368,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
           const wsData = wsNode.data as WorkspaceNodeData
           const newIds = nodeIds.filter(
-            (id) => !wsData.includedNodeIds.includes(id) && id !== workspaceNodeId
+            (id) => !wsData.includedNodeIds.includes(id) && id !== workspaceNodeId,
           )
 
           wsData.includedNodeIds = [...wsData.includedNodeIds, ...newIds]
@@ -6013,7 +6399,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
           const wsData = wsNode.data as WorkspaceNodeData
           const newExclusions = nodeIds.filter(
-            (id) => !wsData.excludedNodeIds.includes(id) && id !== workspaceNodeId
+            (id) => !wsData.excludedNodeIds.includes(id) && id !== workspaceNodeId,
           )
           wsData.excludedNodeIds = [...wsData.excludedNodeIds, ...newExclusions]
           wsData.updatedAt = Date.now()
@@ -6064,9 +6450,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         return state.nodes.filter((n) => {
           if (n.data.type !== 'workspace') return false
           const wsData = n.data as WorkspaceNodeData
-          return (
-            wsData.includedNodeIds.includes(nodeId) && !wsData.excludedNodeIds.includes(nodeId)
-          )
+          return wsData.includedNodeIds.includes(nodeId) && !wsData.excludedNodeIds.includes(nodeId)
         }) as Node<WorkspaceNodeData>[]
       },
 
@@ -6086,9 +6470,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         const workspaceNodes = state.nodes.filter((n) => {
           if (n.data.type !== 'workspace') return false
           const wsData = n.data as WorkspaceNodeData
-          return (
-            wsData.includedNodeIds.includes(nodeId) && !wsData.excludedNodeIds.includes(nodeId)
-          )
+          return wsData.includedNodeIds.includes(nodeId) && !wsData.excludedNodeIds.includes(nodeId)
         }) as Node<WorkspaceNodeData>[]
 
         if (workspaceNodes.length === 0) return null
@@ -6124,9 +6506,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         const workspaceNodes = state.nodes.filter((n) => {
           if (n.data.type !== 'workspace') return false
           const wsData = n.data as WorkspaceNodeData
-          return (
-            wsData.includedNodeIds.includes(nodeId) && !wsData.excludedNodeIds.includes(nodeId)
-          )
+          return wsData.includedNodeIds.includes(nodeId) && !wsData.excludedNodeIds.includes(nodeId)
         }) as Node<WorkspaceNodeData>[]
 
         if (workspaceNodes.length === 0) return null
@@ -6180,6 +6560,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           if (state.commandLog.length > 100) {
             state.commandLog.shift()
           }
+          state.isDirty = true
         })
       },
 
@@ -6189,6 +6570,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           if (entry) {
             Object.assign(entry, updates)
           }
+          state.isDirty = true
         })
       },
 
@@ -6201,6 +6583,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             timestamp: Date.now(),
           }
           state.workspaceConversation.messages.push(newMsg)
+          state.isDirty = true
         })
       },
 
@@ -6210,10 +6593,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             id: 'workspace-command-conversation',
             messages: [],
           }
+          state.isDirty = true
         })
       },
-    }))
-  )
+    })),
+  ),
 )
 
 // -----------------------------------------------------------------------------
@@ -6236,14 +6620,14 @@ useWorkspaceStore.subscribe(
       const state = useWorkspaceStore.getState()
       const newIndex = new Map<string, number>()
       for (let i = 0; i < nodes.length; i++) {
-        newIndex.set(nodes[i]!.id, i)
+        newIndex.set(nodes[i]?.id, i)
       }
       // Avoid infinite loop: only set if actually different
       if (newIndex.size !== state.nodeIndex.size || !mapsEqual(newIndex, state.nodeIndex)) {
         useWorkspaceStore.setState({ nodeIndex: newIndex })
       }
     }
-  }
+  },
 )
 
 let _prevEdgesRef: unknown = null
@@ -6266,7 +6650,7 @@ useWorkspaceStore.subscribe(
         useWorkspaceStore.setState({ edgesByTarget: newIndex })
       }
     }
-  }
+  },
 )
 
 /** Shallow Map equality check for nodeIndex */
@@ -6292,7 +6676,7 @@ function edgesMapsEqual(a: Map<string, string[]>, b: Map<string, string[]>): boo
 }
 
 // Export index helpers for use by storeSyncBridge and tests
-export { rebuildNodeIndex, rebuildEdgesByTarget, getNodeById, profileSelector }
+export { getNodeById, profileSelector, rebuildEdgesByTarget, rebuildNodeIndex }
 
 // -----------------------------------------------------------------------------
 // Selector Hooks (for performance)
@@ -6313,8 +6697,7 @@ export const usePropertySchema = (): PropertySchema =>
   useWorkspaceStore((state) => state.propertySchema)
 export const usePendingExtractions = (): PendingExtraction[] =>
   useWorkspaceStore((state) => state.pendingExtractions)
-export const useIsExtracting = (): string | null =>
-  useWorkspaceStore((state) => state.isExtracting)
+export const useIsExtracting = (): string | null => useWorkspaceStore((state) => state.isExtracting)
 export const useLastCanvasClick = (): { x: number; y: number; time: number } | null =>
   useWorkspaceStore((state) => state.lastCanvasClick)
 
@@ -6340,11 +6723,11 @@ export const useNodeWarmth = (nodeId: string): 'hot' | 'warm' | 'cool' | null =>
 }
 
 export const useIsNodePinned = (nodeId: string): boolean =>
-  useWorkspaceStore((state) => state.pinnedWindows.some(w => w.nodeId === nodeId))
+  useWorkspaceStore((state) => state.pinnedWindows.some((w) => w.nodeId === nodeId))
 
 export const useIsNodeLayoutPinned = (nodeId: string): boolean =>
   useWorkspaceStore((state) => {
-    const node = state.nodes.find(n => n.id === nodeId)
+    const node = state.nodes.find((n) => n.id === nodeId)
     return (node?.data as ContextMetadata)?.layoutMode === 'pinned'
   })
 
@@ -6369,7 +6752,9 @@ export const useNumberedBookmarks = (): Record<number, string | null> =>
 
 /** Get count of pending extractions for a specific node */
 export const useExtractionCountForNode = (nodeId: string): number =>
-  useWorkspaceStore((state) => state.pendingExtractions.filter((e) => e.sourceNodeId === nodeId).length)
+  useWorkspaceStore(
+    (state) => state.pendingExtractions.filter((e) => e.sourceNodeId === nodeId).length,
+  )
 
 /** Get all pending extractions for a specific node */
 export const useExtractionsForNode = (nodeId: string): PendingExtraction[] =>
@@ -6380,7 +6765,7 @@ export const useSortedExtractionsForNode = (nodeId: string): PendingExtraction[]
   useWorkspaceStore((state) =>
     state.pendingExtractions
       .filter((e) => e.sourceNodeId === nodeId)
-      .sort((a, b) => b.confidence - a.confidence)
+      .sort((a, b) => b.confidence - a.confidence),
   )
 
 /** Get which node's extraction panel is open */
@@ -6395,7 +6780,8 @@ export const useIsExtractionPanelOpen = (nodeId: string): boolean =>
 export const useExtractionDrag = () => useWorkspaceStore((state) => state.extractionDrag)
 
 /** Get last accepted extraction for undo */
-export const useLastAcceptedExtraction = () => useWorkspaceStore((state) => state.lastAcceptedExtraction)
+export const useLastAcceptedExtraction = () =>
+  useWorkspaceStore((state) => state.lastAcceptedExtraction)
 
 /** Demo mode flag for workspace.cognograph.app */
 export const useDemoMode = () => useWorkspaceStore((s) => s.demoMode)

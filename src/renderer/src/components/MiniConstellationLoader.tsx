@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useEffect, useState, useRef } from 'react'
 import { motion } from 'framer-motion'
+import { memo, useEffect, useRef, useState } from 'react'
 
 /**
  * Mini Constellation Loader
@@ -18,11 +18,11 @@ interface MiniConstellationLoaderProps {
 
 // Mini node configuration
 const MINI_NODES = [
-  { x: 12, y: 8, color: '#a855f7' },   // Purple (project)
-  { x: 28, y: 18, color: '#3b82f6' },  // Blue (conversation)
-  { x: 8, y: 28, color: '#f59e0b' },   // Amber (note)
-  { x: 24, y: 36, color: '#10b981' },  // Green (task)
-  { x: 38, y: 28, color: '#f97316' }   // Orange (action)
+  { x: 12, y: 8, color: '#a855f7' }, // Purple (project)
+  { x: 28, y: 18, color: '#3b82f6' }, // Blue (conversation)
+  { x: 8, y: 28, color: '#f59e0b' }, // Amber (note)
+  { x: 24, y: 36, color: '#10b981' }, // Green (task)
+  { x: 38, y: 28, color: '#f97316' }, // Orange (action)
 ]
 
 // Edges connecting nodes
@@ -31,7 +31,7 @@ const MINI_EDGES: [number, number][] = [
   [1, 2],
   [1, 3],
   [1, 4],
-  [2, 3]
+  [2, 3],
 ]
 
 // Flow paths for animation
@@ -40,10 +40,13 @@ const FLOW_PATHS = [
   [0, 1, 3],
   [0, 1, 4],
   [1, 2, 3],
-  [0, 1, 2, 3, 4]
+  [0, 1, 2, 3, 4],
 ]
 
-function MiniConstellationLoaderComponent({ size = 48, className = '' }: MiniConstellationLoaderProps): JSX.Element {
+function MiniConstellationLoaderComponent({
+  size = 48,
+  className = '',
+}: MiniConstellationLoaderProps): JSX.Element {
   const [activeNodes, setActiveNodes] = useState<Set<number>>(new Set())
   const flowIndexRef = useRef(0)
 
@@ -67,14 +70,8 @@ function MiniConstellationLoaderComponent({ size = 48, className = '' }: MiniCon
   const scale = size / 48
 
   return (
-    <div
-      className={`relative ${className}`}
-      style={{ width: size, height: size }}
-    >
-      <svg
-        viewBox="0 0 48 48"
-        className="absolute inset-0 w-full h-full"
-      >
+    <div className={`relative ${className}`} style={{ width: size, height: size }}>
+      <svg viewBox="0 0 48 48" className="absolute inset-0 w-full h-full">
         {/* Edges */}
         {MINI_EDGES.map(([from, to], idx) => {
           const fromNode = MINI_NODES[from]
@@ -95,11 +92,13 @@ function MiniConstellationLoaderComponent({ size = 48, className = '' }: MiniCon
               animate={{
                 opacity: isActive ? 0.9 : 0.25,
                 strokeDasharray: isActive ? '3 2' : 'none',
-                strokeDashoffset: isActive ? [0, -5] : 0
+                strokeDashoffset: isActive ? [0, -5] : 0,
               }}
               transition={{
                 opacity: { duration: 0.3 },
-                strokeDashoffset: isActive ? { duration: 0.4, repeat: Infinity, ease: 'linear' } : {}
+                strokeDashoffset: isActive
+                  ? { duration: 0.4, repeat: Infinity, ease: 'linear' }
+                  : {},
               }}
             />
           )
@@ -124,7 +123,7 @@ function MiniConstellationLoaderComponent({ size = 48, className = '' }: MiniCon
               initial={{ opacity: 0.6 }}
               animate={{
                 opacity: isActive ? 1 : 0.5,
-                filter: isActive ? `drop-shadow(0 0 3px ${node.color})` : 'none'
+                filter: isActive ? `drop-shadow(0 0 3px ${node.color})` : 'none',
               }}
               transition={{ duration: 0.3 }}
             />

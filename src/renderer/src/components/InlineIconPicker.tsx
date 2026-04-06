@@ -8,20 +8,20 @@
  * Click the icon to open a dropdown with color circles and icon selection.
  */
 
-import { memo, useState, useCallback, useMemo, useRef, useEffect } from 'react'
-import { createPortal } from 'react-dom'
+import type { NodeData } from '@shared/types'
 import {
-  X,
-  MessageSquare,
-  Folder,
-  FileText,
+  Boxes,
   CheckSquare,
   Code,
-  Boxes,
-  type LucideIcon
+  FileText,
+  Folder,
+  type LucideIcon,
+  MessageSquare,
+  X,
 } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ICON_MAP } from './IconPicker'
-import type { NodeData } from '@shared/types'
 
 // Default icons for each node type (imported directly since they may not be in ICON_MAP)
 const DEFAULT_NODE_ICONS: Record<string, LucideIcon> = {
@@ -30,23 +30,23 @@ const DEFAULT_NODE_ICONS: Record<string, LucideIcon> = {
   note: FileText,
   task: CheckSquare,
   artifact: Code,
-  workspace: Boxes
+  workspace: Boxes,
 }
 
 // Icon categories (subset for inline picker - most useful ones)
 const ICON_CATEGORIES = {
-  'General': ['star', 'heart', 'bookmark', 'flag', 'tag', 'pin'],
-  'Status': ['check', 'check-circle', 'alert-circle', 'alert-triangle', 'info', 'help-circle'],
-  'Actions': ['zap', 'rocket', 'target', 'trophy', 'medal', 'award'],
-  'Objects': ['lightbulb', 'key', 'lock', 'unlock', 'shield', 'eye'],
-  'Communication': ['message-square', 'message-circle', 'mail', 'bell', 'megaphone', 'mic'],
-  'Documents': ['file-text', 'file', 'files', 'folder', 'folder-open', 'archive'],
+  General: ['star', 'heart', 'bookmark', 'flag', 'tag', 'pin'],
+  Status: ['check', 'check-circle', 'alert-circle', 'alert-triangle', 'info', 'help-circle'],
+  Actions: ['zap', 'rocket', 'target', 'trophy', 'medal', 'award'],
+  Objects: ['lightbulb', 'key', 'lock', 'unlock', 'shield', 'eye'],
+  Communication: ['message-square', 'message-circle', 'mail', 'bell', 'megaphone', 'mic'],
+  Documents: ['file-text', 'file', 'files', 'folder', 'folder-open', 'archive'],
   'Code/Tech': ['code', 'terminal', 'cpu', 'database', 'server', 'cloud'],
-  'Time': ['clock', 'calendar', 'timer', 'history', 'hourglass'],
-  'People': ['user', 'users', 'user-plus', 'user-check', 'crown'],
-  'Nature': ['sun', 'moon', 'cloud-sun', 'leaf', 'flower', 'tree'],
-  'Shapes': ['circle', 'square', 'triangle', 'hexagon', 'octagon', 'pentagon'],
-  'Misc': ['sparkles', 'flame', 'gem', 'gift', 'music', 'camera'],
+  Time: ['clock', 'calendar', 'timer', 'history', 'hourglass'],
+  People: ['user', 'users', 'user-plus', 'user-check', 'crown'],
+  Nature: ['sun', 'moon', 'cloud-sun', 'leaf', 'flower', 'tree'],
+  Shapes: ['circle', 'square', 'triangle', 'hexagon', 'octagon', 'pentagon'],
+  Misc: ['sparkles', 'flame', 'gem', 'gift', 'music', 'camera'],
 } as const
 
 // Preset colors for quick selection
@@ -87,7 +87,7 @@ function InlineIconPickerComponent({
   nodeColor,
   onIconChange,
   onIconColorChange,
-  className = 'w-5 h-5'
+  className = 'w-5 h-5',
 }: InlineIconPickerProps): JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -104,9 +104,8 @@ function InlineIconPickerComponent({
   const DefaultIcon = DEFAULT_NODE_ICONS[nodeData.type] || FileText
 
   // Get the icon component - use custom icon from ICON_MAP, or fall back to default
-  const IconComponent = currentIconName && ICON_MAP[currentIconName]
-    ? ICON_MAP[currentIconName]
-    : DefaultIcon
+  const IconComponent =
+    currentIconName && ICON_MAP[currentIconName] ? ICON_MAP[currentIconName] : DefaultIcon
 
   // Filter icons based on search
   const filteredCategories = useMemo(() => {
@@ -148,8 +147,10 @@ function InlineIconPickerComponent({
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node
       if (
-        triggerRef.current && !triggerRef.current.contains(target) &&
-        dropdownRef.current && !dropdownRef.current.contains(target)
+        triggerRef.current &&
+        !triggerRef.current.contains(target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
       ) {
         setIsOpen(false)
         setSearchTerm('')
@@ -167,21 +168,30 @@ function InlineIconPickerComponent({
     }
   }, [isOpen])
 
-  const handleIconClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    setIsOpen(!isOpen)
-  }, [isOpen])
+  const handleIconClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      e.preventDefault()
+      setIsOpen(!isOpen)
+    },
+    [isOpen],
+  )
 
-  const handleSelectIcon = useCallback((iconName: string) => {
-    onIconChange(iconName)
-    setIsOpen(false)
-    setSearchTerm('')
-  }, [onIconChange])
+  const handleSelectIcon = useCallback(
+    (iconName: string) => {
+      onIconChange(iconName)
+      setIsOpen(false)
+      setSearchTerm('')
+    },
+    [onIconChange],
+  )
 
-  const handleSelectColor = useCallback((color: string) => {
-    onIconColorChange(color === nodeColor ? undefined : color)
-  }, [onIconColorChange, nodeColor])
+  const handleSelectColor = useCallback(
+    (color: string) => {
+      onIconColorChange(color === nodeColor ? undefined : color)
+    },
+    [onIconColorChange, nodeColor],
+  )
 
   const handleClearIcon = useCallback(() => {
     onIconChange(undefined)
@@ -207,118 +217,125 @@ function InlineIconPickerComponent({
         className={`${className} flex-shrink-0 hover:opacity-70 transition-opacity cursor-pointer`}
         title="Click to change icon"
       >
-        {IconComponent && <IconComponent className="w-full h-full" style={{ color: currentIconColor }} />}
+        {IconComponent && (
+          <IconComponent className="w-full h-full" style={{ color: currentIconColor }} />
+        )}
       </button>
 
       {/* Dropdown - rendered via portal to avoid overflow clipping */}
-      {isOpen && createPortal(
-        <div
-          ref={dropdownRef}
-          className="fixed z-[9999] bg-[var(--surface-panel)] border border-[var(--border-subtle)] rounded-lg shadow-xl p-2"
-          style={{
-            top: dropdownPosition.top,
-            left: dropdownPosition.left,
-            width: 260
-          }}
-          onKeyDown={handleKeyDown}
-          onClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          {/* Color circles */}
-          <div className="mb-2">
-            <div className="text-[10px] text-[var(--text-secondary)] mb-1 uppercase">Color</div>
-            <div className="flex flex-wrap gap-1.5">
-              {PRESET_COLORS.map((color) => (
+      {isOpen &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            className="fixed z-[9999] bg-[var(--surface-panel)] border border-[var(--border-subtle)] rounded-lg shadow-xl p-2"
+            style={{
+              top: dropdownPosition.top,
+              left: dropdownPosition.left,
+              width: 260,
+            }}
+            onKeyDown={handleKeyDown}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            {/* Color circles */}
+            <div className="mb-2">
+              <div className="text-[10px] text-[var(--text-secondary)] mb-1 uppercase">Color</div>
+              <div className="flex flex-wrap gap-1.5">
+                {PRESET_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => handleSelectColor(color)}
+                    className={`w-5 h-5 rounded-full border-2 transition-all ${
+                      currentIconColor === color || (color === nodeColor && !currentIconColor)
+                        ? 'border-white scale-110'
+                        : 'border-transparent hover:scale-110'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                ))}
+                {/* Node color option */}
                 <button
-                  key={color}
-                  onClick={() => handleSelectColor(color)}
+                  onClick={() => handleSelectColor(nodeColor)}
                   className={`w-5 h-5 rounded-full border-2 transition-all ${
-                    currentIconColor === color || (color === nodeColor && !currentIconColor)
+                    !currentIconColor || currentIconColor === nodeColor
                       ? 'border-white scale-110'
                       : 'border-transparent hover:scale-110'
                   }`}
-                  style={{ backgroundColor: color }}
-                  title={color}
+                  style={{
+                    backgroundColor: nodeColor,
+                    boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.3)',
+                  }}
+                  title="Node color (default)"
                 />
-              ))}
-              {/* Node color option */}
-              <button
-                onClick={() => handleSelectColor(nodeColor)}
-                className={`w-5 h-5 rounded-full border-2 transition-all ${
-                  !currentIconColor || currentIconColor === nodeColor
-                    ? 'border-white scale-110'
-                    : 'border-transparent hover:scale-110'
-                }`}
-                style={{
-                  backgroundColor: nodeColor,
-                  boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.3)'
-                }}
-                title="Node color (default)"
-              />
+              </div>
             </div>
-          </div>
 
-          {/* Search */}
-          <input
-            ref={searchRef}
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search icons..."
-            className="w-full bg-[var(--surface-panel-secondary)] border border-[var(--border-subtle)] rounded px-2 py-1 text-xs text-[var(--text-primary)] mb-2 focus:outline-none focus:border-blue-500"
-          />
+            {/* Search */}
+            <input
+              ref={searchRef}
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search icons..."
+              className="w-full bg-[var(--surface-panel-secondary)] border border-[var(--border-subtle)] rounded px-2 py-1 text-xs text-[var(--text-primary)] mb-2 focus:outline-none focus:border-blue-500"
+            />
 
-          {/* Icons grid */}
-          <div className="max-h-48 overflow-y-auto">
-            {Object.entries(filteredCategories).map(([category, icons]) => (
-              <div key={category} className="mb-2">
-                <div className="text-[10px] text-[var(--text-secondary)] mb-1 uppercase">{category}</div>
-                <div className="flex flex-wrap gap-1">
-                  {icons.map((name) => {
-                    const Icon = ICON_MAP[name]
-                    if (!Icon) return null
-                    return (
-                      <button
-                        key={name}
-                        onClick={() => handleSelectIcon(name)}
-                        className={`w-7 h-7 rounded flex items-center justify-center transition-all ${
-                          currentIconName === name
-                            ? 'bg-blue-600 ring-2 ring-blue-400'
-                            : 'hover:bg-[var(--surface-panel-secondary)]'
-                        }`}
-                        title={name}
-                      >
-                        <Icon
-                          className="w-4 h-4"
-                          style={{ color: currentIconName === name ? currentIconColor : '#9ca3af' }}
-                        />
-                      </button>
-                    )
-                  })}
+            {/* Icons grid */}
+            <div className="max-h-48 overflow-y-auto">
+              {Object.entries(filteredCategories).map(([category, icons]) => (
+                <div key={category} className="mb-2">
+                  <div className="text-[10px] text-[var(--text-secondary)] mb-1 uppercase">
+                    {category}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {icons.map((name) => {
+                      const Icon = ICON_MAP[name]
+                      if (!Icon) return null
+                      return (
+                        <button
+                          key={name}
+                          onClick={() => handleSelectIcon(name)}
+                          className={`w-7 h-7 rounded flex items-center justify-center transition-all ${
+                            currentIconName === name
+                              ? 'bg-blue-600 ring-2 ring-blue-400'
+                              : 'hover:bg-[var(--surface-panel-secondary)]'
+                          }`}
+                          title={name}
+                        >
+                          <Icon
+                            className="w-4 h-4"
+                            style={{
+                              color: currentIconName === name ? currentIconColor : '#9ca3af',
+                            }}
+                          />
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {Object.keys(filteredCategories).length === 0 && (
-              <div className="text-center py-4 text-[var(--text-secondary)] text-xs">
-                No icons found
-              </div>
+              {Object.keys(filteredCategories).length === 0 && (
+                <div className="text-center py-4 text-[var(--text-secondary)] text-xs">
+                  No icons found
+                </div>
+              )}
+            </div>
+
+            {/* Clear button */}
+            {currentIconName && (
+              <button
+                onClick={handleClearIcon}
+                className="w-full mt-2 px-2 py-1 rounded text-xs flex items-center justify-center gap-1 bg-[var(--surface-panel-secondary)] hover:bg-[var(--surface-panel)] text-[var(--text-secondary)] transition-colors"
+              >
+                <X className="w-3 h-3" />
+                Reset to default
+              </button>
             )}
-          </div>
-
-          {/* Clear button */}
-          {currentIconName && (
-            <button
-              onClick={handleClearIcon}
-              className="w-full mt-2 px-2 py-1 rounded text-xs flex items-center justify-center gap-1 bg-[var(--surface-panel-secondary)] hover:bg-[var(--surface-panel)] text-[var(--text-secondary)] transition-colors"
-            >
-              <X className="w-3 h-3" />
-              Reset to default
-            </button>
-          )}
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }

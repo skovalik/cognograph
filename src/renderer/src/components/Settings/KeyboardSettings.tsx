@@ -8,16 +8,16 @@
  * to record a new key combo. Conflicts are detected in real time.
  */
 
-import { memo, useState, useCallback, useEffect, useRef } from 'react'
-import { RotateCcw, AlertTriangle } from 'lucide-react'
-import { useProgramStore, selectKeyboardOverrides } from '../../stores/programStore'
+import { AlertTriangle, RotateCcw } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { selectKeyboardOverrides, useProgramStore } from '../../stores/programStore'
 import {
   DEFAULT_SHORTCUTS,
   eventToCombo,
+  findConflict,
   formatCombo,
   getActiveCombo,
-  findConflict,
-  type ShortcutDefinition
+  type ShortcutDefinition,
 } from '../../utils/shortcuts'
 
 // Category display order and labels
@@ -28,7 +28,7 @@ const CATEGORY_ORDER: Array<{ key: ShortcutDefinition['category']; label: string
   { key: 'create', label: 'Create Nodes' },
   { key: 'panels', label: 'Panels' },
   { key: 'navigation', label: 'Navigation' },
-  { key: 'ai', label: 'AI' }
+  { key: 'ai', label: 'AI' },
 ]
 
 // Group shortcuts by category
@@ -77,7 +77,7 @@ function KeyboardSettingsComponent(): JSX.Element {
       // Check for conflicts
       const conflictId = findConflict(combo, recordingId, overrides)
       if (conflictId) {
-        const conflictDef = DEFAULT_SHORTCUTS.find(s => s.id === conflictId)
+        const conflictDef = DEFAULT_SHORTCUTS.find((s) => s.id === conflictId)
         setConflict(`Conflicts with "${conflictDef?.label || conflictId}"`)
         // Still allow setting it — user just sees a warning
       } else {
@@ -85,7 +85,7 @@ function KeyboardSettingsComponent(): JSX.Element {
       }
 
       // Check if this matches the default (remove override if so)
-      const def = DEFAULT_SHORTCUTS.find(s => s.id === recordingId)
+      const def = DEFAULT_SHORTCUTS.find((s) => s.id === recordingId)
       if (def && combo === def.defaultCombo) {
         removeKeyboardOverride(recordingId)
       } else {
@@ -106,11 +106,14 @@ function KeyboardSettingsComponent(): JSX.Element {
     setConflict(null)
   }, [])
 
-  const handleResetOne = useCallback((id: string) => {
-    removeKeyboardOverride(id)
-    setRecordingId(null)
-    setConflict(null)
-  }, [removeKeyboardOverride])
+  const handleResetOne = useCallback(
+    (id: string) => {
+      removeKeyboardOverride(id)
+      setRecordingId(null)
+      setConflict(null)
+    },
+    [removeKeyboardOverride],
+  )
 
   const handleResetAll = useCallback(() => {
     resetKeyboardOverrides()
@@ -142,7 +145,8 @@ function KeyboardSettingsComponent(): JSX.Element {
 
       {/* Conflict warning */}
       {conflict && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
+        <div
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
           style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--gui-warning, #f59e0b)' }}
         >
           <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
@@ -161,7 +165,7 @@ function KeyboardSettingsComponent(): JSX.Element {
               {label}
             </h4>
             <div className="space-y-0.5">
-              {shortcuts.map(def => {
+              {shortcuts.map((def) => {
                 const activeCombo = getActiveCombo(def.id, overrides)
                 const isOverridden = !!overrides[def.id]
                 const isRecording = recordingId === def.id
@@ -205,7 +209,8 @@ function KeyboardSettingsComponent(): JSX.Element {
 
       <div className="gui-card p-3">
         <p className="text-xs gui-text-secondary">
-          Keyboard overrides persist across sessions. Some shortcuts (Tab navigation, number bookmarks, arrow spatial navigation) are not customizable.
+          Keyboard overrides persist across sessions. Some shortcuts (Tab navigation, number
+          bookmarks, arrow spatial navigation) are not customizable.
         </p>
       </div>
     </div>

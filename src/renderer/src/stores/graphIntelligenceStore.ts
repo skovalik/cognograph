@@ -11,25 +11,17 @@
  * - Progressive mode integration (Optimization #4)
  */
 
+import type { CostSnapshot, GraphInsight, InsightStatus, InsightType } from '@shared/types/bridge'
 import { create } from 'zustand'
-import type {
-  GraphInsight,
-  CostSnapshot,
-  InsightType,
-  InsightStatus,
-} from '@shared/types/bridge'
 
 // =============================================================================
 // Helpers
 // =============================================================================
 
-function computeInsightsByNode(
-  insights: GraphInsight[]
-): Record<string, GraphInsight[]> {
+function computeInsightsByNode(insights: GraphInsight[]): Record<string, GraphInsight[]> {
   const map: Record<string, GraphInsight[]> = {}
   for (const insight of insights) {
-    if (insight.status === 'dismissed' || insight.status === 'expired')
-      continue
+    if (insight.status === 'dismissed' || insight.status === 'expired') continue
     for (const nodeId of insight.affectedNodeIds) {
       if (!map[nodeId]) map[nodeId] = []
       map[nodeId].push(insight)
@@ -83,241 +75,214 @@ interface GraphIntelligenceStoreState {
 // Store Creation
 // =============================================================================
 
-export const useGraphIntelligenceStore = create<GraphIntelligenceStoreState>(
-  (set, get) => ({
-    insights: [],
-    maxInsights: 50,
-    insightsByNode: {},
-    costHistory: [],
-    currentSessionCost: 0,
-    dailyBudgetUsed: 0,
-    dailyBudgetLimit: 0.16,
-    isAnalyzing: false,
-    lastAnalysisAt: null,
-    analysisEnabled: true,
+export const useGraphIntelligenceStore = create<GraphIntelligenceStoreState>((set, get) => ({
+  insights: [],
+  maxInsights: 50,
+  insightsByNode: {},
+  costHistory: [],
+  currentSessionCost: 0,
+  dailyBudgetUsed: 0,
+  dailyBudgetLimit: 0.16,
+  isAnalyzing: false,
+  lastAnalysisAt: null,
+  analysisEnabled: true,
 
-    addInsight: (insight: GraphInsight): void => {
-      set((state) => {
-        // Deduplicate: skip if similar insight already active
-        const isDuplicate = state.insights.some(
+  addInsight: (insight: GraphInsight): void => {
+    set((state) => {
+      // Deduplicate: skip if similar insight already active
+      const isDuplicate = state.insights.some(
+        (existing) =>
+          existing.type === insight.type &&
+          existing.status !== 'dismissed' &&
+          existing.status !== 'expired' &&
+          existing.affectedNodeIds.some((id) => insight.affectedNodeIds.includes(id)),
+      )
+      if (isDuplicate) return state
+
+      const insights = [insight, ...state.insights].slice(0, state.maxInsights)
+      return {
+        insights,
+        insightsByNode: computeInsightsByNode(insights),
+      }
+    })
+  },
+
+  addInsights: (newInsights: GraphInsight[]): void => {
+    set((state) => {
+      let insights = [...state.insights]
+
+      for (const insight of newInsights) {
+        const isDuplicate = insights.some(
           (existing) =>
             existing.type === insight.type &&
             existing.status !== 'dismissed' &&
             existing.status !== 'expired' &&
-            existing.affectedNodeIds.some((id) =>
-              insight.affectedNodeIds.includes(id)
-            )
+            existing.affectedNodeIds.some((id) => insight.affectedNodeIds.includes(id)),
         )
-        if (isDuplicate) return state
-
-        const insights = [insight, ...state.insights].slice(
-          0,
-          state.maxInsights
-        )
-        return {
-          insights,
-          insightsByNode: computeInsightsByNode(insights),
+        if (!isDuplicate) {
+          insights = [insight, ...insights]
         }
-      })
-    },
+      }
 
-    addInsights: (newInsights: GraphInsight[]): void => {
-      set((state) => {
-        let insights = [...state.insights]
+      insights = insights.slice(0, state.maxInsights)
+      return {
+        insights,
+        insightsByNode: computeInsightsByNode(insights),
+      }
+    })
+  },
 
-        for (const insight of newInsights) {
-          const isDuplicate = insights.some(
-            (existing) =>
-              existing.type === insight.type &&
-              existing.status !== 'dismissed' &&
-              existing.status !== 'expired' &&
-              existing.affectedNodeIds.some((id) =>
-                insight.affectedNodeIds.includes(id)
-              )
-          )
-          if (!isDuplicate) {
-            insights = [insight, ...insights]
-          }
+  dismissInsight: (insightId: string): void => {
+    set((state) => {
+      const insights = state.insights.map((i) =>
+        i.id === insightId ? { ...i, status: 'dismissed' as InsightStatus } : i,
+      )
+      return {
+        insights,
+        insightsByNode: computeInsightsByNode(insights),
+      }
+    })
+  },
+
+  applyInsight: (insightId: string): void => {
+    const insight = get().insights.find((i) => i.id === insightId)
+    if (!insight?.suggestedChanges) return
+
+    // Mark insight as applied
+    set((state) => {
+      const insights = state.insights.map((i) =>
+        i.id === insightId ? { ...i, status: 'applied' as InsightStatus } : i,
+      )
+      return {
+        insights,
+        insightsByNode: computeInsightsByNode(insights),
+      }
+    })
+
+    // The actual proposal creation is handled by the caller
+    // (e.g., the InsightIndicator component or a bridging function)
+  },
+
+  viewInsight: (insightId: string): void => {
+    set((state) => {
+      const insights = state.insights.map((i) =>
+        i.id === insightId && i.status === 'new' ? { ...i, status: 'viewed' as InsightStatus } : i,
+      )
+      return { insights }
+    })
+  },
+
+  expireOldInsights: (): void => {
+    const now = Date.now()
+    set((state) => {
+      const insights = state.insights.map((i) => {
+        if (
+          i.expiresAt &&
+          i.expiresAt < now &&
+          i.status !== 'dismissed' &&
+          i.status !== 'applied'
+        ) {
+          return { ...i, status: 'expired' as InsightStatus }
         }
-
-        insights = insights.slice(0, state.maxInsights)
-        return {
-          insights,
-          insightsByNode: computeInsightsByNode(insights),
-        }
+        return i
       })
-    },
+      return {
+        insights,
+        insightsByNode: computeInsightsByNode(insights),
+      }
+    })
+  },
 
-    dismissInsight: (insightId: string): void => {
-      set((state) => {
-        const insights = state.insights.map((i) =>
-          i.id === insightId
-            ? { ...i, status: 'dismissed' as InsightStatus }
-            : i
-        )
-        return {
-          insights,
-          insightsByNode: computeInsightsByNode(insights),
-        }
-      })
-    },
+  addCostSnapshot: (snapshot: CostSnapshot): void => {
+    set((state) => ({
+      costHistory: [...state.costHistory, snapshot].slice(-1000),
+      currentSessionCost: snapshot.sessionCostUSD,
+      dailyBudgetUsed: snapshot.ambientCostUSD,
+    }))
+  },
 
-    applyInsight: (insightId: string): void => {
-      const insight = get().insights.find((i) => i.id === insightId)
-      if (!insight?.suggestedChanges) return
-
-      // Mark insight as applied
-      set((state) => {
-        const insights = state.insights.map((i) =>
-          i.id === insightId
-            ? { ...i, status: 'applied' as InsightStatus }
-            : i
-        )
-        return {
-          insights,
-          insightsByNode: computeInsightsByNode(insights),
-        }
-      })
-
-      // The actual proposal creation is handled by the caller
-      // (e.g., the InsightIndicator component or a bridging function)
-    },
-
-    viewInsight: (insightId: string): void => {
-      set((state) => {
-        const insights = state.insights.map((i) =>
-          i.id === insightId && i.status === 'new'
-            ? { ...i, status: 'viewed' as InsightStatus }
-            : i
-        )
-        return { insights }
-      })
-    },
-
-    expireOldInsights: (): void => {
+  recordAmbientCost: (costUSD: number, tokensUsed: number): void => {
+    set((state) => {
+      const newCost = state.dailyBudgetUsed + costUSD
       const now = Date.now()
-      set((state) => {
-        const insights = state.insights.map((i) => {
-          if (
-            i.expiresAt &&
-            i.expiresAt < now &&
-            i.status !== 'dismissed' &&
-            i.status !== 'applied'
-          ) {
-            return { ...i, status: 'expired' as InsightStatus }
-          }
-          return i
-        })
-        return {
-          insights,
-          insightsByNode: computeInsightsByNode(insights),
-        }
-      })
-    },
 
-    addCostSnapshot: (snapshot: CostSnapshot): void => {
-      set((state) => ({
+      // Add to cost history
+      const snapshot: CostSnapshot = {
+        timestamp: now,
+        sessionTokens: tokensUsed,
+        sessionCostUSD: state.currentSessionCost + costUSD,
+        orchestrationTokens: 0,
+        orchestrationCostUSD: 0,
+        ambientTokens: tokensUsed,
+        ambientCostUSD: newCost,
+        budgetRemainingUSD: state.dailyBudgetLimit - newCost,
+      }
+
+      return {
+        dailyBudgetUsed: newCost,
+        currentSessionCost: state.currentSessionCost + costUSD,
         costHistory: [...state.costHistory, snapshot].slice(-1000),
-        currentSessionCost: snapshot.sessionCostUSD,
-        dailyBudgetUsed: snapshot.ambientCostUSD,
-      }))
-    },
+      }
+    })
+  },
 
-    recordAmbientCost: (costUSD: number, tokensUsed: number): void => {
-      set((state) => {
-        const newCost = state.dailyBudgetUsed + costUSD
-        const now = Date.now()
+  clearInsights: (): void => {
+    set({ insights: [], insightsByNode: {} })
+  },
 
-        // Add to cost history
-        const snapshot: CostSnapshot = {
-          timestamp: now,
-          sessionTokens: tokensUsed,
-          sessionCostUSD: state.currentSessionCost + costUSD,
-          orchestrationTokens: 0,
-          orchestrationCostUSD: 0,
-          ambientTokens: tokensUsed,
-          ambientCostUSD: newCost,
-          budgetRemainingUSD: state.dailyBudgetLimit - newCost,
-        }
+  setAnalysisEnabled: (enabled: boolean): void => {
+    set({ analysisEnabled: enabled })
+  },
 
-        return {
-          dailyBudgetUsed: newCost,
-          currentSessionCost: state.currentSessionCost + costUSD,
-          costHistory: [...state.costHistory, snapshot].slice(-1000),
-        }
-      })
-    },
+  setIsAnalyzing: (analyzing: boolean): void => {
+    set({
+      isAnalyzing: analyzing,
+      ...(analyzing ? {} : { lastAnalysisAt: Date.now() }),
+    })
+  },
 
-    clearInsights: (): void => {
-      set({ insights: [], insightsByNode: {} })
-    },
+  resetDailyBudget: (): void => {
+    set({ dailyBudgetUsed: 0 })
+  },
 
-    setAnalysisEnabled: (enabled: boolean): void => {
-      set({ analysisEnabled: enabled })
-    },
+  // Selectors
+  getInsightsForNode: (nodeId: string): GraphInsight[] => {
+    return get().insightsByNode[nodeId] || []
+  },
 
-    setIsAnalyzing: (analyzing: boolean): void => {
-      set({
-        isAnalyzing: analyzing,
-        ...(analyzing ? {} : { lastAnalysisAt: Date.now() }),
-      })
-    },
+  getActiveInsightCount: (): number => {
+    return get().insights.filter((i) => i.status === 'new' || i.status === 'viewed').length
+  },
 
-    resetDailyBudget: (): void => {
-      set({ dailyBudgetUsed: 0 })
-    },
-
-    // Selectors
-    getInsightsForNode: (nodeId: string): GraphInsight[] => {
-      return get().insightsByNode[nodeId] || []
-    },
-
-    getActiveInsightCount: (): number => {
-      return get().insights.filter(
-        (i) => i.status === 'new' || i.status === 'viewed'
-      ).length
-    },
-
-    canSpendAmbient: (amount: number): boolean => {
-      const state = get()
-      return state.dailyBudgetUsed + amount <= state.dailyBudgetLimit
-    },
-  })
-)
+  canSpendAmbient: (amount: number): boolean => {
+    const state = get()
+    return state.dailyBudgetUsed + amount <= state.dailyBudgetLimit
+  },
+}))
 
 // =============================================================================
 // Selectors
 // =============================================================================
 
-export const selectInsights = (
-  state: GraphIntelligenceStoreState
-): GraphInsight[] => state.insights
+export const selectInsights = (state: GraphIntelligenceStoreState): GraphInsight[] => state.insights
 
-export const selectActiveInsights = (
-  state: GraphIntelligenceStoreState
-): GraphInsight[] =>
+export const selectActiveInsights = (state: GraphIntelligenceStoreState): GraphInsight[] =>
   state.insights.filter((i) => i.status === 'new' || i.status === 'viewed')
 
 export const selectInsightsByNode = (
-  state: GraphIntelligenceStoreState
+  state: GraphIntelligenceStoreState,
 ): Record<string, GraphInsight[]> => state.insightsByNode
 
-export const selectCostHistory = (
-  state: GraphIntelligenceStoreState
-): CostSnapshot[] => state.costHistory
+export const selectCostHistory = (state: GraphIntelligenceStoreState): CostSnapshot[] =>
+  state.costHistory
 
-export const selectDailyBudgetUsed = (
-  state: GraphIntelligenceStoreState
-): number => state.dailyBudgetUsed
+export const selectDailyBudgetUsed = (state: GraphIntelligenceStoreState): number =>
+  state.dailyBudgetUsed
 
-export const selectDailyBudgetLimit = (
-  state: GraphIntelligenceStoreState
-): number => state.dailyBudgetLimit
+export const selectDailyBudgetLimit = (state: GraphIntelligenceStoreState): number =>
+  state.dailyBudgetLimit
 
-export const selectCurrentSessionCost = (
-  state: GraphIntelligenceStoreState
-): number => state.currentSessionCost
+export const selectCurrentSessionCost = (state: GraphIntelligenceStoreState): number =>
+  state.currentSessionCost
 
-export const selectIsAnalyzing = (
-  state: GraphIntelligenceStoreState
-): boolean => state.isAnalyzing
+export const selectIsAnalyzing = (state: GraphIntelligenceStoreState): boolean => state.isAnalyzing

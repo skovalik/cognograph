@@ -63,7 +63,7 @@ export function initSentry(): void {
           fetch: true,
           history: true,
           sentry: true,
-          xhr: true
+          xhr: true,
         }),
         // React-specific error boundary integration
         Sentry.browserTracingIntegration(),
@@ -71,8 +71,8 @@ export function initSentry(): void {
         Sentry.replayIntegration({
           // Mask all text and block all media by default
           maskAllText: true,
-          blockAllMedia: true
-        })
+          blockAllMedia: true,
+        }),
       ],
 
       // Filter sensitive data
@@ -82,13 +82,10 @@ export function initSentry(): void {
           // Remove email-like patterns
           event.message = event.message.replace(
             /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
-            '[email]'
+            '[email]',
           )
           // Remove potential tokens/keys
-          event.message = event.message.replace(
-            /[a-zA-Z0-9_-]{32,}/g,
-            '[token]'
-          )
+          event.message = event.message.replace(/[a-zA-Z0-9_-]{32,}/g, '[token]')
         }
         return event
       },
@@ -103,7 +100,7 @@ export function initSentry(): void {
           }
         }
         return breadcrumb
-      }
+      },
     })
 
     isInitialized = true
@@ -135,7 +132,7 @@ export function setWorkspaceContext(workspaceId: string | null, workspaceName?: 
   if (workspaceId) {
     Sentry.setContext('workspace', {
       id: workspaceId,
-      name: workspaceName || 'Unknown'
+      name: workspaceName || 'Unknown',
     })
   } else {
     Sentry.setContext('workspace', null)
@@ -148,14 +145,14 @@ export function setWorkspaceContext(workspaceId: string | null, workspaceName?: 
 export function setConnectionContext(
   status: 'connected' | 'disconnected' | 'reconnecting',
   isHost: boolean,
-  peerCount: number
+  peerCount: number,
 ): void {
   if (!isInitialized) return
 
   Sentry.setContext('connection', {
     status,
     isHost,
-    peerCount
+    peerCount,
   })
 }
 
@@ -166,7 +163,7 @@ export function addBreadcrumb(
   category: string,
   message: string,
   level: 'debug' | 'info' | 'warning' | 'error' = 'info',
-  data?: Record<string, unknown>
+  data?: Record<string, unknown>,
 ): void {
   if (!isInitialized) return
 
@@ -175,24 +172,21 @@ export function addBreadcrumb(
     message,
     level,
     data,
-    timestamp: Date.now() / 1000
+    timestamp: Date.now() / 1000,
   })
 }
 
 /**
  * Capture an exception with optional context.
  */
-export function captureException(
-  error: Error,
-  context?: Record<string, unknown>
-): string {
+export function captureException(error: Error, context?: Record<string, unknown>): string {
   if (!isInitialized) {
     console.error('[Sentry] Not initialized, error not sent:', error)
     return ''
   }
 
   return Sentry.captureException(error, {
-    extra: context
+    extra: context,
   })
 }
 
@@ -201,7 +195,7 @@ export function captureException(
  */
 export function captureMessage(
   message: string,
-  level: 'debug' | 'info' | 'warning' | 'error' | 'fatal' = 'info'
+  level: 'debug' | 'info' | 'warning' | 'error' | 'fatal' = 'info',
 ): string {
   if (!isInitialized) {
     logger.log('[Sentry] Not initialized, message not sent:', message)

@@ -10,14 +10,14 @@
  * Uses Record<string, T> instead of Map<string, T> for Zustand reactivity.
  */
 
-import { create } from 'zustand'
-import type { Edge } from '@xyflow/react'
 import type {
   AgentActivityState,
-  OrchestratorActivityState,
   BridgeSettings,
+  OrchestratorActivityState,
 } from '@shared/types/bridge'
 import { DEFAULT_BRIDGE_SETTINGS } from '@shared/types/bridge'
+import type { Edge } from '@xyflow/react'
+import { create } from 'zustand'
 import type { OrchestratorStatusUpdate } from './orchestratorStore'
 
 // =============================================================================
@@ -312,8 +312,8 @@ export const useBridgeStore = create<BridgeStoreState>((set, get) => ({
 
     // Recompute aggregates
     const agentEntries = Object.values(newAgents)
-    const runningAgents = agentEntries.filter(a =>
-      a.status === 'running' || a.status === 'queued'
+    const runningAgents = agentEntries.filter(
+      (a) => a.status === 'running' || a.status === 'queued',
     )
 
     // Use RAF batching for high-frequency updates
@@ -323,8 +323,8 @@ export const useBridgeStore = create<BridgeStoreState>((set, get) => ({
       totalActiveAgents: runningAgents.length,
       totalTokensUsed: agentEntries.reduce((sum, a) => sum + a.tokensUsed, 0),
       totalCostUSD: agentEntries.reduce((sum, a) => sum + a.costUSD, 0),
-      totalActiveRuns: Object.values(newOrchestrators)
-        .filter(o => o.status === 'orchestrating').length,
+      totalActiveRuns: Object.values(newOrchestrators).filter((o) => o.status === 'orchestrating')
+        .length,
       isBridgeStatusBarVisible: showStatusBar,
     })
   },
@@ -409,11 +409,9 @@ export function initBridgeIPC(): () => void {
 
   // Subscribe to orchestrator status updates
   // Separate listener from orchestratorStore's listener
-  const cleanup = window.api.orchestrator.onStatusUpdate(
-    (update: OrchestratorStatusUpdate) => {
-      useBridgeStore.getState().handleOrchestratorEvent(update)
-    }
-  )
+  const cleanup = window.api.orchestrator.onStatusUpdate((update: OrchestratorStatusUpdate) => {
+    useBridgeStore.getState().handleOrchestratorEvent(update)
+  })
 
   return cleanup
 }

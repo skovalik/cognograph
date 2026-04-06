@@ -42,12 +42,16 @@ interface ConsoleLogState {
 export const useConsoleLogStore = create<ConsoleLogState>((set) => ({
   entries: [],
   filter: '',
-  addEntry: (entry) => set((state) => ({
-    entries: [...state.entries.slice(-499), {
-      ...entry,
-      message: sanitizeMessage(entry.message),
-    }] // keep last 500
-  })),
+  addEntry: (entry) =>
+    set((state) => ({
+      entries: [
+        ...state.entries.slice(-499),
+        {
+          ...entry,
+          message: sanitizeMessage(entry.message),
+        },
+      ], // keep last 500
+    })),
   setFilter: (filter) => set({ filter }),
   clear: () => set({ entries: [] }),
 }))
@@ -106,7 +110,7 @@ export function initWebConsoleCapture(): void {
         timestamp: Date.now(),
         level: 'warn',
         source: 'web',
-        message: args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' '),
+        message: args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' '),
       })
     } finally {
       _capturing = false
@@ -122,7 +126,7 @@ export function initWebConsoleCapture(): void {
         timestamp: Date.now(),
         level: 'error',
         source: 'web',
-        message: args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' '),
+        message: args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' '),
       })
     } finally {
       _capturing = false

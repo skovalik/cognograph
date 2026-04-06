@@ -4,8 +4,8 @@
 // Static Plugin Registry (Renderer Process)
 // ADD ONE LINE HERE when adding a new plugin
 
-import type { PluginRenderer } from './types'
 import { renderer as notionRenderer } from './notion/renderer'
+import type { PluginRenderer } from './types'
 
 // Future plugins:
 // import { renderer as githubRenderer } from './github/renderer'

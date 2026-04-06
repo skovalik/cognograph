@@ -12,9 +12,9 @@
  * - Undo support
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import type { AuditEventFilter, CanvasAuditEvent } from '@shared/types/bridge'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuditStore } from '../auditStore'
-import type { CanvasAuditEvent, AuditEventFilter } from '@shared/types/bridge'
 
 // Mock Dexie (IndexedDB)
 // Dexie subclasses declare `events!: Table<...>` which TypeScript compiles to
@@ -78,9 +78,7 @@ Object.defineProperty(globalThis, 'crypto', {
 // Helpers
 // =============================================================================
 
-function createMockEvent(
-  overrides: Partial<CanvasAuditEvent> = {}
-): CanvasAuditEvent {
+function createMockEvent(overrides: Partial<CanvasAuditEvent> = {}): CanvasAuditEvent {
   return {
     id: crypto.randomUUID(),
     timestamp: Date.now(),
@@ -155,9 +153,9 @@ describe('AuditStore', () => {
       useAuditStore.setState({ maxEvents: 5 })
 
       for (let i = 0; i < 10; i++) {
-        useAuditStore.getState().addEvent(
-          createMockEvent({ id: `event-${i}`, timestamp: i * 1000 })
-        )
+        useAuditStore
+          .getState()
+          .addEvent(createMockEvent({ id: `event-${i}`, timestamp: i * 1000 }))
       }
 
       const state = useAuditStore.getState()
@@ -169,12 +167,8 @@ describe('AuditStore', () => {
     it('should update filteredEvents when filter is active', () => {
       useAuditStore.getState().setFilter({ actions: ['node-updated'] })
 
-      useAuditStore.getState().addEvent(
-        createMockEvent({ action: 'node-created' })
-      )
-      useAuditStore.getState().addEvent(
-        createMockEvent({ action: 'node-updated' })
-      )
+      useAuditStore.getState().addEvent(createMockEvent({ action: 'node-created' }))
+      useAuditStore.getState().addEvent(createMockEvent({ action: 'node-updated' }))
 
       const state = useAuditStore.getState()
       expect(state.events).toHaveLength(2)
@@ -299,7 +293,7 @@ describe('AuditStore', () => {
           action: 'node-created',
           targetTitle: 'Test Node',
           context: { costUSD: 0.001, tokensUsed: 100 },
-        })
+        }),
       )
     })
 
@@ -320,9 +314,7 @@ describe('AuditStore', () => {
     })
 
     it('should export filtered events only', () => {
-      useAuditStore.getState().addEvent(
-        createMockEvent({ id: 'export-2', action: 'node-updated' })
-      )
+      useAuditStore.getState().addEvent(createMockEvent({ id: 'export-2', action: 'node-updated' }))
 
       useAuditStore.getState().setFilter({ actions: ['node-created'] })
       const json = useAuditStore.getState().exportEvents('json')

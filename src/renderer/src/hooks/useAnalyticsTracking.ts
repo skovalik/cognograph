@@ -11,9 +11,9 @@
  */
 
 import { useEffect, useRef } from 'react'
-import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useAnalyticsStore } from '../stores/analyticsStore'
 import { useProgramStore } from '../stores/programStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 export function useAnalyticsTracking() {
   const recordFirstNode = useAnalyticsStore((s) => s.recordFirstNode)
@@ -95,7 +95,7 @@ export function useAnalyticsTracking() {
 
         prevMessageCount.current = messageCount
       },
-      { equalityFn: (a, b) => a.nodes === b.nodes && a.edges === b.edges }
+      { equalityFn: (a, b) => a.nodes === b.nodes && a.edges === b.edges },
     )
 
     return unsubscribe
@@ -107,7 +107,7 @@ export function useAnalyticsTracking() {
       (state) => ({
         tutorialActive: state.tutorialActive,
         tutorialStep: state.tutorialStep,
-        hasCompletedTutorial: state.hasCompletedTutorial
+        hasCompletedTutorial: state.hasCompletedTutorial,
       }),
       (current, prev) => {
         // Tutorial started
@@ -124,7 +124,7 @@ export function useAnalyticsTracking() {
         if (current.hasCompletedTutorial && !prev.hasCompletedTutorial) {
           recordTutorialCompleted()
         }
-      }
+      },
     )
 
     return unsubscribe

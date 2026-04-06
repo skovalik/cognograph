@@ -14,14 +14,14 @@
  * AppearanceSettings.tsx (includes font picker, font size, grid style).
  */
 
+import { type AccentTheme, PRESET_ACCENT_PALETTES } from '@shared/types'
+import { Moon, Sun } from 'lucide-react'
 import { memo, useCallback, useState } from 'react'
-import { Sun, Moon } from 'lucide-react'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { THEME_PRESETS } from '../../constants/themePresets'
-import { performThemeTransition, performPresetTransition } from '../../utils/themeTransition'
-import { PRESET_ACCENT_PALETTES, type AccentTheme } from '@shared/types'
-import { lightenColor } from '../../utils/colorUtils'
 import { cn } from '@/lib/utils'
+import { THEME_PRESETS } from '../../constants/themePresets'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { lightenColor } from '../../utils/colorUtils'
+import { performPresetTransition, performThemeTransition } from '../../utils/themeTransition'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -49,7 +49,8 @@ function AppearanceTabComponent(): JSX.Element {
   const [customHexInput, setCustomHexInput] = useState(customAccentColor || '')
 
   // Current palette based on active preset
-  const palette = PRESET_ACCENT_PALETTES[currentPresetId || 'default'] || PRESET_ACCENT_PALETTES.default
+  const palette =
+    PRESET_ACCENT_PALETTES[currentPresetId || 'default'] || PRESET_ACCENT_PALETTES.default
 
   // --- Dark/Light toggle ---
   const handleModeToggle = useCallback(

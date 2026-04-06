@@ -8,8 +8,8 @@
  * Shows after plan generation, allowing users to iterate on the plan.
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react'
-import { Send, RotateCcw, History } from 'lucide-react'
+import { History, RotateCcw, Send } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useAIEditorStore } from '../../stores/aiEditorStore'
 
 interface RefinementInputProps {
@@ -19,7 +19,7 @@ interface RefinementInputProps {
 
 function RefinementInputComponent({
   onRefine,
-  isRefining = false
+  isRefining = false,
 }: RefinementInputProps): JSX.Element {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const [value, setValue] = useState('')
@@ -51,7 +51,7 @@ function RefinementInputComponent({
         handleSubmit()
       }
     },
-    [handleSubmit]
+    [handleSubmit],
   )
 
   return (
@@ -65,7 +65,10 @@ function RefinementInputComponent({
             aria-expanded={showHistory}
           >
             <History className="history-icon" />
-            <span>{conversationHistory.length} previous message{conversationHistory.length !== 1 ? 's' : ''}</span>
+            <span>
+              {conversationHistory.length} previous message
+              {conversationHistory.length !== 1 ? 's' : ''}
+            </span>
           </button>
 
           {showHistory && (
@@ -108,9 +111,7 @@ function RefinementInputComponent({
       </div>
 
       {/* Helper text */}
-      <div className="helper-text">
-        Press Enter to send, Shift+Enter for new line
-      </div>
+      <div className="helper-text">Press Enter to send, Shift+Enter for new line</div>
 
       <style>{`
         .refinement-input {

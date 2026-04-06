@@ -60,7 +60,7 @@ export interface AutonomyGuardResult {
  */
 export function checkAutonomyGuard(
   triggerSource: string,
-  parentActionId?: string
+  parentActionId?: string,
 ): AutonomyGuardResult {
   const now = Date.now()
 
@@ -72,12 +72,13 @@ export function checkAutonomyGuard(
     if (depth > MAX_DEPTH) {
       console.warn(
         `[AutonomyGuard] Depth limit exceeded (${depth}/${MAX_DEPTH}). ` +
-        `Trigger: ${triggerSource}, parent: ${parentActionId}`
+          `Trigger: ${triggerSource}, parent: ${parentActionId}`,
       )
       return {
         allowed: false,
-        reason: `Action chain depth ${depth} exceeds maximum of ${MAX_DEPTH}. ` +
-          `Triggered by: ${triggerSource}`
+        reason:
+          `Action chain depth ${depth} exceeds maximum of ${MAX_DEPTH}. ` +
+          `Triggered by: ${triggerSource}`,
       }
     }
   }
@@ -92,12 +93,13 @@ export function checkAutonomyGuard(
   if (recentActions.length >= MAX_ACTIONS_PER_WINDOW) {
     console.warn(
       `[AutonomyGuard] Rate limit exceeded (${recentActions.length}/${MAX_ACTIONS_PER_WINDOW} in ${WINDOW_MS / 1000}s). ` +
-      `Trigger: ${triggerSource}. All autonomous actions paused.`
+        `Trigger: ${triggerSource}. All autonomous actions paused.`,
     )
     return {
       allowed: false,
-      reason: `Rate limit: ${recentActions.length} autonomous actions in ${WINDOW_MS / 1000}s. ` +
-        `Pausing all autonomous execution. Triggered by: ${triggerSource}`
+      reason:
+        `Rate limit: ${recentActions.length} autonomous actions in ${WINDOW_MS / 1000}s. ` +
+        `Pausing all autonomous execution. Triggered by: ${triggerSource}`,
     }
   }
 
@@ -108,7 +110,7 @@ export function checkAutonomyGuard(
     triggerSource,
     parentActionId,
     depth,
-    timestamp: now
+    timestamp: now,
   }
 
   recentActions.push(entry)

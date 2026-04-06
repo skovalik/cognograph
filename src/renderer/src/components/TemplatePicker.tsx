@@ -8,17 +8,17 @@
  * instantiates all nodes and edges from the template at viewport center.
  */
 
-import { memo, useCallback } from 'react'
+import type { EdgeData, NodeData } from '@shared/types'
+import { DEFAULT_EDGE_DATA, NODE_DEFAULTS } from '@shared/types'
+import type { Edge, Node } from '@xyflow/react'
 import { useReactFlow, useUpdateNodeInternals } from '@xyflow/react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { X, BookOpen, Kanban, Library, Lightbulb, Layout } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { BookOpen, Kanban, Layout, Library, Lightbulb, X } from 'lucide-react'
+import { memo, useCallback } from 'react'
 import { toast } from 'react-hot-toast'
 import { v4 as uuid } from 'uuid'
-import { useWorkspaceStore } from '../stores/workspaceStore'
 import { WORKSPACE_TEMPLATES, type WorkspaceTemplate } from '../data/workspaceTemplates'
-import { NODE_DEFAULTS, DEFAULT_EDGE_DATA } from '@shared/types'
-import type { Node, Edge } from '@xyflow/react'
-import type { NodeData, EdgeData } from '@shared/types'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 // Map template icon names to Lucide components
 const ICON_MAP: Record<string, typeof BookOpen> = {
@@ -26,7 +26,7 @@ const ICON_MAP: Record<string, typeof BookOpen> = {
   Kanban,
   Library,
   Lightbulb,
-  Layout
+  Layout,
 }
 
 interface TemplatePickerProps {
@@ -38,151 +38,159 @@ function TemplatePickerComponent({ isOpen, onClose }: TemplatePickerProps): JSX.
   const { screenToFlowPosition } = useReactFlow()
   const updateNodeInternals = useUpdateNodeInternals()
 
-  const handleApplyTemplate = useCallback((template: WorkspaceTemplate) => {
-    // Calculate viewport center in flow coordinates
-    const centerX = window.innerWidth / 2
-    const centerY = window.innerHeight / 2
-    const flowCenter = screenToFlowPosition({ x: centerX, y: centerY })
+  const handleApplyTemplate = useCallback(
+    (template: WorkspaceTemplate) => {
+      // Calculate viewport center in flow coordinates
+      const centerX = window.innerWidth / 2
+      const centerY = window.innerHeight / 2
+      const flowCenter = screenToFlowPosition({ x: centerX, y: centerY })
 
-    // Calculate template bounds to center it
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-    for (const tNode of template.nodes) {
-      const dims = tNode.dimensions || NODE_DEFAULTS[tNode.type] || { width: 280, height: 140 }
-      minX = Math.min(minX, tNode.position.x)
-      minY = Math.min(minY, tNode.position.y)
-      maxX = Math.max(maxX, tNode.position.x + dims.width)
-      maxY = Math.max(maxY, tNode.position.y + dims.height)
-    }
-    const templateWidth = maxX - minX
-    const templateHeight = maxY - minY
-    const offsetX = flowCenter.x - templateWidth / 2 - minX
-    const offsetY = flowCenter.y - templateHeight / 2 - minY
+      // Calculate template bounds to center it
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity
+      for (const tNode of template.nodes) {
+        const dims = tNode.dimensions || NODE_DEFAULTS[tNode.type] || { width: 280, height: 140 }
+        minX = Math.min(minX, tNode.position.x)
+        minY = Math.min(minY, tNode.position.y)
+        maxX = Math.max(maxX, tNode.position.x + dims.width)
+        maxY = Math.max(maxY, tNode.position.y + dims.height)
+      }
+      const templateWidth = maxX - minX
+      const templateHeight = maxY - minY
+      const offsetX = flowCenter.x - templateWidth / 2 - minX
+      const offsetY = flowCenter.y - templateHeight / 2 - minY
 
-    // Map temp IDs to real UUIDs
-    const idMap = new Map<string, string>()
-    for (const tNode of template.nodes) {
-      idMap.set(tNode.tempId, uuid())
-    }
-
-    const now = Date.now()
-
-    // Create nodes
-    const newNodes: Node<NodeData>[] = template.nodes.map(tNode => {
-      const realId = idMap.get(tNode.tempId)!
-      const dims = tNode.dimensions || NODE_DEFAULTS[tNode.type] || { width: 280, height: 140 }
-
-      // Build node data with timestamps
-      const nodeData = {
-        ...tNode.data,
-        createdAt: now,
-        updatedAt: now
-      } as NodeData
-
-      // Resolve parentId from tempId to real UUID (for project children)
-      if ((nodeData as any).parentId && idMap.has((nodeData as any).parentId)) {
-        ;(nodeData as any).parentId = idMap.get((nodeData as any).parentId)
+      // Map temp IDs to real UUIDs
+      const idMap = new Map<string, string>()
+      for (const tNode of template.nodes) {
+        idMap.set(tNode.tempId, uuid())
       }
 
-      // For project nodes, map childNodeIds from temp IDs
-      if (nodeData.type === 'project') {
-        const projectData = nodeData as { childNodeIds?: string[] }
-        // First: collect children that have explicit parentId pointing to this project
-        const explicitChildIds: string[] = []
-        for (const otherNode of template.nodes) {
-          if (otherNode.tempId === tNode.tempId) continue
-          if ((otherNode.data as any).parentId === tNode.tempId) {
-            const childRealId = idMap.get(otherNode.tempId)
-            if (childRealId) explicitChildIds.push(childRealId)
-          }
+      const now = Date.now()
+
+      // Create nodes
+      const newNodes: Node<NodeData>[] = template.nodes.map((tNode) => {
+        const realId = idMap.get(tNode.tempId)!
+        const dims = tNode.dimensions || NODE_DEFAULTS[tNode.type] || { width: 280, height: 140 }
+
+        // Build node data with timestamps
+        const nodeData = {
+          ...tNode.data,
+          createdAt: now,
+          updatedAt: now,
+        } as NodeData
+
+        // Resolve parentId from tempId to real UUID (for project children)
+        if ((nodeData as any).parentId && idMap.has((nodeData as any).parentId)) {
+          ;(nodeData as any).parentId = idMap.get((nodeData as any).parentId)
         }
-        // If explicit children found, use those; otherwise fall back to spatial bounds detection
-        if (explicitChildIds.length > 0) {
-          projectData.childNodeIds = explicitChildIds
-        } else {
-          const projectPos = tNode.position
-          const projectDims = dims
-          const childIds: string[] = []
+
+        // For project nodes, map childNodeIds from temp IDs
+        if (nodeData.type === 'project') {
+          const projectData = nodeData as { childNodeIds?: string[] }
+          // First: collect children that have explicit parentId pointing to this project
+          const explicitChildIds: string[] = []
           for (const otherNode of template.nodes) {
             if (otherNode.tempId === tNode.tempId) continue
-            if (
-              otherNode.position.x >= projectPos.x &&
-              otherNode.position.y >= projectPos.y &&
-              otherNode.position.x < projectPos.x + projectDims.width &&
-              otherNode.position.y < projectPos.y + projectDims.height
-            ) {
+            if ((otherNode.data as any).parentId === tNode.tempId) {
               const childRealId = idMap.get(otherNode.tempId)
-              if (childRealId) childIds.push(childRealId)
+              if (childRealId) explicitChildIds.push(childRealId)
             }
           }
-          projectData.childNodeIds = childIds
+          // If explicit children found, use those; otherwise fall back to spatial bounds detection
+          if (explicitChildIds.length > 0) {
+            projectData.childNodeIds = explicitChildIds
+          } else {
+            const projectPos = tNode.position
+            const projectDims = dims
+            const childIds: string[] = []
+            for (const otherNode of template.nodes) {
+              if (otherNode.tempId === tNode.tempId) continue
+              if (
+                otherNode.position.x >= projectPos.x &&
+                otherNode.position.y >= projectPos.y &&
+                otherNode.position.x < projectPos.x + projectDims.width &&
+                otherNode.position.y < projectPos.y + projectDims.height
+              ) {
+                const childRealId = idMap.get(otherNode.tempId)
+                if (childRealId) childIds.push(childRealId)
+              }
+            }
+            projectData.childNodeIds = childIds
+          }
         }
-      }
 
-      return {
-        id: realId,
-        type: tNode.type,
-        position: {
-          x: tNode.position.x + offsetX,
-          y: tNode.position.y + offsetY
-        },
-        data: nodeData,
-        width: dims.width,
-        height: dims.height
-      }
-    })
-
-    // Create edges
-    const newEdges: Edge<EdgeData>[] = template.edges.map(tEdge => ({
-      id: uuid(),
-      source: idMap.get(tEdge.sourceTempId) || '',
-      target: idMap.get(tEdge.targetTempId) || '',
-      type: 'custom',
-      data: {
-        ...DEFAULT_EDGE_DATA,
-        label: tEdge.label || undefined,
-        ...(tEdge.data || {})
-      }
-    })).filter(e => e.source && e.target)
-
-    // Batch add to workspace
-    useWorkspaceStore.setState((state) => {
-      const allNodes = [...state.nodes, ...newNodes]
-      const allEdges = [...state.edges, ...newEdges]
-
-      // History
-      const historyActions = [
-        ...newNodes.map(node => ({
-          type: 'ADD_NODE' as const,
-          node: JSON.parse(JSON.stringify(node))
-        })),
-        ...newEdges.map(edge => ({
-          type: 'ADD_EDGE' as const,
-          edge: JSON.parse(JSON.stringify(edge))
-        }))
-      ]
-
-      const history = state.history.slice(0, state.historyIndex + 1)
-      history.push({ type: 'BATCH', actions: historyActions })
-
-      return {
-        nodes: allNodes,
-        edges: allEdges,
-        isDirty: true,
-        history,
-        historyIndex: history.length - 1
-      }
-    })
-
-    // Force React Flow to measure nodes and update edge endpoints (fixes misalignment)
-    setTimeout(() => {
-      newNodes.forEach(node => {
-        updateNodeInternals(node.id)
+        return {
+          id: realId,
+          type: tNode.type,
+          position: {
+            x: tNode.position.x + offsetX,
+            y: tNode.position.y + offsetY,
+          },
+          data: nodeData,
+          width: dims.width,
+          height: dims.height,
+        }
       })
-    }, 0)
 
-    toast.success(`Applied "${template.name}" template (${newNodes.length} nodes)`)
-    onClose()
-  }, [screenToFlowPosition, updateNodeInternals, onClose])
+      // Create edges
+      const newEdges: Edge<EdgeData>[] = template.edges
+        .map((tEdge) => ({
+          id: uuid(),
+          source: idMap.get(tEdge.sourceTempId) || '',
+          target: idMap.get(tEdge.targetTempId) || '',
+          type: 'custom',
+          data: {
+            ...DEFAULT_EDGE_DATA,
+            label: tEdge.label || undefined,
+            ...(tEdge.data || {}),
+          },
+        }))
+        .filter((e) => e.source && e.target)
+
+      // Batch add to workspace
+      useWorkspaceStore.setState((state) => {
+        const allNodes = [...state.nodes, ...newNodes]
+        const allEdges = [...state.edges, ...newEdges]
+
+        // History
+        const historyActions = [
+          ...newNodes.map((node) => ({
+            type: 'ADD_NODE' as const,
+            node: JSON.parse(JSON.stringify(node)),
+          })),
+          ...newEdges.map((edge) => ({
+            type: 'ADD_EDGE' as const,
+            edge: JSON.parse(JSON.stringify(edge)),
+          })),
+        ]
+
+        const history = state.history.slice(0, state.historyIndex + 1)
+        history.push({ type: 'BATCH', actions: historyActions })
+
+        return {
+          nodes: allNodes,
+          edges: allEdges,
+          isDirty: true,
+          history,
+          historyIndex: history.length - 1,
+        }
+      })
+
+      // Force React Flow to measure nodes and update edge endpoints (fixes misalignment)
+      setTimeout(() => {
+        newNodes.forEach((node) => {
+          updateNodeInternals(node.id)
+        })
+      }, 0)
+
+      toast.success(`Applied "${template.name}" template (${newNodes.length} nodes)`)
+      onClose()
+    },
+    [screenToFlowPosition, updateNodeInternals, onClose],
+  )
 
   if (!isOpen) return null
 
@@ -224,7 +232,7 @@ function TemplatePickerComponent({ isOpen, onClose }: TemplatePickerProps): JSX.
 
           {/* Template grid */}
           <div className="px-5 py-4 grid grid-cols-2 gap-3">
-            {WORKSPACE_TEMPLATES.map(template => {
+            {WORKSPACE_TEMPLATES.map((template) => {
               const IconComponent = ICON_MAP[template.icon] || Layout
               return (
                 <button
@@ -236,7 +244,10 @@ function TemplatePickerComponent({ isOpen, onClose }: TemplatePickerProps): JSX.
                   <div className="flex items-center gap-2.5 mb-2">
                     <div
                       className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ background: `${template.color}20`, border: `1px solid ${template.color}40` }}
+                      style={{
+                        background: `${template.color}20`,
+                        border: `1px solid ${template.color}40`,
+                      }}
                     >
                       <IconComponent className="w-4 h-4" style={{ color: template.color }} />
                     </div>

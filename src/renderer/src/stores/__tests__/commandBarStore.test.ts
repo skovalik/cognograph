@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCommandBarStore } from '../commandBarStore'
 
 // =============================================================================
@@ -132,7 +132,7 @@ describe('commandBarStore', () => {
 
       const suggestions = useCommandBarStore.getState().suggestions
       expect(suggestions.length).toBeGreaterThan(0)
-      expect(suggestions.some(s => s.text.toLowerCase().includes('create'))).toBe(true)
+      expect(suggestions.some((s) => s.text.toLowerCase().includes('create'))).toBe(true)
     })
 
     it('returns recent commands matching input', async () => {
@@ -141,7 +141,7 @@ describe('commandBarStore', () => {
       useCommandBarStore.getState().loadSuggestions('widget')
 
       const suggestions = useCommandBarStore.getState().suggestions
-      expect(suggestions.some(s => s.source === 'recent')).toBe(true)
+      expect(suggestions.some((s) => s.source === 'recent')).toBe(true)
     })
 
     it('clears suggestions for empty input', () => {

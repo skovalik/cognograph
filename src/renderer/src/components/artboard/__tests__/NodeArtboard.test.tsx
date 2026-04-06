@@ -12,16 +12,16 @@
  * - CSS custom property for node accent color
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Mock @xyflow/react
 vi.mock('@xyflow/react', () => ({
   useViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1.2 })),
   useReactFlow: vi.fn(() => ({
-    getViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1.2 }))
-  }))
+    getViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1.2 })),
+  })),
 }))
 
 // Mock workspace store
@@ -30,14 +30,14 @@ vi.mock('../../../stores/workspaceStore', () => ({
   useWorkspaceStore: vi.fn((selector: (state: Record<string, unknown>) => unknown) =>
     selector({
       inPlaceExpandedNodeId: 'test-node-1',
-      collapseInPlaceExpansion: mockCollapseInPlaceExpansion
-    })
-  )
+      collapseInPlaceExpansion: mockCollapseInPlaceExpansion,
+    }),
+  ),
 }))
 
 // Mock cn utility
 vi.mock('@/lib/utils', () => ({
-  cn: (...args: unknown[]) => args.filter(Boolean).join(' ')
+  cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
 }))
 
 import { NodeArtboard } from '../NodeArtboard'
@@ -61,7 +61,7 @@ describe('NodeArtboard', () => {
     render(
       <NodeArtboard nodeId="test-1" nodeColor="#6366f1" title="Test Note">
         <div>Body content</div>
-      </NodeArtboard>
+      </NodeArtboard>,
     )
     expect(screen.getByText('Test Note')).toBeInTheDocument()
   })
@@ -75,7 +75,7 @@ describe('NodeArtboard', () => {
         icon={<span data-testid="test-icon">IC</span>}
       >
         <div>Body content</div>
-      </NodeArtboard>
+      </NodeArtboard>,
     )
     expect(screen.getByTestId('test-icon')).toBeInTheDocument()
   })
@@ -84,7 +84,7 @@ describe('NodeArtboard', () => {
     render(
       <NodeArtboard nodeId="test-1" nodeColor="#6366f1" title="Test Note">
         <div data-testid="body-content">Body content</div>
-      </NodeArtboard>
+      </NodeArtboard>,
     )
     expect(screen.getByTestId('body-content')).toBeInTheDocument()
   })
@@ -93,7 +93,7 @@ describe('NodeArtboard', () => {
     render(
       <NodeArtboard nodeId="test-1" nodeColor="#6366f1" title="Test Note">
         <div>Body</div>
-      </NodeArtboard>
+      </NodeArtboard>,
     )
     const dialog = screen.getByRole('dialog')
     expect(dialog).toBeInTheDocument()
@@ -104,7 +104,7 @@ describe('NodeArtboard', () => {
     render(
       <NodeArtboard nodeId="test-1" nodeColor="#6366f1" title="Test Note">
         <div>Body</div>
-      </NodeArtboard>
+      </NodeArtboard>,
     )
     const closeButton = screen.getByLabelText('Close artboard')
     fireEvent.click(closeButton)
@@ -115,7 +115,7 @@ describe('NodeArtboard', () => {
     render(
       <NodeArtboard nodeId="test-1" nodeColor="#ff5733" title="Colored Note">
         <div>Body</div>
-      </NodeArtboard>
+      </NodeArtboard>,
     )
     const dialog = screen.getByRole('dialog')
     expect(dialog.style.getPropertyValue('--node-accent')).toBe('#ff5733')
@@ -123,14 +123,9 @@ describe('NodeArtboard', () => {
 
   it('should apply custom className when provided', () => {
     render(
-      <NodeArtboard
-        nodeId="test-1"
-        nodeColor="#6366f1"
-        title="Test"
-        className="custom-class"
-      >
+      <NodeArtboard nodeId="test-1" nodeColor="#6366f1" title="Test" className="custom-class">
         <div>Body</div>
-      </NodeArtboard>
+      </NodeArtboard>,
     )
     const dialog = screen.getByRole('dialog')
     expect(dialog.className).toContain('custom-class')

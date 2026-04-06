@@ -21,16 +21,10 @@ function PinnedWindowsContainerComponent(): JSX.Element | null {
   return (
     <>
       {pinnedWindows.map((win) => {
-        const node = nodes.find(n => n.id === win.nodeId)
+        const node = nodes.find((n) => n.id === win.nodeId)
         if (!node) return null
 
-        return (
-          <PinnedWindow
-            key={win.nodeId}
-            window={win}
-            node={node}
-          />
-        )
+        return <PinnedWindow key={win.nodeId} window={win} node={node} />
       })}
     </>
   )

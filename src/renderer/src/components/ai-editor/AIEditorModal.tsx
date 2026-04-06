@@ -8,36 +8,36 @@
  * Allows users to select mode, enter prompts, and generate/execute plans.
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react'
+import type { AIEditorMode, AIEditorScope } from '@shared/types'
+import { AI_EDITOR_MODE_DESCRIPTIONS, AI_EDITOR_SCOPE_DESCRIPTIONS } from '@shared/types'
 import {
-  X,
-  GripHorizontal,
-  Minimize2,
-  Maximize2,
-  Wand2,
-  Pencil,
-  LayoutGrid,
-  Sparkles,
-  Zap,
-  MessageCircle,
-  Target,
-  Layers,
-  Globe,
   AlertCircle,
-  Bot
+  Bot,
+  Globe,
+  GripHorizontal,
+  Layers,
+  LayoutGrid,
+  Maximize2,
+  MessageCircle,
+  Minimize2,
+  Pencil,
+  Sparkles,
+  Target,
+  Wand2,
+  X,
+  Zap,
 } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useAIEditorStore } from '../../stores/aiEditorStore'
-import { createFocusTrap } from '../../utils/accessibility'
-import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { createFocusTrap } from '../../utils/accessibility'
 import { buildAIEditorContext } from '../../utils/contextBuilder'
-import { buildPreviewState } from '../../utils/previewBuilder'
+import { EscapePriority, escapeManager } from '../../utils/EscapeManager'
 import { executeMutationPlan } from '../../utils/mutationExecutor'
+import { buildPreviewState } from '../../utils/previewBuilder'
 import LoadingState from './LoadingState'
 import PreviewControls from './PreviewControls'
 import RefinementInput from './RefinementInput'
-import type { AIEditorMode, AIEditorScope } from '@shared/types'
-import { AI_EDITOR_MODE_DESCRIPTIONS, AI_EDITOR_SCOPE_DESCRIPTIONS } from '@shared/types'
 
 const MAX_REFINEMENT_TURNS = 10
 
@@ -54,15 +54,15 @@ const modeIcons: Record<AIEditorMode, React.ComponentType<{ className?: string }
   edit: Pencil,
   organize: LayoutGrid,
   automate: Zap,
-  ask: MessageCircle
+  ask: MessageCircle,
 }
 
 const scopeIcons: Record<AIEditorScope, React.ComponentType<{ className?: string }>> = {
   selection: Target,
   canvas: Layers,
   workspace: Globe,
-  single: Target,  // Internal scope - uses same icon as selection
-  view: Layers     // Internal scope - uses same icon as canvas
+  single: Target, // Internal scope - uses same icon as selection
+  view: Layers, // Internal scope - uses same icon as canvas
 }
 
 function AIEditorModalComponent(): JSX.Element | null {
@@ -90,7 +90,7 @@ function AIEditorModalComponent(): JSX.Element | null {
     generatePlan,
     cancelGeneration,
     setPreviewState,
-    togglePreviewVisibility
+    togglePreviewVisibility,
   } = useAIEditorStore()
 
   const nodes = useWorkspaceStore((state) => state.nodes)
@@ -112,7 +112,7 @@ function AIEditorModalComponent(): JSX.Element | null {
     }
     return {
       x: Math.max(50, (window.innerWidth - 380) / 2),
-      y: Math.max(50, (window.innerHeight - 420) / 2)
+      y: Math.max(50, (window.innerHeight - 420) / 2),
     }
   })
   const [isDragging, setIsDragging] = useState(false)
@@ -150,13 +150,7 @@ function AIEditorModalComponent(): JSX.Element | null {
   // Build preview when plan is generated
   useEffect(() => {
     if (currentPlan && !previewState) {
-      const preview = buildPreviewState(
-        currentPlan,
-        nodes,
-        edges,
-        selectedNodeIds,
-        viewport
-      )
+      const preview = buildPreviewState(currentPlan, nodes, edges, selectedNodeIds, viewport)
       setPreviewState(preview)
     }
   }, [currentPlan, previewState, nodes, edges, selectedNodeIds, viewport, setPreviewState])
@@ -168,10 +162,10 @@ function AIEditorModalComponent(): JSX.Element | null {
       setIsDragging(true)
       dragStartPos.current = {
         x: e.clientX - position.x,
-        y: e.clientY - position.y
+        y: e.clientY - position.y,
       }
     },
-    [position]
+    [position],
   )
 
   // Handle drag move
@@ -179,8 +173,14 @@ function AIEditorModalComponent(): JSX.Element | null {
     if (!isDragging) return
 
     const handleMouseMove = (e: MouseEvent): void => {
-      const newX = Math.max(0, Math.min(window.innerWidth - 100, e.clientX - dragStartPos.current.x))
-      const newY = Math.max(0, Math.min(window.innerHeight - 50, e.clientY - dragStartPos.current.y))
+      const newX = Math.max(
+        0,
+        Math.min(window.innerWidth - 100, e.clientX - dragStartPos.current.x),
+      )
+      const newY = Math.max(
+        0,
+        Math.min(window.innerHeight - 50, e.clientY - dragStartPos.current.y),
+      )
       setPosition({ x: newX, y: newY })
     }
 
@@ -212,13 +212,23 @@ function AIEditorModalComponent(): JSX.Element | null {
       viewportBounds: { width: window.innerWidth, height: window.innerHeight },
       workspaceSettings: {
         defaultProvider: 'anthropic',
-        themeMode: themeSettings.mode
+        themeMode: themeSettings.mode,
       },
-      includeEnhancedAnalysis: true
+      includeEnhancedAnalysis: true,
     })
 
     await generatePlan(context)
-  }, [mode, prompt, scope, nodes, edges, selectedNodeIds, viewport, themeSettings.mode, generatePlan])
+  }, [
+    mode,
+    prompt,
+    scope,
+    nodes,
+    edges,
+    selectedNodeIds,
+    viewport,
+    themeSettings.mode,
+    generatePlan,
+  ])
 
   // Handle apply
   const handleApply = useCallback(async () => {
@@ -234,41 +244,60 @@ function AIEditorModalComponent(): JSX.Element | null {
   }, [setPreviewState, closeModal])
 
   // Handle refinement
-  const handleRefine = useCallback(async (refinementPrompt: string) => {
-    if (refinementCount >= MAX_REFINEMENT_TURNS) return
-    setIsRefining(true)
+  const handleRefine = useCallback(
+    async (refinementPrompt: string) => {
+      if (refinementCount >= MAX_REFINEMENT_TURNS) return
+      setIsRefining(true)
 
-    try {
-      // Record the user's refinement in conversation history
-      addToConversation({ role: 'user', content: refinementPrompt })
+      try {
+        // Record the user's refinement in conversation history
+        addToConversation({ role: 'user', content: refinementPrompt })
 
-      // Build context that includes the conversation history
-      const conversationContext = getConversationContext()
-      const context = buildAIEditorContext({
-        mode,
-        prompt: `${prompt}\n\n--- Refinement History ---\n${conversationContext}\n\n--- Latest Refinement ---\n${refinementPrompt}`,
-        scope,
-        nodes,
-        edges,
-        selectedNodeIds,
-        viewport,
-        viewportBounds: { width: window.innerWidth, height: window.innerHeight },
-        workspaceSettings: {
-          defaultProvider: 'anthropic',
-          themeMode: themeSettings.mode
-        },
-        includeEnhancedAnalysis: true
-      })
+        // Build context that includes the conversation history
+        const conversationContext = getConversationContext()
+        const context = buildAIEditorContext({
+          mode,
+          prompt: `${prompt}\n\n--- Refinement History ---\n${conversationContext}\n\n--- Latest Refinement ---\n${refinementPrompt}`,
+          scope,
+          nodes,
+          edges,
+          selectedNodeIds,
+          viewport,
+          viewportBounds: { width: window.innerWidth, height: window.innerHeight },
+          workspaceSettings: {
+            defaultProvider: 'anthropic',
+            themeMode: themeSettings.mode,
+          },
+          includeEnhancedAnalysis: true,
+        })
 
-      await generatePlan(context)
-      setRefinementCount(c => c + 1)
+        await generatePlan(context)
+        setRefinementCount((c) => c + 1)
 
-      // Record the assistant response in conversation
-      addToConversation({ role: 'assistant', content: `Plan refined based on: "${refinementPrompt}"` })
-    } finally {
-      setIsRefining(false)
-    }
-  }, [refinementCount, addToConversation, getConversationContext, mode, prompt, scope, nodes, edges, selectedNodeIds, viewport, themeSettings.mode, generatePlan])
+        // Record the assistant response in conversation
+        addToConversation({
+          role: 'assistant',
+          content: `Plan refined based on: "${refinementPrompt}"`,
+        })
+      } finally {
+        setIsRefining(false)
+      }
+    },
+    [
+      refinementCount,
+      addToConversation,
+      getConversationContext,
+      mode,
+      prompt,
+      scope,
+      nodes,
+      edges,
+      selectedNodeIds,
+      viewport,
+      themeSettings.mode,
+      generatePlan,
+    ],
+  )
 
   // Escape key via EscapeManager
   useEffect(() => {
@@ -317,7 +346,17 @@ function AIEditorModalComponent(): JSX.Element | null {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, currentPlan, isGeneratingPlan, previewState, prompt, handleApply, handleGenerate, cancelGeneration, togglePreviewVisibility])
+  }, [
+    isOpen,
+    currentPlan,
+    isGeneratingPlan,
+    previewState,
+    prompt,
+    handleApply,
+    handleGenerate,
+    cancelGeneration,
+    togglePreviewVisibility,
+  ])
 
   if (!isOpen) return null
 
@@ -341,7 +380,7 @@ function AIEditorModalComponent(): JSX.Element | null {
         top: position.y,
         width: size.width,
         height: isMinimized ? 44 : size.height,
-        transition: isDragging ? 'none' : 'height 0.2s ease-out'
+        transition: isDragging ? 'none' : 'height 0.2s ease-out',
       }}
       role="dialog"
       aria-modal="true"
@@ -355,7 +394,9 @@ function AIEditorModalComponent(): JSX.Element | null {
         <div className="flex items-center gap-2">
           <GripHorizontal className={`w-4 h-4 ${textMutedClass}`} />
           <Wand2 className="w-4 h-4" style={{ color: 'var(--gui-accent-primary)' }} />
-          <span id={titleId} className={`text-sm font-medium ${textClass}`}>AI Editor</span>
+          <span id={titleId} className={`text-sm font-medium ${textClass}`}>
+            AI Editor
+          </span>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -409,17 +450,16 @@ function AIEditorModalComponent(): JSX.Element | null {
                   Maximum refinements reached. Start a new generation.
                 </div>
               ) : (
-                <RefinementInput
-                  onRefine={handleRefine}
-                  isRefining={isRefining}
-                />
+                <RefinementInput onRefine={handleRefine} isRefining={isRefining} />
               )}
             </>
           ) : (
             <div className="flex flex-col gap-3">
               {/* Mode Selection */}
               <div>
-                <label className={`block text-xs font-medium ${textMutedClass} uppercase tracking-wide mb-1.5`}>
+                <label
+                  className={`block text-xs font-medium ${textMutedClass} uppercase tracking-wide mb-1.5`}
+                >
                   Mode
                 </label>
                 <div className="grid grid-cols-3 gap-1.5">
@@ -435,11 +475,16 @@ function AIEditorModalComponent(): JSX.Element | null {
                             ? ''
                             : `${borderClass} hover:bg-[var(--surface-panel-secondary)] ${textClass}`
                         }`}
-                        style={isSelected ? {
-                          borderColor: 'var(--gui-accent-primary)',
-                          backgroundColor: 'color-mix(in srgb, var(--gui-accent-primary) 10%, transparent)',
-                          color: 'var(--gui-accent-primary)'
-                        } : undefined}
+                        style={
+                          isSelected
+                            ? {
+                                borderColor: 'var(--gui-accent-primary)',
+                                backgroundColor:
+                                  'color-mix(in srgb, var(--gui-accent-primary) 10%, transparent)',
+                                color: 'var(--gui-accent-primary)',
+                              }
+                            : undefined
+                        }
                         aria-pressed={isSelected}
                       >
                         <Icon className="w-3.5 h-3.5" />
@@ -469,11 +514,16 @@ function AIEditorModalComponent(): JSX.Element | null {
                               ? ''
                               : `${borderClass} hover:bg-[var(--surface-panel-secondary)] ${textClass}`
                         }`}
-                        style={!isDisabled && isSelected ? {
-                          borderColor: 'var(--gui-accent-primary)',
-                          backgroundColor: 'color-mix(in srgb, var(--gui-accent-primary) 10%, transparent)',
-                          color: 'var(--gui-accent-primary)'
-                        } : undefined}
+                        style={
+                          !isDisabled && isSelected
+                            ? {
+                                borderColor: 'var(--gui-accent-primary)',
+                                backgroundColor:
+                                  'color-mix(in srgb, var(--gui-accent-primary) 10%, transparent)',
+                                color: 'var(--gui-accent-primary)',
+                              }
+                            : undefined
+                        }
                         title={AI_EDITOR_SCOPE_DESCRIPTIONS[s].description}
                         aria-pressed={isSelected}
                         aria-disabled={isDisabled}
@@ -494,8 +544,14 @@ function AIEditorModalComponent(): JSX.Element | null {
                     className={`relative w-9 h-5 rounded-full transition-colors ${
                       useAgentMode ? '' : 'bg-[var(--surface-panel-secondary)]'
                     }`}
-                    style={useAgentMode ? { backgroundColor: 'var(--gui-accent-primary)' } : undefined}
-                    title={useAgentMode ? 'Agent mode: AI explores workspace first' : 'Standard mode: Faster generation'}
+                    style={
+                      useAgentMode ? { backgroundColor: 'var(--gui-accent-primary)' } : undefined
+                    }
+                    title={
+                      useAgentMode
+                        ? 'Agent mode: AI explores workspace first'
+                        : 'Standard mode: Faster generation'
+                    }
                     role="switch"
                     aria-checked={useAgentMode}
                     aria-label="Toggle Agent Mode"
@@ -521,7 +577,12 @@ function AIEditorModalComponent(): JSX.Element | null {
                   placeholder={getPlaceholder(mode)}
                   className={`w-full h-28 p-2.5 rounded-lg border ${inputBgClass} ${textClass} placeholder:text-[var(--text-muted)] resize-none focus:outline-none focus:ring-2 text-sm`}
                   style={{ ['--tw-ring-color' as string]: 'var(--gui-accent-primary)' }}
-                  onFocus={(e) => e.currentTarget.style.setProperty('--tw-ring-color', 'var(--gui-accent-primary)')}
+                  onFocus={(e) =>
+                    e.currentTarget.style.setProperty(
+                      '--tw-ring-color',
+                      'var(--gui-accent-primary)',
+                    )
+                  }
                   aria-label="Enter your AI prompt"
                 />
               </div>
@@ -542,11 +603,12 @@ function AIEditorModalComponent(): JSX.Element | null {
                 style={{
                   borderColor: 'var(--gui-accent-primary)',
                   color: 'var(--gui-accent-primary)',
-                  backgroundColor: 'transparent'
+                  backgroundColor: 'transparent',
                 }}
                 onMouseEnter={(e) => {
                   if (!e.currentTarget.disabled) {
-                    e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--gui-accent-primary) 15%, transparent)'
+                    e.currentTarget.style.backgroundColor =
+                      'color-mix(in srgb, var(--gui-accent-primary) 15%, transparent)'
                   }
                 }}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
@@ -587,7 +649,9 @@ function AIEditorModalComponent(): JSX.Element | null {
             document.addEventListener('mouseup', handleResizeEnd)
           }}
         >
-          <div className={`absolute bottom-1 right-1 w-2 h-2 border-r-2 border-b-2 ${borderClass}`} />
+          <div
+            className={`absolute bottom-1 right-1 w-2 h-2 border-r-2 border-b-2 ${borderClass}`}
+          />
         </div>
       )}
     </div>

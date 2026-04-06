@@ -20,14 +20,14 @@ const MODE_COLORS: Record<KeyboardMode, string> = {
   Navigate: 'bg-blue-600/80 text-blue-50',
   Edit: 'bg-green-600/80 text-green-50',
   Terminal: 'bg-amber-600/80 text-amber-50',
-  Artboard: 'bg-purple-600/80 text-purple-50'
+  Artboard: 'bg-purple-600/80 text-purple-50',
 }
 
 const MODE_ICONS: Record<KeyboardMode, string> = {
   Navigate: '\u2328', // keyboard icon
-  Edit: '\u270E',     // pencil icon
-  Terminal: '\u25B6',  // terminal arrow
-  Artboard: '\u25A3'  // filled square with inner square (artboard metaphor)
+  Edit: '\u270E', // pencil icon
+  Terminal: '\u25B6', // terminal arrow
+  Artboard: '\u25A3', // filled square with inner square (artboard metaphor)
 }
 
 function detectMode(): KeyboardMode {

@@ -8,14 +8,14 @@
  * indicators, and child count summary. Expanded version of L3 content.
  */
 
-import { memo, useCallback, useMemo } from 'react'
-import { FolderKanban, GripVertical } from 'lucide-react'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { useNodesStore } from '../../stores/nodesStore'
-import { EditableText } from '../EditableText'
+import type { NodeData, ProjectNodeData } from '@shared/types'
 import { DEFAULT_THEME_SETTINGS } from '@shared/types'
-import type { ProjectNodeData, NodeData } from '@shared/types'
 import type { Node } from '@xyflow/react'
+import { FolderKanban, GripVertical } from 'lucide-react'
+import { memo, useCallback, useMemo } from 'react'
+import { useNodesStore } from '../../stores/nodesStore'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { EditableText } from '../EditableText'
 
 interface ProjectArtboardProps {
   nodeId: string
@@ -69,8 +69,8 @@ function ProjectArtboardComponent({ nodeId }: ProjectArtboardProps): JSX.Element
           priority: string
         }>
       },
-      [childNodeIds]
-    )
+      [childNodeIds],
+    ),
   )
 
   // Group by type for summary
@@ -86,7 +86,7 @@ function ProjectArtboardComponent({ nodeId }: ProjectArtboardProps): JSX.Element
     (newDescription: string) => {
       updateNode(nodeId, { description: newDescription })
     },
-    [nodeId, updateNode]
+    [nodeId, updateNode],
   )
 
   const getTypeColor = useCallback(
@@ -97,7 +97,7 @@ function ProjectArtboardComponent({ nodeId }: ProjectArtboardProps): JSX.Element
         'var(--gui-text-muted)'
       )
     },
-    [themeSettings.nodeColors]
+    [themeSettings.nodeColors],
   )
 
   if (!nodeData) {
@@ -114,10 +114,7 @@ function ProjectArtboardComponent({ nodeId }: ProjectArtboardProps): JSX.Element
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Description area */}
-      <div
-        className="px-5 py-4 shrink-0"
-        style={{ borderBottom: '1px solid var(--gui-border)' }}
-      >
+      <div className="px-5 py-4 shrink-0" style={{ borderBottom: '1px solid var(--gui-border)' }}>
         <EditableText
           value={nodeData.description || ''}
           onChange={handleDescriptionChange}
@@ -132,10 +129,7 @@ function ProjectArtboardComponent({ nodeId }: ProjectArtboardProps): JSX.Element
           className="flex items-center gap-2 px-5 py-2 flex-wrap shrink-0"
           style={{ borderBottom: '1px solid var(--gui-border)' }}
         >
-          <span
-            className="text-xs font-medium"
-            style={{ color: 'var(--gui-text-muted)' }}
-          >
+          <span className="text-xs font-medium" style={{ color: 'var(--gui-text-muted)' }}>
             {childNodes.length} items
           </span>
           {Object.entries(typeCounts).map(([type, count]) => (
@@ -234,8 +228,8 @@ function ProjectArtboardComponent({ nodeId }: ProjectArtboardProps): JSX.Element
                         child.status === 'done'
                           ? '#22c55e'
                           : child.status === 'in-progress'
-                          ? '#f59e0b'
-                          : 'var(--gui-text-muted)',
+                            ? '#f59e0b'
+                            : 'var(--gui-text-muted)',
                     }}
                   >
                     {child.status}

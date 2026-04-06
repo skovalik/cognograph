@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useViewport } from '@xyflow/react'
+import type React from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
+import { EscapePriority, escapeManager } from '../../utils/EscapeManager'
 
 interface NodeArtboardProps {
   nodeId: string
@@ -37,14 +38,12 @@ export const NodeArtboard = memo(function NodeArtboard({
   title,
   icon,
   children,
-  className
+  className,
 }: NodeArtboardProps): React.JSX.Element {
   const viewport = useViewport()
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const collapseInPlaceExpansion = useWorkspaceStore(
-    (state) => state.collapseInPlaceExpansion
-  )
+  const collapseInPlaceExpansion = useWorkspaceStore((state) => state.collapseInPlaceExpansion)
 
   // Calculate artboard dimensions based on viewport
   const dimensions = useMemo(() => {
@@ -88,7 +87,7 @@ export const NodeArtboard = memo(function NodeArtboard({
         {
           width: dimensions.width,
           height: dimensions.height,
-          '--node-accent': nodeColor
+          '--node-accent': nodeColor,
         } as React.CSSProperties
       }
       role="dialog"

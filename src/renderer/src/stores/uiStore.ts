@@ -10,13 +10,13 @@
  * Created as part of Batch 0B: Split workspaceStore
  */
 
-import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
-import { subscribeWithSelector } from 'zustand/middleware'
-import { enableMapSet } from 'immer'
 import type { NodeData, ThemeSettings, WorkspacePreferences } from '@shared/types'
 import { DEFAULT_THEME_SETTINGS } from '@shared/types'
-import type { UIState, PinnedWindow } from './types'
+import { enableMapSet } from 'immer'
+import { create } from 'zustand'
+import { subscribeWithSelector } from 'zustand/middleware'
+import { immer } from 'zustand/middleware/immer'
+import type { PinnedWindow, UIState } from './types'
 
 // Enable Immer support for Map and Set
 enableMapSet()
@@ -35,7 +35,9 @@ interface UIActions {
   // Left Sidebar
   toggleLeftSidebar: () => void
   setLeftSidebarWidth: (width: number) => void
-  setLeftSidebarTab: (tab: 'layers' | 'extractions' | 'activity' | 'dispatch' | 'cc-bridge' | 'agent-log' | 'console') => void
+  setLeftSidebarTab: (
+    tab: 'layers' | 'extractions' | 'activity' | 'dispatch' | 'cc-bridge' | 'agent-log' | 'console',
+  ) => void
   toggleNodeExpanded: (nodeId: string) => void
   setLayersSortMode: (mode: 'hierarchy' | 'type' | 'recent' | 'manual') => void
   setManualLayerOrder: (order: string[] | null) => void
@@ -50,7 +52,11 @@ interface UIActions {
   jumpToNumberedBookmark: (number: number) => string | null
 
   // Pinned Windows
-  pinWindow: (nodeId: string, position: { x: number; y: number }, size: { width: number; height: number }) => void
+  pinWindow: (
+    nodeId: string,
+    position: { x: number; y: number },
+    size: { width: number; height: number },
+  ) => void
   unpinWindow: (nodeId: string) => void
   updatePinnedWindowPosition: (nodeId: string, position: { x: number; y: number }) => void
   updatePinnedWindowSize: (nodeId: string, size: { width: number; height: number }) => void
@@ -67,7 +73,12 @@ interface UIActions {
 
   // Canvas interaction (for shader performance throttling)
   setCanvasInteracting: (interacting: boolean) => void
-  setAmbientQuality: (quality: { resolutionScale: number; frameSkip: boolean; shouldRender: boolean; dprCap: number }) => void
+  setAmbientQuality: (quality: {
+    resolutionScale: number
+    frameSkip: boolean
+    shouldRender: boolean
+    dprCap: number
+  }) => void
 
   // Theme
   setThemeSettings: (settings: Partial<ThemeSettings>) => void
@@ -140,7 +151,7 @@ const initialUIState: UIState = {
     propertiesDisplayMode: 'popup',
     chatDisplayMode: 'panel',
     showNodePreviews: true,
-    autoSaveInterval: 30000
+    autoSaveInterval: 30000,
   },
 
   // Command response panel
@@ -305,7 +316,7 @@ export const useUIStore = create<UIStore>()(
             position,
             size,
             minimized: false,
-            zIndex: state.nextPinnedZIndex
+            zIndex: state.nextPinnedZIndex,
           }
           state.pinnedWindows.push(newWindow)
           state.nextPinnedZIndex++
@@ -424,7 +435,10 @@ export const useUIStore = create<UIStore>()(
       setWorkspacePreferences: (preferences) => {
         // Validate autoSaveInterval if being set (must be >= 1000ms)
         if (preferences.autoSaveInterval !== undefined) {
-          preferences = { ...preferences, autoSaveInterval: Math.max(1000, preferences.autoSaveInterval) }
+          preferences = {
+            ...preferences,
+            autoSaveInterval: Math.max(1000, preferences.autoSaveInterval),
+          }
         }
 
         set((state) => {
@@ -461,8 +475,8 @@ export const useUIStore = create<UIStore>()(
           state.agentLogExpanded = expanded
         })
       },
-    }))
-  )
+    })),
+  ),
 )
 
 // =============================================================================

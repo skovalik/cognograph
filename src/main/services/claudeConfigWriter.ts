@@ -14,9 +14,8 @@
  */
 
 import { app } from 'electron'
-import { join, resolve } from 'path'
 import { promises as fs } from 'fs'
-import { getWorkspaceFilePath } from './contextWriter'
+import { join, resolve } from 'path'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -100,11 +99,7 @@ interface MCPConfig {
   [key: string]: unknown
 }
 
-function buildMCPConfig(
-  mcpBinaryPath: string,
-  workspacePath: string,
-  nodeId: string,
-): MCPConfig {
+function buildMCPConfig(mcpBinaryPath: string, workspacePath: string, nodeId: string): MCPConfig {
   return {
     mcpServers: {
       cognograph: {
@@ -131,11 +126,7 @@ function buildMCPConfig(
  * - What MCP tools are available and how to use them
  * - Behavioral guidelines for canvas interaction
  */
-function buildClaudeMd(
-  nodeId: string,
-  nodeTitle: string,
-  contextMarkdown: string,
-): string {
+function buildClaudeMd(nodeId: string, nodeTitle: string, contextMarkdown: string): string {
   // The content between sentinel markers. When appended to an existing CLAUDE.md,
   // the markers allow precise extraction during cleanup.
   return `${COGNOGRAPH_SECTION_START}
@@ -154,7 +145,7 @@ You are running inside a **Cognograph terminal node**. Cognograph is a spatial A
 
 ## MCP Tools Available
 
-You have an MCP server connection to Cognograph (\`cognograph\` in .mcp.json). Use these tools to interact with the workspace:
+MCP tools may be available via the \`cognograph\` server configured in .mcp.json. If tool calls fail or the server is unresponsive, proceed without them — your core task does not depend on MCP. Available tools when the server is running:
 
 ### Read Operations
 | Tool | Description |
@@ -213,9 +204,7 @@ ${COGNOGRAPH_SECTION_END}`
  *
  * Returns paths to both files for cleanup on terminal exit.
  */
-export async function writeClaudeConfig(
-  input: ClaudeConfigInput,
-): Promise<ClaudeConfigResult> {
+export async function writeClaudeConfig(input: ClaudeConfigInput): Promise<ClaudeConfigResult> {
   const { nodeId, cwd, nodeTitle = 'Terminal', contextMarkdown = '', workspaceId } = input
 
   const mcpConfigPath = join(cwd, '.mcp.json')
@@ -225,21 +214,32 @@ export async function writeClaudeConfig(
   await recoverClaudeMd(cwd)
 
   try {
-    // Resolve workspace path — prefer passed workspaceId (always current),
-    // fall back to settings.json (may be stale)
+    // Resolve workspace path — require explicit workspaceId (always current).
+    // Do NOT fall back to settings.json which can be stale.
     let workspacePath: string | null = null
     if (workspaceId) {
       const { getAppPath } = await import('./contextWriter')
       workspacePath = join(getAppPath('userData'), 'workspaces', `${workspaceId}.json`)
-    } else {
-      workspacePath = await getWorkspaceFilePath()
     }
     if (!workspacePath) {
       return {
         mcpConfigPath,
         claudeMdPath,
         success: false,
-        error: 'No active workspace found',
+        error: 'No active workspace found (no workspaceId passed)',
+        appendedToExisting: false,
+      }
+    }
+
+    // Verify workspace file exists before writing .mcp.json pointing to it
+    try {
+      await fs.access(workspacePath)
+    } catch {
+      return {
+        mcpConfigPath,
+        claudeMdPath,
+        success: false,
+        error: `Workspace file not found: ${workspacePath}`,
         appendedToExisting: false,
       }
     }

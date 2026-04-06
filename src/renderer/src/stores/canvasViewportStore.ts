@@ -8,10 +8,10 @@
  * Extracted from workspaceStore as part of Week 2 Stream B Track 2 Phase 2.2a.
  */
 
-import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
-import { subscribeWithSelector } from 'zustand/middleware'
 import { v4 as uuid } from 'uuid'
+import { create } from 'zustand'
+import { subscribeWithSelector } from 'zustand/middleware'
+import { immer } from 'zustand/middleware/immer'
 
 // =============================================================================
 // Store State
@@ -94,10 +94,10 @@ const initialState: CanvasViewportState = {
     6: null,
     7: null,
     8: null,
-    9: null
+    9: null,
   },
   savedViews: [],
-  lastCanvasClick: null
+  lastCanvasClick: null,
 }
 
 // =============================================================================
@@ -227,7 +227,7 @@ export const useCanvasViewportStore = create<CanvasViewportStore>()(
           name,
           viewport: { ...get().viewport },
           selectedNodeIds: [...selectedNodeIds],
-          createdAt: Date.now()
+          createdAt: Date.now(),
         }
 
         set((state) => {
@@ -271,16 +271,16 @@ export const useCanvasViewportStore = create<CanvasViewportStore>()(
           state.lastCanvasClick = {
             x: position.x,
             y: position.y,
-            time: Date.now()
+            time: Date.now(),
           }
         })
       },
 
       getLastCanvasClick: () => {
         return get().lastCanvasClick
-      }
-    }))
-  )
+      },
+    })),
+  ),
 )
 
 // =============================================================================

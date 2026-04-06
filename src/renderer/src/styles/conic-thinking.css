@@ -17,10 +17,13 @@
   to { --conic-angle: 360deg; }
 }
 
-/* Thinking state: conic gradient shows through transparent border */
+/* Thinking state: conic gradient shows through transparent border.
+   The solid fill MUST use linear-gradient() wrapper — a plain color in a
+   non-final background layer is invalid CSS and Chrome 134+ silently
+   drops the entire declaration, leaving the node transparent. */
 .cognograph-node.is-thinking {
   background:
-    var(--surface-node) padding-box,
+    linear-gradient(var(--surface-node), var(--surface-node)) padding-box,
     conic-gradient(
       from var(--conic-angle),
       var(--conic-color-1),

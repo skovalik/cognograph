@@ -9,20 +9,25 @@
  * Uses shadcn Dialog for modal presentation.
  */
 
-import { memo, useState, useMemo, useEffect } from 'react'
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
-} from '../ui/dialog'
-import { ScrollArea } from '../ui/scroll-area'
-import { Card } from '../ui/card'
-import { Checkbox } from '../ui/checkbox'
-import { Badge } from '../ui/Badge'
-import { Button } from '../ui/Button'
-import { Separator } from '../ui/separator'
-import { Bot, Clock, Check, X } from 'lucide-react'
-import { useProposalStore } from '../../stores/proposalStore'
 import type { Proposal, ProposedChange } from '@shared/types/bridge'
 import { DEFAULT_BRIDGE_SETTINGS } from '@shared/types/bridge'
+import { Bot, Check, Clock, X } from 'lucide-react'
+import { memo, useEffect, useMemo, useState } from 'react'
+import { useProposalStore } from '../../stores/proposalStore'
+import { Badge } from '../ui/Badge'
+import { Button } from '../ui/Button'
+import { Card } from '../ui/card'
+import { Checkbox } from '../ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog'
+import { ScrollArea } from '../ui/scroll-area'
+import { Separator } from '../ui/separator'
 
 // =============================================================================
 // HELPERS
@@ -78,14 +83,12 @@ function ChangeCard({
   onToggle: () => void
 }): JSX.Element {
   return (
-    <Card className={`p-2 flex items-start gap-2 transition-colors ${
-      selected ? 'bg-accent/30' : 'opacity-50'
-    }`}>
-      <Checkbox
-        checked={selected}
-        onCheckedChange={onToggle}
-        className="mt-0.5"
-      />
+    <Card
+      className={`p-2 flex items-start gap-2 transition-colors ${
+        selected ? 'bg-accent/30' : 'opacity-50'
+      }`}
+    >
+      <Checkbox checked={selected} onCheckedChange={onToggle} className="mt-0.5" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <Badge className={`text-[9px] px-1 ${TYPE_COLORS[change.type] || ''}`}>
@@ -122,10 +125,10 @@ interface ProposalCardProps {
 
 function ProposalCardComponent({ proposal, open, onOpenChange }: ProposalCardProps): JSX.Element {
   const [selectedChanges, setSelectedChanges] = useState<Set<string>>(
-    new Set(proposal.changes.map(c => c.id))
+    new Set(proposal.changes.map((c) => c.id)),
   )
-  const approveSelected = useProposalStore(s => s.approveSelected)
-  const rejectProposal = useProposalStore(s => s.rejectProposal)
+  const approveSelected = useProposalStore((s) => s.approveSelected)
+  const rejectProposal = useProposalStore((s) => s.rejectProposal)
 
   // Countdown timer
   const [timeRemaining, setTimeRemaining] = useState<number>(() => {
@@ -170,7 +173,7 @@ function ProposalCardComponent({ proposal, open, onOpenChange }: ProposalCardPro
 
         <ScrollArea className="max-h-[50vh] pr-2">
           <div className="space-y-1.5">
-            {proposal.changes.map(change => (
+            {proposal.changes.map((change) => (
               <ChangeCard
                 key={change.id}
                 change={change}
@@ -183,16 +186,23 @@ function ProposalCardComponent({ proposal, open, onOpenChange }: ProposalCardPro
 
         <Separator />
 
-        <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-muted)' }}>
+        <div
+          className="flex items-center justify-between text-xs"
+          style={{ color: 'var(--text-muted)' }}
+        >
           <div className="flex gap-2">
             <Button
-              variant="ghost" size="sm" className="h-6 text-[10px]"
-              onClick={() => setSelectedChanges(new Set(proposal.changes.map(c => c.id)))}
+              variant="ghost"
+              size="sm"
+              className="h-6 text-[10px]"
+              onClick={() => setSelectedChanges(new Set(proposal.changes.map((c) => c.id)))}
             >
               Select All
             </Button>
             <Button
-              variant="ghost" size="sm" className="h-6 text-[10px]"
+              variant="ghost"
+              size="sm"
+              className="h-6 text-[10px]"
               onClick={() => setSelectedChanges(new Set())}
             >
               Deselect All

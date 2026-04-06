@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import type { ArtifactNodeData, ArtifactMediaMetadata } from '@shared/types/nodes'
+import type { ArtifactMediaMetadata, ArtifactNodeData } from '@shared/types/nodes'
 
 const MEDIA_CONTENT_TYPES = ['image', 'video', 'audio', '3d-model'] as const
-type MediaContentType = typeof MEDIA_CONTENT_TYPES[number]
+type MediaContentType = (typeof MEDIA_CONTENT_TYPES)[number]
 
 export function isMediaArtifact(artifact: ArtifactNodeData): boolean {
   return MEDIA_CONTENT_TYPES.includes(artifact.contentType as MediaContentType)
@@ -20,7 +20,9 @@ export interface SerializedMediaContext {
   provider?: string
 }
 
-export function serializeMediaForContext(artifact: ArtifactNodeData): SerializedMediaContext | null {
+export function serializeMediaForContext(
+  artifact: ArtifactNodeData,
+): SerializedMediaContext | null {
   if (!isMediaArtifact(artifact)) return null
 
   const meta = artifact.metadata as ArtifactMediaMetadata | undefined

@@ -8,11 +8,11 @@
  * Shows a summary of changes and Apply/Cancel buttons.
  */
 
-import { memo } from 'react'
-import { Check, X, Eye, EyeOff, AlertTriangle, Info } from 'lucide-react'
 import type { MutationPreviewState, PlanWarning } from '@shared/types'
-import { getPreviewSummary, formatPreviewSummary } from '../../utils/previewBuilder'
+import { AlertTriangle, Check, Eye, EyeOff, Info, X } from 'lucide-react'
+import { memo } from 'react'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
+import { formatPreviewSummary, getPreviewSummary } from '../../utils/previewBuilder'
 import LiveRegion from '../a11y/LiveRegion'
 
 interface PreviewControlsProps {
@@ -34,7 +34,7 @@ function PreviewControlsComponent({
   isPreviewVisible,
   onApply,
   onCancel,
-  onToggleVisibility
+  onToggleVisibility,
 }: PreviewControlsProps): JSX.Element {
   const reducedMotion = useReducedMotion()
   const summary = getPreviewSummary(preview)
@@ -92,10 +92,7 @@ function PreviewControlsComponent({
       {warnings.length > 0 && (
         <div className="preview-warnings">
           {warnings.map((warning, index) => (
-            <div
-              key={index}
-              className={`preview-warning preview-warning-${warning.level}`}
-            >
+            <div key={index} className={`preview-warning preview-warning-${warning.level}`}>
               <AlertTriangle className="warning-icon" />
               <div className="warning-content">
                 <span className="warning-message">{warning.message}</span>
@@ -136,9 +133,7 @@ function PreviewControlsComponent({
         )}
         {(summary.edgesCreated > 0 || summary.edgesDeleted > 0) && (
           <div className="stat stat-edges">
-            <span className="stat-value">
-              {summary.edgesCreated + summary.edgesDeleted}
-            </span>
+            <span className="stat-value">{summary.edgesCreated + summary.edgesDeleted}</span>
             <span className="stat-label">Edges</span>
           </div>
         )}

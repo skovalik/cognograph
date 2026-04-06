@@ -152,9 +152,7 @@ export function shouldCompact(currentTokens: number, maxTokens: number): boolean
  * Accounts for per-message overhead (~4 tokens for role/delimiter markers)
  * as per Anthropic's message formatting.
  */
-export function estimateMessageTokens(
-  messages: Array<{ role: string; content: string }>
-): number {
+export function estimateMessageTokens(messages: Array<{ role: string; content: string }>): number {
   const PER_MESSAGE_OVERHEAD = 4 // role marker + delimiters
 
   let total = 0

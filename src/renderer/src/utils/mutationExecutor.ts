@@ -9,32 +9,32 @@
  * Creates a single BATCH history action for atomic undo.
  */
 
-import { v4 as uuid } from 'uuid'
-import type { Node, Edge } from '@xyflow/react'
+import type { ActionNodeData } from '@shared/actionTypes'
 import type {
-  MutationPlan,
-  NodeData,
+  ArtifactNodeData,
+  ConversationNodeData,
   EdgeData,
   HistoryAction,
-  ConversationNodeData,
+  MutationPlan,
+  NodeData,
   NoteNodeData,
-  TaskNodeData,
   ProjectNodeData,
-  ArtifactNodeData,
+  TaskNodeData,
+  TextNodeData,
   WorkspaceNodeData,
-  TextNodeData
 } from '@shared/types'
-import type { ActionNodeData } from '@shared/actionTypes'
+import type { Edge, Node } from '@xyflow/react'
+import { v4 as uuid } from 'uuid'
+import { useAIEditorStore } from '../stores/aiEditorStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 import {
+  calculateOptimalHandles,
+  calculateSelectionBounds,
+  DEFAULT_NODE_DIMENSIONS,
+  type PositionResolutionContext,
   resolvePosition,
   sortOperationsByPositionDependency,
-  calculateSelectionBounds,
-  calculateOptimalHandles,
-  DEFAULT_NODE_DIMENSIONS,
-  type PositionResolutionContext
 } from './positionResolver'
-import { useWorkspaceStore } from '../stores/workspaceStore'
-import { useAIEditorStore } from '../stores/aiEditorStore'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -54,10 +54,7 @@ export interface ExecutionResult {
 // Node Creation Helpers
 // -----------------------------------------------------------------------------
 
-function createNodeData(
-  type: NodeData['type'],
-  partialData: Partial<NodeData>
-): NodeData {
+function createNodeData(type: NodeData['type'], partialData: Partial<NodeData>): NodeData {
   const now = Date.now()
 
   switch (type) {
@@ -69,7 +66,7 @@ function createNodeData(
         provider: 'anthropic',
         createdAt: now,
         updatedAt: now,
-        ...partialData
+        ...partialData,
       } as ConversationNodeData
 
     case 'note':
@@ -79,7 +76,7 @@ function createNodeData(
         content: '',
         createdAt: now,
         updatedAt: now,
-        ...partialData
+        ...partialData,
       } as NoteNodeData
 
     case 'task':
@@ -91,7 +88,7 @@ function createNodeData(
         priority: 'medium',
         createdAt: now,
         updatedAt: now,
-        ...partialData
+        ...partialData,
       } as TaskNodeData
 
     case 'project':
@@ -104,7 +101,7 @@ function createNodeData(
         color: '#8b5cf6',
         createdAt: now,
         updatedAt: now,
-        ...partialData
+        ...partialData,
       } as ProjectNodeData
 
     case 'artifact':
@@ -122,7 +119,7 @@ function createNodeData(
         previewLines: 10,
         createdAt: now,
         updatedAt: now,
-        ...partialData
+        ...partialData,
       } as ArtifactNodeData
 
     case 'workspace':
@@ -137,20 +134,20 @@ function createNodeData(
         llmSettings: {
           provider: 'anthropic',
           temperature: 0.7,
-          maxTokens: 4096
+          maxTokens: 4096,
         },
         contextRules: {
           maxTokens: 8000,
           maxDepth: 2,
           traversalMode: 'all',
-          includeDisabledNodes: false
+          includeDisabledNodes: false,
         },
         themeDefaults: {},
         includedNodeIds: [],
         excludedNodeIds: [],
         createdAt: now,
         updatedAt: now,
-        ...partialData
+        ...partialData,
       } as WorkspaceNodeData
 
     case 'text':
@@ -160,7 +157,7 @@ function createNodeData(
         contentFormat: 'html',
         createdAt: now,
         updatedAt: now,
-        ...partialData
+        ...partialData,
       } as TextNodeData
 
     case 'action':
@@ -176,7 +173,7 @@ function createNodeData(
         errorCount: 0,
         createdAt: now,
         updatedAt: now,
-        ...partialData
+        ...partialData,
       } as ActionNodeData
 
     case 'orchestrator':
@@ -192,7 +189,7 @@ function createNodeData(
         maxHistoryRuns: 20,
         createdAt: now,
         updatedAt: now,
-        ...partialData
+        ...partialData,
       } as unknown as NodeData
 
     default:
@@ -218,7 +215,7 @@ export async function executeMutationPlan(plan: MutationPlan): Promise<Execution
     deletedNodeIds: [],
     modifiedNodeIds: [],
     createdEdgeIds: [],
-    deletedEdgeIds: []
+    deletedEdgeIds: [],
   }
 
   // Track all history actions for BATCH
@@ -235,7 +232,7 @@ export async function executeMutationPlan(plan: MutationPlan): Promise<Execution
     viewportBounds: { width: window.innerWidth, height: window.innerHeight },
     selectedNodeIds,
     selectionCenter: selectionInfo?.center,
-    selectionBounds: selectionInfo?.bounds
+    selectionBounds: selectionInfo?.bounds,
   }
 
   // Sort operations by position dependencies
@@ -273,7 +270,7 @@ export async function executeMutationPlan(plan: MutationPlan): Promise<Execution
         data: nodeData,
         width: dimensions.width,
         height: dimensions.height,
-        selected: false
+        selected: false,
       }
 
       // Track for result
@@ -282,7 +279,7 @@ export async function executeMutationPlan(plan: MutationPlan): Promise<Execution
       // Track for history
       historyActions.push({
         type: 'ADD_NODE',
-        node: JSON.parse(JSON.stringify(newNode))
+        node: JSON.parse(JSON.stringify(newNode)),
       })
 
       // Also add to position context nodes for subsequent position resolution
@@ -301,18 +298,18 @@ export async function executeMutationPlan(plan: MutationPlan): Promise<Execution
             result.deletedNodeIds.push(op.nodeId)
             historyActions.push({
               type: 'DELETE_NODE',
-              node: JSON.parse(JSON.stringify(node))
+              node: JSON.parse(JSON.stringify(node)),
             })
 
             // Also delete edges connected to this node
             const connectedEdges = edges.filter(
-              (e) => e.source === op.nodeId || e.target === op.nodeId
+              (e) => e.source === op.nodeId || e.target === op.nodeId,
             )
             for (const edge of connectedEdges) {
               result.deletedEdgeIds.push(edge.id)
               historyActions.push({
                 type: 'DELETE_EDGE',
-                edge: JSON.parse(JSON.stringify(edge))
+                edge: JSON.parse(JSON.stringify(edge)),
               })
             }
           }
@@ -328,7 +325,7 @@ export async function executeMutationPlan(plan: MutationPlan): Promise<Execution
               type: 'UPDATE_NODE',
               nodeId: op.nodeId,
               before,
-              after: op.data
+              after: op.data,
             })
           }
           break
@@ -343,7 +340,7 @@ export async function executeMutationPlan(plan: MutationPlan): Promise<Execution
               type: 'MOVE_NODE',
               nodeId: op.nodeId,
               before: { x: node.position.x, y: node.position.y },
-              after: resolvedPos
+              after: resolvedPos,
             })
           }
           break
@@ -363,12 +360,17 @@ export async function executeMutationPlan(plan: MutationPlan): Promise<Execution
           const targetPos = positionContext.resolvedPositions.get(op.target) || targetNode?.position
 
           // Determine dimensions from existing nodes or context nodes (for new nodes)
-          const getNodeDimensions = (nodeId: string, tempId: string): { width: number; height: number } => {
+          const getNodeDimensions = (
+            nodeId: string,
+            tempId: string,
+          ): { width: number; height: number } => {
             const existingNode = nodes.find((n) => n.id === nodeId)
             if (existingNode) {
               return { width: existingNode.width || 280, height: existingNode.height || 140 }
             }
-            const contextNode = positionContext.nodes.find((n) => n.id === tempId || n.id === nodeId)
+            const contextNode = positionContext.nodes.find(
+              (n) => n.id === tempId || n.id === nodeId,
+            )
             if (contextNode) {
               const nodeType = contextNode.type as NodeData['type']
               return DEFAULT_NODE_DIMENSIONS[nodeType] || { width: 280, height: 140 }
@@ -380,9 +382,10 @@ export async function executeMutationPlan(plan: MutationPlan): Promise<Execution
           const targetDim = getNodeDimensions(targetId, op.target)
 
           // Calculate optimal handles based on positions
-          const { sourceHandle, targetHandle } = sourcePos && targetPos
-            ? calculateOptimalHandles(sourcePos, sourceDim, targetPos, targetDim)
-            : { sourceHandle: 'bottom-source', targetHandle: 'top-target' }
+          const { sourceHandle, targetHandle } =
+            sourcePos && targetPos
+              ? calculateOptimalHandles(sourcePos, sourceDim, targetPos, targetDim)
+              : { sourceHandle: 'bottom-source', targetHandle: 'top-target' }
 
           const edgeId = `${sourceId}-${targetId}`
           const newEdge: Edge<EdgeData> = {
@@ -395,14 +398,14 @@ export async function executeMutationPlan(plan: MutationPlan): Promise<Execution
               direction: 'unidirectional',
               strength: 'normal',
               active: true,
-              ...op.data
-            }
+              ...op.data,
+            },
           }
 
           result.createdEdgeIds.push(edgeId)
           historyActions.push({
             type: 'ADD_EDGE',
-            edge: JSON.parse(JSON.stringify(newEdge))
+            edge: JSON.parse(JSON.stringify(newEdge)),
           })
           break
         }
@@ -413,7 +416,7 @@ export async function executeMutationPlan(plan: MutationPlan): Promise<Execution
             result.deletedEdgeIds.push(op.edgeId)
             historyActions.push({
               type: 'DELETE_EDGE',
-              edge: JSON.parse(JSON.stringify(edge))
+              edge: JSON.parse(JSON.stringify(edge)),
             })
           }
           break
@@ -426,7 +429,7 @@ export async function executeMutationPlan(plan: MutationPlan): Promise<Execution
               type: 'UPDATE_EDGE',
               edgeId: op.edgeId,
               before: JSON.parse(JSON.stringify(edge.data)),
-              after: op.data
+              after: op.data,
             })
           }
           break
@@ -511,7 +514,6 @@ export async function executeMutationPlan(plan: MutationPlan): Promise<Execution
 
     aiEditorStore.completeExecution()
     return result
-
   } catch (error) {
     const errorMsg = String(error)
     result.success = false
@@ -534,7 +536,7 @@ export function dryRunMutationPlan(
   nodes: Node<NodeData>[],
   _edges: Edge<EdgeData>[],
   selectedNodeIds: string[],
-  viewport: { x: number; y: number; zoom: number }
+  viewport: { x: number; y: number; zoom: number },
 ): {
   resolvedPositions: Map<string, { x: number; y: number }>
   tempIdToType: Map<string, NodeData['type']>
@@ -548,7 +550,7 @@ export function dryRunMutationPlan(
     viewportBounds: { width: window.innerWidth, height: window.innerHeight },
     selectedNodeIds,
     selectionCenter: selectionInfo?.center,
-    selectionBounds: selectionInfo?.bounds
+    selectionBounds: selectionInfo?.bounds,
   }
 
   const tempIdToType = new Map<string, NodeData['type']>()
@@ -570,7 +572,7 @@ export function dryRunMutationPlan(
         position: resolvedPos,
         data: { type: op.type } as NodeData,
         width: dimensions.width,
-        height: dimensions.height
+        height: dimensions.height,
       } as Node<NodeData>)
     } else if (op.op === 'move-node') {
       const resolvedPos = resolvePosition(op.position, positionContext)
@@ -580,6 +582,6 @@ export function dryRunMutationPlan(
 
   return {
     resolvedPositions: positionContext.resolvedPositions,
-    tempIdToType
+    tempIdToType,
   }
 }

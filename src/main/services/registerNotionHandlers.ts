@@ -12,7 +12,7 @@ export function registerNotionHandlers(): void {
     } catch (err) {
       return {
         success: false,
-        error: err instanceof Error ? err.message : String(err)
+        error: err instanceof Error ? err.message : String(err),
       }
     }
   })
@@ -23,7 +23,7 @@ export function registerNotionHandlers(): void {
     const config = notionService.getConfig()
     return {
       connected: !!(token && config),
-      config
+      config,
     }
   })
 
@@ -33,7 +33,7 @@ export function registerNotionHandlers(): void {
       circuitState: notionService.getCircuitBreakerState(),
       syncEnabled: notionService.isSyncEnabled(),
       hasToken: !!notionService.getToken(),
-      hasConfig: !!notionService.getConfig()
+      hasConfig: !!notionService.getConfig(),
     }
   })
 }

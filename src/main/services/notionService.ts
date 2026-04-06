@@ -50,7 +50,7 @@ class TokenBucketRateLimiter {
   constructor() {
     this.state = {
       tokens: this.capacity,
-      lastRefill: Date.now()
+      lastRefill: Date.now(),
     }
   }
 
@@ -68,7 +68,7 @@ class TokenBucketRateLimiter {
     // If no tokens available, wait
     if (this.state.tokens < 1) {
       const waitTime = this.refillInterval - (now - this.state.lastRefill)
-      await new Promise(resolve => setTimeout(resolve, waitTime))
+      await new Promise((resolve) => setTimeout(resolve, waitTime))
       this.state.tokens = 1
       this.state.lastRefill = Date.now()
     }
@@ -92,7 +92,7 @@ class CircuitBreaker {
     this.state = {
       failures: [],
       state: 'closed',
-      lastProbeTime: 0
+      lastProbeTime: 0,
     }
   }
 
@@ -101,9 +101,7 @@ class CircuitBreaker {
     this.state.failures.push({ timestamp: now })
 
     // Remove failures outside the sliding window
-    this.state.failures = this.state.failures.filter(
-      f => now - f.timestamp < this.windowMs
-    )
+    this.state.failures = this.state.failures.filter((f) => now - f.timestamp < this.windowMs)
 
     // Trip if threshold exceeded
     if (this.state.failures.length >= this.failureThreshold) {
@@ -188,7 +186,7 @@ class NotionService {
 
     return {
       workflowsDbId: workflowsDbId as string,
-      execLogDbId: execLogDbId as string
+      execLogDbId: execLogDbId as string,
     }
   }
 
@@ -213,13 +211,15 @@ class NotionService {
 
   async request<T>(
     fn: (client: Client) => Promise<T>,
-    operation: string
-  ): Promise<{ success: true; data: T } | { success: false; error: string; shouldSuspend?: boolean }> {
+    operation: string,
+  ): Promise<
+    { success: true; data: T } | { success: false; error: string; shouldSuspend?: boolean }
+  > {
     // Check circuit breaker
     if (!this.circuitBreaker.shouldAllowRequest()) {
       return {
         success: false,
-        error: 'Circuit breaker open - sync paused'
+        error: 'Circuit breaker open - sync paused',
       }
     }
 
@@ -227,7 +227,7 @@ class NotionService {
     if (!this.initClient() || !this.client) {
       return {
         success: false,
-        error: 'Notion token not configured'
+        error: 'Notion token not configured',
       }
     }
 
@@ -237,7 +237,7 @@ class NotionService {
     } catch (err) {
       return {
         success: false,
-        error: 'Rate limiter error: ' + String(err)
+        error: 'Rate limiter error: ' + String(err),
       }
     }
 
@@ -260,7 +260,7 @@ class NotionService {
           return {
             success: false,
             error: 'Notion token invalid or revoked',
-            shouldSuspend: true
+            shouldSuspend: true,
           }
         }
 
@@ -274,17 +274,19 @@ class NotionService {
           // Exponential backoff with Retry-After
           const backoffMs = Math.min(
             retryAfterMs,
-            Math.pow(2, attempt - 1) * 1000, // 1s, 2s, 4s
-            30000 // Max 30s
+            2 ** (attempt - 1) * 1000, // 1s, 2s, 4s
+            30000, // Max 30s
           )
 
-          console.warn(`[NotionService] Rate limited, waiting ${backoffMs}ms (Retry-After: ${retryAfterSeconds}s)`)
-          await new Promise(resolve => setTimeout(resolve, backoffMs))
+          console.warn(
+            `[NotionService] Rate limited, waiting ${backoffMs}ms (Retry-After: ${retryAfterSeconds}s)`,
+          )
+          await new Promise((resolve) => setTimeout(resolve, backoffMs))
 
           // After 5 consecutive rate limits, pause for 60s
           if (this.consecutiveRateLimits >= 5) {
             console.warn('[NotionService] 5 consecutive rate limits, pausing for 60s')
-            await new Promise(resolve => setTimeout(resolve, 60000))
+            await new Promise((resolve) => setTimeout(resolve, 60000))
             this.consecutiveRateLimits = 0
           }
 
@@ -296,7 +298,7 @@ class NotionService {
           return {
             success: false,
             error: 'Notion database not found',
-            shouldSuspend: true
+            shouldSuspend: true,
           }
         }
 
@@ -305,8 +307,8 @@ class NotionService {
 
         // Wait before retry
         if (attempt < 3) {
-          const backoffMs = Math.pow(2, attempt - 1) * 1000
-          await new Promise(resolve => setTimeout(resolve, backoffMs))
+          const backoffMs = 2 ** (attempt - 1) * 1000
+          await new Promise((resolve) => setTimeout(resolve, backoffMs))
         }
       }
     }
@@ -314,15 +316,12 @@ class NotionService {
     // All retries exhausted
     return {
       success: false,
-      error: `Failed after 3 attempts: ${lastError}`
+      error: `Failed after 3 attempts: ${lastError}`,
     }
   }
 
   async testConnection(): Promise<{ success: boolean; workspaceName?: string; error?: string }> {
-    const result = await this.request(
-      (client) => client.users.me({}),
-      'testConnection'
-    )
+    const result = await this.request((client) => client.users.me({}), 'testConnection')
 
     if (!result.success) {
       return { success: false, error: result.error }
@@ -334,7 +333,7 @@ class NotionService {
 
     return {
       success: true,
-      workspaceName
+      workspaceName,
     }
   }
 
@@ -376,20 +375,19 @@ class NotionService {
     this.store.set('notionSyncEnabled', enabled)
   }
 
-  async getWorkflowsSchema(): Promise<{ properties: Record<string, { type: string }> } | { error: string }> {
+  async getWorkflowsSchema(): Promise<
+    { properties: Record<string, { type: string }> } | { error: string }
+  > {
     try {
       const config = this.getConfig()
       if (!config) {
         return { error: 'No database configured' }
       }
 
-      const result = await this.request(
-        async (client) => {
-          const db = await client.databases.retrieve({ database_id: config.workflowsDbId })
-          return db
-        },
-        'getWorkflowsSchema'
-      )
+      const result = await this.request(async (client) => {
+        const db = await client.databases.retrieve({ database_id: config.workflowsDbId })
+        return db
+      }, 'getWorkflowsSchema')
 
       if (!result.success) {
         return { error: result.error }

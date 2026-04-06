@@ -11,29 +11,29 @@
  * Command definitions are sourced from useCommandRegistry (shared with BottomCommandBar).
  */
 
-import { memo, useState, useCallback, useEffect, useMemo } from 'react'
-import {
-  MessageSquare,
-  FileText,
-  CheckSquare,
-  Folder,
-  Code,
-  Boxes,
-  Zap,
-  MapPin,
-} from 'lucide-react'
-import { useWorkspaceStore } from '../stores/workspaceStore'
 import type { NodeData } from '@shared/types'
 import { useReactFlow } from '@xyflow/react'
-import { useCommandRegistry, CATEGORY_LABELS } from '../hooks/useCommandRegistry'
+import {
+  Boxes,
+  CheckSquare,
+  Code,
+  FileText,
+  Folder,
+  MapPin,
+  MessageSquare,
+  Zap,
+} from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import type { CommandRegistryItem } from '../hooks/useCommandRegistry'
+import { CATEGORY_LABELS, useCommandRegistry } from '../hooks/useCommandRegistry'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 import {
   CommandDialog,
-  CommandInput,
-  CommandList,
   CommandEmpty,
   CommandGroup,
+  CommandInput,
   CommandItem,
+  CommandList,
   CommandShortcut,
 } from './ui'
 
@@ -60,7 +60,7 @@ export function useCommandPalette(): CommandPaletteState {
     window.dispatchEvent(new CustomEvent('command-palette-opened'))
   }, [])
   const closePalette = useCallback(() => setIsOpen(false), [])
-  const togglePalette = useCallback(() => setIsOpen(prev => !prev), [])
+  const togglePalette = useCallback(() => setIsOpen((prev) => !prev), [])
 
   // Store reference for external access
   commandPaletteState = { isOpen, openPalette, closePalette, togglePalette }
@@ -85,8 +85,8 @@ const FULL_CATEGORY_LABELS: Record<string, string> = {
 function CommandPaletteComponent({ isOpen, onClose }: CommandPaletteProps): JSX.Element {
   const { screenToFlowPosition, setCenter } = useReactFlow()
 
-  const nodes = useWorkspaceStore(state => state.nodes)
-  const setSelectedNodes = useWorkspaceStore(state => state.setSelectedNodes)
+  const nodes = useWorkspaceStore((state) => state.nodes)
+  const setSelectedNodes = useWorkspaceStore((state) => state.setSelectedNodes)
 
   // Search state for node results
   const [search, setSearch] = useState('')
@@ -105,16 +105,19 @@ function CommandPaletteComponent({ isOpen, onClose }: CommandPaletteProps): JSX.
   })
 
   // Node type to icon mapping for "Go to Node" results
-  const nodeTypeIcons: Record<string, React.ComponentType<{ className?: string }>> = useMemo(() => ({
-    conversation: MessageSquare,
-    note: FileText,
-    task: CheckSquare,
-    project: Folder,
-    artifact: Code,
-    workspace: Boxes,
-    action: Zap,
-    text: FileText
-  }), [])
+  const nodeTypeIcons: Record<string, React.ComponentType<{ className?: string }>> = useMemo(
+    () => ({
+      conversation: MessageSquare,
+      note: FileText,
+      task: CheckSquare,
+      project: Folder,
+      artifact: Code,
+      workspace: Boxes,
+      action: Zap,
+      text: FileText,
+    }),
+    [],
+  )
 
   // Build dynamic node search results (only when searching)
   const nodeResults: PaletteItem[] = useMemo(() => {
@@ -122,14 +125,14 @@ function CommandPaletteComponent({ isOpen, onClose }: CommandPaletteProps): JSX.
     const query = search.toLowerCase()
 
     return nodes
-      .filter(node => {
+      .filter((node) => {
         const data = node.data as NodeData
         const title = (data.title || data.label || '').toLowerCase()
         const type = data.type.toLowerCase()
         return title.includes(query) || type.includes(query)
       })
       .slice(0, 8)
-      .map(node => {
+      .map((node) => {
         const data = node.data as NodeData
         const title = data.title || data.label || `Untitled ${data.type}`
         const Icon = nodeTypeIcons[data.type] || MapPin
@@ -143,14 +146,13 @@ function CommandPaletteComponent({ isOpen, onClose }: CommandPaletteProps): JSX.
           action: () => {
             const nodeWidth = node.measured?.width || 280
             const nodeHeight = node.measured?.height || 140
-            setCenter(
-              node.position.x + nodeWidth / 2,
-              node.position.y + nodeHeight / 2,
-              { duration: 300, zoom: 1 }
-            )
+            setCenter(node.position.x + nodeWidth / 2, node.position.y + nodeHeight / 2, {
+              duration: 300,
+              zoom: 1,
+            })
             setSelectedNodes([node.id])
             onClose()
-          }
+          },
         }
       })
   }, [search, nodes, nodeTypeIcons, setCenter, setSelectedNodes, onClose])
@@ -171,7 +173,12 @@ function CommandPaletteComponent({ isOpen, onClose }: CommandPaletteProps): JSX.
   }, [commands, nodeResults])
 
   return (
-    <CommandDialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+    <CommandDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
       <CommandInput
         placeholder="Type a command or search..."
         value={search}
@@ -181,13 +188,15 @@ function CommandPaletteComponent({ isOpen, onClose }: CommandPaletteProps): JSX.
         <CommandEmpty>No commands found</CommandEmpty>
         {Object.entries(groupedCommands).map(([category, items]) => (
           <CommandGroup key={category} heading={FULL_CATEGORY_LABELS[category] || category}>
-            {items.map(cmd => {
+            {items.map((cmd) => {
               const Icon = cmd.icon
               return (
                 <CommandItem
                   key={cmd.id}
                   value={`${cmd.label} ${cmd.description || ''}`}
-                  onSelect={() => { if (!cmd.disabled) cmd.action() }}
+                  onSelect={() => {
+                    if (!cmd.disabled) cmd.action()
+                  }}
                   disabled={cmd.disabled}
                   className="gap-3"
                 >
@@ -200,9 +209,7 @@ function CommandPaletteComponent({ isOpen, onClose }: CommandPaletteProps): JSX.
                       </div>
                     )}
                   </div>
-                  {cmd.shortcut && (
-                    <CommandShortcut>{cmd.shortcut}</CommandShortcut>
-                  )}
+                  {cmd.shortcut && <CommandShortcut>{cmd.shortcut}</CommandShortcut>}
                 </CommandItem>
               )
             })}

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import React, { useState } from 'react'
-import { ChevronDown, ChevronRight, HelpCircle } from 'lucide-react'
 import type { AgentSettings } from '@shared/types'
+import { ChevronDown, ChevronRight, HelpCircle } from 'lucide-react'
+import type React from 'react'
+import { useState } from 'react'
 import { Checkbox } from '../ui/checkbox'
 
 interface AgentSettingsEditorProps {
@@ -25,7 +26,7 @@ interface AgentSettingsEditorProps {
 export const AgentSettingsEditor: React.FC<AgentSettingsEditorProps> = ({
   settings,
   preset,
-  onChange
+  onChange,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [permissionsExpanded, setPermissionsExpanded] = useState(true)
@@ -61,7 +62,8 @@ export const AgentSettingsEditor: React.FC<AgentSettingsEditorProps> = ({
                 </>
               ) : (
                 <>
-                  Preset: <span className="font-semibold">{preset}</span> → Editing switches to Custom
+                  Preset: <span className="font-semibold">{preset}</span> → Editing switches to
+                  Custom
                 </>
               )}
             </p>
@@ -74,7 +76,11 @@ export const AgentSettingsEditor: React.FC<AgentSettingsEditorProps> = ({
               className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium gui-text-secondary hover:bg-gray-500/10 transition-colors"
             >
               <span>▸ Permissions</span>
-              {permissionsExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              {permissionsExpanded ? (
+                <ChevronDown className="w-3 h-3" />
+              ) : (
+                <ChevronRight className="w-3 h-3" />
+              )}
             </button>
             {permissionsExpanded && (
               <div className="px-3 pb-3 space-y-2">
@@ -158,12 +164,18 @@ export const AgentSettingsEditor: React.FC<AgentSettingsEditorProps> = ({
               className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium gui-text-secondary hover:bg-gray-500/10 transition-colors"
             >
               <span>▸ Behavior</span>
-              {behaviorExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              {behaviorExpanded ? (
+                <ChevronDown className="w-3 h-3" />
+              ) : (
+                <ChevronRight className="w-3 h-3" />
+              )}
             </button>
             {behaviorExpanded && (
               <div className="px-3 pb-3 space-y-3">
                 <div>
-                  <label className="block text-xs font-medium gui-text-secondary mb-1">Scope Mode</label>
+                  <label className="block text-xs font-medium gui-text-secondary mb-1">
+                    Scope Mode
+                  </label>
                   <div className="space-y-1">
                     <label className="flex items-center gap-2 text-xs cursor-pointer">
                       <input
@@ -174,7 +186,9 @@ export const AgentSettingsEditor: React.FC<AgentSettingsEditorProps> = ({
                         onChange={() => handleChange('scopeMode', 'connected')}
                         className="w-3 h-3"
                       />
-                      <span className="gui-text-primary">Connected — Only nodes linked via edges</span>
+                      <span className="gui-text-primary">
+                        Connected — Only nodes linked via edges
+                      </span>
                     </label>
                     <label className="flex items-center gap-2 text-xs cursor-pointer">
                       <input
@@ -185,7 +199,9 @@ export const AgentSettingsEditor: React.FC<AgentSettingsEditorProps> = ({
                         onChange={() => handleChange('scopeMode', 'workspace')}
                         className="w-3 h-3"
                       />
-                      <span className="gui-text-primary">Entire Workspace — All nodes accessible</span>
+                      <span className="gui-text-primary">
+                        Entire Workspace — All nodes accessible
+                      </span>
                     </label>
                   </div>
                 </div>
@@ -214,7 +230,11 @@ export const AgentSettingsEditor: React.FC<AgentSettingsEditorProps> = ({
               className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium gui-text-secondary hover:bg-gray-500/10 transition-colors"
             >
               <span>▸ Limits</span>
-              {limitsExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              {limitsExpanded ? (
+                <ChevronDown className="w-3 h-3" />
+              ) : (
+                <ChevronRight className="w-3 h-3" />
+              )}
             </button>
             {limitsExpanded && (
               <div className="px-3 pb-3 space-y-3">

@@ -13,7 +13,7 @@
  *       retry logic at lines ~584-647 should be replaced with withRetry.
  */
 
-import { classifyLLMError, type ClassifiedLLMError } from './llmErrors'
+import { type ClassifiedLLMError, classifyLLMError } from './llmErrors'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -53,7 +53,7 @@ export interface RetryInfo {
  * delay = random(0, min(maxDelay, base * 2^attempt))
  */
 function jitteredDelay(base: number, attempt: number, max: number): number {
-  const exponential = base * Math.pow(2, attempt)
+  const exponential = base * 2 ** attempt
   const capped = Math.min(exponential, max)
   return Math.floor(Math.random() * capped)
 }

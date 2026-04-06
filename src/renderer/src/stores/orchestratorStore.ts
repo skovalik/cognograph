@@ -9,8 +9,8 @@
  * this store manages transient UI concerns (active run tracking, animations).
  */
 
-import { create } from 'zustand'
 import type { OrchestratorRunStatus } from '@shared/types'
+import { create } from 'zustand'
 
 // Status update shape from IPC
 export interface OrchestratorStatusUpdate {
@@ -98,7 +98,8 @@ export const useOrchestratorStore = create<OrchestratorStoreState>((set, get) =>
           if (existing) {
             newRuns.set(update.orchestratorId, {
               ...existing,
-              currentAgentId: update.type === 'agent-retrying' ? update.agentNodeId ?? null : null,
+              currentAgentId:
+                update.type === 'agent-retrying' ? (update.agentNodeId ?? null) : null,
             })
           }
           break
@@ -191,18 +192,24 @@ export function initOrchestratorIPC(): () => void {
   })
 
   // Resync active runs on renderer mount
-  window.api.orchestrator.resync().then((activeRuns) => {
-    const store = useOrchestratorStore.getState()
-    for (const [orchestratorId, runInfo] of Object.entries(activeRuns)) {
-      store.handleStatusUpdate({
-        orchestratorId,
-        runId: runInfo.runId,
-        type: 'run-started',
-      })
-    }
-  }).catch((err: unknown) => {
-    console.warn('[OrchestratorStore] Resync failed (orchestrator API may not be registered yet):', err)
-  })
+  window.api.orchestrator
+    .resync()
+    .then((activeRuns) => {
+      const store = useOrchestratorStore.getState()
+      for (const [orchestratorId, runInfo] of Object.entries(activeRuns)) {
+        store.handleStatusUpdate({
+          orchestratorId,
+          runId: runInfo.runId,
+          type: 'run-started',
+        })
+      }
+    })
+    .catch((err: unknown) => {
+      console.warn(
+        '[OrchestratorStore] Resync failed (orchestrator API may not be registered yet):',
+        err,
+      )
+    })
 
   return cleanup
 }

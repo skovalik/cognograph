@@ -8,19 +8,19 @@
  * Handles modal UI, plan generation, preview state, and execution.
  */
 
-import { create } from 'zustand'
-import { subscribeWithSelector } from 'zustand/middleware'
-import { immer } from 'zustand/middleware/immer'
 import type {
+  AIEditorContext,
   AIEditorMode,
   AIEditorScope,
   AIEditorState,
+  ConversationMessage,
   MutationPlan,
   MutationPreviewState,
-  AIEditorContext,
   StreamingPhase,
-  ConversationMessage
 } from '@shared/types'
+import { create } from 'zustand'
+import { subscribeWithSelector } from 'zustand/middleware'
+import { immer } from 'zustand/middleware/immer'
 
 // -----------------------------------------------------------------------------
 // Store Interface
@@ -28,7 +28,12 @@ import type {
 
 interface AIEditorActions {
   // Modal actions
-  openModal: (options?: { mode?: AIEditorMode; scope?: AIEditorScope; prompt?: string; targetNodeId?: string }) => void
+  openModal: (options?: {
+    mode?: AIEditorMode
+    scope?: AIEditorScope
+    prompt?: string
+    targetNodeId?: string
+  }) => void
   closeModal: () => void
   openSidebar: () => void
   closeSidebar: () => void
@@ -88,7 +93,7 @@ const initialState: AIEditorState = {
   isExecutingPlan: false,
   executionError: null,
   tempIdToRealId: new Map(),
-  conversationHistory: []
+  conversationHistory: [],
 }
 
 // -----------------------------------------------------------------------------
@@ -285,7 +290,7 @@ export const useAIEditorStore = create<AIEditorStore>()(
                 finalizing: 'parsing',
                 complete: 'complete',
                 error: 'error',
-                cancelled: 'cancelled'
+                cancelled: 'cancelled',
               }
               state.streamingPhase = phaseMap[phase.phase] || 'generating'
             })
@@ -436,7 +441,7 @@ export const useAIEditorStore = create<AIEditorStore>()(
         set((state) => {
           state.conversationHistory.push({
             ...message,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           })
         })
       },
@@ -467,34 +472,28 @@ export const useAIEditorStore = create<AIEditorStore>()(
         set(() => ({
           ...initialState,
           tempIdToRealId: new Map(),
-          conversationHistory: []
+          conversationHistory: [],
         }))
-      }
-    }))
-  )
+      },
+    })),
+  ),
 )
 
 // -----------------------------------------------------------------------------
 // Selectors
 // -----------------------------------------------------------------------------
 
-export const useAIEditorIsOpen = (): boolean =>
-  useAIEditorStore((s) => s.isOpen)
+export const useAIEditorIsOpen = (): boolean => useAIEditorStore((s) => s.isOpen)
 
-export const useAIEditorSidebarOpen = (): boolean =>
-  useAIEditorStore((s) => s.isSidebarOpen)
+export const useAIEditorSidebarOpen = (): boolean => useAIEditorStore((s) => s.isSidebarOpen)
 
-export const useAIEditorMode = (): AIEditorMode =>
-  useAIEditorStore((s) => s.mode)
+export const useAIEditorMode = (): AIEditorMode => useAIEditorStore((s) => s.mode)
 
-export const useAIEditorPrompt = (): string =>
-  useAIEditorStore((s) => s.prompt)
+export const useAIEditorPrompt = (): string => useAIEditorStore((s) => s.prompt)
 
-export const useAIEditorScope = (): AIEditorScope =>
-  useAIEditorStore((s) => s.scope)
+export const useAIEditorScope = (): AIEditorScope => useAIEditorStore((s) => s.scope)
 
-export const useAIEditorIsGenerating = (): boolean =>
-  useAIEditorStore((s) => s.isGeneratingPlan)
+export const useAIEditorIsGenerating = (): boolean => useAIEditorStore((s) => s.isGeneratingPlan)
 
 export const useAIEditorGenerationError = (): string | null =>
   useAIEditorStore((s) => s.generationError)
@@ -508,27 +507,24 @@ export const useAIEditorPreviewState = (): MutationPreviewState | null =>
 export const useAIEditorIsPreviewVisible = (): boolean =>
   useAIEditorStore((s) => s.isPreviewVisible)
 
-export const useAIEditorIsExecuting = (): boolean =>
-  useAIEditorStore((s) => s.isExecutingPlan)
+export const useAIEditorIsExecuting = (): boolean => useAIEditorStore((s) => s.isExecutingPlan)
 
 export const useAIEditorExecutionError = (): string | null =>
   useAIEditorStore((s) => s.executionError)
 
-export const useAIEditorHasPlan = (): boolean =>
-  useAIEditorStore((s) => s.currentPlan !== null)
+export const useAIEditorHasPlan = (): boolean => useAIEditorStore((s) => s.currentPlan !== null)
 
 // Streaming selectors
 export const useAIEditorStreamingPhase = (): StreamingPhase =>
   useAIEditorStore((s) => s.streamingPhase)
 
-export const useAIEditorStreamingText = (): string =>
-  useAIEditorStore((s) => s.streamingText)
+export const useAIEditorStreamingText = (): string => useAIEditorStore((s) => s.streamingText)
 
 export const useAIEditorStreamingState = () =>
   useAIEditorStore((s) => ({
     phase: s.streamingPhase,
     text: s.streamingText,
-    requestId: s.streamingRequestId
+    requestId: s.streamingRequestId,
   }))
 
 // Combined selector for modal header state
@@ -539,5 +535,5 @@ export const useAIEditorModalState = () =>
     scope: s.scope,
     isGenerating: s.isGeneratingPlan,
     hasPlan: s.currentPlan !== null,
-    streamingPhase: s.streamingPhase
+    streamingPhase: s.streamingPhase,
   }))

@@ -13,17 +13,10 @@
  * - Create new tags with quick-create (Enter) or full edit flow
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react'
-import {
-  ChevronLeft,
-  Check,
-  Pencil,
-  Plus,
-  X,
-  Pipette
-} from 'lucide-react'
 import type { PropertyOption } from '@shared/types'
-import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
+import { Check, ChevronLeft, Pencil, Pipette, Plus, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { EscapePriority, escapeManager } from '../../utils/EscapeManager'
 
 // Preset colors for quick selection (circles)
 const PRESET_COLORS = [
@@ -63,7 +56,7 @@ function TagsDropdownComponent({
   disabled = false,
   placeholder = 'Add tags...',
   allowCreate = true,
-  allowEdit = true
+  allowEdit = true,
 }: TagsDropdownProps): JSX.Element {
   // State machine
   const [mode, setMode] = useState<DropdownMode>('closed')
@@ -88,12 +81,12 @@ function TagsDropdownComponent({
 
   // Filter options by search (show all, including selected, so user can see/edit them)
   const filteredOptions = options.filter((opt) =>
-    opt.label.toLowerCase().includes(searchQuery.toLowerCase())
+    opt.label.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
   // Check if search query matches any option exactly
   const queryMatchesOption = options.some(
-    (o) => o.label.toLowerCase() === searchQuery.toLowerCase()
+    (o) => o.label.toLowerCase() === searchQuery.toLowerCase(),
   )
 
   // Close on click outside
@@ -161,7 +154,7 @@ function TagsDropdownComponent({
       }
       // Don't close - stay open for multi-select
     },
-    [value, onChange]
+    [value, onChange],
   )
 
   const handleRemoveTag = useCallback(
@@ -169,7 +162,7 @@ function TagsDropdownComponent({
       e.stopPropagation()
       onChange(value.filter((v) => v !== optionValue))
     },
-    [value, onChange]
+    [value, onChange],
   )
 
   const handleStartEdit = useCallback((option: PropertyOption, e: React.MouseEvent) => {
@@ -205,7 +198,7 @@ function TagsDropdownComponent({
 
     onUpdateOption(editingOption.value, {
       label: editName.trim(),
-      color: editColor
+      color: editColor,
     })
     handleBackToSelection()
   }, [editingOption, editName, editColor, onUpdateOption, handleBackToSelection])
@@ -216,7 +209,7 @@ function TagsDropdownComponent({
 
     const newValue = onCreateOption({
       label: editName.trim(),
-      color: editColor
+      color: editColor,
     })
     // Auto-select the new tag
     onChange([...value, newValue])
@@ -228,7 +221,7 @@ function TagsDropdownComponent({
 
     const newValue = onCreateOption({
       label: searchQuery.trim(),
-      color: '#6b7280' // Default gray for quick create
+      color: '#6b7280', // Default gray for quick create
     })
     // Auto-select the new tag
     onChange([...value, newValue])
@@ -264,7 +257,7 @@ function TagsDropdownComponent({
             className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded"
             style={{
               backgroundColor: `${opt.color || '#6b7280'}30`,
-              color: opt.color || '#6b7280'
+              color: opt.color || '#6b7280',
             }}
           >
             {opt.label}
@@ -322,11 +315,16 @@ function TagsDropdownComponent({
                         className={`flex items-center justify-between px-3 py-1.5 cursor-pointer group hover:brightness-110 ${
                           isSelected ? 'bg-[var(--gui-accent-primary)]/10' : ''
                         }`}
-                        style={{ backgroundColor: isSelected ? undefined : 'var(--gui-panel-bg-secondary)' }}
+                        style={{
+                          backgroundColor: isSelected ? undefined : 'var(--gui-panel-bg-secondary)',
+                        }}
                       >
                         <div className="flex items-center gap-2">
                           {isSelected ? (
-                            <Check className="w-3.5 h-3.5" style={{ color: 'var(--gui-accent-primary)' }} />
+                            <Check
+                              className="w-3.5 h-3.5"
+                              style={{ color: 'var(--gui-accent-primary)' }}
+                            />
                           ) : (
                             <div className="w-3.5 h-3.5" />
                           )}
@@ -349,13 +347,9 @@ function TagsDropdownComponent({
                     )
                   })
                 ) : searchQuery ? (
-                  <div className="px-3 py-2 text-sm gui-text-secondary">
-                    No matching tags
-                  </div>
+                  <div className="px-3 py-2 text-sm gui-text-secondary">No matching tags</div>
                 ) : (
-                  <div className="px-3 py-2 text-sm gui-text-secondary">
-                    No tags available
-                  </div>
+                  <div className="px-3 py-2 text-sm gui-text-secondary">No tags available</div>
                 )}
               </div>
 
@@ -430,7 +424,8 @@ function TagsDropdownComponent({
                         className="w-5 h-5 rounded-full transition-all hover:scale-110"
                         style={{
                           backgroundColor: color,
-                          boxShadow: editColor === color ? '0 0 0 2px var(--gui-accent-primary)' : undefined
+                          boxShadow:
+                            editColor === color ? '0 0 0 2px var(--gui-accent-primary)' : undefined,
                         }}
                       />
                     ))}
@@ -440,7 +435,9 @@ function TagsDropdownComponent({
                       className="w-5 h-5 rounded-full flex items-center justify-center gui-input border transition-all hover:scale-110"
                       style={{
                         backgroundColor: !PRESET_COLORS.includes(editColor) ? editColor : undefined,
-                        boxShadow: !PRESET_COLORS.includes(editColor) ? '0 0 0 2px var(--gui-accent-primary)' : undefined
+                        boxShadow: !PRESET_COLORS.includes(editColor)
+                          ? '0 0 0 2px var(--gui-accent-primary)'
+                          : undefined,
                       }}
                       title="Custom color"
                     >

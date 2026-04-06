@@ -11,16 +11,16 @@
  * - Accent bar class applied to header
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import React from 'react'
 import { render, screen } from '@testing-library/react'
+import React from 'react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Mock @xyflow/react
 vi.mock('@xyflow/react', () => ({
   useViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1.2 })),
   useReactFlow: vi.fn(() => ({
-    getViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1.2 }))
-  }))
+    getViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1.2 })),
+  })),
 }))
 
 // Mock workspace store
@@ -29,14 +29,14 @@ vi.mock('../../../stores/workspaceStore', () => ({
   useWorkspaceStore: vi.fn((selector: (state: Record<string, unknown>) => unknown) =>
     selector({
       inPlaceExpandedNodeId: 'test-node-1',
-      collapseInPlaceExpansion: mockCollapseInPlaceExpansion
-    })
-  )
+      collapseInPlaceExpansion: mockCollapseInPlaceExpansion,
+    }),
+  ),
 }))
 
 // Mock cn utility
 vi.mock('@/lib/utils', () => ({
-  cn: (...args: unknown[]) => args.filter(Boolean).join(' ')
+  cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
 }))
 
 import { NodeArtboard } from '../NodeArtboard'
@@ -51,7 +51,7 @@ describe('ArtboardTransitions (Phase 3C)', () => {
       render(
         <NodeArtboard nodeId="n1" nodeColor="#6366f1" title="Test Node">
           <div>Content</div>
-        </NodeArtboard>
+        </NodeArtboard>,
       )
       const dialog = screen.getByRole('dialog')
       expect(dialog.className).toContain('artboard-primary')
@@ -61,7 +61,7 @@ describe('ArtboardTransitions (Phase 3C)', () => {
       render(
         <NodeArtboard nodeId="n1" nodeColor="#6366f1" title="Test Node">
           <div>Content</div>
-        </NodeArtboard>
+        </NodeArtboard>,
       )
       const dialog = screen.getByRole('dialog')
       expect(dialog.className).toContain('artboard-transition')
@@ -71,7 +71,7 @@ describe('ArtboardTransitions (Phase 3C)', () => {
       render(
         <NodeArtboard nodeId="n1" nodeColor="#6366f1" title="Test Node">
           <div>Content</div>
-        </NodeArtboard>
+        </NodeArtboard>,
       )
       const dialog = screen.getByRole('dialog')
       expect(dialog.className).toContain('node-artboard')
@@ -81,7 +81,7 @@ describe('ArtboardTransitions (Phase 3C)', () => {
       render(
         <NodeArtboard nodeId="n1" nodeColor="#ff5733" title="Colored">
           <div>Content</div>
-        </NodeArtboard>
+        </NodeArtboard>,
       )
       const dialog = screen.getByRole('dialog')
       expect(dialog.style.getPropertyValue('--node-accent')).toBe('#ff5733')
@@ -95,7 +95,7 @@ describe('ArtboardTransitions (Phase 3C)', () => {
       const { container } = render(
         <div className="artboard-dimmed" data-testid="dimmed-node">
           Dimmed content
-        </div>
+        </div>,
       )
       const el = container.querySelector('.artboard-dimmed')
       expect(el).not.toBeNull()
@@ -108,7 +108,7 @@ describe('ArtboardTransitions (Phase 3C)', () => {
       render(
         <NodeArtboard nodeId="n1" nodeColor="#6366f1" title="My Note Title">
           <div>Content</div>
-        </NodeArtboard>
+        </NodeArtboard>,
       )
       expect(screen.getByText('My Note Title')).toBeInTheDocument()
     })
@@ -122,7 +122,7 @@ describe('ArtboardTransitions (Phase 3C)', () => {
           icon={<span data-testid="node-icon">IC</span>}
         >
           <div>Content</div>
-        </NodeArtboard>
+        </NodeArtboard>,
       )
       expect(screen.getByTestId('node-icon')).toBeInTheDocument()
     })
@@ -131,7 +131,7 @@ describe('ArtboardTransitions (Phase 3C)', () => {
       render(
         <NodeArtboard nodeId="n1" nodeColor="#6366f1" title="Test">
           <div>Content</div>
-        </NodeArtboard>
+        </NodeArtboard>,
       )
       const closeBtn = screen.getByLabelText('Close artboard')
       expect(closeBtn).toBeInTheDocument()
@@ -141,7 +141,7 @@ describe('ArtboardTransitions (Phase 3C)', () => {
       render(
         <NodeArtboard nodeId="n1" nodeColor="#6366f1" title="Test">
           <div>Content</div>
-        </NodeArtboard>
+        </NodeArtboard>,
       )
       expect(screen.getByText('Esc')).toBeInTheDocument()
     })
@@ -150,7 +150,7 @@ describe('ArtboardTransitions (Phase 3C)', () => {
       render(
         <NodeArtboard nodeId="n1" nodeColor="#6366f1" title="Test">
           <div>Content</div>
-        </NodeArtboard>
+        </NodeArtboard>,
       )
       const dialog = screen.getByRole('dialog')
       const header = dialog.querySelector('.node-artboard__header')
@@ -162,7 +162,7 @@ describe('ArtboardTransitions (Phase 3C)', () => {
       render(
         <NodeArtboard nodeId="n1" nodeColor="#6366f1" title="Test">
           <div>Content</div>
-        </NodeArtboard>
+        </NodeArtboard>,
       )
       const closeBtn = screen.getByLabelText('Close artboard')
       // X character (times symbol)
@@ -177,7 +177,7 @@ describe('ArtboardTransitions (Phase 3C)', () => {
       render(
         <NodeArtboard nodeId="n1" nodeColor="#6366f1" title="Test">
           <div>Content</div>
-        </NodeArtboard>
+        </NodeArtboard>,
       )
       const dialog = screen.getByRole('dialog')
       const classes = dialog.className
@@ -188,14 +188,9 @@ describe('ArtboardTransitions (Phase 3C)', () => {
 
     it('should append custom className alongside transition classes', () => {
       render(
-        <NodeArtboard
-          nodeId="n1"
-          nodeColor="#6366f1"
-          title="Test"
-          className="my-custom-class"
-        >
+        <NodeArtboard nodeId="n1" nodeColor="#6366f1" title="Test" className="my-custom-class">
           <div>Content</div>
-        </NodeArtboard>
+        </NodeArtboard>,
       )
       const dialog = screen.getByRole('dialog')
       expect(dialog.className).toContain('node-artboard')

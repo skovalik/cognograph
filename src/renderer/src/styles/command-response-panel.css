@@ -81,6 +81,20 @@
   font-size: 13px;
 }
 
+/* Prose theme adaptation — Tailwind prose uses its own color vars */
+.cmd-response-panel__entry-response .prose {
+  --tw-prose-body: var(--text-primary);
+  --tw-prose-headings: var(--text-primary);
+  --tw-prose-bold: var(--text-primary);
+  --tw-prose-links: var(--accent-glow);
+  --tw-prose-counters: var(--text-secondary);
+  --tw-prose-bullets: var(--text-muted);
+  --tw-prose-hr: var(--border-default);
+  --tw-prose-quotes: var(--text-secondary);
+  --tw-prose-code: var(--text-primary);
+  --tw-prose-pre-bg: var(--surface-elevated);
+}
+
 .cmd-response-panel__entry-thinking {
   display: flex;
   align-items: center;
@@ -104,13 +118,10 @@
   border-radius: 2px;
   background: linear-gradient(
     180deg,
-    rgba(200,150,62,0.15) 0%,
-    #C8963E 20%,
-    #E5B95C 35%,
-    #ffffff 50%,
-    #E5B95C 65%,
-    #C8963E 80%,
-    rgba(200,150,62,0.15) 100%
+    var(--accent-glow-subtle) 0%,
+    var(--accent-glow) 20%,
+    var(--accent-glow) 50%,
+    var(--accent-glow-subtle) 100%
   );
   background-size: 100% 300%;
   animation: gradient-border-sweep 2.4s ease-in-out infinite;
@@ -152,7 +163,7 @@
   padding: 1px 8px;
   border-radius: var(--radius-full);
   font-size: 11px;
-  background: var(--accent-glow-subtle, rgba(200,150,62,0.1));
+  background: var(--accent-glow-subtle);
   color: var(--accent-glow);
   cursor: pointer;
   border: none;
@@ -195,35 +206,11 @@
 }
 
 
-/* ═══ Thinking dot — conic gradient animation ═══ */
-.cmd-response-panel__thinking-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: conic-gradient(
-    from var(--conic-angle),
-    #C8963E 0deg,
-    #E5B95C 90deg,
-    #d4a056 180deg,
-    #b8860b 270deg,
-    #C8963E 360deg
-  );
-  animation: conic-rotate 3s linear infinite;
-  flex-shrink: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cmd-response-panel__thinking-dot {
-    animation: none;
-    background: var(--accent-glow);
-  }
-}
-
 /* ═══ Thinking state: conic gradient on running entry's prompt line ═══ */
 .cmd-response-panel__entry.is-thinking .cmd-response-panel__entry-prompt {
   background:
     color-mix(in srgb, var(--surface-panel) 85%, transparent) padding-box,
-    conic-gradient(from var(--conic-angle), #C8963E, #E5B95C, #d4a056, #b8860b, #C8963E) border-box;
+    conic-gradient(from var(--conic-angle), var(--accent-glow), var(--accent-glow-strong), var(--accent-glow), var(--accent-glow-strong), var(--accent-glow)) border-box;
   border: 2px solid transparent;
   border-radius: var(--radius-md);
   padding: 6px 8px;
@@ -294,7 +281,7 @@
 }
 
 .cmd-response-panel__log-entry--active {
-  background: var(--accent-glow-subtle, rgba(200,150,62,0.1));
+  background: var(--accent-glow-subtle);
   color: var(--accent-glow);
 }
 
@@ -318,15 +305,52 @@
     top: auto;
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: 72px; /* Clear the mobile bottom toolbar */
     width: 100%;
-    max-height: 50vh;
+    max-height: calc(100vh - 140px); /* Full height minus TopBar + bottom toolbar */
+    min-height: 120px;
     border-radius: var(--radius-xl, 12px) var(--radius-xl, 12px) 0 0;
+    z-index: 9991; /* Above mobile toolbar (9990) when expanded */
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.3) !important;
+  }
+  .cmd-response-panel__header {
+    padding: 8px 16px 6px;
+  }
+  /* Drag handle for mobile — rendered as real element for touch events */
+  .cmd-response-panel__drag-handle {
+    width: 100%;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    touch-action: none;
+    flex-shrink: 0;
+  }
+  .cmd-response-panel__drag-handle::after {
+    content: '';
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--text-muted, #666);
+  }
+  .cmd-response-panel__entry-prompt {
+    gap: 6px;
+  }
+  .cmd-response-panel__entry-prompt .truncate {
+    white-space: normal; /* Allow wrapping on mobile */
+    overflow: visible;
+    text-overflow: unset;
+  }
+  .cmd-response-panel__entry-response {
+    padding-left: 0; /* No indent on mobile — save space */
+    font-size: 13px;
   }
   .cmd-response-toggle {
-    bottom: 8px;
+    bottom: 80px; /* Above bottom toolbar */
     left: 8px;
     top: auto;
+    z-index: 9991;
   }
 }
 

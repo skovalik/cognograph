@@ -20,15 +20,11 @@
  *   - Verify initAgentService registers the callback correctly
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
-import {
-  resetWorkspaceStore,
-  getWorkspaceState,
-  seedNode
-} from '../../../../test/storeUtils'
-import { createConversationNode, resetTestCounters } from '../../../../test/utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AgentStreamChunk } from '../../../../preload/index'
+import { getWorkspaceState, resetWorkspaceStore, seedNode } from '../../../../test/storeUtils'
+import { createConversationNode, resetTestCounters } from '../../../../test/utils'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 
 describe('agentService — stop button race condition', () => {
   beforeEach(() => {
@@ -78,7 +74,9 @@ describe('agentService — stop button race condition', () => {
       let capturedHandler: ((chunk: AgentStreamChunk) => void) | null = null
       vi.mocked(window.api.agent.onStreamChunk).mockImplementation((cb) => {
         capturedHandler = cb
-        return () => { capturedHandler = null }
+        return () => {
+          capturedHandler = null
+        }
       })
 
       // Use dynamic import with resetModules to get a fresh agentService
@@ -107,7 +105,7 @@ describe('agentService — stop button race condition', () => {
         requestId: 'orphaned-request-123',
         conversationId: 'conv-orphan',
         type: 'text_delta',
-        content: 'late arriving text'
+        content: 'late arriving text',
       })
 
       // Streaming should still be off — the chunk was dropped
@@ -118,14 +116,14 @@ describe('agentService — stop button race condition', () => {
         requestId: 'dead-request',
         conversationId: 'conv-orphan',
         type: 'done',
-        stopReason: 'end_turn'
+        stopReason: 'end_turn',
       })
 
       capturedHandler!({
         requestId: 'dead-request',
         conversationId: 'conv-orphan',
         type: 'error',
-        error: 'late error'
+        error: 'late error',
       })
 
       // Still no streaming state change

@@ -6,19 +6,23 @@
 // =============================================================================
 // Button to trigger AI-assisted configuration
 
-import { memo, useState, useCallback, useMemo, lazy, Suspense } from 'react'
 import { Wand2 } from 'lucide-react'
-const AIConfigModal = lazy(() => import('./AIConfigModal').then(m => ({ default: m.AIConfigModal })))
+import { lazy, memo, Suspense, useCallback, useMemo, useState } from 'react'
+
+const AIConfigModal = lazy(() =>
+  import('./AIConfigModal').then((m) => ({ default: m.AIConfigModal })),
+)
+
 import type {
-  ActionNodeData,
-  ActionTrigger,
   ActionCondition,
+  ActionNodeData,
   ActionStep,
+  ActionTrigger,
   AIActionContext,
-  AIGeneratedConfig
+  AIGeneratedConfig,
 } from '@shared/actionTypes'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
 import { useActionStore } from '../../stores/actionStore'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 
 interface AIConfigButtonProps {
   nodeId: string
@@ -36,50 +40,50 @@ function AIConfigButtonComponent({
   nodeId,
   data,
   description,
-  onApplyConfig
+  onApplyConfig,
 }: AIConfigButtonProps): JSX.Element {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const nodes = useWorkspaceStore(s => s.nodes)
-  const edges = useWorkspaceStore(s => s.edges)
+  const nodes = useWorkspaceStore((s) => s.nodes)
+  const edges = useWorkspaceStore((s) => s.edges)
 
   // Build context for AI
   const context = useMemo((): AIActionContext => {
-    const actionNode = nodes.find(n => n.id === nodeId)
+    const actionNode = nodes.find((n) => n.id === nodeId)
     if (!actionNode) {
       return {
         connectedNodes: [],
         nearbyNodes: [],
         workspaceStats: {},
-        existingConfig: data.trigger && data.trigger.type !== 'manual' ? {
-          trigger: data.trigger,
-          conditions: data.conditions,
-          actions: data.actions
-        } : undefined
+        existingConfig:
+          data.trigger && data.trigger.type !== 'manual'
+            ? {
+                trigger: data.trigger,
+                conditions: data.conditions,
+                actions: data.actions,
+              }
+            : undefined,
       }
     }
 
     // Get connected nodes
-    const connectedEdges = edges.filter(e => e.source === nodeId || e.target === nodeId)
-    const connectedNodeIds = connectedEdges.map(e => e.source === nodeId ? e.target : e.source)
+    const connectedEdges = edges.filter((e) => e.source === nodeId || e.target === nodeId)
+    const connectedNodeIds = connectedEdges.map((e) => (e.source === nodeId ? e.target : e.source))
     const connectedNodes = nodes
-      .filter(n => connectedNodeIds.includes(n.id))
+      .filter((n) => connectedNodeIds.includes(n.id))
       .slice(0, 10)
-      .map(n => ({
+      .map((n) => ({
         id: n.id,
         type: n.type || 'unknown',
-        title: (n.data as { title?: string })?.title || 'Untitled'
+        title: (n.data as { title?: string })?.title || 'Untitled',
       }))
 
     // Get nearby nodes (within 500px)
     const actionPos = actionNode.position
     const nearbyNodes = nodes
-      .filter(n => n.id !== nodeId && !connectedNodeIds.includes(n.id))
-      .map(n => ({
+      .filter((n) => n.id !== nodeId && !connectedNodeIds.includes(n.id))
+      .map((n) => ({
         node: n,
-        distance: Math.sqrt(
-          Math.pow(n.position.x - actionPos.x, 2) +
-          Math.pow(n.position.y - actionPos.y, 2)
-        )
+        distance: Math.sqrt((n.position.x - actionPos.x) ** 2 + (n.position.y - actionPos.y) ** 2),
       }))
       .filter(({ distance }) => distance < 500)
       .sort((a, b) => a.distance - b.distance)
@@ -87,7 +91,7 @@ function AIConfigButtonComponent({
       .map(({ node }) => ({
         id: node.id,
         type: node.type || 'unknown',
-        title: (node.data as { title?: string })?.title || 'Untitled'
+        title: (node.data as { title?: string })?.title || 'Untitled',
       }))
 
     // Calculate workspace stats
@@ -101,11 +105,14 @@ function AIConfigButtonComponent({
       connectedNodes,
       nearbyNodes,
       workspaceStats,
-      existingConfig: data.trigger && data.trigger.type !== 'manual' ? {
-        trigger: data.trigger,
-        conditions: data.conditions,
-        actions: data.actions
-      } : undefined
+      existingConfig:
+        data.trigger && data.trigger.type !== 'manual'
+          ? {
+              trigger: data.trigger,
+              conditions: data.conditions,
+              actions: data.actions,
+            }
+          : undefined,
     }
   }, [nodeId, nodes, edges, data])
 
@@ -117,40 +124,46 @@ function AIConfigButtonComponent({
     setIsModalOpen(false)
   }, [])
 
-  const handleApplyConfig = useCallback((config: AIGeneratedConfig, title?: string) => {
-    onApplyConfig({
-      trigger: config.trigger,
-      conditions: config.conditions,
-      actions: config.actions,
-      title
-    })
-    setIsModalOpen(false)
-  }, [onApplyConfig])
+  const handleApplyConfig = useCallback(
+    (config: AIGeneratedConfig, title?: string) => {
+      onApplyConfig({
+        trigger: config.trigger,
+        conditions: config.conditions,
+        actions: config.actions,
+        title,
+      })
+      setIsModalOpen(false)
+    },
+    [onApplyConfig],
+  )
 
   // Apply config and immediately trigger execution
-  const handleApplyAndRunConfig = useCallback((config: AIGeneratedConfig, title?: string) => {
-    const store = useWorkspaceStore.getState()
+  const handleApplyAndRunConfig = useCallback(
+    (config: AIGeneratedConfig, title?: string) => {
+      const store = useWorkspaceStore.getState()
 
-    // Batch all config updates into a single updateNode call
-    // This ensures atomic state update and avoids race conditions
-    store.updateNode(nodeId, {
-      trigger: config.trigger,
-      conditions: config.conditions,
-      actions: config.actions,
-      enabled: true,
-      ...(title && { title })
-    })
-
-    setIsModalOpen(false)
-
-    // Use double requestAnimationFrame to ensure React has flushed all state updates
-    // This is more reliable than arbitrary setTimeout delays
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        useActionStore.getState().triggerManual(nodeId)
+      // Batch all config updates into a single updateNode call
+      // This ensures atomic state update and avoids race conditions
+      store.updateNode(nodeId, {
+        trigger: config.trigger,
+        conditions: config.conditions,
+        actions: config.actions,
+        enabled: true,
+        ...(title && { title }),
       })
-    })
-  }, [nodeId])
+
+      setIsModalOpen(false)
+
+      // Use double requestAnimationFrame to ensure React has flushed all state updates
+      // This is more reliable than arbitrary setTimeout delays
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          useActionStore.getState().triggerManual(nodeId)
+        })
+      })
+    },
+    [nodeId],
+  )
 
   const isDisabled = !description?.trim()
 
@@ -161,15 +174,13 @@ function AIConfigButtonComponent({
         disabled={isDisabled}
         className={`
           absolute bottom-1.5 right-1.5 p-1.5 rounded transition-all
-          ${isDisabled
-            ? 'opacity-40 cursor-not-allowed bg-[var(--surface-panel-secondary)]'
-            : 'bg-purple-600 hover:bg-purple-500 hover:scale-105 active:scale-95'
+          ${
+            isDisabled
+              ? 'opacity-40 cursor-not-allowed bg-[var(--surface-panel-secondary)]'
+              : 'bg-purple-600 hover:bg-purple-500 hover:scale-105 active:scale-95'
           }
         `}
-        title={isDisabled
-          ? 'Enter a description first'
-          : 'Configure with AI'
-        }
+        title={isDisabled ? 'Enter a description first' : 'Configure with AI'}
       >
         <Wand2 className="w-3.5 h-3.5" />
       </button>

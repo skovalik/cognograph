@@ -8,10 +8,16 @@
  * All changes apply instantly via the workspace store.
  */
 
+import {
+  type AccentTheme,
+  FONT_THEMES,
+  type FontTheme,
+  type GridStyle,
+  PRESET_ACCENT_PALETTES,
+} from '@shared/types'
+import { Moon, Sun } from 'lucide-react'
 import { memo, useCallback, useState } from 'react'
-import { Sun, Moon } from 'lucide-react'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { FONT_THEMES, PRESET_ACCENT_PALETTES, type FontTheme, type AccentTheme, type GridStyle } from '@shared/types'
 import { performThemeTransition } from '../../utils/themeTransition'
 import { Slider } from '../ui/slider'
 
@@ -27,7 +33,9 @@ function AppearanceSettingsComponent(): JSX.Element {
   const [customHexInput, setCustomHexInput] = useState(themeSettings.customAccentColor || '')
 
   // Current palette based on active preset
-  const palette = PRESET_ACCENT_PALETTES[themeSettings.currentPresetId || 'default'] || PRESET_ACCENT_PALETTES.default
+  const palette =
+    PRESET_ACCENT_PALETTES[themeSettings.currentPresetId || 'default'] ||
+    PRESET_ACCENT_PALETTES.default
 
   // --- Mode toggle ---
   const handleModeChange = useCallback((mode: 'dark' | 'light', event?: React.MouseEvent) => {
@@ -35,60 +43,78 @@ function AppearanceSettingsComponent(): JSX.Element {
   }, [])
 
   // --- Per-preset accent selection ---
-  const handleAccentSelect = useCallback((idx: number) => {
-    const state = useWorkspaceStore.getState().themeSettings
-    const presetId = state.currentPresetId || 'default'
-    const pal = PRESET_ACCENT_PALETTES[presetId] || PRESET_ACCENT_PALETTES.default
-    const accent = pal[idx]
-    if (!accent) return
-
-    const isDark = state.mode === 'dark'
-    const guiDark = { ...(state.guiColorsDark || state.guiColors!), accentSecondary: accent.glow }
-    const guiLight = { ...(state.guiColorsLight || state.guiColors!), accentSecondary: accent.glowLight }
-
-    updateThemeSettings({
-      accentIndex: idx,
-      accentTheme: 'aurochs-gold' as AccentTheme,
-      guiColors: isDark ? guiDark : guiLight,
-      guiColorsDark: guiDark,
-      guiColorsLight: guiLight,
-    })
-  }, [updateThemeSettings])
-
-  const handleCustomHexApply = useCallback((hex: string) => {
-    const cleaned = hex.trim()
-    if (/^#[0-9a-fA-F]{6}$/.test(cleaned)) {
-      setCustomHexInput(cleaned)
-
+  const handleAccentSelect = useCallback(
+    (idx: number) => {
       const state = useWorkspaceStore.getState().themeSettings
-      const guiDark = { ...(state.guiColorsDark || state.guiColors!), accentSecondary: cleaned }
-      const guiLight = { ...(state.guiColorsLight || state.guiColors!), accentSecondary: cleaned }
+      const presetId = state.currentPresetId || 'default'
+      const pal = PRESET_ACCENT_PALETTES[presetId] || PRESET_ACCENT_PALETTES.default
+      const accent = pal[idx]
+      if (!accent) return
+
       const isDark = state.mode === 'dark'
+      const guiDark = { ...(state.guiColorsDark || state.guiColors!), accentSecondary: accent.glow }
+      const guiLight = {
+        ...(state.guiColorsLight || state.guiColors!),
+        accentSecondary: accent.glowLight,
+      }
 
       updateThemeSettings({
-        accentTheme: 'custom' as AccentTheme,
-        customAccentColor: cleaned,
+        accentIndex: idx,
+        accentTheme: 'aurochs-gold' as AccentTheme,
         guiColors: isDark ? guiDark : guiLight,
         guiColorsDark: guiDark,
         guiColorsLight: guiLight,
       })
-    }
-  }, [updateThemeSettings])
+    },
+    [updateThemeSettings],
+  )
+
+  const handleCustomHexApply = useCallback(
+    (hex: string) => {
+      const cleaned = hex.trim()
+      if (/^#[0-9a-fA-F]{6}$/.test(cleaned)) {
+        setCustomHexInput(cleaned)
+
+        const state = useWorkspaceStore.getState().themeSettings
+        const guiDark = { ...(state.guiColorsDark || state.guiColors!), accentSecondary: cleaned }
+        const guiLight = { ...(state.guiColorsLight || state.guiColors!), accentSecondary: cleaned }
+        const isDark = state.mode === 'dark'
+
+        updateThemeSettings({
+          accentTheme: 'custom' as AccentTheme,
+          customAccentColor: cleaned,
+          guiColors: isDark ? guiDark : guiLight,
+          guiColorsDark: guiDark,
+          guiColorsLight: guiLight,
+        })
+      }
+    },
+    [updateThemeSettings],
+  )
 
   // --- Font picker ---
-  const handleFontChange = useCallback((font: FontTheme) => {
-    updateThemeSettings({ fontTheme: font })
-  }, [updateThemeSettings])
+  const handleFontChange = useCallback(
+    (font: FontTheme) => {
+      updateThemeSettings({ fontTheme: font })
+    },
+    [updateThemeSettings],
+  )
 
   // --- Font size ---
-  const handleFontSizeChange = useCallback((values: number[]) => {
-    updateThemeSettings({ fontSize: values[0] })
-  }, [updateThemeSettings])
+  const handleFontSizeChange = useCallback(
+    (values: number[]) => {
+      updateThemeSettings({ fontSize: values[0] })
+    },
+    [updateThemeSettings],
+  )
 
   // --- Grid style ---
-  const handleGridStyleChange = useCallback((style: GridStyle) => {
-    updateThemeSettings({ gridStyle: style })
-  }, [updateThemeSettings])
+  const handleGridStyleChange = useCallback(
+    (style: GridStyle) => {
+      updateThemeSettings({ gridStyle: style })
+    },
+    [updateThemeSettings],
+  )
 
   const currentMode = themeSettings.mode
   const currentAccent = themeSettings.accentTheme || 'aurochs-gold'
@@ -103,9 +129,7 @@ function AppearanceSettingsComponent(): JSX.Element {
       {/* Header */}
       <div>
         <h3 className="text-sm font-medium gui-text mb-1">Appearance</h3>
-        <p className="text-xs gui-text-secondary">
-          Customize how Cognograph looks and feels.
-        </p>
+        <p className="text-xs gui-text-secondary">Customize how Cognograph looks and feels.</p>
       </div>
 
       {/* Mode toggle */}
@@ -205,7 +229,9 @@ function AppearanceSettingsComponent(): JSX.Element {
                     {font.label}
                   </span>
                   {isActive && (
-                    <span className="text-xs" style={{ color: 'var(--gui-accent-secondary)' }}>Active</span>
+                    <span className="text-xs" style={{ color: 'var(--gui-accent-secondary)' }}>
+                      Active
+                    </span>
                   )}
                 </div>
                 <span className="text-xs gui-text-secondary" style={{ fontFamily: font.sans }}>
@@ -242,11 +268,11 @@ function AppearanceSettingsComponent(): JSX.Element {
           Canvas Grid
         </label>
         <div className="flex gap-2">
-          {([
+          {[
             { id: 'dots' as GridStyle, label: 'Dots' },
             { id: 'hash' as GridStyle, label: 'Hash' },
             { id: 'none' as GridStyle, label: 'None' },
-          ]).map(({ id, label }) => (
+          ].map(({ id, label }) => (
             <button
               key={id}
               onClick={() => handleGridStyleChange(id)}

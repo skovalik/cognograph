@@ -14,11 +14,11 @@
  * - __fixtures__/golden-messages.jsonl
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { promises as fs } from 'fs'
-import { join, resolve } from 'path'
-import { tmpdir } from 'os'
 import { randomUUID } from 'crypto'
+import { promises as fs } from 'fs'
+import { tmpdir } from 'os'
+import { join, resolve } from 'path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { validateWorkspaceData } from '../workspaceValidation'
 
 // Mock electron for workspace validation (it doesn't need electron, but
@@ -170,43 +170,43 @@ describe('Golden-file workspace round-trip', () => {
   })
 
   it('workspace JSON preserves Unicode content', async () => {
-    const original = await loadWorkspace(GOLDEN_WORKSPACE_PATH) as {
+    const original = (await loadWorkspace(GOLDEN_WORKSPACE_PATH)) as {
       nodes: Array<{ data: { content?: string } }>
     }
 
     const outPath = join(tmpDir, 'ws-unicode.json')
     await saveWorkspace(outPath, original)
-    const reloaded = await loadWorkspace(outPath) as typeof original
+    const reloaded = (await loadWorkspace(outPath)) as typeof original
 
     // The note node has Unicode
-    const noteNode = reloaded.nodes.find(
-      (n: { data: { content?: string } }) => n.data.content?.includes('\u4f60\u597d'),
+    const noteNode = reloaded.nodes.find((n: { data: { content?: string } }) =>
+      n.data.content?.includes('\u4f60\u597d'),
     )
     expect(noteNode).toBeDefined()
     expect(noteNode!.data.content).toContain('\ud83c\udf0d')
   })
 
   it('workspace JSON preserves all node types', async () => {
-    const original = await loadWorkspace(GOLDEN_WORKSPACE_PATH) as {
+    const original = (await loadWorkspace(GOLDEN_WORKSPACE_PATH)) as {
       nodes: Array<{ data: { type: string } }>
     }
 
     const outPath = join(tmpDir, 'ws-types.json')
     await saveWorkspace(outPath, original)
-    const reloaded = await loadWorkspace(outPath) as typeof original
+    const reloaded = (await loadWorkspace(outPath)) as typeof original
 
     const types = reloaded.nodes.map((n) => n.data.type).sort()
     expect(types).toEqual(['artifact', 'conversation', 'note', 'task'])
   })
 
   it('workspace JSON preserves edge data', async () => {
-    const original = await loadWorkspace(GOLDEN_WORKSPACE_PATH) as {
+    const original = (await loadWorkspace(GOLDEN_WORKSPACE_PATH)) as {
       edges: Array<{ id: string; source: string; target: string; data: unknown }>
     }
 
     const outPath = join(tmpDir, 'ws-edges.json')
     await saveWorkspace(outPath, original)
-    const reloaded = await loadWorkspace(outPath) as typeof original
+    const reloaded = (await loadWorkspace(outPath)) as typeof original
 
     expect(reloaded.edges).toHaveLength(3)
     expect(reloaded.edges[0]!.source).toBe('note-001')
@@ -218,25 +218,25 @@ describe('Golden-file workspace round-trip', () => {
   })
 
   it('workspace JSON preserves viewport', async () => {
-    const original = await loadWorkspace(GOLDEN_WORKSPACE_PATH) as {
+    const original = (await loadWorkspace(GOLDEN_WORKSPACE_PATH)) as {
       viewport: { x: number; y: number; zoom: number }
     }
 
     const outPath = join(tmpDir, 'ws-vp.json')
     await saveWorkspace(outPath, original)
-    const reloaded = await loadWorkspace(outPath) as typeof original
+    const reloaded = (await loadWorkspace(outPath)) as typeof original
 
     expect(reloaded.viewport).toEqual({ x: 0, y: 0, zoom: 1 })
   })
 
   it('workspace JSON preserves contextSettings', async () => {
-    const original = await loadWorkspace(GOLDEN_WORKSPACE_PATH) as {
+    const original = (await loadWorkspace(GOLDEN_WORKSPACE_PATH)) as {
       contextSettings?: { globalDepth: number; traversalMode: string }
     }
 
     const outPath = join(tmpDir, 'ws-ctx.json')
     await saveWorkspace(outPath, original)
-    const reloaded = await loadWorkspace(outPath) as typeof original
+    const reloaded = (await loadWorkspace(outPath)) as typeof original
 
     expect(reloaded.contextSettings).toEqual({
       globalDepth: 2,
@@ -259,7 +259,7 @@ describe('Golden-file workspace round-trip', () => {
   })
 
   it('JSONL preserves message UUIDs', async () => {
-    const messages = await loadMessagesJsonl(GOLDEN_MESSAGES_PATH) as Array<{
+    const messages = (await loadMessagesJsonl(GOLDEN_MESSAGES_PATH)) as Array<{
       uuid: string
     }>
 
@@ -269,7 +269,7 @@ describe('Golden-file workspace round-trip', () => {
   })
 
   it('JSONL preserves ISO timestamps', async () => {
-    const messages = await loadMessagesJsonl(GOLDEN_MESSAGES_PATH) as Array<{
+    const messages = (await loadMessagesJsonl(GOLDEN_MESSAGES_PATH)) as Array<{
       isoTimestamp: string
     }>
 
@@ -278,7 +278,7 @@ describe('Golden-file workspace round-trip', () => {
   })
 
   it('JSONL preserves conversation ID association', async () => {
-    const messages = await loadMessagesJsonl(GOLDEN_MESSAGES_PATH) as Array<{
+    const messages = (await loadMessagesJsonl(GOLDEN_MESSAGES_PATH)) as Array<{
       conversationId: string
     }>
 
@@ -288,7 +288,7 @@ describe('Golden-file workspace round-trip', () => {
   })
 
   it('JSONL preserves Unicode content in messages', async () => {
-    const messages = await loadMessagesJsonl(GOLDEN_MESSAGES_PATH) as Array<{
+    const messages = (await loadMessagesJsonl(GOLDEN_MESSAGES_PATH)) as Array<{
       content: string
     }>
 
@@ -298,7 +298,7 @@ describe('Golden-file workspace round-trip', () => {
   })
 
   it('JSONL de-duplicates on UUID (crash recovery)', async () => {
-    const messages = await loadMessagesJsonl(GOLDEN_MESSAGES_PATH) as Array<{
+    const messages = (await loadMessagesJsonl(GOLDEN_MESSAGES_PATH)) as Array<{
       uuid: string
     }>
 
@@ -306,7 +306,7 @@ describe('Golden-file workspace round-trip', () => {
     const outPath = join(tmpDir, 'messages-dup.jsonl')
     await saveMessagesJsonl(outPath, [...messages, ...messages])
 
-    const reloaded = await loadMessagesJsonl(outPath) as Array<{ uuid: string }>
+    const reloaded = (await loadMessagesJsonl(outPath)) as Array<{ uuid: string }>
     // Should de-duplicate — only 3 unique UUIDs
     expect(reloaded).toHaveLength(3)
   })
@@ -353,14 +353,11 @@ describe('Golden-file workspace round-trip', () => {
   })
 
   it('validates that workspace has expected structure after round-trip', async () => {
-    const workspace = await loadWorkspace(GOLDEN_WORKSPACE_PATH) as Record<
-      string,
-      unknown
-    >
+    const workspace = (await loadWorkspace(GOLDEN_WORKSPACE_PATH)) as Record<string, unknown>
 
     const wsPath = join(tmpDir, 'structure-check.json')
     await saveWorkspace(wsPath, workspace)
-    const reloaded = await loadWorkspace(wsPath) as Record<string, unknown>
+    const reloaded = (await loadWorkspace(wsPath)) as Record<string, unknown>
 
     // Structural assertions
     expect(typeof reloaded.id).toBe('string')

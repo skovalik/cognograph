@@ -1,9 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { Edit2, Check, X, HardDrive, Clock, MoreHorizontal, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react'
-import { useNodesStore, useEdgesStore, usePersistenceStore, useWorkspaceStore } from '../stores'
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle,
+  Clock,
+  Edit2,
+  HardDrive,
+  Loader2,
+  MoreHorizontal,
+  X,
+} from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEdgesStore, useNodesStore, usePersistenceStore, useWorkspaceStore } from '../stores'
 
 // Width thresholds for toolbar layout modes (must match Toolbar.tsx)
 const VERTICAL_MODE_THRESHOLD = 900
@@ -20,7 +30,9 @@ function WorkspaceInfoComponent(_props: WorkspaceInfoProps): JSX.Element {
   const saveStatus = usePersistenceStore((s) => s.saveStatus)
   const nodes = useNodesStore((s) => s.nodes)
   const edges = useEdgesStore((s) => s.edges)
-  const preferVerticalToolbar = useWorkspaceStore((s) => s.workspacePreferences.preferVerticalToolbar) // Workspace preferences - stays in workspaceStore
+  const preferVerticalToolbar = useWorkspaceStore(
+    (s) => s.workspacePreferences.preferVerticalToolbar,
+  ) // Workspace preferences - stays in workspaceStore
 
   const [isEditing, setIsEditing] = useState(false)
   const [editName, setEditName] = useState(workspaceName)
@@ -53,7 +65,7 @@ function WorkspaceInfoComponent(_props: WorkspaceInfoProps): JSX.Element {
       return {
         top: 16, // Same as toolbar's top-4
         left: 76, // Right of vertical toolbar with gap
-        right: undefined
+        right: undefined,
       }
     } else {
       // Horizontal mode (single row or two row): position below toolbar, left-aligned
@@ -64,7 +76,7 @@ function WorkspaceInfoComponent(_props: WorkspaceInfoProps): JSX.Element {
       return {
         top: topOffset,
         left: leftOffset,
-        right: undefined
+        right: undefined,
       }
     }
   }, [isVerticalMode, isTwoRowMode])
@@ -73,7 +85,8 @@ function WorkspaceInfoComponent(_props: WorkspaceInfoProps): JSX.Element {
   useEffect(() => {
     const checkOverflow = (): void => {
       if (containerRef.current) {
-        const isContentOverflowing = containerRef.current.scrollWidth > containerRef.current.clientWidth
+        const isContentOverflowing =
+          containerRef.current.scrollWidth > containerRef.current.clientWidth
         setIsOverflowing(isContentOverflowing)
       }
     }
@@ -119,13 +132,16 @@ function WorkspaceInfoComponent(_props: WorkspaceInfoProps): JSX.Element {
     setEditName(workspaceName)
   }, [workspaceName])
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSaveName()
-    } else if (e.key === 'Escape') {
-      handleCancelEdit()
-    }
-  }, [handleSaveName, handleCancelEdit])
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        handleSaveName()
+      } else if (e.key === 'Escape') {
+        handleCancelEdit()
+      }
+    },
+    [handleSaveName, handleCancelEdit],
+  )
 
   // Theme-aware styling using GUI theme CSS classes
   // Uses GUI panel background - colors are controlled by CSS variables
@@ -142,7 +158,7 @@ function WorkspaceInfoComponent(_props: WorkspaceInfoProps): JSX.Element {
     saved: { icon: CheckCircle, text: 'Saved', className: 'text-green-500', animate: false },
     saving: { icon: Loader2, text: 'Saving...', className: 'text-blue-400', animate: true },
     unsaved: { icon: Clock, text: 'Unsaved', className: 'text-amber-500', animate: true },
-    error: { icon: AlertTriangle, text: 'Save failed', className: 'text-red-500', animate: true }
+    error: { icon: AlertTriangle, text: 'Save failed', className: 'text-red-500', animate: true },
   }
   const saveConfig = saveIndicatorConfig[saveStatus]
   const SaveIcon = saveConfig.icon
@@ -161,7 +177,9 @@ function WorkspaceInfoComponent(_props: WorkspaceInfoProps): JSX.Element {
           <HardDrive className={`w-4 h-4 ${iconClasses}`} />
         </span>
         <span title={saveConfig.text}>
-          <SaveIcon className={`w-3.5 h-3.5 ${saveConfig.className} ${saveConfig.animate ? 'animate-pulse' : ''}`} />
+          <SaveIcon
+            className={`w-3.5 h-3.5 ${saveConfig.className} ${saveConfig.animate ? 'animate-pulse' : ''}`}
+          />
         </span>
       </div>
     )
@@ -175,7 +193,6 @@ function WorkspaceInfoComponent(_props: WorkspaceInfoProps): JSX.Element {
         top: position.top,
         left: position.left,
         maxWidth: Math.max(200, availableWidth),
-        
       }}
     >
       {/* Workspace name */}
@@ -213,8 +230,14 @@ function WorkspaceInfoComponent(_props: WorkspaceInfoProps): JSX.Element {
             className={`flex items-center gap-1.5 text-sm ${textClasses} transition-colors group min-w-0`}
             title="Click to rename workspace"
           >
-            <span className={`font-medium truncate ${isCompact ? 'max-w-[80px]' : 'max-w-[150px]'}`}>{workspaceName}</span>
-            <Edit2 className={`w-3 h-3 flex-shrink-0 ${iconClasses} opacity-0 group-hover:opacity-100 transition-opacity`} />
+            <span
+              className={`font-medium truncate ${isCompact ? 'max-w-[80px]' : 'max-w-[150px]'}`}
+            >
+              {workspaceName}
+            </span>
+            <Edit2
+              className={`w-3 h-3 flex-shrink-0 ${iconClasses} opacity-0 group-hover:opacity-100 transition-opacity`}
+            />
           </button>
         )}
       </div>
@@ -235,8 +258,13 @@ function WorkspaceInfoComponent(_props: WorkspaceInfoProps): JSX.Element {
       {/* Save status indicator - always visible for ND anxiety reduction */}
       <>
         <div className={`w-px h-4 ${dividerClasses}`} />
-        <div className={`flex items-center gap-1.5 text-xs ${saveConfig.className}`} title={saveConfig.text}>
-          <SaveIcon className={`w-3.5 h-3.5 ${saveConfig.animate ? 'animate-pulse' : ''} ${saveStatus === 'saving' ? 'animate-spin' : ''}`} />
+        <div
+          className={`flex items-center gap-1.5 text-xs ${saveConfig.className}`}
+          title={saveConfig.text}
+        >
+          <SaveIcon
+            className={`w-3.5 h-3.5 ${saveConfig.animate ? 'animate-pulse' : ''} ${saveStatus === 'saving' ? 'animate-spin' : ''}`}
+          />
           {!isCompact && <span>{saveConfig.text}</span>}
         </div>
       </>
@@ -246,7 +274,7 @@ function WorkspaceInfoComponent(_props: WorkspaceInfoProps): JSX.Element {
         <div
           className="absolute right-0 top-0 bottom-0 flex items-center pr-1.5 pl-4 rounded-r-lg"
           style={{
-            background: `linear-gradient(to left, var(--gui-panel-bg) 0%, color-mix(in srgb, var(--gui-panel-bg) 90%, transparent) 50%, transparent 100%)`
+            background: `linear-gradient(to left, var(--gui-panel-bg) 0%, color-mix(in srgb, var(--gui-panel-bg) 90%, transparent) 50%, transparent 100%)`,
           }}
           title="More content hidden"
         >

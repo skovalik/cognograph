@@ -65,10 +65,11 @@ function parseFormattedText(text: string): TextSegment[] {
       // Check if this range overlaps with existing matches
       const start = match.index
       const end = match.index + match[0].length
-      const overlaps = matches.some(m =>
-        (start >= m.start && start < m.end) ||
-        (end > m.start && end <= m.end) ||
-        (start <= m.start && end >= m.end)
+      const overlaps = matches.some(
+        (m) =>
+          (start >= m.start && start < m.end) ||
+          (end > m.start && end <= m.end) ||
+          (start <= m.start && end >= m.end),
       )
 
       if (!overlaps) {
@@ -76,7 +77,7 @@ function parseFormattedText(text: string): TextSegment[] {
           start,
           end,
           text: match[1], // Captured group (content without markers)
-          format
+          format,
         })
       }
     }
@@ -97,7 +98,7 @@ function parseFormattedText(text: string): TextSegment[] {
     // Add formatted segment
     segments.push({
       text: match.text,
-      [match.format]: true
+      [match.format]: true,
     })
 
     lastEnd = match.end
@@ -123,13 +124,29 @@ export function hasFormatting(text: string): boolean {
   return /\*\*|__|\*|_|~~|`/.test(text)
 }
 
-function FormattedTextComponent({ text, className, style, onDoubleClick }: FormattedTextProps): JSX.Element {
+function FormattedTextComponent({
+  text,
+  className,
+  style,
+  onDoubleClick,
+}: FormattedTextProps): JSX.Element {
   const segments = useMemo(() => parseFormattedText(text), [text])
 
   // Fast path: if only one segment with no formatting, return plain span
   const firstSegment = segments[0]
-  if (segments.length === 1 && firstSegment && !firstSegment.bold && !firstSegment.italic && !firstSegment.strikethrough && !firstSegment.code) {
-    return <span className={className} style={style} onDoubleClick={onDoubleClick}>{text}</span>
+  if (
+    segments.length === 1 &&
+    firstSegment &&
+    !firstSegment.bold &&
+    !firstSegment.italic &&
+    !firstSegment.strikethrough &&
+    !firstSegment.code
+  ) {
+    return (
+      <span className={className} style={style} onDoubleClick={onDoubleClick}>
+        {text}
+      </span>
+    )
   }
 
   return (
@@ -144,7 +161,7 @@ function FormattedTextComponent({ text, className, style, onDoubleClick }: Forma
               className="px-1 py-0.5 rounded text-[0.9em]"
               style={{
                 backgroundColor: 'color-mix(in srgb, var(--gui-text-primary) 10%, transparent)',
-                fontFamily: 'monospace'
+                fontFamily: 'monospace',
               }}
             >
               {content}

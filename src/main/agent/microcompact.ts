@@ -75,7 +75,7 @@ function isToolResultMessage(msg: GenericMessage, provider: LLMProvider): boolea
       // Anthropic: role: 'user' with content array containing { type: 'tool_result' }
       if (msg.role !== 'user' || !Array.isArray(msg.content)) return false
       return (msg.content as Array<Record<string, unknown>>).some(
-        (block) => block.type === 'tool_result'
+        (block) => block.type === 'tool_result',
       )
 
     case 'openai':
@@ -104,7 +104,7 @@ function isToolResultMessage(msg: GenericMessage, provider: LLMProvider): boolea
 function truncateToolResult(
   msg: GenericMessage,
   provider: LLMProvider,
-  maxBytes: number
+  maxBytes: number,
 ): GenericMessage {
   switch (provider) {
     case 'anthropic':
@@ -257,7 +257,7 @@ function getSystemMessageText(msg: GenericMessage): string | null {
 export function microcompact(
   messages: GenericMessage[],
   provider: LLMProvider,
-  preserveRecent: number = DEFAULT_PRESERVE_RECENT
+  preserveRecent: number = DEFAULT_PRESERVE_RECENT,
 ): MicrocompactResult {
   if (messages.length === 0) {
     return { messages: [], removedCount: 0, truncatedCount: 0 }

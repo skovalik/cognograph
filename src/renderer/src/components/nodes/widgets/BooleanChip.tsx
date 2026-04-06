@@ -14,11 +14,14 @@ export const BooleanChip = memo(function BooleanChip({
   onChange,
   fieldName,
 }: BooleanChipProps) {
-  const toggle = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    onChange(!value)
-  }, [value, onChange])
+  const toggle = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      e.preventDefault()
+      onChange(!value)
+    },
+    [value, onChange],
+  )
 
   const color = value ? '#22c55e' : '#6b7280'
 
@@ -34,10 +37,7 @@ export const BooleanChip = memo(function BooleanChip({
       }}
       title={`${fieldName || 'Toggle'}: ${value ? 'on' : 'off'} (click to toggle)`}
     >
-      <span
-        className="w-2 h-2 rounded-full flex-shrink-0"
-        style={{ backgroundColor: color }}
-      />
+      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
       {value ? 'On' : 'Off'}
     </button>
   )

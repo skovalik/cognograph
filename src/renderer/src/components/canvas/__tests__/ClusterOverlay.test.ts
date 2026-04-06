@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+import type { Cluster } from '../../../utils/clusterEngine'
 import {
   buildStatusText,
+  ClusterOverlay,
   computeBubbleSize,
-  TYPE_ICONS,
-  TYPE_COLORS,
   TYPE_BORDER_COLORS,
-  ClusterOverlay
+  TYPE_COLORS,
+  TYPE_ICONS,
 } from '../ClusterOverlay'
-import type { Cluster } from '../../../utils/clusterEngine'
 
 // Helper: create a minimal Cluster object for testing pure functions
 function makeCluster(overrides: Partial<Cluster> = {}): Cluster {
@@ -23,9 +23,9 @@ function makeCluster(overrides: Partial<Cluster> = {}): Cluster {
     summary: {
       nodeCount: 2,
       typeCounts: { note: 2 },
-      statusCounts: {}
+      statusCounts: {},
     },
-    ...overrides
+    ...overrides,
   }
 }
 
@@ -50,8 +50,8 @@ describe('ClusterOverlay', () => {
       summary: {
         nodeCount: 7,
         typeCounts: { task: 5, note: 2 },
-        statusCounts: { done: 3, 'in-progress': 2 }
-      }
+        statusCounts: { done: 3, 'in-progress': 2 },
+      },
     })
     expect(buildStatusText(cluster)).toBe('3/5 done')
   })
@@ -62,8 +62,8 @@ describe('ClusterOverlay', () => {
       summary: {
         nodeCount: 4,
         typeCounts: { note: 3, conversation: 1 },
-        statusCounts: { active: 2, blocked: 1 }
-      }
+        statusCounts: { active: 2, blocked: 1 },
+      },
     })
     expect(buildStatusText(cluster)).toBe('2 active')
   })
@@ -74,8 +74,8 @@ describe('ClusterOverlay', () => {
       summary: {
         nodeCount: 3,
         typeCounts: { note: 3 },
-        statusCounts: {}
-      }
+        statusCounts: {},
+      },
     })
     expect(buildStatusText(cluster)).toBeNull()
   })
@@ -91,7 +91,7 @@ describe('ClusterOverlay', () => {
       'workspace',
       'orchestrator',
       'action',
-      'text'
+      'text',
     ]
     for (const type of expectedTypes) {
       expect(TYPE_ICONS[type]).toBeDefined()
@@ -112,7 +112,7 @@ describe('ClusterOverlay', () => {
       'workspace',
       'orchestrator',
       'action',
-      'text'
+      'text',
     ]
     for (const type of expectedTypes) {
       expect(TYPE_COLORS[type]).toBeDefined()
@@ -126,11 +126,11 @@ describe('ClusterOverlay', () => {
 
   // 8. Bubble size calculation
   it('should compute bubble size: base 56 + min(count * 2, 24)', () => {
-    expect(computeBubbleSize(0)).toBe(56)       // 56 + 0
-    expect(computeBubbleSize(5)).toBe(66)       // 56 + 10
-    expect(computeBubbleSize(10)).toBe(76)      // 56 + 20
-    expect(computeBubbleSize(12)).toBe(80)      // 56 + 24 (cap)
-    expect(computeBubbleSize(100)).toBe(80)     // 56 + 24 (cap)
+    expect(computeBubbleSize(0)).toBe(56) // 56 + 0
+    expect(computeBubbleSize(5)).toBe(66) // 56 + 10
+    expect(computeBubbleSize(10)).toBe(76) // 56 + 20
+    expect(computeBubbleSize(12)).toBe(80) // 56 + 24 (cap)
+    expect(computeBubbleSize(100)).toBe(80) // 56 + 24 (cap)
   })
 
   // 9. buildStatusText edge case: task cluster with 0 done
@@ -139,8 +139,8 @@ describe('ClusterOverlay', () => {
       summary: {
         nodeCount: 3,
         typeCounts: { task: 3 },
-        statusCounts: { 'in-progress': 2, blocked: 1 }
-      }
+        statusCounts: { 'in-progress': 2, blocked: 1 },
+      },
     })
     expect(buildStatusText(cluster)).toBe('0/3 done')
   })
@@ -151,8 +151,8 @@ describe('ClusterOverlay', () => {
       summary: {
         nodeCount: 5,
         typeCounts: { note: 3, task: 2 },
-        statusCounts: { done: 1, active: 3 }
-      }
+        statusCounts: { done: 1, active: 3 },
+      },
     })
     // Has tasks -> "done/taskCount done" format
     expect(buildStatusText(cluster)).toBe('1/2 done')

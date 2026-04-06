@@ -14,14 +14,14 @@
  *   - Structured display data from PermissionRequest
  */
 
+import type {
+  PermissionDisplay,
+  PermissionRequest as TransportPermissionRequest,
+} from '@shared/transport/types'
+import { nanoid } from 'nanoid'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
-import { nanoid } from 'nanoid'
-import type {
-  PermissionRequest as TransportPermissionRequest,
-  PermissionDisplay,
-} from '@shared/transport/types'
 
 // -----------------------------------------------------------------------------
 // Constants
@@ -37,7 +37,11 @@ export const PERMISSION_TIMEOUT_MS = 60_000
 // Types
 // -----------------------------------------------------------------------------
 
-export type PermissionType = 'filesystem_read' | 'filesystem_write' | 'network_fetch' | 'shell_execute'
+export type PermissionType =
+  | 'filesystem_read'
+  | 'filesystem_write'
+  | 'network_fetch'
+  | 'shell_execute'
 
 export type PermissionDuration = 'once' | 'session' | 'workspace' | 'permanent'
 
@@ -152,7 +156,7 @@ const initialState: PermissionState = {
   grantedPermissions: [],
   pendingRequests: [],
   overflowQueue: [],
-  workspaceSandboxPath: null
+  workspaceSandboxPath: null,
 }
 
 // -----------------------------------------------------------------------------
@@ -165,12 +169,9 @@ const initialState: PermissionState = {
  */
 function promoteFromOverflow(
   state: PermissionState,
-  startTimeout: (requestId: string) => void
+  startTimeout: (requestId: string) => void,
 ): void {
-  while (
-    state.pendingRequests.length < MAX_CONCURRENT_REQUESTS &&
-    state.overflowQueue.length > 0
-  ) {
+  while (state.pendingRequests.length < MAX_CONCURRENT_REQUESTS && state.overflowQueue.length > 0) {
     const next = state.overflowQueue.shift()
     if (next) {
       state.pendingRequests.push(next)
@@ -233,7 +234,7 @@ export const usePermissionStore = create<PermissionStore>()(
               command: request.command,
               grantedAt: Date.now(),
               expiresAt,
-              duration
+              duration,
             })
 
             // Promote overflow requests into pending
@@ -267,9 +268,7 @@ export const usePermissionStore = create<PermissionStore>()(
 
         revokePermission: (permissionId) => {
           set((state) => {
-            state.grantedPermissions = state.grantedPermissions.filter(
-              (p) => p.id !== permissionId
-            )
+            state.grantedPermissions = state.grantedPermissions.filter((p) => p.id !== permissionId)
           })
         },
 
@@ -277,7 +276,7 @@ export const usePermissionStore = create<PermissionStore>()(
           const now = Date.now()
           set((state) => {
             state.grantedPermissions = state.grantedPermissions.filter(
-              (p) => !p.expiresAt || p.expiresAt > now
+              (p) => !p.expiresAt || p.expiresAt > now,
             )
           })
         },
@@ -293,7 +292,7 @@ export const usePermissionStore = create<PermissionStore>()(
               ...request,
               id,
               createdAt: Date.now(),
-              status: 'pending'
+              status: 'pending',
             }
 
             if (state.pendingRequests.length < MAX_CONCURRENT_REQUESTS) {
@@ -315,16 +314,15 @@ export const usePermissionStore = create<PermissionStore>()(
         createRequestFromTransport: (payload) => {
           return get().createRequest({
             type: 'shell_execute',
-            command: typeof payload.args?.['command'] === 'string'
-              ? payload.args['command']
-              : undefined,
+            command:
+              typeof payload.args?.['command'] === 'string' ? payload.args['command'] : undefined,
             reason: payload.description,
             displayData: {
               toolName: payload.toolName,
               description: payload.description,
-              args: payload.args
+              args: payload.args,
             },
-            display: payload.display
+            display: payload.display,
           })
         },
 
@@ -438,7 +436,7 @@ export const usePermissionStore = create<PermissionStore>()(
 
         getPermissionsOfType: (type) => {
           return get().grantedPermissions.filter((p) => p.type === type)
-        }
+        },
       }
     }),
     {
@@ -446,29 +444,25 @@ export const usePermissionStore = create<PermissionStore>()(
       // Only persist workspace-level and permanent permissions
       partialize: (state) => ({
         grantedPermissions: state.grantedPermissions.filter(
-          (p) => p.duration === 'workspace' || p.duration === 'permanent'
+          (p) => p.duration === 'workspace' || p.duration === 'permanent',
         ),
-        workspaceSandboxPath: state.workspaceSandboxPath
-      })
-    }
-  )
+        workspaceSandboxPath: state.workspaceSandboxPath,
+      }),
+    },
+  ),
 )
 
 // -----------------------------------------------------------------------------
 // Selectors
 // -----------------------------------------------------------------------------
 
-export const useGrantedPermissions = () =>
-  usePermissionStore((s) => s.grantedPermissions)
+export const useGrantedPermissions = () => usePermissionStore((s) => s.grantedPermissions)
 
-export const usePendingRequests = () =>
-  usePermissionStore((s) => s.pendingRequests)
+export const usePendingRequests = () => usePermissionStore((s) => s.pendingRequests)
 
-export const useOverflowQueue = () =>
-  usePermissionStore((s) => s.overflowQueue)
+export const useOverflowQueue = () => usePermissionStore((s) => s.overflowQueue)
 
-export const useWorkspaceSandbox = () =>
-  usePermissionStore((s) => s.workspaceSandboxPath)
+export const useWorkspaceSandbox = () => usePermissionStore((s) => s.workspaceSandboxPath)
 
 export const useHasPermission = (type: PermissionType, resource: string) =>
   usePermissionStore((s) => s.hasPermission(type, resource))

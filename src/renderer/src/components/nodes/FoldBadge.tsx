@@ -9,8 +9,8 @@
  * Click to toggle collapsed state.
  */
 
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { memo, useMemo } from 'react'
-import { ChevronRight, ChevronDown } from 'lucide-react'
 import { useNodesStore } from '../../stores'
 
 interface FoldBadgeProps {
@@ -18,7 +18,10 @@ interface FoldBadgeProps {
   nodeColor?: string
 }
 
-function FoldBadgeComponent({ nodeId, nodeColor = 'var(--gui-accent-primary)' }: FoldBadgeProps): JSX.Element | null {
+function FoldBadgeComponent({
+  nodeId,
+  nodeColor = 'var(--gui-accent-primary)',
+}: FoldBadgeProps): JSX.Element | null {
   const getChildNodeIds = useNodesStore((s) => s.getChildNodeIds)
   const toggleNodeCollapsed = useNodesStore((s) => s.toggleNodeCollapsed)
   const nodes = useNodesStore((s) => s.nodes)
@@ -43,10 +46,16 @@ function FoldBadgeComponent({ nodeId, nodeColor = 'var(--gui-accent-primary)' }:
     <button
       className="fold-badge"
       onClick={handleClick}
-      title={isCollapsed ? `Expand ${childCount} children (Alt+.)` : `Collapse ${childCount} children (Alt+.)`}
-      style={{
-        '--badge-color': nodeColor
-      } as React.CSSProperties}
+      title={
+        isCollapsed
+          ? `Expand ${childCount} children (Alt+.)`
+          : `Collapse ${childCount} children (Alt+.)`
+      }
+      style={
+        {
+          '--badge-color': nodeColor,
+        } as React.CSSProperties
+      }
     >
       {isCollapsed ? (
         <>

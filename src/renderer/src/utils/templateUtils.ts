@@ -7,21 +7,21 @@
  * Functions for creating templates from selections and applying templates to canvas.
  */
 
-import type { Node, Edge } from '@xyflow/react'
-import { v4 as uuid } from 'uuid'
 import type {
-  NodeTemplate,
-  TemplateNode,
-  TemplateEdge,
-  NodeData,
   EdgeData,
-  PlaceholderDefinition
+  NodeData,
+  NodeTemplate,
+  PlaceholderDefinition,
+  TemplateEdge,
+  TemplateNode,
 } from '@shared/types'
 import { DEFAULT_EDGE_DATA } from '@shared/types'
+import type { Edge, Node } from '@xyflow/react'
+import { v4 as uuid } from 'uuid'
 import {
-  detectPlaceholdersInNodeData,
   buildPlaceholderDefinitions,
-  resolvePlaceholdersInNodeData
+  detectPlaceholdersInNodeData,
+  resolvePlaceholdersInNodeData,
 } from './placeholderParser'
 
 // -----------------------------------------------------------------------------
@@ -55,7 +55,7 @@ export function createTemplateFromSelection(
   options: {
     includeContent: boolean
     detectPlaceholders?: boolean
-  } = { includeContent: true, detectPlaceholders: true }
+  } = { includeContent: true, detectPlaceholders: true },
 ): CreateTemplateResult {
   if (nodes.length === 0) {
     throw new Error('Cannot create template from empty selection')
@@ -70,22 +70,20 @@ export function createTemplateFromSelection(
 
   // Calculate relative positions and build template nodes
   const templateNodes: TemplateNode[] = nodes.map((node) => {
-    const nodeData = options.includeContent
-      ? { ...node.data }
-      : stripContent(node.data)
+    const nodeData = options.includeContent ? { ...node.data } : stripContent(node.data)
 
     return {
       templateNodeId: node.id,
       type: node.data.type,
       relativePosition: {
         x: node.position.x - rootNode.position.x,
-        y: node.position.y - rootNode.position.y
+        y: node.position.y - rootNode.position.y,
       },
       dimensions: {
         width: node.width || getDefaultNodeWidth(node.data.type),
-        height: node.height || getDefaultNodeHeight(node.data.type)
+        height: node.height || getDefaultNodeHeight(node.data.type),
       },
-      data: nodeData
+      data: nodeData,
     }
   })
 
@@ -99,7 +97,7 @@ export function createTemplateFromSelection(
       target: e.target,
       sourceHandle: e.sourceHandle || undefined,
       targetHandle: e.targetHandle || undefined,
-      data: e.data
+      data: e.data,
     }))
 
   // Calculate bounds
@@ -108,9 +106,7 @@ export function createTemplateFromSelection(
   // Detect placeholders if enabled
   let placeholders: PlaceholderDefinition[] = []
   if (options.detectPlaceholders) {
-    const allDetected = templateNodes.flatMap((tn) =>
-      detectPlaceholdersInNodeData(tn.data)
-    )
+    const allDetected = templateNodes.flatMap((tn) => detectPlaceholdersInNodeData(tn.data))
     placeholders = buildPlaceholderDefinitions(allDetected)
   }
 
@@ -119,7 +115,7 @@ export function createTemplateFromSelection(
     edges: templateEdges,
     bounds,
     rootNodeId: rootNode.id,
-    placeholders
+    placeholders,
   }
 }
 
@@ -128,7 +124,7 @@ export function createTemplateFromSelection(
  */
 function stripContent(data: NodeData): Partial<NodeData> {
   const base: Partial<NodeData> = {
-    type: data.type
+    type: data.type,
   }
 
   switch (data.type) {
@@ -137,7 +133,7 @@ function stripContent(data: NodeData): Partial<NodeData> {
         ...base,
         title: '{{title}}',
         messages: [],
-        provider: data.provider
+        provider: data.provider,
       }
     case 'project':
       return {
@@ -146,13 +142,13 @@ function stripContent(data: NodeData): Partial<NodeData> {
         description: '',
         collapsed: false,
         childNodeIds: [],
-        color: data.color
+        color: data.color,
       }
     case 'note':
       return {
         ...base,
         title: '{{title}}',
-        content: ''
+        content: '',
       }
     case 'task':
       return {
@@ -160,7 +156,7 @@ function stripContent(data: NodeData): Partial<NodeData> {
         title: '{{title}}',
         description: '',
         status: 'todo',
-        priority: 'medium'
+        priority: 'medium',
       }
     case 'artifact':
       return {
@@ -175,7 +171,7 @@ function stripContent(data: NodeData): Partial<NodeData> {
         versioningMode: 'update',
         injectionFormat: 'full',
         collapsed: false,
-        previewLines: 5
+        previewLines: 5,
       }
     case 'orchestrator':
       return {
@@ -185,7 +181,7 @@ function stripContent(data: NodeData): Partial<NodeData> {
         strategy: 'sequential',
         connectedAgents: [],
         runHistory: [],
-        maxHistoryRuns: 20
+        maxHistoryRuns: 20,
       }
     default:
       return base
@@ -195,9 +191,7 @@ function stripContent(data: NodeData): Partial<NodeData> {
 /**
  * Calculate the bounding box of nodes
  */
-function calculateBounds(
-  nodes: Node<NodeData>[]
-): { width: number; height: number } {
+function calculateBounds(nodes: Node<NodeData>[]): { width: number; height: number } {
   if (nodes.length === 0) {
     return { width: 0, height: 0 }
   }
@@ -219,7 +213,7 @@ function calculateBounds(
 
   return {
     width: maxX - minX,
-    height: maxY - minY
+    height: maxY - minY,
   }
 }
 
@@ -266,7 +260,7 @@ function getDefaultNodeHeight(type: NodeData['type']): number {
 export function applyTemplate(
   template: NodeTemplate,
   position: { x: number; y: number },
-  placeholderValues: Record<string, string>
+  placeholderValues: Record<string, string>,
 ): ApplyTemplateResult {
   const templateNodeIdToRealId = new Map<string, string>()
   const nodes: Node<NodeData>[] = []
@@ -281,7 +275,7 @@ export function applyTemplate(
     // Resolve placeholders in node data
     const resolvedData = resolvePlaceholdersInNodeData(
       tNode.data as Record<string, unknown>,
-      placeholderValues
+      placeholderValues,
     ) as Partial<NodeData>
 
     // Create the full node data with required fields
@@ -292,11 +286,11 @@ export function applyTemplate(
       type: tNode.type,
       position: {
         x: position.x + tNode.relativePosition.x,
-        y: position.y + tNode.relativePosition.y
+        y: position.y + tNode.relativePosition.y,
       },
       data: fullData,
       width: tNode.dimensions.width,
-      height: tNode.dimensions.height
+      height: tNode.dimensions.height,
     })
   }
 
@@ -314,8 +308,8 @@ export function applyTemplate(
         targetHandle: tEdge.targetHandle,
         data: {
           ...DEFAULT_EDGE_DATA,
-          ...tEdge.data
-        }
+          ...tEdge.data,
+        },
       })
     }
   }
@@ -329,13 +323,13 @@ export function applyTemplate(
 function createNodeData(
   type: NodeData['type'],
   partialData: Partial<NodeData>,
-  timestamp: number
+  timestamp: number,
 ): NodeData {
   const base = {
     ...partialData,
     type,
     createdAt: timestamp,
-    updatedAt: timestamp
+    updatedAt: timestamp,
   }
 
   switch (type) {
@@ -344,7 +338,7 @@ function createNodeData(
         title: 'New Conversation',
         messages: [],
         provider: 'anthropic',
-        ...base
+        ...base,
       } as NodeData
 
     case 'project':
@@ -354,14 +348,14 @@ function createNodeData(
         collapsed: false,
         childNodeIds: [],
         color: '#3b82f6',
-        ...base
+        ...base,
       } as NodeData
 
     case 'note':
       return {
         title: 'New Note',
         content: '',
-        ...base
+        ...base,
       } as NodeData
 
     case 'task':
@@ -370,7 +364,7 @@ function createNodeData(
         description: '',
         status: 'todo',
         priority: 'medium',
-        ...base
+        ...base,
       } as NodeData
 
     case 'artifact':
@@ -385,7 +379,7 @@ function createNodeData(
         injectionFormat: 'full',
         collapsed: false,
         previewLines: 5,
-        ...base
+        ...base,
       } as NodeData
 
     default:
@@ -406,14 +400,12 @@ export function createConnectionEdge(
   options: {
     direction?: 'to-template' | 'from-template'
     label?: string
-  } = {}
+  } = {},
 ): Edge<EdgeData> {
   const { direction = 'to-template', label } = options
 
   const [source, target] =
-    direction === 'to-template'
-      ? [targetNodeId, templateRootId]
-      : [templateRootId, targetNodeId]
+    direction === 'to-template' ? [targetNodeId, templateRootId] : [templateRootId, targetNodeId]
 
   return {
     id: `${source}-${target}-${uuid().slice(0, 8)}`,
@@ -421,8 +413,8 @@ export function createConnectionEdge(
     target,
     data: {
       ...DEFAULT_EDGE_DATA,
-      label
-    }
+      label,
+    },
   }
 }
 
@@ -469,7 +461,10 @@ export function validateTemplate(template: NodeTemplate): {
     errors.push('Template has no root node')
   }
 
-  if (template.rootNodeId && !template.nodes.some((n) => n.templateNodeId === template.rootNodeId)) {
+  if (
+    template.rootNodeId &&
+    !template.nodes.some((n) => n.templateNodeId === template.rootNodeId)
+  ) {
     errors.push('Template root node not found in nodes')
   }
 
@@ -486,16 +481,14 @@ export function validateTemplate(template: NodeTemplate): {
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   }
 }
 
 /**
  * Get node count by type in a template
  */
-export function getTemplateNodeCounts(
-  template: NodeTemplate
-): Record<NodeData['type'], number> {
+export function getTemplateNodeCounts(template: NodeTemplate): Record<NodeData['type'], number> {
   const counts: Record<NodeData['type'], number> = {
     conversation: 0,
     project: 0,
@@ -505,7 +498,7 @@ export function getTemplateNodeCounts(
     action: 0,
     text: 0,
     workspace: 0,
-    orchestrator: 0
+    orchestrator: 0,
   }
 
   for (const node of template.nodes) {

@@ -8,25 +8,37 @@
  * buttons, storage usage bar, and manage subscription link.
  */
 
+import { CreditCard, Database, ExternalLink, Loader2, Star, User } from 'lucide-react'
 import { memo, useEffect } from 'react'
-import { User, CreditCard, Database, Star, ExternalLink, Loader2 } from 'lucide-react'
-// Cloud billing not available in open-source build
+// Cloud features disabled in open-source build (src/web/ not included)
+const createCheckoutSession = async (_id: string) => {}
+const getCustomerPortalUrl = async (): Promise<string> => ''
+const CREDIT_BUNDLES: { id: string; label: string }[] = []
+const formatCreditBalance = (_cents: number): string => '$0.00'
 const isAuthEnabled = (): boolean => false
-const useBillingStore = (): any => ({
-  tier: 'free', status: 'active', creditBalanceCents: 0, currentPeriodEnd: null,
-  foundingMember: false, storageUsedBytes: 0, storageLimitBytes: 0,
-  loading: false, fetchBilling: () => {},
+const useBillingStore = () => ({
+  tier: 'free' as const,
+  status: 'inactive',
+  creditBalanceCents: 0,
+  currentPeriodEnd: null as string | null,
+  foundingMember: false,
+  storageUsedBytes: 0,
+  storageLimitBytes: 0,
+  loading: false,
+  fetchBilling: async () => {},
 })
-const createCheckoutSession = async (_plan: string): Promise<void> => { window.open('https://cognograph.app/#pricing', '_blank') }
-const getCustomerPortalUrl = async (): Promise<string> => 'https://cognograph.app/#pricing'
-const formatCreditBalance = (cents: number): string => `$${(cents / 100).toFixed(2)}`
-const CREDIT_BUNDLES: any[] = []
 
 function AccountTabComponent(): JSX.Element {
   const {
-    tier, status, creditBalanceCents, currentPeriodEnd,
-    foundingMember, storageUsedBytes, storageLimitBytes,
-    loading, fetchBilling
+    tier,
+    status,
+    creditBalanceCents,
+    currentPeriodEnd,
+    foundingMember,
+    storageUsedBytes,
+    storageLimitBytes,
+    loading,
+    fetchBilling,
   } = useBillingStore()
 
   useEffect(() => {
@@ -49,9 +61,7 @@ function AccountTabComponent(): JSX.Element {
             Visit the dashboard to create an account.
           </p>
           <a
-            href={window.location.hostname === 'canvas.cognograph.app'
-              ? 'https://cognograph.app/dashboard'
-              : '/dashboard'}
+            href="/dashboard"
             className="gui-btn gui-btn-accent gui-btn-sm text-xs mt-3 inline-flex items-center gap-1"
           >
             <ExternalLink className="w-3 h-3" /> Go to Dashboard
@@ -69,9 +79,10 @@ function AccountTabComponent(): JSX.Element {
     )
   }
 
-  const storagePercent = storageLimitBytes > 0
-    ? Math.min(100, Math.round((storageUsedBytes / storageLimitBytes) * 100))
-    : 0
+  const storagePercent =
+    storageLimitBytes > 0
+      ? Math.min(100, Math.round((storageUsedBytes / storageLimitBytes) * 100))
+      : 0
   const storageMB = (storageUsedBytes / (1024 * 1024)).toFixed(1)
   const storageLimitMB = (storageLimitBytes / (1024 * 1024)).toFixed(0)
 
@@ -80,9 +91,7 @@ function AccountTabComponent(): JSX.Element {
       {/* Header */}
       <div>
         <h3 className="text-sm font-medium gui-text mb-1">Account & Billing</h3>
-        <p className="text-xs gui-text-secondary">
-          Manage your plan, credits, and storage.
-        </p>
+        <p className="text-xs gui-text-secondary">Manage your plan, credits, and storage.</p>
       </div>
 
       {/* Plan Badge */}
@@ -95,11 +104,14 @@ function AccountTabComponent(): JSX.Element {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium gui-text capitalize">{tier} Plan</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full"
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded-full"
                   style={{
-                    backgroundColor: status === 'active' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                    color: status === 'active' ? '#22c55e' : '#ef4444'
-                  }}>
+                    backgroundColor:
+                      status === 'active' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                    color: status === 'active' ? '#22c55e' : '#ef4444',
+                  }}
+                >
                   {status}
                 </span>
               </div>
@@ -166,12 +178,20 @@ function AccountTabComponent(): JSX.Element {
             <span className="text-xs gui-text">{storageMB} MB used</span>
             <span className="text-[10px] gui-text-secondary">{storageLimitMB} MB limit</span>
           </div>
-          <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+          <div
+            className="w-full h-1.5 rounded-full overflow-hidden"
+            style={{ backgroundColor: 'var(--surface-secondary)' }}
+          >
             <div
               className="h-full rounded-full transition-all duration-300"
               style={{
                 width: `${storagePercent}%`,
-                backgroundColor: storagePercent > 90 ? '#ef4444' : storagePercent > 70 ? '#f59e0b' : 'var(--gui-accent-primary)'
+                backgroundColor:
+                  storagePercent > 90
+                    ? '#ef4444'
+                    : storagePercent > 70
+                      ? '#f59e0b'
+                      : 'var(--gui-accent-primary)',
               }}
             />
           </div>

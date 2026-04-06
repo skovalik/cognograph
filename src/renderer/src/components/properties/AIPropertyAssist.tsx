@@ -8,45 +8,45 @@
  * Accessible via Sparkles button in PropertiesPanel header.
  */
 
-import { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import type { Edge, EdgeData, NodeData, PropertyDefinition } from '@shared/types'
 import {
-  Sparkles,
-  X,
-  Check,
+  AlertCircle,
   ArrowLeft,
+  Check,
+  CheckCircle,
+  Flag,
   Loader2,
+  Network,
+  RotateCcw,
+  Settings,
+  Sparkles,
   Tag,
   Tags,
-  Flag,
-  Network,
-  AlertCircle,
-  Settings,
-  RotateCcw,
-  CheckCircle
+  X,
 } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import type { NodeData, PropertyDefinition, Edge, EdgeData } from '@shared/types'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
+import {
+  GENERIC_QUICK_ACTIONS,
+  getQuickActionsForNode,
+} from '../../constants/aiPropertyQuickActions'
 import { getPropertiesForNodeType } from '../../constants/properties'
 import {
-  getQuickActionsForNode,
-  GENERIC_QUICK_ACTIONS
-} from '../../constants/aiPropertyQuickActions'
-import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
-import {
-  extractNodeContent,
   buildPropertyPrompt,
+  type ConfidenceLevel,
+  type ConnectedNodeContext,
+  cacheResponse,
+  computeContextHash,
+  extractNodeContent,
+  type GraphStats,
+  getCachedResponse,
+  type PropertyAIContext,
+  type PropertySuggestion,
   parsePropertyResponse,
   validateAndFilterSuggestions,
-  computeContextHash,
-  getCachedResponse,
-  cacheResponse,
-  type PropertySuggestion,
-  type PropertyAIContext,
-  type ConnectedNodeContext,
-  type GraphStats,
-  type ConfidenceLevel
 } from '../../services/propertyAIService'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { EscapePriority, escapeManager } from '../../utils/EscapeManager'
 
 // =============================================================================
 // Types
@@ -56,8 +56,8 @@ interface AIPropertyAssistProps {
   nodeId: string
   nodeData: NodeData
   disabled?: boolean
-  compact?: boolean  // For node card usage (smaller UI, fewer actions)
-  onOpen?: () => void  // Callback when popover opens
+  compact?: boolean // For node card usage (smaller UI, fewer actions)
+  onOpen?: () => void // Callback when popover opens
 }
 
 interface UndoEntry {
@@ -76,19 +76,19 @@ const QUICK_ACTION_ICONS: Record<string, typeof Sparkles> = {
   Tags,
   Flag,
   Network,
-  CheckCircle
+  CheckCircle,
 }
 
 const CONFIDENCE_COLORS: Record<ConfidenceLevel, string> = {
   high: 'text-green-500',
   medium: 'text-yellow-500',
-  low: 'text-[var(--text-secondary)]'
+  low: 'text-[var(--text-secondary)]',
 }
 
 const CONFIDENCE_DOTS: Record<ConfidenceLevel, number> = {
   high: 4,
   medium: 3,
-  low: 2
+  low: 2,
 }
 
 // =============================================================================
@@ -96,7 +96,7 @@ const CONFIDENCE_DOTS: Record<ConfidenceLevel, number> = {
 // =============================================================================
 
 const ConfidenceIndicator = memo(function ConfidenceIndicator({
-  confidence
+  confidence,
 }: {
   confidence: ConfidenceLevel
 }) {
@@ -135,7 +135,7 @@ const SuggestionCard = memo(function SuggestionCard({
   propertyDef,
   onAccept,
   onReject,
-  isAnimatingOut
+  isAnimatingOut,
 }: SuggestionCardProps) {
   const formatValue = (value: unknown): string => {
     if (value === undefined || value === null) return '—'
@@ -181,9 +181,7 @@ const SuggestionCard = memo(function SuggestionCard({
 
       {/* New option warning */}
       {suggestion.needsOptionCreation && (
-        <p className="text-[10px] text-yellow-500 mb-2">
-          Will create new option(s)
-        </p>
+        <p className="text-[10px] text-yellow-500 mb-2">Will create new option(s)</p>
       )}
 
       {/* Actions */}
@@ -218,7 +216,7 @@ function AIPropertyAssistComponent({
   nodeData,
   disabled = false,
   compact = false,
-  onOpen
+  onOpen,
 }: AIPropertyAssistProps): JSX.Element {
   // Refs
   const popoverRef = useRef<HTMLDivElement>(null)
@@ -239,8 +237,8 @@ function AIPropertyAssistComponent({
   const setNodeProperty = useWorkspaceStore((state) => state.setNodeProperty)
   const addPropertyOption = useWorkspaceStore((state) => state.addPropertyOption)
   const propertySchema = useWorkspaceStore((state) => state.propertySchema)
-  const nodes = useWorkspaceStore((state) => isOpen ? state.nodes : null)
-  const edges = useWorkspaceStore((state) => isOpen ? state.edges : null)
+  const nodes = useWorkspaceStore((state) => (isOpen ? state.nodes : null))
+  const edges = useWorkspaceStore((state) => (isOpen ? state.edges : null))
   const llmSettings = useWorkspaceStore((state) => state.llmSettings)
 
   // Get available properties for this node type
@@ -250,15 +248,22 @@ function AIPropertyAssistComponent({
 
   // Get quick actions (node-specific in compact mode, generic in full mode)
   const quickActions = useMemo(() => {
-    return compact
-      ? getQuickActionsForNode(nodeData.type)
-      : GENERIC_QUICK_ACTIONS
+    return compact ? getQuickActionsForNode(nodeData.type) : GENERIC_QUICK_ACTIONS
   }, [compact, nodeData.type])
 
   // Get connected nodes with full edge context and compute graph stats
   const { connectedNodes, graphStats } = useMemo(() => {
     // When popover is closed, nodes/edges are null — return empty defaults
-    if (!nodes || !edges) return { connectedNodes: [] as ConnectedNodeContext[], graphStats: { incomingCount: 0, outgoingCount: 0, highPriorityConnections: 0, sharedTags: [] } as GraphStats }
+    if (!nodes || !edges)
+      return {
+        connectedNodes: [] as ConnectedNodeContext[],
+        graphStats: {
+          incomingCount: 0,
+          outgoingCount: 0,
+          highPriorityConnections: 0,
+          sharedTags: [],
+        } as GraphStats,
+      }
 
     const connected: ConnectedNodeContext[] = []
     const tagCounts = new Map<string, number>()
@@ -266,12 +271,16 @@ function AIPropertyAssistComponent({
 
     // Filter edges for this node, excluding inactive edges
     const nodeEdges = edges.filter(
-      (e: Edge) => (e.source === nodeId || e.target === nodeId) && (e.data as EdgeData | undefined)?.active !== false
+      (e: Edge) =>
+        (e.source === nodeId || e.target === nodeId) &&
+        (e.data as EdgeData | undefined)?.active !== false,
     )
 
     // Sort by weight descending to prioritize important connections
-    const sortedEdges = [...nodeEdges].sort((a, b) =>
-      ((b.data as EdgeData | undefined)?.weight ?? 5) - ((a.data as EdgeData | undefined)?.weight ?? 5)
+    const sortedEdges = [...nodeEdges].sort(
+      (a, b) =>
+        ((b.data as EdgeData | undefined)?.weight ?? 5) -
+        ((a.data as EdgeData | undefined)?.weight ?? 5),
     )
 
     for (const edge of sortedEdges) {
@@ -305,16 +314,16 @@ function AIPropertyAssistComponent({
           properties: {
             tags: otherTags,
             priority: otherPriority,
-            status: otherStatus
+            status: otherStatus,
           },
           edgeLabel: edgeData?.label,
           edgeWeight: edgeData?.weight ?? 5,
           edgeDirection: isOutgoing ? 'outgoing' : 'incoming',
-          edgeActive: edgeData?.active !== false
+          edgeActive: edgeData?.active !== false,
         })
       }
 
-      if (connected.length >= 8) break  // Limit for prompt size
+      if (connected.length >= 8) break // Limit for prompt size
     }
 
     // Compute shared tags (appearing in 2+ connected nodes)
@@ -325,10 +334,10 @@ function AIPropertyAssistComponent({
 
     // Compute graph stats
     const stats: GraphStats = {
-      incomingCount: connected.filter(n => n.edgeDirection === 'incoming').length,
-      outgoingCount: connected.filter(n => n.edgeDirection === 'outgoing').length,
+      incomingCount: connected.filter((n) => n.edgeDirection === 'incoming').length,
+      outgoingCount: connected.filter((n) => n.edgeDirection === 'outgoing').length,
       highPriorityConnections: highPriorityCount,
-      sharedTags
+      sharedTags,
     }
 
     return { connectedNodes: connected, graphStats: stats }
@@ -414,7 +423,7 @@ function AIPropertyAssistComponent({
           availableProperties,
           connectedNodes,
           graphStats,
-          userPrompt
+          userPrompt,
         }
 
         // Check cache
@@ -433,7 +442,7 @@ function AIPropertyAssistComponent({
         const response = await window.api.llm.extract({
           systemPrompt,
           userPrompt: builtPrompt,
-          maxTokens: 1024
+          maxTokens: 1024,
         })
 
         // Check if aborted
@@ -450,7 +459,7 @@ function AIPropertyAssistComponent({
         const validated = validateAndFilterSuggestions(
           parsed.suggestions,
           propertySchema,
-          availableProperties
+          availableProperties,
         )
 
         // Attach current values for diff display
@@ -458,7 +467,8 @@ function AIPropertyAssistComponent({
           ...s,
           currentValue:
             s.currentValue ??
-            ((nodeData.properties as Record<string, unknown>)?.[s.propertyId] ?? undefined)
+            (nodeData.properties as Record<string, unknown>)?.[s.propertyId] ??
+            undefined,
         }))
 
         // Cache response
@@ -477,7 +487,7 @@ function AIPropertyAssistComponent({
         setIsLoading(false)
       }
     },
-    [prompt, nodeId, nodeData, availableProperties, connectedNodes, graphStats, propertySchema]
+    [prompt, nodeId, nodeData, availableProperties, connectedNodes, graphStats, propertySchema],
   )
 
   const handleAccept = useCallback(
@@ -493,9 +503,7 @@ function AIPropertyAssistComponent({
 
         // Handle option creation for select/multi-select
         if (suggestion.needsOptionCreation) {
-          const values = Array.isArray(suggestion.value)
-            ? suggestion.value
-            : [suggestion.value]
+          const values = Array.isArray(suggestion.value) ? suggestion.value : [suggestion.value]
           for (const val of values) {
             addPropertyOption(suggestion.propertyId, { label: String(val) })
           }
@@ -510,8 +518,8 @@ function AIPropertyAssistComponent({
           {
             propertyId: suggestion.propertyId,
             previousValue,
-            newValue: suggestion.value
-          }
+            newValue: suggestion.value,
+          },
         ])
 
         // Remove from suggestions
@@ -521,7 +529,7 @@ function AIPropertyAssistComponent({
         toast.success(`Set ${suggestion.propertyId}`)
       }, 200)
     },
-    [nodeId, nodeData, setNodeProperty, addPropertyOption]
+    [nodeId, nodeData, setNodeProperty, addPropertyOption],
   )
 
   const handleReject = useCallback((suggestion: PropertySuggestion) => {
@@ -547,7 +555,7 @@ function AIPropertyAssistComponent({
       setPrompt(actionPrompt)
       handleSubmit(actionPrompt)
     },
-    [handleSubmit]
+    [handleSubmit],
   )
 
   // Find property definition for a suggestion
@@ -555,7 +563,7 @@ function AIPropertyAssistComponent({
     (propertyId: string): PropertyDefinition | undefined => {
       return availableProperties.find((p) => p.id === propertyId)
     },
-    [availableProperties]
+    [availableProperties],
   )
 
   // Render
@@ -582,7 +590,9 @@ function AIPropertyAssistComponent({
         aria-expanded={isOpen}
         aria-haspopup="dialog"
       >
-        <Sparkles className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} ${isLoading ? 'animate-pulse' : ''}`} />
+        <Sparkles
+          className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} ${isLoading ? 'animate-pulse' : ''}`}
+        />
         {suggestions.length > 0 && !isOpen && (
           <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" />
         )}
@@ -618,10 +628,7 @@ function AIPropertyAssistComponent({
                   <RotateCcw className="w-3.5 h-3.5" />
                 </button>
               )}
-              <button
-                onClick={handleClose}
-                className="p-1 rounded gui-button transition-colors"
-              >
+              <button onClick={handleClose} className="p-1 rounded gui-button transition-colors">
                 <X className="w-4 h-4 gui-text-secondary" />
               </button>
             </div>

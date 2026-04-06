@@ -8,21 +8,21 @@
  * Shows progress indicator and cancel button.
  */
 
-import { memo } from 'react'
+import type { MutationOp, StreamingPhase } from '@shared/types'
 import {
+  CheckCircle,
+  Edit3,
+  Link,
+  Loader2,
+  Move,
+  Play,
   Plus,
   Trash2,
-  Edit3,
-  Move,
-  Link,
   Unlink,
-  Loader2,
   X,
-  CheckCircle,
   XCircle,
-  Play
 } from 'lucide-react'
-import type { MutationOp, StreamingPhase } from '@shared/types'
+import { memo } from 'react'
 import { useReducedMotion } from '../../../hooks/useReducedMotion'
 import LiveRegion from '../../a11y/LiveRegion'
 
@@ -42,7 +42,7 @@ const phaseMessages: Partial<Record<StreamingPhase, string>> = {
   parsing: 'Finalizing...',
   complete: 'Ready to apply!',
   cancelled: 'Cancelled',
-  error: 'An error occurred'
+  error: 'An error occurred',
 }
 
 function StreamingPreviewComponent({
@@ -50,7 +50,7 @@ function StreamingPreviewComponent({
   operations,
   onCancel,
   onApply,
-  error
+  error,
 }: StreamingPreviewProps): JSX.Element | null {
   const reducedMotion = useReducedMotion()
   const isActive = !['idle', 'complete', 'cancelled', 'error'].includes(phase)
@@ -104,7 +104,9 @@ function StreamingPreviewComponent({
   }
 
   return (
-    <div className={`streaming-preview ${isComplete ? 'complete' : ''} ${isError ? 'error' : ''} ${reducedMotion ? 'reduced-motion' : ''}`}>
+    <div
+      className={`streaming-preview ${isComplete ? 'complete' : ''} ${isError ? 'error' : ''} ${reducedMotion ? 'reduced-motion' : ''}`}
+    >
       {/* Screen reader announcement */}
       <LiveRegion message={announcementMessage} priority={isError ? 'assertive' : 'polite'} />
 
@@ -125,11 +127,7 @@ function StreamingPreviewComponent({
       </div>
 
       {/* Error message */}
-      {error && (
-        <div className="error-message">
-          {error}
-        </div>
-      )}
+      {error && <div className="error-message">{error}</div>}
 
       {/* Operations list */}
       {operations.length > 0 && (

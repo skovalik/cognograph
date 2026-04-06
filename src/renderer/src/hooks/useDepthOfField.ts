@@ -17,7 +17,7 @@
  */
 
 import { useMemo } from 'react'
-import { useContextVisualizationStore, DOF_DISCONNECTED } from '../stores/contextVisualizationStore'
+import { DOF_DISCONNECTED, useContextVisualizationStore } from '../stores/contextVisualizationStore'
 import type { ZoomLevel } from './useSemanticZoom'
 
 // --- Constants (exported for testing) -------------------------------------
@@ -28,15 +28,15 @@ export const ZOOM_LEVEL_ORDER: readonly ZoomLevel[] = [
   'close',
   'mid',
   'far',
-  'ultra-far'
+  'ultra-far',
 ] as const
 
 /** Maps ring number to the number of LOD levels to reduce */
 export const RING_LOD_REDUCTION: Record<number, number> = {
-  0: 0,  // focus node — no change
-  1: 1,  // 1-hop — one LOD level reduction
-  2: 2,  // 2-hop — two LOD level reductions
-  3: 4   // 3+ hops — force to ultra-far
+  0: 0, // focus node — no change
+  1: 1, // 1-hop — one LOD level reduction
+  2: 2, // 2-hop — two LOD level reductions
+  3: 4, // 3+ hops — force to ultra-far
 }
 
 /** LOD reduction for disconnected nodes */
@@ -47,7 +47,7 @@ export const RING_CSS_CLASS: Record<number, string> = {
   0: 'dof-ring-0',
   1: 'dof-ring-1',
   2: 'dof-ring-2',
-  3: 'dof-ring-3'
+  3: 'dof-ring-3',
 }
 
 export const DISCONNECTED_CSS_CLASS = 'dof-out-of-scope'
@@ -64,9 +64,10 @@ export const DISCONNECTED_CSS_CLASS = 'dof-out-of-scope'
  */
 export function computeEffectiveZoomLevel(currentLevel: ZoomLevel, ring: number): ZoomLevel {
   const currentIndex = ZOOM_LEVEL_ORDER.indexOf(currentLevel)
-  const reduction = ring === DOF_DISCONNECTED
-    ? DISCONNECTED_LOD_REDUCTION
-    : (RING_LOD_REDUCTION[ring] ?? DISCONNECTED_LOD_REDUCTION)
+  const reduction =
+    ring === DOF_DISCONNECTED
+      ? DISCONNECTED_LOD_REDUCTION
+      : (RING_LOD_REDUCTION[ring] ?? DISCONNECTED_LOD_REDUCTION)
 
   // Higher index = less detail. DoF can only increase index (reduce detail).
   const effectiveIndex = Math.min(currentIndex + reduction, ZOOM_LEVEL_ORDER.length - 1)
@@ -107,13 +108,13 @@ export function useDepthOfField(nodeId: string, currentZoomLevel: ZoomLevel): De
     if (!dofEnabled || !dofFocusNodeId) {
       return {
         dofClass: '',
-        effectiveZoomLevel: currentZoomLevel
+        effectiveZoomLevel: currentZoomLevel,
       }
     }
 
     return {
       dofClass: getDofCssClass(ring),
-      effectiveZoomLevel: computeEffectiveZoomLevel(currentZoomLevel, ring)
+      effectiveZoomLevel: computeEffectiveZoomLevel(currentZoomLevel, ring),
     }
   }, [dofEnabled, dofFocusNodeId, ring, currentZoomLevel])
 }

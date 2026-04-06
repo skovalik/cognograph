@@ -1,23 +1,36 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react'
-import {
-  Sparkles, ArrowUp, FileUp, X,
-  MessageSquare, FileText, CheckSquare, Folder, Code, Boxes, Zap, Workflow,
-  Slash, AtSign, TerminalSquare, MapPin
-} from 'lucide-react'
-import { sciFiToast } from './ui/SciFiToast'
-import { useIsMobile } from '../hooks/useIsMobile'
 import { getFlag } from '@shared/featureFlags'
+import type { NodeData } from '@shared/types'
+import {
+  ArrowUp,
+  AtSign,
+  Boxes,
+  CheckSquare,
+  Code,
+  FileText,
+  FileUp,
+  Folder,
+  MapPin,
+  MessageSquare,
+  Slash,
+  Sparkles,
+  TerminalSquare,
+  Workflow,
+  X,
+  Zap,
+} from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { CommandRegistryItem } from '../hooks/useCommandRegistry'
+import { CATEGORY_LABELS, useCommandRegistry } from '../hooks/useCommandRegistry'
+import { useIsMobile } from '../hooks/useIsMobile'
+import { executeCommand } from '../services/WorkspaceCommandService'
+import { useConnectorStore } from '../stores/connectorStore'
 import { useUIStore } from '../stores/uiStore'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import { useConnectorStore } from '../stores/connectorStore'
-import { executeCommand } from '../services/WorkspaceCommandService'
 import { SuggestedPrompts } from './SuggestedPrompts'
-import { useCommandRegistry, CATEGORY_LABELS } from '../hooks/useCommandRegistry'
-import type { CommandRegistryItem } from '../hooks/useCommandRegistry'
-import type { NodeData } from '@shared/types'
+import { sciFiToast } from './ui/SciFiToast'
 import '../styles/bottom-command-bar.css'
 
 // ── Prefix mode detection ──
@@ -52,7 +65,10 @@ const NODE_ICONS: Record<string, typeof FileText> = {
 
 // ── Prefix mode labels & icons ──
 
-const PREFIX_CONFIG: Record<Exclude<PrefixMode, 'none'>, { label: string; icon: typeof Slash; color: string }> = {
+const PREFIX_CONFIG: Record<
+  Exclude<PrefixMode, 'none'>,
+  { label: string; icon: typeof Slash; color: string }
+> = {
   slash: { label: 'Commands', icon: Slash, color: 'var(--accent-glow)' },
   mention: { label: 'Go to node', icon: AtSign, color: '#60a5fa' },
   terminal: { label: 'Terminal', icon: TerminalSquare, color: '#a78bfa' },
@@ -68,8 +84,10 @@ function isInputFocused(): boolean {
 }
 
 function isModalOpen(): boolean {
-  return document.querySelector('[role="dialog"]') !== null ||
-         document.querySelector('[data-radix-popper-content-wrapper]') !== null
+  return (
+    document.querySelector('[role="dialog"]') !== null ||
+    document.querySelector('[data-radix-popper-content-wrapper]') !== null
+  )
 }
 
 // ── Completion item type ──
@@ -89,13 +107,13 @@ interface CompletionItem {
 function BottomCommandBarComponent(): JSX.Element | null {
   // ALL hooks MUST be called before any conditional return (React rules of hooks)
   const isMobile = useIsMobile()
-  const commandLog = useWorkspaceStore(s => s.commandLog)
-  const selectedNodeIds = useWorkspaceStore(s => s.selectedNodeIds)
-  const nodes = useWorkspaceStore(s => s.nodes)
-  const defaultLLMId = useConnectorStore(s => s.defaultLLMId)
-  const connectors = useConnectorStore(s => s.connectors)
-  const defaultConnector = connectors.find(c => c.id === defaultLLMId) ?? null
-  const artboardNodeId = useUIStore(s => s.artboardNodeId)
+  const commandLog = useWorkspaceStore((s) => s.commandLog)
+  const selectedNodeIds = useWorkspaceStore((s) => s.selectedNodeIds)
+  const nodes = useWorkspaceStore((s) => s.nodes)
+  const defaultLLMId = useConnectorStore((s) => s.defaultLLMId)
+  const connectors = useConnectorStore((s) => s.connectors)
+  const defaultConnector = connectors.find((c) => c.id === defaultLLMId) ?? null
+  const artboardNodeId = useUIStore((s) => s.artboardNodeId)
 
   const [input, setInput] = useState('')
   const [isExecuting, setIsExecuting] = useState(false)
@@ -124,7 +142,7 @@ function BottomCommandBarComponent(): JSX.Element | null {
     if (prefixMode !== 'slash') return []
     const q = prefixQuery.toLowerCase()
     return commands
-      .filter(cmd => {
+      .filter((cmd) => {
         if (cmd.disabled) return false
         if (!q) return true // empty query = show all
         return (
@@ -134,7 +152,7 @@ function BottomCommandBarComponent(): JSX.Element | null {
         )
       })
       .slice(0, 12)
-      .map(cmd => ({
+      .map((cmd) => ({
         id: cmd.id,
         label: cmd.alias ? `/${cmd.alias}` : cmd.label,
         description: cmd.description,
@@ -151,7 +169,7 @@ function BottomCommandBarComponent(): JSX.Element | null {
     const q = prefixQuery.toLowerCase()
 
     return nodes
-      .filter(node => {
+      .filter((node) => {
         const data = node.data as NodeData
         if (data.isArchived) return false
         const title = (data.title || data.label || '').toLowerCase()
@@ -160,7 +178,7 @@ function BottomCommandBarComponent(): JSX.Element | null {
         return title.includes(q) || type.includes(q)
       })
       .slice(0, 12)
-      .map(node => {
+      .map((node) => {
         const data = node.data as NodeData
         const title = data.title || data.label || `Untitled ${data.type}`
         const Icon = NODE_ICONS[data.type] || MapPin
@@ -185,10 +203,14 @@ function BottomCommandBarComponent(): JSX.Element | null {
   // ── Active completions based on mode ──
   const completions: CompletionItem[] = useMemo(() => {
     switch (prefixMode) {
-      case 'slash': return slashCompletions
-      case 'mention': return mentionCompletions
-      case 'terminal': return [] // no completions for terminal mode
-      default: return []
+      case 'slash':
+        return slashCompletions
+      case 'mention':
+        return mentionCompletions
+      case 'terminal':
+        return [] // no completions for terminal mode
+      default:
+        return []
     }
   }, [prefixMode, slashCompletions, mentionCompletions])
 
@@ -268,27 +290,31 @@ function BottomCommandBarComponent(): JSX.Element | null {
   }, [])
 
   // ── Terminal dispatch ──
-  const dispatchToTerminal = useCallback((cmd: string) => {
-    // Find the active terminal node — prefer the artboard node, else first conversation node
-    const terminalNodeId = artboardNodeId
-      ?? nodes.find(n => (n.data as NodeData).type === 'conversation')?.id
-      ?? null
+  const dispatchToTerminal = useCallback(
+    (cmd: string) => {
+      // Find the active terminal node — prefer the artboard node, else first conversation node
+      const terminalNodeId =
+        artboardNodeId ??
+        nodes.find((n) => (n.data as NodeData).type === 'conversation')?.id ??
+        null
 
-    if (!terminalNodeId) {
-      sciFiToast('No active terminal found', 'error', 2000)
-      return
-    }
+      if (!terminalNodeId) {
+        sciFiToast('No active terminal found', 'error', 2000)
+        return
+      }
 
-    if ((window as any).__ELECTRON__ && (window as any).api?.terminal?.write) {
-      // Send command + newline to the PTY
-      ;(window as any).api.terminal.write(terminalNodeId, cmd + '\n').catch(() => {
-        sciFiToast('Failed to send command to terminal', 'error', 2000)
-      })
-      sciFiToast(`Sent to terminal: ${cmd}`, 'info', 1500)
-    } else {
-      sciFiToast('Terminal requires the desktop app', 'info', 2000)
-    }
-  }, [artboardNodeId, nodes])
+      if ((window as any).__ELECTRON__ && (window as any).api?.terminal?.write) {
+        // Send command + newline to the PTY
+        ;(window as any).api.terminal.write(terminalNodeId, cmd + '\n').catch(() => {
+          sciFiToast('Failed to send command to terminal', 'error', 2000)
+        })
+        sciFiToast(`Sent to terminal: ${cmd}`, 'info', 1500)
+      } else {
+        sciFiToast('Terminal requires the desktop app', 'info', 2000)
+      }
+    },
+    [artboardNodeId, nodes],
+  )
 
   // ── Submit ──
   const handleSubmit = useCallback(async () => {
@@ -343,7 +369,9 @@ function BottomCommandBarComponent(): JSX.Element | null {
           if (textResult.success && textResult.data) {
             fileContext = { filename: attachedFile.filename, content: textResult.data }
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
       setAttachedFile(null)
     }
@@ -359,171 +387,74 @@ function BottomCommandBarComponent(): JSX.Element | null {
     } finally {
       setIsExecuting(false)
     }
-  }, [input, isExecuting, attachedFile, prefixMode, prefixQuery, completions, selectedCompletionIndex, dispatchToTerminal])
+  }, [
+    input,
+    isExecuting,
+    attachedFile,
+    prefixMode,
+    prefixQuery,
+    completions,
+    selectedCompletionIndex,
+    dispatchToTerminal,
+  ])
 
   // ── Input key handler ──
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    // Arrow navigation for completion list
-    if (completions.length > 0 && prefixMode !== 'none') {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        setSelectedCompletionIndex(i => Math.min(i + 1, completions.length - 1))
-        return
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        setSelectedCompletionIndex(i => Math.max(i - 1, 0))
-        return
-      }
-      if (e.key === 'Tab') {
-        e.preventDefault()
-        // Tab-complete the selected item label into the input
-        const selected = completions[selectedCompletionIndex]
-        if (selected && prefixMode === 'slash') {
-          // Extract the alias from the label (e.g. "/note" -> "note")
-          const alias = selected.label.startsWith('/') ? selected.label : `/${selected.label}`
-          setInput(alias)
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      // Arrow navigation for completion list
+      if (completions.length > 0 && prefixMode !== 'none') {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          setSelectedCompletionIndex((i) => Math.min(i + 1, completions.length - 1))
+          return
         }
-        return
+        if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          setSelectedCompletionIndex((i) => Math.max(i - 1, 0))
+          return
+        }
+        if (e.key === 'Tab') {
+          e.preventDefault()
+          // Tab-complete the selected item label into the input
+          const selected = completions[selectedCompletionIndex]
+          if (selected && prefixMode === 'slash') {
+            // Extract the alias from the label (e.g. "/note" -> "note")
+            const alias = selected.label.startsWith('/') ? selected.label : `/${selected.label}`
+            setInput(alias)
+          }
+          return
+        }
       }
-    }
 
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSubmit()
-    }
-  }, [handleSubmit, completions, selectedCompletionIndex, prefixMode])
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        handleSubmit()
+      }
+    },
+    [handleSubmit, completions, selectedCompletionIndex, prefixMode],
+  )
 
   // Early return AFTER all hooks — mobile gets FAB + bottom sheet when flag enabled
   if (isMobile && !getFlag('MOBILE_RESPONSIVE')) return null
 
   if (isMobile && getFlag('MOBILE_RESPONSIVE')) {
-    return (
-      <>
-        {!sheetOpen && (
-          <button
-            className="mobile-command-fab touch-target"
-            onClick={() => setSheetOpen(true)}
-            aria-label="Open command input"
-          >
-            <Sparkles size={24} />
-          </button>
-        )}
-        {sheetOpen && (
-          <>
-            <div
-              className="mobile-drawer-backdrop"
-              onClick={() => setSheetOpen(false)}
-            />
-            <div className="mobile-command-sheet glass-soft">
-              <div className="mobile-command-sheet__handle" />
-              <div className="bottom-command-bar__input-row">
-                <Sparkles className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent-glow)' }} />
-                <textarea
-                  ref={inputRef}
-                  className="bottom-command-bar__input"
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  onInput={(e) => {
-                    const target = e.target as HTMLTextAreaElement
-                    target.style.height = 'auto'
-                    const maxH = Math.floor(window.innerHeight * 0.4)
-                    target.style.height = `${Math.min(target.scrollHeight, maxH)}px`
-                  }}
-                  placeholder={
-                    prefixMode === 'slash' ? 'Search commands...'
-                    : prefixMode === 'mention' ? 'Search nodes...'
-                    : prefixMode === 'terminal' ? 'Type command for terminal...'
-                    : 'Type a command...'
-                  }
-                  rows={1}
-                  aria-label="Workspace command"
-                  autoFocus
-                />
-                <button
-                  className="bottom-command-bar__send touch-target"
-                  onClick={() => { handleSubmit(); setSheetOpen(false) }}
-                  disabled={!input.trim() || isExecuting}
-                >
-                  <ArrowUp className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Completions inside sheet */}
-              {completions.length > 0 && prefixMode !== 'none' && (
-                <div className="bottom-command-bar__completions" style={{ maxHeight: '40vh' }}>
-                  {completions.map((item, i) => {
-                    const Icon = item.icon
-                    return (
-                      <button
-                        key={item.id}
-                        className={`bottom-command-bar__completion-item ${i === selectedCompletionIndex ? 'is-selected' : ''} ${item.disabled ? 'is-disabled' : ''}`}
-                        onClick={() => {
-                          if (!item.disabled) {
-                            item.action()
-                            setInput('')
-                            setSheetOpen(false)
-                          }
-                        }}
-                        onMouseEnter={() => setSelectedCompletionIndex(i)}
-                      >
-                        <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                        <span className="bottom-command-bar__completion-label">{item.label}</span>
-                        {item.description && (
-                          <span className="bottom-command-bar__completion-desc">{item.description}</span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-
-              {/* Prefix shortcuts row */}
-              <div className="bottom-command-bar__toolbar-row">
-                <button
-                  className={`bottom-command-bar__toolbar-btn ${prefixMode === 'slash' ? 'is-active' : ''}`}
-                  title="Slash commands"
-                  onClick={() => { setInput('/'); inputRef.current?.focus() }}
-                >
-                  <Slash className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  className={`bottom-command-bar__toolbar-btn ${prefixMode === 'mention' ? 'is-active' : ''}`}
-                  title="Go to node"
-                  onClick={() => { setInput('@'); inputRef.current?.focus() }}
-                >
-                  <AtSign className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  className={`bottom-command-bar__toolbar-btn ${prefixMode === 'terminal' ? 'is-active' : ''}`}
-                  title="Terminal command"
-                  onClick={() => { setInput('!'); inputRef.current?.focus() }}
-                >
-                  <TerminalSquare className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-      </>
-    )
+    return null // FAB removed — chat input handled by Toolbar
   }
 
   // ── Context subject: selected node pill ──
-  const contextNode = selectedNodeIds.length === 1
-    ? nodes.find(n => n.id === selectedNodeIds[0])
-    : null
+  const contextNode =
+    selectedNodeIds.length === 1 ? nodes.find((n) => n.id === selectedNodeIds[0]) : null
   const contextTitle = contextNode ? (contextNode.data as any).title || 'Untitled' : null
   const contextType = contextNode?.data.type || null
   const ContextIcon = contextType ? NODE_ICONS[contextType] || FileText : null
 
   // Context indicator for toolbar
-  const contextText = selectedNodeIds.length > 1
-    ? `${selectedNodeIds.length} nodes selected`
-    : selectedNodeIds.length === 1
-      ? '1 node selected'
-      : 'canvas scope'
+  const contextText =
+    selectedNodeIds.length > 1
+      ? `${selectedNodeIds.length} nodes selected`
+      : selectedNodeIds.length === 1
+        ? '1 node selected'
+        : 'canvas scope'
 
   // Suppress unused variable warning — commandLog is read to satisfy hook rules
   void commandLog
@@ -535,7 +466,12 @@ function BottomCommandBarComponent(): JSX.Element | null {
     <div className="bottom-command-bar">
       {/* Suggested prompts — hidden when typing or executing */}
       {!input && !isExecuting && (
-        <SuggestedPrompts onSelect={(text) => { setInput(text); inputRef.current?.focus() }} />
+        <SuggestedPrompts
+          onSelect={(text) => {
+            setInput(text)
+            inputRef.current?.focus()
+          }}
+        />
       )}
 
       {/* ═══ COMPLETION POPOVER ═══ */}
@@ -586,7 +522,10 @@ function BottomCommandBarComponent(): JSX.Element | null {
         <div className="bottom-command-bar__input-row">
           {/* Mode indicator — shows prefix icon when in a mode */}
           {activePrefixConfig ? (
-            <div className="bottom-command-bar__mode-badge" style={{ color: activePrefixConfig.color }}>
+            <div
+              className="bottom-command-bar__mode-badge"
+              style={{ color: activePrefixConfig.color }}
+            >
               <activePrefixConfig.icon className="w-4 h-4 flex-shrink-0" />
             </div>
           ) : (
@@ -627,7 +566,7 @@ function BottomCommandBarComponent(): JSX.Element | null {
             ref={inputRef}
             className="bottom-command-bar__input"
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             onInput={(e) => {
               const target = e.target as HTMLTextAreaElement
@@ -636,15 +575,22 @@ function BottomCommandBarComponent(): JSX.Element | null {
               target.style.height = `${Math.min(target.scrollHeight, maxH)}px`
             }}
             placeholder={
-              prefixMode === 'slash' ? 'Search commands...'
-              : prefixMode === 'mention' ? 'Search nodes...'
-              : prefixMode === 'terminal' ? 'Type command for terminal...'
-              : 'Type a command...  (/ to focus)'
+              prefixMode === 'slash'
+                ? 'Search commands...'
+                : prefixMode === 'mention'
+                  ? 'Search nodes...'
+                  : prefixMode === 'terminal'
+                    ? 'Type command for terminal...'
+                    : 'Type a command...  (/ to focus)'
             }
             rows={1}
             aria-label="Workspace command"
           />
-          <button className="bottom-command-bar__send" onClick={handleSubmit} disabled={!input.trim() || isExecuting}>
+          <button
+            className="bottom-command-bar__send"
+            onClick={handleSubmit}
+            disabled={!input.trim() || isExecuting}
+          >
             <ArrowUp className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -652,7 +598,11 @@ function BottomCommandBarComponent(): JSX.Element | null {
         {/* Toolbar — inside the bar, below input */}
         <div className="bottom-command-bar__toolbar-row">
           {(window as any).__ELECTRON__ && (
-            <button className="bottom-command-bar__toolbar-btn" title="Attach file" onClick={handleAttachFile}>
+            <button
+              className="bottom-command-bar__toolbar-btn"
+              title="Attach file"
+              onClick={handleAttachFile}
+            >
               <FileUp className="w-3.5 h-3.5" />
             </button>
           )}
@@ -661,21 +611,30 @@ function BottomCommandBarComponent(): JSX.Element | null {
           <button
             className={`bottom-command-bar__toolbar-btn ${prefixMode === 'slash' ? 'is-active' : ''}`}
             title="Slash commands"
-            onClick={() => { setInput('/'); inputRef.current?.focus() }}
+            onClick={() => {
+              setInput('/')
+              inputRef.current?.focus()
+            }}
           >
             <Slash className="w-3.5 h-3.5" />
           </button>
           <button
             className={`bottom-command-bar__toolbar-btn ${prefixMode === 'mention' ? 'is-active' : ''}`}
             title="Go to node"
-            onClick={() => { setInput('@'); inputRef.current?.focus() }}
+            onClick={() => {
+              setInput('@')
+              inputRef.current?.focus()
+            }}
           >
             <AtSign className="w-3.5 h-3.5" />
           </button>
           <button
             className={`bottom-command-bar__toolbar-btn ${prefixMode === 'terminal' ? 'is-active' : ''}`}
             title="Terminal command"
-            onClick={() => { setInput('!'); inputRef.current?.focus() }}
+            onClick={() => {
+              setInput('!')
+              inputRef.current?.focus()
+            }}
           >
             <TerminalSquare className="w-3.5 h-3.5" />
           </button>
@@ -691,11 +650,14 @@ function BottomCommandBarComponent(): JSX.Element | null {
             </button>
             {modelDropdownOpen && connectors.length > 0 && (
               <div className="bottom-command-bar__model-dropdown glass-soft">
-                {connectors.map(c => (
+                {connectors.map((c) => (
                   <button
                     key={c.id}
                     className={`bottom-command-bar__model-option ${c.id === defaultLLMId ? 'bottom-command-bar__model-option--active' : ''}`}
-                    onClick={() => { useConnectorStore.getState().setDefaultLLM(c.id); setModelDropdownOpen(false) }}
+                    onClick={() => {
+                      useConnectorStore.getState().setDefaultLLM(c.id)
+                      setModelDropdownOpen(false)
+                    }}
                   >
                     {c.model}
                   </button>
@@ -704,9 +666,7 @@ function BottomCommandBarComponent(): JSX.Element | null {
             )}
           </div>
           <span className="bottom-command-bar__context">
-            {activePrefixConfig
-              ? activePrefixConfig.label
-              : contextText}
+            {activePrefixConfig ? activePrefixConfig.label : contextText}
           </span>
         </div>
       </div>

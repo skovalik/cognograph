@@ -117,12 +117,7 @@ export type ProposedChangeType =
   | 'create-edge'
   | 'delete-edge'
 
-export type ProposalStatus =
-  | 'pending'
-  | 'approved'
-  | 'rejected'
-  | 'applied'
-  | 'expired'
+export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'applied' | 'expired'
 
 export interface ProposedChange {
   id: string
@@ -218,12 +213,7 @@ export type InsightType =
 
 export type InsightPriority = 'low' | 'medium' | 'high'
 
-export type InsightStatus =
-  | 'new'
-  | 'viewed'
-  | 'applied'
-  | 'dismissed'
-  | 'expired'
+export type InsightStatus = 'new' | 'viewed' | 'applied' | 'dismissed' | 'expired'
 
 export interface GraphInsight {
   id: string

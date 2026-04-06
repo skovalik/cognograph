@@ -10,16 +10,21 @@
  * Created as part of Batch 0B: Split workspaceStore
  */
 
-import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
-import { subscribeWithSelector } from 'zustand/middleware'
 import type {
-  HistoryAction,
-  PropertySchema,
   ContextSettings,
-  PendingExtraction
+  HistoryAction,
+  PendingExtraction,
+  PropertySchema,
 } from '@shared/types'
-import type { FeaturesState, TrashedItem, ExtractionDragState, LastAcceptedExtraction } from './types'
+import { create } from 'zustand'
+import { subscribeWithSelector } from 'zustand/middleware'
+import { immer } from 'zustand/middleware/immer'
+import type {
+  ExtractionDragState,
+  FeaturesState,
+  LastAcceptedExtraction,
+  TrashedItem,
+} from './types'
 
 // =============================================================================
 // Action Types
@@ -84,7 +89,7 @@ const initialFeaturesState: FeaturesState = {
   contextSettings: {
     defaultContextDepth: 2,
     maxTokens: 50000,
-    defaultEdgeWeight: 5
+    defaultEdgeWeight: 5,
   },
 
   // History
@@ -111,7 +116,7 @@ const initialFeaturesState: FeaturesState = {
   saveStatus: 'saved',
 
   // Trash
-  trash: []
+  trash: [],
 }
 
 // =============================================================================
@@ -320,9 +325,9 @@ export const useFeaturesStore = create<FeaturesStore>()(
 
       getTrashItem: (nodeId) => {
         return get().trash.find((t) => t.node.id === nodeId) ?? null
-      }
-    }))
-  )
+      },
+    })),
+  ),
 )
 
 // =============================================================================
@@ -361,7 +366,7 @@ export const selectHistoryState = (state: FeaturesStore) => ({
   canUndo: state.historyIndex >= 0,
   canRedo: state.historyIndex < state.history.length - 1,
   historyLength: state.history.length,
-  historyIndex: state.historyIndex
+  historyIndex: state.historyIndex,
 })
 
 /**

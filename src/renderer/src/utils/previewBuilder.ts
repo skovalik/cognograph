@@ -8,17 +8,17 @@
  * Used to show ghost nodes, deletion overlays, and movement paths.
  */
 
-import type { Node, Edge } from '@xyflow/react'
 import type {
+  DeletionOverlayPreview,
+  EdgeData,
+  EdgePreview,
+  GhostNodePreview,
+  MovementPathPreview,
   MutationPlan,
   MutationPreviewState,
-  GhostNodePreview,
-  DeletionOverlayPreview,
-  MovementPathPreview,
-  EdgePreview,
   NodeData,
-  EdgeData
 } from '@shared/types'
+import type { Edge, Node } from '@xyflow/react'
 import { dryRunMutationPlan } from './mutationExecutor'
 import { DEFAULT_NODE_DIMENSIONS } from './positionResolver'
 
@@ -35,7 +35,7 @@ export function buildPreviewState(
   nodes: Node<NodeData>[],
   edges: Edge<EdgeData>[],
   selectedNodeIds: string[],
-  viewport: { x: number; y: number; zoom: number }
+  viewport: { x: number; y: number; zoom: number },
 ): MutationPreviewState {
   // Run dry execution to get resolved positions
   const { resolvedPositions, tempIdToType: _tempIdToType } = dryRunMutationPlan(
@@ -43,7 +43,7 @@ export function buildPreviewState(
     nodes,
     edges,
     selectedNodeIds,
-    viewport
+    viewport,
   )
 
   const ghostNodes: GhostNodePreview[] = []
@@ -103,7 +103,7 @@ export function buildPreviewState(
             type: op.type,
             position: resolvedPos,
             dimensions,
-            data: op.data
+            data: op.data,
           })
         }
         break
@@ -119,7 +119,7 @@ export function buildPreviewState(
           reason: op.reason,
           nodeTitle,
           preservedIn,
-          preservedData: node ? node.data : undefined
+          preservedData: node ? node.data : undefined,
         })
         break
       }
@@ -127,7 +127,7 @@ export function buildPreviewState(
       case 'update-node': {
         nodeUpdates.push({
           nodeId: op.nodeId,
-          changes: op.data
+          changes: op.data,
         })
         break
       }
@@ -142,7 +142,7 @@ export function buildPreviewState(
             nodeId: op.nodeId,
             from: { x: node.position.x, y: node.position.y },
             to: resolvedPos,
-            nodeTitle
+            nodeTitle,
           })
         }
         break
@@ -154,7 +154,7 @@ export function buildPreviewState(
           source: op.source,
           target: op.target,
           data: op.data,
-          isNew: true
+          isNew: true,
         })
         break
       }
@@ -167,7 +167,7 @@ export function buildPreviewState(
             target: edge.target,
             data: edge.data,
             isNew: false,
-            isDeleted: true
+            isDeleted: true,
           })
         }
         break
@@ -181,7 +181,7 @@ export function buildPreviewState(
     deletionOverlays,
     movementPaths,
     edgePreviews,
-    nodeUpdates
+    nodeUpdates,
   }
 }
 
@@ -217,7 +217,8 @@ export function getPreviewSummary(preview: MutationPreviewState): PreviewSummary
     nodesMoved,
     edgesCreated,
     edgesDeleted,
-    totalChanges: nodesCreated + nodesDeleted + nodesUpdated + nodesMoved + edgesCreated + edgesDeleted
+    totalChanges:
+      nodesCreated + nodesDeleted + nodesUpdated + nodesMoved + edgesCreated + edgesDeleted,
   }
 }
 
@@ -269,7 +270,7 @@ export interface PreviewValidation {
 export function validatePreview(
   preview: MutationPreviewState,
   nodes: Node<NodeData>[],
-  edges: Edge<EdgeData>[]
+  edges: Edge<EdgeData>[],
 ): PreviewValidation {
   const warnings: string[] = []
   const errors: string[] = []
@@ -282,7 +283,7 @@ export function validatePreview(
       const sourceNodes = nodes.filter((n) => sourceNodeIds.includes(n.id))
       const titles = sourceNodes.map((n) => getNodeTitle(n.data)).join(', ')
       warnings.push(
-        `Deleting "${getNodeTitle(nodes.find((n) => n.id === deletion.nodeId)?.data)}" will break connections from: ${titles}`
+        `Deleting "${getNodeTitle(nodes.find((n) => n.id === deletion.nodeId)?.data)}" will break connections from: ${titles}`,
       )
     }
   }
@@ -313,7 +314,7 @@ export function validatePreview(
   return {
     isValid: errors.length === 0,
     warnings,
-    errors
+    errors,
   }
 }
 

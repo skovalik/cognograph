@@ -12,12 +12,12 @@ export type ExecutionStatus = 'active' | 'queued' | 'complete' | 'error'
 
 export interface NodeExecutionState {
   status: ExecutionStatus
-  orchestratorId: string  // which orchestrator is running this
-  stepIndex?: number      // position in pipeline
-  message?: string        // optional status message
-  startedAt?: number      // timestamp
-  completedAt?: number    // timestamp
-  error?: string          // error message if status === 'error'
+  orchestratorId: string // which orchestrator is running this
+  stepIndex?: number // position in pipeline
+  message?: string // optional status message
+  startedAt?: number // timestamp
+  completedAt?: number // timestamp
+  error?: string // error message if status === 'error'
 }
 
 interface ExecutionStatusStore {

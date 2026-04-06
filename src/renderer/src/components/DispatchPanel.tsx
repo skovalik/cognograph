@@ -11,27 +11,27 @@
  * @module DispatchPanel
  */
 
-import { memo, useState, useCallback, useMemo } from 'react'
+import type { CCDispatchMessage, CCDispatchPriority, CCDispatchType } from '@shared/bridge-types'
 import {
-  Send,
-  Clock,
   CheckCircle2,
-  XCircle,
-  Loader2,
-  Trash2,
-  Plus,
   ChevronDown,
   ChevronUp,
-  Zap,
+  Clock,
+  Loader2,
+  Plus,
+  Send,
   Server,
+  Trash2,
+  XCircle,
+  Zap,
 } from 'lucide-react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import {
-  useCCBridgeStore,
   selectCCBridgeDispatches,
   selectCCBridgeDispatchServerPort,
+  useCCBridgeStore,
 } from '../stores/ccBridgeStore'
-import type { CCDispatchMessage, CCDispatchPriority, CCDispatchType } from '@shared/bridge-types'
 
 // -----------------------------------------------------------------------------
 // Props
@@ -59,12 +59,11 @@ const DispatchItem = memo(function DispatchItem({
   const statusIcon = getStatusIcon(dispatch.status)
   const statusColor = getStatusColor(dispatch.status)
   const timeStr = formatTime(dispatch.createdAt)
-  const updatedStr = dispatch.updatedAt !== dispatch.createdAt ? formatTime(dispatch.updatedAt) : null
+  const updatedStr =
+    dispatch.updatedAt !== dispatch.createdAt ? formatTime(dispatch.updatedAt) : null
 
   return (
-    <div
-      className="px-3 py-2 text-xs border-b border-[var(--border-subtle)] hover:bg-[var(--surface-panel-secondary)] transition-colors"
-    >
+    <div className="px-3 py-2 text-xs border-b border-[var(--border-subtle)] hover:bg-[var(--surface-panel-secondary)] transition-colors">
       <div className="flex items-center gap-2">
         <span className={statusColor}>{statusIcon}</span>
         <span className="flex-1 truncate font-medium gui-text" title={dispatch.content}>
@@ -75,11 +74,7 @@ const DispatchItem = memo(function DispatchItem({
           onClick={() => setExpanded(!expanded)}
           className="p-0.5 rounded hover:bg-[var(--surface-hover)] gui-text-muted"
         >
-          {expanded ? (
-            <ChevronUp className="w-3 h-3" />
-          ) : (
-            <ChevronDown className="w-3 h-3" />
-          )}
+          {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
         </button>
       </div>
 
@@ -106,8 +101,7 @@ const DispatchItem = memo(function DispatchItem({
           </div>
           {dispatch.filePaths && dispatch.filePaths.length > 0 && (
             <div className="text-[10px] gui-text-muted">
-              <span className="font-medium">Files:</span>{' '}
-              {dispatch.filePaths.join(', ')}
+              <span className="font-medium">Files:</span> {dispatch.filePaths.join(', ')}
             </div>
           )}
           {dispatch.completionMessage && (
@@ -115,11 +109,7 @@ const DispatchItem = memo(function DispatchItem({
               <span className="font-medium">Result:</span> {dispatch.completionMessage}
             </div>
           )}
-          {updatedStr && (
-            <div className="text-[10px] gui-text-muted">
-              Updated: {updatedStr}
-            </div>
-          )}
+          {updatedStr && <div className="text-[10px] gui-text-muted">Updated: {updatedStr}</div>}
         </div>
       )}
     </div>
@@ -155,7 +145,7 @@ const ComposeForm = memo(function ComposeForm({ onSubmit }: ComposeFormProps): J
         handleSubmit()
       }
     },
-    [handleSubmit]
+    [handleSubmit],
   )
 
   if (!isOpen) {
@@ -218,9 +208,7 @@ const ComposeForm = memo(function ComposeForm({ onSubmit }: ComposeFormProps): J
           Send
         </button>
       </div>
-      <div className="text-[10px] gui-text-muted">
-        Ctrl+Enter to send
-      </div>
+      <div className="text-[10px] gui-text-muted">Ctrl+Enter to send</div>
     </div>
   )
 })
@@ -241,11 +229,11 @@ function DispatchPanelComponent({ sidebarWidth = 260 }: DispatchPanelProps): JSX
 
   const pendingCount = useMemo(
     () => dispatches.filter((d) => d.status === 'pending').length,
-    [dispatches]
+    [dispatches],
   )
   const activeCount = useMemo(
     () => dispatches.filter((d) => d.status === 'acknowledged').length,
-    [dispatches]
+    [dispatches],
   )
 
   const handleCompose = useCallback(
@@ -273,7 +261,7 @@ function DispatchPanelComponent({ sidebarWidth = 260 }: DispatchPanelProps): JSX
         console.error('[DispatchPanel] Queue error:', err)
       }
     },
-    [addDispatch]
+    [addDispatch],
   )
 
   const handleCancel = useCallback(
@@ -291,12 +279,12 @@ function DispatchPanelComponent({ sidebarWidth = 260 }: DispatchPanelProps): JSX
         console.error('[DispatchPanel] Cancel error:', err)
       }
     },
-    [removeDispatch]
+    [removeDispatch],
   )
 
   const handleClearCompleted = useCallback(() => {
     const completed = dispatches.filter(
-      (d) => d.status === 'completed' || d.status === 'failed' || d.status === 'timeout'
+      (d) => d.status === 'completed' || d.status === 'failed' || d.status === 'timeout',
     )
     for (const d of completed) {
       removeDispatch(d.id)
@@ -339,12 +327,12 @@ function DispatchPanelComponent({ sidebarWidth = 260 }: DispatchPanelProps): JSX
       timeout: 4,
     }
     return [...dispatches].sort(
-      (a, b) => (statusOrder[a.status] ?? 5) - (statusOrder[b.status] ?? 5)
+      (a, b) => (statusOrder[a.status] ?? 5) - (statusOrder[b.status] ?? 5),
     )
   }, [dispatches])
 
   const hasCompleted = dispatches.some(
-    (d) => d.status === 'completed' || d.status === 'failed' || d.status === 'timeout'
+    (d) => d.status === 'completed' || d.status === 'failed' || d.status === 'timeout',
   )
 
   return (
@@ -366,9 +354,7 @@ function DispatchPanelComponent({ sidebarWidth = 260 }: DispatchPanelProps): JSX
             <button
               onClick={serverPort ? handleStopServer : handleStartServer}
               className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] ${
-                serverPort
-                  ? 'text-green-400 hover:text-red-400'
-                  : 'gui-text-muted hover:gui-text'
+                serverPort ? 'text-green-400 hover:text-red-400' : 'gui-text-muted hover:gui-text'
               } hover:bg-[var(--surface-hover)]`}
               title={
                 serverPort

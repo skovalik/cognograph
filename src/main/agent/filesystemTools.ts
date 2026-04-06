@@ -20,18 +20,18 @@
  * - allowedCommands whitelist validates the binary name
  */
 
+import { execFile } from 'child_process' // execFile is the SAFE variant — no shell injection
+import { app, ipcMain } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
-import { execFile } from 'child_process' // execFile is the SAFE variant — no shell injection
-import { ipcMain, app } from 'electron'
 import { join } from 'path'
 import {
-  FsReadFileSchema,
-  FsWriteFileSchema,
   FsEditFileSchema,
   FsExecuteCommandSchema,
   FsListDirectorySchema,
+  FsReadFileSchema,
   FsSearchFilesSchema,
+  FsWriteFileSchema,
 } from '../ipc/schemas'
 
 // -----------------------------------------------------------------------------
@@ -260,7 +260,9 @@ function extractMCPRoots(mcpJsonPath: string): string[] {
  * Get the current security context. Returns cached version if available.
  */
 export function getSecurityContext(): WorkspaceSecurityContext {
-  return cachedSecurityContext ?? { allowedPaths: [], allowedCommands: [], trustedSymlinkTargets: [] }
+  return (
+    cachedSecurityContext ?? { allowedPaths: [], allowedCommands: [], trustedSymlinkTargets: [] }
+  )
 }
 
 // -----------------------------------------------------------------------------
@@ -271,7 +273,7 @@ export function getSecurityContext(): WorkspaceSecurityContext {
  * Check if a resolved path falls within any of the given path lists.
  */
 function isWithinPaths(resolved: string, pathList: string[]): boolean {
-  return pathList.some(allowed => {
+  return pathList.some((allowed) => {
     const resolvedAllowed = path.resolve(allowed)
     return resolved === resolvedAllowed || resolved.startsWith(resolvedAllowed + path.sep)
   })
@@ -286,10 +288,14 @@ function isWithinPaths(resolved: string, pathList: string[]): boolean {
 export function validatePath(
   targetPath: string,
   allowedPaths: string[],
-  trustedSymlinkTargets: string[] = []
+  trustedSymlinkTargets: string[] = [],
 ): { valid: boolean; resolved: string; error?: string } {
   if (allowedPaths.length === 0) {
-    return { valid: false, resolved: '', error: 'No allowed paths configured. Connect artifact nodes to grant filesystem access.' }
+    return {
+      valid: false,
+      resolved: '',
+      error: 'No allowed paths configured. Connect artifact nodes to grant filesystem access.',
+    }
   }
 
   try {
@@ -297,7 +303,11 @@ export function validatePath(
 
     // Check if the resolved path starts with any allowed path
     if (!isWithinPaths(resolved, allowedPaths)) {
-      return { valid: false, resolved, error: `Path "${resolved}" is outside allowed directories: ${allowedPaths.join(', ')}` }
+      return {
+        valid: false,
+        resolved,
+        error: `Path "${resolved}" is outside allowed directories: ${allowedPaths.join(', ')}`,
+      }
     }
 
     // Symlink-safe check: use lstat() to detect symlinks BEFORE resolving them.
@@ -323,7 +333,7 @@ export function validatePath(
         return {
           valid: false,
           resolved: realPath,
-          error: `Symlink target "${realPath}" is outside allowed directories and trusted targets`
+          error: `Symlink target "${realPath}" is outside allowed directories and trusted targets`,
         }
       }
 
@@ -331,12 +341,14 @@ export function validatePath(
       const realPath = fs.realpathSync(resolved)
       if (realPath !== resolved) {
         // A parent directory is a symlink
-        if (!isWithinPaths(realPath, allowedPaths) &&
-            !(trustedSymlinkTargets.length > 0 && isWithinPaths(realPath, trustedSymlinkTargets))) {
+        if (
+          !isWithinPaths(realPath, allowedPaths) &&
+          !(trustedSymlinkTargets.length > 0 && isWithinPaths(realPath, trustedSymlinkTargets))
+        ) {
           return {
             valid: false,
             resolved: realPath,
-            error: `Real path "${realPath}" (via parent symlink) is outside allowed directories`
+            error: `Real path "${realPath}" (via parent symlink) is outside allowed directories`,
           }
         }
         return { valid: true, resolved: realPath }
@@ -347,12 +359,14 @@ export function validatePath(
       const parentDir = path.dirname(resolved)
       try {
         const parentReal = fs.realpathSync(parentDir)
-        if (!isWithinPaths(parentReal, allowedPaths) &&
-            !(trustedSymlinkTargets.length > 0 && isWithinPaths(parentReal, trustedSymlinkTargets))) {
+        if (
+          !isWithinPaths(parentReal, allowedPaths) &&
+          !(trustedSymlinkTargets.length > 0 && isWithinPaths(parentReal, trustedSymlinkTargets))
+        ) {
           return {
             valid: false,
             resolved,
-            error: `Parent directory real path "${parentReal}" is outside allowed directories`
+            error: `Parent directory real path "${parentReal}" is outside allowed directories`,
           }
         }
       } catch {
@@ -362,7 +376,11 @@ export function validatePath(
 
     return { valid: true, resolved }
   } catch (err) {
-    return { valid: false, resolved: '', error: `Path validation failed: ${(err as Error).message}` }
+    return {
+      valid: false,
+      resolved: '',
+      error: `Path validation failed: ${(err as Error).message}`,
+    }
   }
 }
 
@@ -374,7 +392,10 @@ export function validatePath(
  * Validate a command against the allowed commands whitelist.
  * Fail-closed: empty allowlist means NO commands are allowed.
  */
-export function validateCommand(command: string, allowedCommands: string[]): { valid: boolean; error?: string } {
+export function validateCommand(
+  command: string,
+  allowedCommands: string[],
+): { valid: boolean; error?: string } {
   if (allowedCommands.length === 0) {
     // Fail-closed: empty whitelist blocks all commands
     return { valid: false, error: 'No commands allowed — configure an allowedCommands whitelist' }
@@ -387,7 +408,10 @@ export function validateCommand(command: string, allowedCommands: string[]): { v
   }
 
   if (!allowedCommands.includes(baseCommand)) {
-    return { valid: false, error: `Command "${baseCommand}" not in allowed list: ${allowedCommands.join(', ')}` }
+    return {
+      valid: false,
+      error: `Command "${baseCommand}" not in allowed list: ${allowedCommands.join(', ')}`,
+    }
   }
 
   return { valid: true }
@@ -406,7 +430,10 @@ const MAX_PATTERN_LENGTH = 256
  */
 export function isRegexSafe(pattern: string): { safe: boolean; error?: string } {
   if (pattern.length > MAX_PATTERN_LENGTH) {
-    return { safe: false, error: `Pattern too long (${pattern.length} chars, max ${MAX_PATTERN_LENGTH})` }
+    return {
+      safe: false,
+      error: `Pattern too long (${pattern.length} chars, max ${MAX_PATTERN_LENGTH})`,
+    }
   }
 
   // Detect nested quantifiers: the primary ReDoS pattern
@@ -427,7 +454,10 @@ export function isRegexSafe(pattern: string): { safe: boolean; error?: string } 
       for (let i = 0; i < branches.length; i++) {
         for (let j = i + 1; j < branches.length; j++) {
           if (branches[i] === branches[j]) {
-            return { safe: false, error: 'Pattern contains overlapping alternation with quantifier — potential ReDoS' }
+            return {
+              safe: false,
+              error: 'Pattern contains overlapping alternation with quantifier — potential ReDoS',
+            }
           }
         }
       }
@@ -459,7 +489,7 @@ export function readFile(
   allowedPaths: string[],
   startLine?: number,
   endLine?: number,
-  trustedSymlinkTargets: string[] = []
+  trustedSymlinkTargets: string[] = [],
 ): FilesystemToolResult {
   const validation = validatePath(filePath, allowedPaths, trustedSymlinkTargets)
   if (!validation.valid) return { success: false, error: validation.error }
@@ -472,7 +502,15 @@ export function readFile(
       const start = Math.max(0, (startLine ?? 1) - 1)
       const end = endLine ?? lines.length
       const sliced = lines.slice(start, end).join('\n')
-      return { success: true, result: { content: sliced, totalLines: lines.length, startLine: start + 1, endLine: Math.min(end, lines.length) } }
+      return {
+        success: true,
+        result: {
+          content: sliced,
+          totalLines: lines.length,
+          startLine: start + 1,
+          endLine: Math.min(end, lines.length),
+        },
+      }
     }
 
     return { success: true, result: { content, totalLines: content.split('\n').length } }
@@ -485,12 +523,15 @@ export function writeFile(
   filePath: string,
   content: string,
   allowedPaths: string[],
-  trustedSymlinkTargets: string[] = []
+  trustedSymlinkTargets: string[] = [],
 ): FilesystemToolResult {
   // Protected path check (0.1l)
   const protection = isProtectedPath(filePath)
   if (protection) {
-    return { success: false, error: `Protected path (${protection}): writing to "${filePath}" requires explicit approval` }
+    return {
+      success: false,
+      error: `Protected path (${protection}): writing to "${filePath}" requires explicit approval`,
+    }
   }
 
   const validation = validatePath(filePath, allowedPaths, trustedSymlinkTargets)
@@ -504,7 +545,10 @@ export function writeFile(
     }
 
     fs.writeFileSync(validation.resolved, content, 'utf-8')
-    return { success: true, result: { path: validation.resolved, bytes: Buffer.byteLength(content, 'utf-8') } }
+    return {
+      success: true,
+      result: { path: validation.resolved, bytes: Buffer.byteLength(content, 'utf-8') },
+    }
   } catch (err) {
     return { success: false, error: `Failed to write file: ${(err as Error).message}` }
   }
@@ -515,12 +559,15 @@ export function editFile(
   oldString: string,
   newString: string,
   allowedPaths: string[],
-  trustedSymlinkTargets: string[] = []
+  trustedSymlinkTargets: string[] = [],
 ): FilesystemToolResult {
   // Protected path check (0.1l)
   const protection = isProtectedPath(filePath)
   if (protection) {
-    return { success: false, error: `Protected path (${protection}): editing "${filePath}" requires explicit approval` }
+    return {
+      success: false,
+      error: `Protected path (${protection}): editing "${filePath}" requires explicit approval`,
+    }
   }
 
   const validation = validatePath(filePath, allowedPaths, trustedSymlinkTargets)
@@ -530,7 +577,10 @@ export function editFile(
     const content = fs.readFileSync(validation.resolved, 'utf-8')
 
     if (!content.includes(oldString)) {
-      return { success: false, error: `String not found in file. Make sure oldString matches exactly.` }
+      return {
+        success: false,
+        error: `String not found in file. Make sure oldString matches exactly.`,
+      }
     }
 
     // Only replace first occurrence (like a targeted edit)
@@ -545,19 +595,24 @@ export function editFile(
 export function listDirectory(
   dirPath: string,
   allowedPaths: string[],
-  trustedSymlinkTargets: string[] = []
+  trustedSymlinkTargets: string[] = [],
 ): FilesystemToolResult {
   const validation = validatePath(dirPath, allowedPaths, trustedSymlinkTargets)
   if (!validation.valid) return { success: false, error: validation.error }
 
   try {
     const entries = fs.readdirSync(validation.resolved, { withFileTypes: true })
-    const items = entries.map(entry => ({
+    const items = entries.map((entry) => ({
       name: entry.name,
-      type: entry.isDirectory() ? 'directory' as const : 'file' as const,
-      size: entry.isFile() ? fs.statSync(path.join(validation.resolved, entry.name)).size : undefined,
+      type: entry.isDirectory() ? ('directory' as const) : ('file' as const),
+      size: entry.isFile()
+        ? fs.statSync(path.join(validation.resolved, entry.name)).size
+        : undefined,
     }))
-    return { success: true, result: { path: validation.resolved, entries: items, count: items.length } }
+    return {
+      success: true,
+      result: { path: validation.resolved, entries: items, count: items.length },
+    }
   } catch (err) {
     return { success: false, error: `Failed to list directory: ${(err as Error).message}` }
   }
@@ -568,7 +623,7 @@ export function searchFiles(
   pattern: string,
   allowedPaths: string[],
   fileGlob?: string,
-  trustedSymlinkTargets: string[] = []
+  trustedSymlinkTargets: string[] = [],
 ): FilesystemToolResult {
   const validation = validatePath(dirPath, allowedPaths, trustedSymlinkTargets)
   if (!validation.valid) return { success: false, error: validation.error }
@@ -606,7 +661,11 @@ export function searchFiles(
             for (let i = 0; i < lines.length; i++) {
               const line = lines[i]!
               if (regex.test(line)) {
-                results.push({ file: path.relative(validation.resolved, fullPath), line: i + 1, content: line.trim().slice(0, 200) })
+                results.push({
+                  file: path.relative(validation.resolved, fullPath),
+                  line: i + 1,
+                  content: line.trim().slice(0, 200),
+                })
                 regex.lastIndex = 0 // Reset regex state for global flag
                 if (results.length >= maxResults) return
               }
@@ -619,7 +678,14 @@ export function searchFiles(
     }
 
     searchDir(validation.resolved)
-    return { success: true, result: { matches: results, totalMatches: results.length, truncated: results.length >= maxResults } }
+    return {
+      success: true,
+      result: {
+        matches: results,
+        totalMatches: results.length,
+        truncated: results.length >= maxResults,
+      },
+    }
   } catch (err) {
     return { success: false, error: `Search failed: ${(err as Error).message}` }
   }
@@ -635,7 +701,7 @@ export function executeCommand(
   allowedCommands: string[],
   cwd?: string,
   timeoutMs: number = 60000,
-  trustedSymlinkTargets: string[] = []
+  trustedSymlinkTargets: string[] = [],
 ): Promise<FilesystemToolResult> {
   const cmdValidation = validateCommand(command, allowedCommands)
   if (!cmdValidation.valid) return Promise.resolve({ success: false, error: cmdValidation.error })
@@ -651,13 +717,17 @@ export function executeCommand(
     if (shellMetachars.test(arg)) {
       return Promise.resolve({
         success: false,
-        error: `Shell metacharacters not allowed in arguments: "${arg}". Use separate tool calls instead of pipes/redirects.`
+        error: `Shell metacharacters not allowed in arguments: "${arg}". Use separate tool calls instead of pipes/redirects.`,
       })
     }
   }
 
   // Use first allowed path as default cwd
-  const workingDir = cwd ? path.resolve(cwd) : (allowedPaths[0] ? path.resolve(allowedPaths[0]) : process.cwd())
+  const workingDir = cwd
+    ? path.resolve(cwd)
+    : allowedPaths[0]
+      ? path.resolve(allowedPaths[0])
+      : process.cwd()
 
   // Validate cwd is within allowed paths
   if (cwd) {
@@ -668,25 +738,34 @@ export function executeCommand(
   return new Promise((resolve) => {
     // execFile is used intentionally — it is the safe variant that avoids shell injection.
     // Do NOT replace with exec().
-    const child = execFile(binary!, args, {
-      cwd: workingDir,
-      timeout: timeoutMs,
-      maxBuffer: 100 * 1024, // 100KB
-      shell: false // Explicit: no shell
-    }, (error, stdout, stderr) => {
-      if (error) {
-        resolve({
-          success: false,
-          error: `Command failed: ${error.message}`,
-          result: { stdout: stdout?.slice(0, 10000), stderr: stderr?.slice(0, 10000), exitCode: error.code }
-        })
-      } else {
-        resolve({
-          success: true,
-          result: { stdout: stdout.slice(0, 10000), stderr: stderr.slice(0, 10000), exitCode: 0 }
-        })
-      }
-    })
+    const child = execFile(
+      binary!,
+      args,
+      {
+        cwd: workingDir,
+        timeout: timeoutMs,
+        maxBuffer: 100 * 1024, // 100KB
+        shell: false, // Explicit: no shell
+      },
+      (error, stdout, stderr) => {
+        if (error) {
+          resolve({
+            success: false,
+            error: `Command failed: ${error.message}`,
+            result: {
+              stdout: stdout?.slice(0, 10000),
+              stderr: stderr?.slice(0, 10000),
+              exitCode: error.code,
+            },
+          })
+        } else {
+          resolve({
+            success: true,
+            result: { stdout: stdout.slice(0, 10000), stderr: stderr.slice(0, 10000), exitCode: 0 },
+          })
+        }
+      },
+    )
 
     // Close stdin — no interactive commands
     child.stdin?.end()
@@ -752,70 +831,138 @@ export function registerFilesystemHandlers(): void {
     refreshWorkspaceSecurityContext().catch(() => {})
   })
 
-  ipcMain.handle('fs:readFile', async (_event, filePath: string, _allowedPaths: unknown, startLine?: number, endLine?: number) => {
-    // Zod validation (SEC-0.1j)
-    const parsed = FsReadFileSchema.safeParse({ filePath, startLine, endLine })
-    if (!parsed.success) {
-      return { success: false, error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}` }
-    }
-    const ctx = getSecurityContext()
-    return readFile(filePath, ctx.allowedPaths, startLine, endLine, ctx.trustedSymlinkTargets)
-  })
+  ipcMain.handle(
+    'fs:readFile',
+    async (
+      _event,
+      filePath: string,
+      _allowedPaths: unknown,
+      startLine?: number,
+      endLine?: number,
+    ) => {
+      // Zod validation (SEC-0.1j)
+      const parsed = FsReadFileSchema.safeParse({ filePath, startLine, endLine })
+      if (!parsed.success) {
+        return {
+          success: false,
+          error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}`,
+        }
+      }
+      const ctx = getSecurityContext()
+      return readFile(filePath, ctx.allowedPaths, startLine, endLine, ctx.trustedSymlinkTargets)
+    },
+  )
 
-  ipcMain.handle('fs:writeFile', async (_event, filePath: string, content: string, _allowedPaths: unknown) => {
-    // Zod validation (SEC-0.1j)
-    const ctx = getSecurityContext()
-    const validated = FsWriteFileSchema.safeParse({ filePath, content, allowedPaths: ctx.allowedPaths })
-    if (!validated.success) {
-      return { success: false, error: `Validation failed: ${validated.error.issues[0]?.message || 'Invalid input'}` }
-    }
-    return writeFile(filePath, content, ctx.allowedPaths, ctx.trustedSymlinkTargets)
-  })
+  ipcMain.handle(
+    'fs:writeFile',
+    async (_event, filePath: string, content: string, _allowedPaths: unknown) => {
+      // Zod validation (SEC-0.1j)
+      const ctx = getSecurityContext()
+      const validated = FsWriteFileSchema.safeParse({
+        filePath,
+        content,
+        allowedPaths: ctx.allowedPaths,
+      })
+      if (!validated.success) {
+        return {
+          success: false,
+          error: `Validation failed: ${validated.error.issues[0]?.message || 'Invalid input'}`,
+        }
+      }
+      return writeFile(filePath, content, ctx.allowedPaths, ctx.trustedSymlinkTargets)
+    },
+  )
 
-  ipcMain.handle('fs:editFile', async (_event, filePath: string, oldString: string, newString: string, _allowedPaths: unknown) => {
-    // Zod validation (SEC-0.1j)
-    const ctx = getSecurityContext()
-    const validated = FsEditFileSchema.safeParse({ filePath, oldString, newString, allowedPaths: ctx.allowedPaths })
-    if (!validated.success) {
-      return { success: false, error: `Validation failed: ${validated.error.issues[0]?.message || 'Invalid input'}` }
-    }
-    return editFile(filePath, oldString, newString, ctx.allowedPaths, ctx.trustedSymlinkTargets)
-  })
+  ipcMain.handle(
+    'fs:editFile',
+    async (
+      _event,
+      filePath: string,
+      oldString: string,
+      newString: string,
+      _allowedPaths: unknown,
+    ) => {
+      // Zod validation (SEC-0.1j)
+      const ctx = getSecurityContext()
+      const validated = FsEditFileSchema.safeParse({
+        filePath,
+        oldString,
+        newString,
+        allowedPaths: ctx.allowedPaths,
+      })
+      if (!validated.success) {
+        return {
+          success: false,
+          error: `Validation failed: ${validated.error.issues[0]?.message || 'Invalid input'}`,
+        }
+      }
+      return editFile(filePath, oldString, newString, ctx.allowedPaths, ctx.trustedSymlinkTargets)
+    },
+  )
 
   ipcMain.handle('fs:listDirectory', async (_event, dirPath: string, _allowedPaths: unknown) => {
     // Zod validation (SEC-0.1j)
     const parsed = FsListDirectorySchema.safeParse({ dirPath })
     if (!parsed.success) {
-      return { success: false, error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}` }
+      return {
+        success: false,
+        error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}`,
+      }
     }
     const ctx = getSecurityContext()
     return listDirectory(dirPath, ctx.allowedPaths, ctx.trustedSymlinkTargets)
   })
 
-  ipcMain.handle('fs:searchFiles', async (_event, dirPath: string, pattern: string, _allowedPaths: unknown, fileGlob?: string) => {
-    // Zod validation (SEC-0.1j)
-    const parsed = FsSearchFilesSchema.safeParse({ dirPath, pattern, fileGlob })
-    if (!parsed.success) {
-      return { success: false, error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}` }
-    }
-    const ctx = getSecurityContext()
-    return searchFiles(dirPath, pattern, ctx.allowedPaths, fileGlob, ctx.trustedSymlinkTargets)
-  })
+  ipcMain.handle(
+    'fs:searchFiles',
+    async (_event, dirPath: string, pattern: string, _allowedPaths: unknown, fileGlob?: string) => {
+      // Zod validation (SEC-0.1j)
+      const parsed = FsSearchFilesSchema.safeParse({ dirPath, pattern, fileGlob })
+      if (!parsed.success) {
+        return {
+          success: false,
+          error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}`,
+        }
+      }
+      const ctx = getSecurityContext()
+      return searchFiles(dirPath, pattern, ctx.allowedPaths, fileGlob, ctx.trustedSymlinkTargets)
+    },
+  )
 
-  ipcMain.handle('fs:executeCommand', async (_event, command: string, _allowedPaths: unknown, _allowedCommands: unknown, cwd?: string, timeoutMs?: number) => {
-    // Zod validation (SEC-0.1j)
-    const ctx = getSecurityContext()
-    const validated = FsExecuteCommandSchema.safeParse({
-      command,
-      allowedPaths: ctx.allowedPaths,
-      allowedCommands: ctx.allowedCommands,
-      cwd,
-      timeoutMs,
-    })
-    if (!validated.success) {
-      return { success: false, error: `Validation failed: ${validated.error.issues[0]?.message || 'Invalid input'}` }
-    }
-    // For commands, use workspace-level allowed commands (derived from active conversation's agent settings)
-    return executeCommand(command, ctx.allowedPaths, ctx.allowedCommands, cwd, timeoutMs, ctx.trustedSymlinkTargets)
-  })
+  ipcMain.handle(
+    'fs:executeCommand',
+    async (
+      _event,
+      command: string,
+      _allowedPaths: unknown,
+      _allowedCommands: unknown,
+      cwd?: string,
+      timeoutMs?: number,
+    ) => {
+      // Zod validation (SEC-0.1j)
+      const ctx = getSecurityContext()
+      const validated = FsExecuteCommandSchema.safeParse({
+        command,
+        allowedPaths: ctx.allowedPaths,
+        allowedCommands: ctx.allowedCommands,
+        cwd,
+        timeoutMs,
+      })
+      if (!validated.success) {
+        return {
+          success: false,
+          error: `Validation failed: ${validated.error.issues[0]?.message || 'Invalid input'}`,
+        }
+      }
+      // For commands, use workspace-level allowed commands (derived from active conversation's agent settings)
+      return executeCommand(
+        command,
+        ctx.allowedPaths,
+        ctx.allowedCommands,
+        cwd,
+        timeoutMs,
+        ctx.trustedSymlinkTargets,
+      )
+    },
+  )
 }

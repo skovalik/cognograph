@@ -11,17 +11,17 @@
  * The YjsStoreBinding handles bidirectional sync with the Zustand store.
  */
 
-import * as Y from 'yjs'
-import { IndexeddbPersistence } from 'y-indexeddb'
-import type { CollaborativeSyncProvider } from './CollaborativeSyncProvider'
-import type { ExternalChangeCallback, UnsubscribeFn } from './SyncProvider'
+import type { ConnectionStatus, MultiplayerConfig } from '@shared/multiplayerTypes'
 import type { WorkspaceData } from '@shared/types'
-import type { MultiplayerConfig, ConnectionStatus } from '@shared/multiplayerTypes'
-import { YjsStoreBinding } from './YjsStoreBinding'
-import { populateDocFromWorkspaceData, workspaceDataFromDoc } from './yjs-utils'
+import { IndexeddbPersistence } from 'y-indexeddb'
 import { Awareness } from 'y-protocols/awareness'
+import * as Y from 'yjs'
 import { tokenSync } from '../services/tokenSync'
 import { logger } from '../utils/logger'
+import type { CollaborativeSyncProvider } from './CollaborativeSyncProvider'
+import type { ExternalChangeCallback, UnsubscribeFn } from './SyncProvider'
+import { YjsStoreBinding } from './YjsStoreBinding'
+import { populateDocFromWorkspaceData, workspaceDataFromDoc } from './yjs-utils'
 
 /**
  * Type-safe interface for y-websocket's WebsocketProvider.
@@ -114,7 +114,10 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
         await this.connectWebSocket()
       } catch (err) {
         // WebSocket connection failed, but local persistence works
-        console.warn('[YjsSyncProvider] WebSocket connection failed, operating in offline mode:', err)
+        console.warn(
+          '[YjsSyncProvider] WebSocket connection failed, operating in offline mode:',
+          err,
+        )
         this._connectionStatus = 'error'
         this.notifyStatusChange()
       }
@@ -283,16 +286,11 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
       // Dynamic import to avoid bundling y-websocket when not needed
       const { WebsocketProvider } = await import('y-websocket')
 
-      this.wsProvider = new WebsocketProvider(
-        this.config.serverUrl,
-        this._workspaceId,
-        this.doc,
-        {
-          params: {
-            token: this.config.token
-          }
-        }
-      ) as unknown as WebsocketProviderLike
+      this.wsProvider = new WebsocketProvider(this.config.serverUrl, this._workspaceId, this.doc, {
+        params: {
+          token: this.config.token,
+        },
+      }) as unknown as WebsocketProviderLike
 
       this.awareness = this.wsProvider.awareness
 
@@ -300,7 +298,7 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
       this.awareness!.setLocalStateField('user', {
         id: this.config.userName,
         name: this.config.userName,
-        color: this.config.userColor
+        color: this.config.userColor,
       })
 
       // Start connection timeout — if still connecting after 15s, treat as error
@@ -317,7 +315,7 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
       }, YjsSyncProvider.CONNECTION_TIMEOUT_MS)
 
       // Connection status handlers
-      this.wsProvider.on('status', ((...args: unknown[]) => {
+      this.wsProvider.on('status', (...args: unknown[]) => {
         const { status } = args[0] as { status: string }
         if (status === 'connected') {
           this.clearConnectionTimeout()
@@ -336,7 +334,7 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
           this._connectionStatus = 'connecting'
         }
         this.notifyStatusChange()
-      }))
+      })
 
       // Track peer count via awareness
       this.awareness!.on('change', () => {
@@ -345,7 +343,7 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
       })
 
       // Sync status
-      this.wsProvider.on('sync', ((...args: unknown[]) => {
+      this.wsProvider.on('sync', (...args: unknown[]) => {
         const isSynced = args[0] as boolean
         if (isSynced) {
           this._connectionStatus = 'connected'
@@ -354,8 +352,7 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
           this._connectionStatus = 'syncing'
         }
         this.notifyStatusChange()
-      }))
-
+      })
     } catch (err) {
       this.clearConnectionTimeout()
       console.error('[YjsSyncProvider] Failed to connect WebSocket:', err)
@@ -390,14 +387,16 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
   async goOnline(): Promise<void> {
     // Check if we've exceeded max reconnect attempts
     if (this._reconnectAttempts >= YjsSyncProvider.MAX_RECONNECT_ATTEMPTS) {
-      console.warn(`[YjsSyncProvider] Max reconnect attempts (${YjsSyncProvider.MAX_RECONNECT_ATTEMPTS}) reached`)
+      console.warn(
+        `[YjsSyncProvider] Max reconnect attempts (${YjsSyncProvider.MAX_RECONNECT_ATTEMPTS}) reached`,
+      )
       this._connectionStatus = 'error'
       this.notifyStatusChange()
       return
     }
 
     // Calculate backoff delay: 1s, 2s, 4s, 8s, max 30s
-    const backoffMs = Math.min(1000 * Math.pow(2, this._reconnectAttempts), 30000)
+    const backoffMs = Math.min(1000 * 2 ** this._reconnectAttempts, 30000)
     this._reconnectAttempts++
 
     if (this._reconnectTimer) {
@@ -453,19 +452,22 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
 
     // Set up cross-tab token sync listener
     if (!this._tokenSyncUnsubscribe) {
-      this._tokenSyncUnsubscribe = tokenSync.onTokenUpdate(this._workspaceId, (newToken, expiresAt) => {
-        logger.log('[YjsSyncProvider] Received token update from another tab')
-        // Update our config with the new token
-        if (this.config) {
-          this.config.token = newToken
-          // Reconnect with new token if we're online
-          if (this.wsProvider && this._isOnline) {
-            this.reconnectWithNewToken(newToken)
+      this._tokenSyncUnsubscribe = tokenSync.onTokenUpdate(
+        this._workspaceId,
+        (newToken, expiresAt) => {
+          logger.log('[YjsSyncProvider] Received token update from another tab')
+          // Update our config with the new token
+          if (this.config) {
+            this.config.token = newToken
+            // Reconnect with new token if we're online
+            if (this.wsProvider && this._isOnline) {
+              this.reconnectWithNewToken(newToken)
+            }
           }
-        }
-        // Reschedule refresh based on new expiry
-        this.scheduleRefresh(new Date(expiresAt).getTime() - Date.now())
-      })
+          // Reschedule refresh based on new expiry
+          this.scheduleRefresh(new Date(expiresAt).getTime() - Date.now())
+        },
+      )
     }
 
     try {
@@ -483,7 +485,6 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
       // Calculate when to refresh
       const expiresIn = result.expiresIn ?? YjsSyncProvider.TOKEN_CHECK_INTERVAL_MS
       this.scheduleRefresh(expiresIn)
-
     } catch (err) {
       console.error('[YjsSyncProvider] Failed to start token refresh:', err)
       this._tokenRefreshRetries++
@@ -573,7 +574,6 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
 
       // Schedule next refresh
       this.startTokenRefresh()
-
     } catch (err) {
       console.error('[YjsSyncProvider] Token refresh error:', err)
       tokenSync.notifyRefreshFailed(this._workspaceId, (err as Error).message)
@@ -629,10 +629,7 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
     }
 
     // Calculate when to refresh (10 minutes before expiry, minimum 30 seconds)
-    const refreshIn = Math.max(
-      expiresIn - YjsSyncProvider.TOKEN_REFRESH_BUFFER_MS,
-      30000
-    )
+    const refreshIn = Math.max(expiresIn - YjsSyncProvider.TOKEN_REFRESH_BUFFER_MS, 30000)
 
     logger.log(`[YjsSyncProvider] Token refresh scheduled in ${Math.round(refreshIn / 1000)}s`)
 
@@ -657,7 +654,7 @@ export class YjsSyncProvider implements CollaborativeSyncProvider {
     } else if (remoteVersion > YDOC_SCHEMA_VERSION) {
       console.warn(
         `[YjsSyncProvider] Schema version mismatch: remote=${remoteVersion}, local=${YDOC_SCHEMA_VERSION}. ` +
-        'This workspace was created with a newer version of Cognograph.'
+          'This workspace was created with a newer version of Cognograph.',
       )
       // Don't block writes for now, just warn — future: optionally block writes
     }

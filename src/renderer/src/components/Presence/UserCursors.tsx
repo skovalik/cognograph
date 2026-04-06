@@ -8,8 +8,8 @@
  * the user's name and a colored pointer matching their assigned color.
  */
 
-import { memo, useState, useEffect, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { useCollaborativeProvider } from '../../sync'
 
 const CURSOR_INACTIVITY_MS = 30000 // 30 seconds
@@ -51,7 +51,7 @@ export const UserCursors = memo(function UserCursors() {
           color: state.user.color || '#888888',
           x: state.cursor.x,
           y: state.cursor.y,
-          lastUpdate: now
+          lastUpdate: now,
         })
       })
 
@@ -96,17 +96,11 @@ export const UserCursors = memo(function UserCursors() {
             key={cursor.id}
             className="absolute transition-transform duration-75 ease-linear"
             style={{
-              transform: `translate(${screenPos.x}px, ${screenPos.y}px)`
+              transform: `translate(${screenPos.x}px, ${screenPos.y}px)`,
             }}
           >
             {/* Cursor pointer SVG */}
-            <svg
-              width="16"
-              height="20"
-              viewBox="0 0 16 20"
-              fill="none"
-              className="drop-shadow-sm"
-            >
+            <svg width="16" height="20" viewBox="0 0 16 20" fill="none" className="drop-shadow-sm">
               <path
                 d="M0.5 0.5L15 10L8 10.5L5 19L0.5 0.5Z"
                 fill={cursor.color}

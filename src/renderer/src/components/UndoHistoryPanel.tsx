@@ -8,8 +8,8 @@
  * what actions can be undone. Visual history reduces memory load.
  */
 
+import { History, Link, Move, Plus, RotateCcw, RotateCw, Trash2 } from 'lucide-react'
 import { memo, useCallback } from 'react'
-import { History, RotateCcw, RotateCw, Trash2, Plus, Move, Link } from 'lucide-react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 
 // Map history action types to icons and labels
@@ -22,7 +22,7 @@ const ACTION_CONFIG: Record<string, { icon: typeof History; label: string }> = {
   DELETE_EDGE: { icon: Trash2, label: 'Delete connection' },
   BATCH_MOVE: { icon: Move, label: 'Move nodes' },
   ALIGN_NODES: { icon: Move, label: 'Align nodes' },
-  DISTRIBUTE_NODES: { icon: Move, label: 'Distribute nodes' }
+  DISTRIBUTE_NODES: { icon: Move, label: 'Distribute nodes' },
 }
 
 interface UndoHistoryPanelProps {
@@ -56,7 +56,7 @@ function UndoHistoryPanelComponent({ isOpen, onClose }: UndoHistoryPanelProps): 
     <div
       className="absolute top-20 left-4 gui-z-panels w-64 rounded-lg overflow-hidden shadow-xl animate-fade-in glass-soft"
       style={{
-        border: '1px solid var(--gui-border-subtle)'
+        border: '1px solid var(--gui-border-subtle)',
       }}
     >
       {/* Header */}
@@ -87,11 +87,7 @@ function UndoHistoryPanelComponent({ isOpen, onClose }: UndoHistoryPanelProps): 
           >
             <RotateCw className="w-4 h-4" style={{ color: 'var(--gui-text-secondary)' }} />
           </button>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-white/10 ml-2"
-            title="Close"
-          >
+          <button onClick={onClose} className="p-1 rounded hover:bg-white/10 ml-2" title="Close">
             <span style={{ color: 'var(--gui-text-muted)' }}>×</span>
           </button>
         </div>
@@ -102,7 +98,10 @@ function UndoHistoryPanelComponent({ isOpen, onClose }: UndoHistoryPanelProps): 
         {/* Future actions (can redo) */}
         {futureHistory.length > 0 && (
           <>
-            <div className="text-[10px] uppercase px-2 py-1" style={{ color: 'var(--gui-text-muted)' }}>
+            <div
+              className="text-[10px] uppercase px-2 py-1"
+              style={{ color: 'var(--gui-text-muted)' }}
+            >
               Redo available
             </div>
             {futureHistory.map((action, i) => {
@@ -135,9 +134,14 @@ function UndoHistoryPanelComponent({ isOpen, onClose }: UndoHistoryPanelProps): 
                 className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs ${
                   isCurrent ? 'bg-white/5' : ''
                 }`}
-                style={{ color: isCurrent ? 'var(--gui-text-primary)' : 'var(--gui-text-secondary)' }}
+                style={{
+                  color: isCurrent ? 'var(--gui-text-primary)' : 'var(--gui-text-secondary)',
+                }}
               >
-                <Icon className="w-3 h-3" style={isCurrent ? { color: 'var(--gui-accent-primary)' } : undefined} />
+                <Icon
+                  className="w-3 h-3"
+                  style={isCurrent ? { color: 'var(--gui-accent-primary)' } : undefined}
+                />
                 <span>{config.label}</span>
                 {isCurrent && (
                   <span className="ml-auto text-[10px]" style={{ color: 'var(--gui-text-muted)' }}>

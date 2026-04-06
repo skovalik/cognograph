@@ -12,10 +12,10 @@
  * falls back to a static CSS glow ring.
  */
 
-import { useEffect, useRef, useCallback, type ReactNode, type CSSProperties } from 'react'
+import { type CSSProperties, type ReactNode, useCallback, useEffect, useRef } from 'react'
 import { useReducedMotion } from '../../../hooks/useReducedMotion'
-import { supportsWebGL } from '../../../utils/gpuDetection'
 import { cn } from '../../../lib/utils'
+import { supportsWebGL } from '../../../utils/gpuDetection'
 
 export interface ElectricBorderProps {
   children: ReactNode
@@ -125,7 +125,14 @@ function getRoundedRectPoint(
   // Top-right corner
   if (distance <= accumulated + cornerArc) {
     const progress = (distance - accumulated) / cornerArc
-    return getCornerPoint(left + width - radius, top + radius, radius, -Math.PI / 2, Math.PI / 2, progress)
+    return getCornerPoint(
+      left + width - radius,
+      top + radius,
+      radius,
+      -Math.PI / 2,
+      Math.PI / 2,
+      progress,
+    )
   }
   accumulated += cornerArc
 
@@ -139,7 +146,14 @@ function getRoundedRectPoint(
   // Bottom-right corner
   if (distance <= accumulated + cornerArc) {
     const progress = (distance - accumulated) / cornerArc
-    return getCornerPoint(left + width - radius, top + height - radius, radius, 0, Math.PI / 2, progress)
+    return getCornerPoint(
+      left + width - radius,
+      top + height - radius,
+      radius,
+      0,
+      Math.PI / 2,
+      progress,
+    )
   }
   accumulated += cornerArc
 
@@ -153,7 +167,14 @@ function getRoundedRectPoint(
   // Bottom-left corner
   if (distance <= accumulated + cornerArc) {
     const progress = (distance - accumulated) / cornerArc
-    return getCornerPoint(left + radius, top + height - radius, radius, Math.PI / 2, Math.PI / 2, progress)
+    return getCornerPoint(
+      left + radius,
+      top + height - radius,
+      radius,
+      Math.PI / 2,
+      Math.PI / 2,
+      progress,
+    )
   }
   accumulated += cornerArc
 
@@ -177,7 +198,10 @@ function StaticElectricBorder({
   borderRadius,
   className,
   style,
-}: Pick<ElectricBorderProps, 'children' | 'color' | 'borderRadius' | 'className' | 'style'>): JSX.Element {
+}: Pick<
+  ElectricBorderProps,
+  'children' | 'color' | 'borderRadius' | 'className' | 'style'
+>): JSX.Element {
   return (
     <div
       className={cn('relative', className)}
@@ -269,12 +293,26 @@ export function ElectricBorder({
         const point = getRoundedRectPoint(progress, left, top, bw, bh, radius)
 
         const xNoise = octavedNoise(
-          progress * 8, octaves, lacunarity, gain, amplitude, frequency,
-          timeRef.current, 0, baseFlatness,
+          progress * 8,
+          octaves,
+          lacunarity,
+          gain,
+          amplitude,
+          frequency,
+          timeRef.current,
+          0,
+          baseFlatness,
         )
         const yNoise = octavedNoise(
-          progress * 8, octaves, lacunarity, gain, amplitude, frequency,
-          timeRef.current, 1, baseFlatness,
+          progress * 8,
+          octaves,
+          lacunarity,
+          gain,
+          amplitude,
+          frequency,
+          timeRef.current,
+          1,
+          baseFlatness,
         )
 
         const dx = point.x + xNoise * displacement

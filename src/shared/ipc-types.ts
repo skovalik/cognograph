@@ -58,8 +58,8 @@ export function createIPCSuccess<T>(data: T, meta?: Partial<IPCMeta>): IPCRespon
     data,
     meta: {
       timestamp: Date.now(),
-      ...meta
-    }
+      ...meta,
+    },
   }
 }
 
@@ -69,14 +69,14 @@ export function createIPCSuccess<T>(data: T, meta?: Partial<IPCMeta>): IPCRespon
 export function createIPCError(
   code: string,
   message: string,
-  details?: string
+  details?: string,
 ): IPCResponse<never> {
   return {
     success: false,
     error: { code, message, details },
     meta: {
-      timestamp: Date.now()
-    }
+      timestamp: Date.now(),
+    },
   }
 }
 
@@ -85,18 +85,18 @@ export function createIPCError(
  */
 export function createIPCErrorFromException(
   error: Error,
-  code: string = 'UNKNOWN_ERROR'
+  code: string = 'UNKNOWN_ERROR',
 ): IPCResponse<never> {
   return {
     success: false,
     error: {
       code,
       message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     },
     meta: {
-      timestamp: Date.now()
-    }
+      timestamp: Date.now(),
+    },
   }
 }
 
@@ -134,7 +134,7 @@ export const IPC_ERROR_CODES = {
   FILE_NOT_FOUND: 'FILE_NOT_FOUND',
   FILE_READ_ERROR: 'FILE_READ_ERROR',
   FILE_WRITE_ERROR: 'FILE_WRITE_ERROR',
-  PERMISSION_DENIED: 'PERMISSION_DENIED'
+  PERMISSION_DENIED: 'PERMISSION_DENIED',
 } as const
 
 export type IPCErrorCode = (typeof IPC_ERROR_CODES)[keyof typeof IPC_ERROR_CODES]
@@ -146,14 +146,18 @@ export type IPCErrorCode = (typeof IPC_ERROR_CODES)[keyof typeof IPC_ERROR_CODES
 /**
  * Check if a response is successful
  */
-export function isIPCSuccess<T>(response: IPCResponse<T>): response is IPCResponse<T> & { success: true; data: T } {
+export function isIPCSuccess<T>(
+  response: IPCResponse<T>,
+): response is IPCResponse<T> & { success: true; data: T } {
   return response.success === true && response.data !== undefined
 }
 
 /**
  * Check if a response is an error
  */
-export function isIPCError<T>(response: IPCResponse<T>): response is IPCResponse<T> & { success: false; error: IPCError } {
+export function isIPCError<T>(
+  response: IPCResponse<T>,
+): response is IPCResponse<T> & { success: false; error: IPCError } {
   return response.success === false && response.error !== undefined
 }
 
@@ -167,7 +171,7 @@ export function isIPCError<T>(response: IPCResponse<T>): response is IPCResponse
  */
 export async function wrapIPCHandler<T>(
   handler: () => Promise<T>,
-  errorCode: string = IPC_ERROR_CODES.UNKNOWN_ERROR
+  errorCode: string = IPC_ERROR_CODES.UNKNOWN_ERROR,
 ): Promise<IPCResponse<T>> {
   const startTime = Date.now()
   try {
@@ -177,8 +181,8 @@ export async function wrapIPCHandler<T>(
       data,
       meta: {
         timestamp: Date.now(),
-        duration: Date.now() - startTime
-      }
+        duration: Date.now() - startTime,
+      },
     }
   } catch (error) {
     return {
@@ -186,12 +190,15 @@ export async function wrapIPCHandler<T>(
       error: {
         code: errorCode,
         message: error instanceof Error ? error.message : String(error),
-        stack: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined
+        stack:
+          process.env.NODE_ENV === 'development' && error instanceof Error
+            ? error.stack
+            : undefined,
       },
       meta: {
         timestamp: Date.now(),
-        duration: Date.now() - startTime
-      }
+        duration: Date.now() - startTime,
+      },
     }
   }
 }

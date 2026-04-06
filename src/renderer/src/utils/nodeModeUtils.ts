@@ -57,13 +57,13 @@ const NOTE_MODE_CONFIG: Record<NoteMode, ModeConfig> = {
     label: 'Persona',
     tintLevel: 'heavy',
     borderStyle: 'solid',
-    description: 'Character descriptions, AI persona definitions'
+    description: 'Character descriptions, AI persona definitions',
   },
-  'instruction': {
+  instruction: {
     label: 'Instruction',
     tintLevel: 'heavy',
     borderStyle: 'solid',
-    description: 'Guidelines, rules, system prompts'
+    description: 'Guidelines, rules, system prompts',
   },
 
   // Special mode: 30% opacity
@@ -71,7 +71,7 @@ const NOTE_MODE_CONFIG: Record<NoteMode, ModeConfig> = {
     label: 'Design Tokens',
     tintLevel: 'heavy',
     borderStyle: 'solid',
-    description: 'Colors, typography, spacing definitions'
+    description: 'Colors, typography, spacing definitions',
   },
 
   // Scoped content: 28% opacity
@@ -79,31 +79,31 @@ const NOTE_MODE_CONFIG: Record<NoteMode, ModeConfig> = {
     label: 'Reference',
     tintLevel: 'medium',
     borderStyle: 'dashed',
-    description: 'Links, documentation, external resources'
+    description: 'Links, documentation, external resources',
   },
   examples: {
     label: 'Examples',
     tintLevel: 'medium',
     borderStyle: 'dashed',
-    description: 'Code snippets, use cases, demos'
+    description: 'Code snippets, use cases, demos',
   },
   page: {
     label: 'Page',
     tintLevel: 'medium',
     borderStyle: 'dashed',
-    description: 'Website page specification'
+    description: 'Website page specification',
   },
   component: {
     label: 'Component',
     tintLevel: 'medium',
     borderStyle: 'dashed',
-    description: 'UI component specification'
+    description: 'UI component specification',
   },
   'content-model': {
     label: 'Content Model',
     tintLevel: 'medium',
     borderStyle: 'dashed',
-    description: 'CMS content type definition'
+    description: 'CMS content type definition',
   },
 
   // Default/low priority: 20% opacity
@@ -111,13 +111,13 @@ const NOTE_MODE_CONFIG: Record<NoteMode, ModeConfig> = {
     label: 'General',
     tintLevel: 'light',
     borderStyle: 'dotted',
-    description: 'General notes, meeting notes, scratch'
+    description: 'General notes, meeting notes, scratch',
   },
   background: {
     label: 'Background',
     tintLevel: 'light',
     borderStyle: 'dotted',
-    description: 'Context, research, background information'
+    description: 'Context, research, background information',
   },
 
   // WP Config: Special case (20% like general)
@@ -125,8 +125,8 @@ const NOTE_MODE_CONFIG: Record<NoteMode, ModeConfig> = {
     label: 'WP Config',
     tintLevel: 'light',
     borderStyle: 'dotted',
-    description: 'WordPress configuration settings'
-  }
+    description: 'WordPress configuration settings',
+  },
 }
 
 /**
@@ -136,17 +136,17 @@ const NOTE_MODE_CONFIG: Record<NoteMode, ModeConfig> = {
  * Pattern: background: color-mix(in srgb, ${nodeColor} ${opacity}%, transparent)
  */
 const NOTE_MODE_OPACITY_MAP: Record<NoteMode, number> = {
-  'general': 20,
-  'persona': 35,
-  'instruction': 35,
-  'reference': 28,
-  'examples': 28,
-  'background': 20,
+  general: 20,
+  persona: 35,
+  instruction: 35,
+  reference: 28,
+  examples: 28,
+  background: 20,
   'design-tokens': 30,
-  'page': 28,
-  'component': 28,
+  page: 28,
+  component: 28,
   'content-model': 28,
-  'wp-config': 20
+  'wp-config': 20,
 }
 
 /**
@@ -158,9 +158,9 @@ const NOTE_MODE_OPACITY_MAP: Record<NoteMode, number> = {
  * - Heavy: 35% - High importance
  */
 const TINT_OPACITY_MAP: Record<TintLevel, number> = {
-  light: 20,    // 20% opacity
-  medium: 28,   // 28% opacity (+8% delta)
-  heavy: 35     // 35% opacity (+7% delta)
+  light: 20, // 20% opacity
+  medium: 28, // 28% opacity (+8% delta)
+  heavy: 35, // 35% opacity (+7% delta)
 }
 
 /**
@@ -171,9 +171,9 @@ const TINT_OPACITY_MAP: Record<TintLevel, number> = {
  * - Strong (130%): For users who want more contrast (Riley's request)
  */
 const INTENSITY_MULTIPLIERS: Record<TintIntensity, number> = {
-  subtle: 0.7,   // 70% of base opacity
-  normal: 1.0,   // 100% of base opacity (default)
-  strong: 1.3    // 130% of base opacity
+  subtle: 0.7, // 70% of base opacity
+  normal: 1.0, // 100% of base opacity (default)
+  strong: 1.3, // 130% of base opacity
 }
 
 // -----------------------------------------------------------------------------
@@ -220,10 +220,12 @@ export function getModeConfig(mode: NoteMode | undefined): ModeConfig {
 export function getTintOpacity(
   mode: NoteMode | undefined,
   intensity: TintIntensity = 'normal',
-  theme: 'light' | 'dark' = 'light'
+  theme: 'light' | 'dark' = 'light',
 ): number {
   // Use direct opacity map for NoteNode modes (exact values from spec)
-  const baseOpacity = mode ? (NOTE_MODE_OPACITY_MAP[mode] ?? TINT_OPACITY_MAP[getModeConfig(mode).tintLevel]) : TINT_OPACITY_MAP.light
+  const baseOpacity = mode
+    ? (NOTE_MODE_OPACITY_MAP[mode] ?? TINT_OPACITY_MAP[getModeConfig(mode).tintLevel])
+    : TINT_OPACITY_MAP.light
   const intensityMultiplier = INTENSITY_MULTIPLIERS[intensity]
 
   // Apply intensity multiplier
@@ -232,7 +234,7 @@ export function getTintOpacity(
   // Dark theme compensation: Reduce node color opacity for better text contrast
   // Less bright node color + more dark background = darker backgrounds, better readability
   if (theme === 'dark') {
-    opacity *= 0.5  // Reduce by 50% for consistency (e.g., 20% → 10%, 35% → 17.5%)
+    opacity *= 0.5 // Reduce by 50% for consistency (e.g., 20% → 10%, 35% → 17.5%)
   }
 
   // Clamp to valid range [0, 100]
@@ -303,7 +305,7 @@ export function getModeTintBackground(
   mode: NoteMode | undefined,
   nodeColor: string,
   intensity: TintIntensity = 'normal',
-  theme: 'light' | 'dark' = 'light'
+  theme: 'light' | 'dark' = 'light',
 ): string {
   const opacity = getTintOpacity(mode, intensity, theme)
   return `color-mix(in srgb, ${nodeColor} ${opacity}%, transparent)`
@@ -326,13 +328,13 @@ export function getNodeModeStyle(
   mode: NoteMode | undefined,
   nodeColor: string,
   intensity: TintIntensity = 'normal',
-  theme: 'light' | 'dark' = 'light'
+  theme: 'light' | 'dark' = 'light',
 ): React.CSSProperties {
   return {
     background: getModeTintBackground(mode, nodeColor, intensity, theme),
     borderStyle: getBorderStyle(mode),
     borderWidth: `${getBorderWidth(mode)}px`,
-    transition: 'background 200ms ease-in-out, border-style 200ms ease-in-out'
+    transition: 'background 200ms ease-in-out, border-style 200ms ease-in-out',
   }
 }
 
@@ -346,9 +348,9 @@ export function getNodeModeStyle(
  * @returns Array of mode configurations suitable for dropdown rendering
  */
 export function getAllModeOptions(): Array<ModeConfig & { value: NoteMode }> {
-  return (Object.keys(NOTE_MODE_CONFIG) as NoteMode[]).map(mode => ({
+  return (Object.keys(NOTE_MODE_CONFIG) as NoteMode[]).map((mode) => ({
     value: mode,
-    ...NOTE_MODE_CONFIG[mode]
+    ...NOTE_MODE_CONFIG[mode],
   }))
 }
 
@@ -361,7 +363,7 @@ export function getModesByTintLevel(): Record<TintLevel, NoteMode[]> {
   const grouped: Record<TintLevel, NoteMode[]> = {
     heavy: [],
     medium: [],
-    light: []
+    light: [],
   }
 
   for (const [mode, config] of Object.entries(NOTE_MODE_CONFIG)) {

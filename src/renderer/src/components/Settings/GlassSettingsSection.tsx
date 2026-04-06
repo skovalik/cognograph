@@ -8,13 +8,13 @@
  * Shows effective style, GPU tier, and performance info.
  */
 
-import { memo, useCallback } from 'react'
-import { Eye, Sparkles, Info, AlertTriangle, Lightbulb } from 'lucide-react'
 import type { GlassSettings, GlassStyle } from '@shared/types'
-import { getGPUTier } from '@/utils/gpuDetection'
+import { AlertTriangle, Eye, Info, Lightbulb, Sparkles } from 'lucide-react'
+import { memo, useCallback } from 'react'
 import { resolveGlassStyle } from '@/utils/glassUtils'
-import { Slider } from '../ui/slider'
+import { getGPUTier } from '@/utils/gpuDetection'
 import { logger } from '@/utils/logger'
+import { Slider } from '../ui/slider'
 
 interface GlassSettingsSectionProps {
   glassSettings: GlassSettings
@@ -25,52 +25,71 @@ interface GlassSettingsSectionProps {
 function GlassSettingsSectionInner({
   glassSettings,
   ambientEnabled,
-  onGlassSettingsChange
+  onGlassSettingsChange,
 }: GlassSettingsSectionProps) {
   const gpuTier = getGPUTier()
   const effectiveStyle = resolveGlassStyle(
     glassSettings.userPreference,
     gpuTier.tier,
-    ambientEnabled
+    ambientEnabled,
   )
 
-  const handleStyleChange = useCallback((style: GlassStyle) => {
-    onGlassSettingsChange({ userPreference: style, effectiveStyle: style === 'auto' ? effectiveStyle : style })
-  }, [onGlassSettingsChange, effectiveStyle])
+  const handleStyleChange = useCallback(
+    (style: GlassStyle) => {
+      onGlassSettingsChange({
+        userPreference: style,
+        effectiveStyle: style === 'auto' ? effectiveStyle : style,
+      })
+    },
+    [onGlassSettingsChange, effectiveStyle],
+  )
 
-  const handleBlurRadiusChange = useCallback((value: number[]) => {
-    onGlassSettingsChange({ blurRadius: value[0] })
-  }, [onGlassSettingsChange])
+  const handleBlurRadiusChange = useCallback(
+    (value: number[]) => {
+      onGlassSettingsChange({ blurRadius: value[0] })
+    },
+    [onGlassSettingsChange],
+  )
 
-  const handlePanelOpacityChange = useCallback((value: number[]) => {
-    logger.log('[SLIDER] Panel opacity changed to:', value[0])
-    onGlassSettingsChange({ panelOpacity: value[0] })
-  }, [onGlassSettingsChange])
+  const handlePanelOpacityChange = useCallback(
+    (value: number[]) => {
+      logger.log('[SLIDER] Panel opacity changed to:', value[0])
+      onGlassSettingsChange({ panelOpacity: value[0] })
+    },
+    [onGlassSettingsChange],
+  )
 
-  const handleNoiseOpacityChange = useCallback((value: number[]) => {
-    onGlassSettingsChange({ noiseOpacity: value[0] })
-  }, [onGlassSettingsChange])
+  const handleNoiseOpacityChange = useCallback(
+    (value: number[]) => {
+      onGlassSettingsChange({ noiseOpacity: value[0] })
+    },
+    [onGlassSettingsChange],
+  )
 
-  const handleShimmerSpeedChange = useCallback((value: number[]) => {
-    onGlassSettingsChange({ shimmerSpeed: value[0] })
-  }, [onGlassSettingsChange])
+  const handleShimmerSpeedChange = useCallback(
+    (value: number[]) => {
+      onGlassSettingsChange({ shimmerSpeed: value[0] })
+    },
+    [onGlassSettingsChange],
+  )
 
   // Get GPU tier label
   const gpuTierLabel = {
     high: 'High (FluidGlass capable)',
     medium: 'Medium (Soft Blur only)',
-    low: 'Low (Solid recommended)'
+    low: 'Low (Solid recommended)',
   }[gpuTier.tier]
 
   // Get effective style label
   const effectiveStyleLabel = {
     solid: 'Solid (No glass)',
     'soft-blur': 'Soft Blur (CSS only)',
-    'fluid-glass': 'FluidGlass (Premium)'
+    'fluid-glass': 'FluidGlass (Premium)',
   }[effectiveStyle]
 
   // Check if user choice is different from effective
-  const isDowngraded = glassSettings.userPreference !== 'auto' && effectiveStyle !== glassSettings.userPreference
+  const isDowngraded =
+    glassSettings.userPreference !== 'auto' && effectiveStyle !== glassSettings.userPreference
 
   return (
     <div className="space-y-4">
@@ -198,9 +217,7 @@ function GlassSettingsSectionInner({
             onValueChange={handleNoiseOpacityChange}
             className="w-full"
           />
-          <p className="text-xs gui-text-secondary mt-1">
-            Subtle grain texture for premium look
-          </p>
+          <p className="text-xs gui-text-secondary mt-1">Subtle grain texture for premium look</p>
         </div>
       )}
 
@@ -218,25 +235,23 @@ function GlassSettingsSectionInner({
             onValueChange={handleShimmerSpeedChange}
             className="w-full"
           />
-          <p className="text-xs gui-text-secondary mt-1">
-            Animation speed of shimmer effect
-          </p>
+          <p className="text-xs gui-text-secondary mt-1">Animation speed of shimmer effect</p>
         </div>
       )}
 
       {/* Apply To Checkboxes */}
       <div className="pt-4 border-t gui-border">
-        <label className="block text-xs font-medium gui-text mb-3">
-          Apply glass effects to:
-        </label>
+        <label className="block text-xs font-medium gui-text mb-3">Apply glass effects to:</label>
         <div className="space-y-2">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               checked={glassSettings.applyTo?.nodes ?? false}
-              onChange={(e) => onGlassSettingsChange({
-                applyTo: { ...glassSettings.applyTo, nodes: e.target.checked }
-              })}
+              onChange={(e) =>
+                onGlassSettingsChange({
+                  applyTo: { ...glassSettings.applyTo, nodes: e.target.checked },
+                })
+              }
               className="w-4 h-4 rounded border-gui-border text-gui-accent-primary focus:ring-2 focus:ring-gui-accent-primary/20"
             />
             <span className="text-sm gui-text">Nodes</span>
@@ -245,9 +260,11 @@ function GlassSettingsSectionInner({
             <input
               type="checkbox"
               checked={glassSettings.applyTo?.modals ?? false}
-              onChange={(e) => onGlassSettingsChange({
-                applyTo: { ...glassSettings.applyTo, modals: e.target.checked }
-              })}
+              onChange={(e) =>
+                onGlassSettingsChange({
+                  applyTo: { ...glassSettings.applyTo, modals: e.target.checked },
+                })
+              }
               className="w-4 h-4 rounded border-gui-border text-gui-accent-primary focus:ring-2 focus:ring-gui-accent-primary/20"
             />
             <span className="text-sm gui-text">Modals & dialogs</span>
@@ -256,9 +273,11 @@ function GlassSettingsSectionInner({
             <input
               type="checkbox"
               checked={glassSettings.applyTo?.panels ?? false}
-              onChange={(e) => onGlassSettingsChange({
-                applyTo: { ...glassSettings.applyTo, panels: e.target.checked }
-              })}
+              onChange={(e) =>
+                onGlassSettingsChange({
+                  applyTo: { ...glassSettings.applyTo, panels: e.target.checked },
+                })
+              }
               className="w-4 h-4 rounded border-gui-border text-gui-accent-primary focus:ring-2 focus:ring-gui-accent-primary/20"
             />
             <span className="text-sm gui-text">Toolbars & side panels</span>
@@ -303,9 +322,7 @@ function StyleRadio({ selected, onClick, label, description, disabled = false }:
               : 'border-gui-border'
           }`}
         >
-          {selected && (
-            <div className="w-full h-full rounded-full bg-white scale-50" />
-          )}
+          {selected && <div className="w-full h-full rounded-full bg-white scale-50" />}
         </div>
         <div>
           <div className="text-sm font-medium gui-text">{label}</div>

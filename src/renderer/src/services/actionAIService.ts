@@ -7,16 +7,16 @@
 // Core service for AI-assisted action node configuration
 
 import type {
-  AIConfigResponse,
-  AIActionContext,
-  AIGeneratedConfig,
-  AIClarifyingQuestion,
-  ActionTrigger,
   ActionCondition,
   ActionStep,
-  ActionTriggerType,
   ActionStepType,
-  AIDescriptionTemplate
+  ActionTrigger,
+  ActionTriggerType,
+  AIActionContext,
+  AIClarifyingQuestion,
+  AIConfigResponse,
+  AIDescriptionTemplate,
+  AIGeneratedConfig,
 } from '@shared/actionTypes'
 import { aiConfigLearning } from './aiConfigLearning'
 
@@ -25,14 +25,32 @@ import { aiConfigLearning } from './aiConfigLearning'
 // =============================================================================
 
 const VALID_TRIGGER_TYPES: ActionTriggerType[] = [
-  'property-change', 'manual', 'schedule', 'node-created', 'connection-made',
-  'region-enter', 'region-exit', 'cluster-size', 'proximity',
-  'children-complete', 'ancestor-change', 'connection-count', 'isolation'
+  'property-change',
+  'manual',
+  'schedule',
+  'node-created',
+  'connection-made',
+  'region-enter',
+  'region-exit',
+  'cluster-size',
+  'proximity',
+  'children-complete',
+  'ancestor-change',
+  'connection-count',
+  'isolation',
 ]
 
 const VALID_STEP_TYPES: ActionStepType[] = [
-  'update-property', 'create-node', 'delete-node', 'move-node',
-  'link-nodes', 'unlink-nodes', 'wait', 'condition', 'llm-call', 'http-request'
+  'update-property',
+  'create-node',
+  'delete-node',
+  'move-node',
+  'link-nodes',
+  'unlink-nodes',
+  'wait',
+  'condition',
+  'llm-call',
+  'http-request',
 ]
 
 const MAX_STEPS = 10
@@ -45,25 +63,100 @@ const MAX_QUESTIONS_PER_ROUND = 3
 
 export const DESCRIPTION_TEMPLATES: AIDescriptionTemplate[] = [
   // Trigger patterns
-  { id: 'trigger-task-complete', label: 'Task completion', template: 'When a task is marked complete, [action]', category: 'triggers' },
-  { id: 'trigger-new-node', label: 'New node created', template: 'When a new [node type] is created, [action]', category: 'triggers' },
-  { id: 'trigger-connection', label: 'Connection made', template: 'When [node type] is connected to [node type], [action]', category: 'triggers' },
-  { id: 'trigger-schedule', label: 'Scheduled', template: 'Every [time period], [action]', category: 'triggers' },
-  { id: 'trigger-manual', label: 'Manual trigger', template: 'When I click the button, [action]', category: 'triggers' },
+  {
+    id: 'trigger-task-complete',
+    label: 'Task completion',
+    template: 'When a task is marked complete, [action]',
+    category: 'triggers',
+  },
+  {
+    id: 'trigger-new-node',
+    label: 'New node created',
+    template: 'When a new [node type] is created, [action]',
+    category: 'triggers',
+  },
+  {
+    id: 'trigger-connection',
+    label: 'Connection made',
+    template: 'When [node type] is connected to [node type], [action]',
+    category: 'triggers',
+  },
+  {
+    id: 'trigger-schedule',
+    label: 'Scheduled',
+    template: 'Every [time period], [action]',
+    category: 'triggers',
+  },
+  {
+    id: 'trigger-manual',
+    label: 'Manual trigger',
+    template: 'When I click the button, [action]',
+    category: 'triggers',
+  },
 
   // Action patterns
-  { id: 'action-create-summary', label: 'Create summary', template: 'create a note summarizing [what]', category: 'actions' },
-  { id: 'action-update-status', label: 'Update status', template: 'update the [property] to [value]', category: 'actions' },
-  { id: 'action-ai-analyze', label: 'AI analysis', template: 'use AI to [analyze/categorize/summarize] the [node]', category: 'actions' },
-  { id: 'action-webhook', label: 'Send webhook', template: 'send a webhook to [URL] with [data]', category: 'actions' },
-  { id: 'action-organize', label: 'Organize', template: 'move [node type] to [location/area]', category: 'actions' },
+  {
+    id: 'action-create-summary',
+    label: 'Create summary',
+    template: 'create a note summarizing [what]',
+    category: 'actions',
+  },
+  {
+    id: 'action-update-status',
+    label: 'Update status',
+    template: 'update the [property] to [value]',
+    category: 'actions',
+  },
+  {
+    id: 'action-ai-analyze',
+    label: 'AI analysis',
+    template: 'use AI to [analyze/categorize/summarize] the [node]',
+    category: 'actions',
+  },
+  {
+    id: 'action-webhook',
+    label: 'Send webhook',
+    template: 'send a webhook to [URL] with [data]',
+    category: 'actions',
+  },
+  {
+    id: 'action-organize',
+    label: 'Organize',
+    template: 'move [node type] to [location/area]',
+    category: 'actions',
+  },
 
   // Complete examples
-  { id: 'complete-task-summary', label: 'Task summary', template: 'When a task is marked complete, create a note summarizing what was done', category: 'complete' },
-  { id: 'complete-daily-standup', label: 'Daily standup', template: 'Every morning at 9am, create a note listing incomplete tasks', category: 'complete' },
-  { id: 'complete-auto-connect', label: 'Auto-connect', template: 'When a new note is created, connect it to the nearest project', category: 'complete' },
-  { id: 'complete-priority-alert', label: 'Priority alert', template: 'When a high-priority task is created, create an alert note', category: 'complete' },
-  { id: 'complete-archive', label: 'Archive tasks', template: 'When a task has been complete for 7 days, move it to the archive area', category: 'complete' }
+  {
+    id: 'complete-task-summary',
+    label: 'Task summary',
+    template: 'When a task is marked complete, create a note summarizing what was done',
+    category: 'complete',
+  },
+  {
+    id: 'complete-daily-standup',
+    label: 'Daily standup',
+    template: 'Every morning at 9am, create a note listing incomplete tasks',
+    category: 'complete',
+  },
+  {
+    id: 'complete-auto-connect',
+    label: 'Auto-connect',
+    template: 'When a new note is created, connect it to the nearest project',
+    category: 'complete',
+  },
+  {
+    id: 'complete-priority-alert',
+    label: 'Priority alert',
+    template: 'When a high-priority task is created, create an alert note',
+    category: 'complete',
+  },
+  {
+    id: 'complete-archive',
+    label: 'Archive tasks',
+    template: 'When a task has been complete for 7 days, move it to the archive area',
+    category: 'complete',
+  },
 ]
 
 // =============================================================================
@@ -169,7 +262,7 @@ Only output the JSON configuration schema.`
 export function buildPrompt(
   description: string,
   context: AIActionContext,
-  previousAnswers?: Record<string, string>
+  previousAnswers?: Record<string, string>,
 ): { systemPrompt: string; userPrompt: string } {
   // Check for learning hints
   const learningHint = aiConfigLearning.suggestFromHistory(description)
@@ -189,7 +282,7 @@ Consider this pattern if it fits.
 
   if (context.connectedNodes.length > 0) {
     contextLines.push('Connected nodes:')
-    context.connectedNodes.slice(0, 10).forEach(n => {
+    context.connectedNodes.slice(0, 10).forEach((n) => {
       contextLines.push(`  - ${n.type}: "${n.title}"`)
     })
   }
@@ -219,7 +312,9 @@ ${contextLines.join('\n')}
   if (previousAnswers && Object.keys(previousAnswers).length > 0) {
     userPrompt += `
 User clarifications:
-${Object.entries(previousAnswers).map(([q, a]) => `- ${q}: ${a}`).join('\n')}
+${Object.entries(previousAnswers)
+  .map(([q, a]) => `- ${q}: ${a}`)
+  .join('\n')}
 
 Generate the final configuration based on these answers.
 `
@@ -231,7 +326,7 @@ Configure this action or ask clarifying questions.
 
   return {
     systemPrompt: SYSTEM_PROMPT + learningContext,
-    userPrompt
+    userPrompt,
   }
 }
 
@@ -274,9 +369,9 @@ function normalizeResponse(raw: unknown): AIConfigResponse {
   const obj = raw as Record<string, unknown>
 
   // Normalize confidence
-  const confidence = (['high', 'medium', 'low'].includes(obj.confidence as string)
-    ? obj.confidence
-    : 'medium') as 'high' | 'medium' | 'low'
+  const confidence = (
+    ['high', 'medium', 'low'].includes(obj.confidence as string) ? obj.confidence : 'medium'
+  ) as 'high' | 'medium' | 'low'
 
   // Normalize config if present
   let config: AIGeneratedConfig | undefined
@@ -286,7 +381,7 @@ function normalizeResponse(raw: unknown): AIConfigResponse {
       trigger: normalizeTrigger(rawConfig.trigger),
       conditions: normalizeConditions(rawConfig.conditions as unknown[]),
       actions: normalizeActions(rawConfig.actions as unknown[]),
-      explanation: typeof rawConfig.explanation === 'string' ? rawConfig.explanation : ''
+      explanation: typeof rawConfig.explanation === 'string' ? rawConfig.explanation : '',
     }
   }
 
@@ -306,7 +401,7 @@ function normalizeResponse(raw: unknown): AIConfigResponse {
     planSummary: typeof obj.planSummary === 'string' ? obj.planSummary : undefined,
     suggestedTitle: typeof obj.suggestedTitle === 'string' ? obj.suggestedTitle : undefined,
     limitations: Array.isArray(obj.limitations) ? obj.limitations : undefined,
-    reasoning: typeof obj.reasoning === 'string' ? obj.reasoning : ''
+    reasoning: typeof obj.reasoning === 'string' ? obj.reasoning : '',
   }
 }
 
@@ -328,17 +423,17 @@ function normalizeTrigger(raw: unknown): ActionTrigger {
         property: typeof obj.property === 'string' ? obj.property : 'data.status',
         fromValue: obj.fromValue,
         toValue: obj.toValue,
-        nodeFilter: typeof obj.nodeFilter === 'string' ? obj.nodeFilter : undefined
+        nodeFilter: typeof obj.nodeFilter === 'string' ? obj.nodeFilter : undefined,
       }
     case 'schedule':
       return {
         type: 'schedule',
-        cron: typeof obj.cron === 'string' ? obj.cron : '0 9 * * *'
+        cron: typeof obj.cron === 'string' ? obj.cron : '0 9 * * *',
       }
     case 'node-created':
       return {
         type: 'node-created',
-        nodeTypeFilter: typeof obj.nodeTypeFilter === 'string' ? obj.nodeTypeFilter : undefined
+        nodeTypeFilter: typeof obj.nodeTypeFilter === 'string' ? obj.nodeTypeFilter : undefined,
       }
     case 'connection-made':
       return {
@@ -346,7 +441,7 @@ function normalizeTrigger(raw: unknown): ActionTrigger {
         direction: ['incoming', 'outgoing', 'any'].includes(obj.direction as string)
           ? (obj.direction as 'incoming' | 'outgoing' | 'any')
           : 'any',
-        nodeTypeFilter: typeof obj.nodeTypeFilter === 'string' ? obj.nodeTypeFilter : undefined
+        nodeTypeFilter: typeof obj.nodeTypeFilter === 'string' ? obj.nodeTypeFilter : undefined,
       }
     default:
       return { type } as ActionTrigger
@@ -357,18 +452,18 @@ function normalizeConditions(raw: unknown[]): ActionCondition[] {
   if (!Array.isArray(raw)) return []
 
   return raw
-    .filter(c => c && typeof c === 'object')
+    .filter((c) => c && typeof c === 'object')
     .map((c, i) => {
       const obj = c as Record<string, unknown>
       return {
         id: typeof obj.id === 'string' ? obj.id : `condition-${i}`,
         field: typeof obj.field === 'string' ? obj.field : 'data.status',
-        operator: obj.operator as ActionCondition['operator'] || 'equals',
+        operator: (obj.operator as ActionCondition['operator']) || 'equals',
         value: obj.value,
         target: ['trigger-node', 'action-node', 'specific-node'].includes(obj.target as string)
           ? (obj.target as ActionCondition['target'])
           : 'trigger-node',
-        targetNodeId: typeof obj.targetNodeId === 'string' ? obj.targetNodeId : undefined
+        targetNodeId: typeof obj.targetNodeId === 'string' ? obj.targetNodeId : undefined,
       }
     })
 }
@@ -377,7 +472,7 @@ function normalizeActions(raw: unknown[]): ActionStep[] {
   if (!Array.isArray(raw)) return []
 
   return raw
-    .filter(a => a && typeof a === 'object')
+    .filter((a) => a && typeof a === 'object')
     .slice(0, MAX_STEPS)
     .map((a, i) => {
       const obj = a as Record<string, unknown>
@@ -390,11 +485,14 @@ function normalizeActions(raw: unknown[]): ActionStep[] {
         type,
         label: typeof obj.label === 'string' ? obj.label : undefined,
         onError: 'continue' as const,
-        disabled: false
+        disabled: false,
       }
 
       // Normalize config based on step type
-      const config = (obj.config && typeof obj.config === 'object' ? obj.config : obj) as Record<string, unknown>
+      const config = (obj.config && typeof obj.config === 'object' ? obj.config : obj) as Record<
+        string,
+        unknown
+      >
 
       switch (type) {
         case 'create-node':
@@ -404,24 +502,33 @@ function normalizeActions(raw: unknown[]): ActionStep[] {
             config: {
               nodeType: typeof config.nodeType === 'string' ? config.nodeType : 'note',
               title: typeof config.title === 'string' ? config.title : 'New Node',
-              position: ['near-trigger', 'near-action', 'absolute'].includes(config.position as string)
+              position: ['near-trigger', 'near-action', 'absolute'].includes(
+                config.position as string,
+              )
                 ? (config.position as 'near-trigger' | 'near-action' | 'absolute')
                 : 'near-trigger',
-              variableName: typeof config.variableName === 'string' ? config.variableName : undefined,
+              variableName:
+                typeof config.variableName === 'string' ? config.variableName : undefined,
               offsetX: typeof config.offsetX === 'number' ? config.offsetX : 300,
-              offsetY: typeof config.offsetY === 'number' ? config.offsetY : 0
-            }
+              offsetY: typeof config.offsetY === 'number' ? config.offsetY : 0,
+            },
           }
         case 'update-property':
           return {
             ...base,
             type: 'update-property' as const,
             config: {
-              target: config.target as 'trigger-node' | 'action-node' | 'specific-node' | 'created-node' || 'trigger-node',
-              targetNodeId: typeof config.targetNodeId === 'string' ? config.targetNodeId : undefined,
+              target:
+                (config.target as
+                  | 'trigger-node'
+                  | 'action-node'
+                  | 'specific-node'
+                  | 'created-node') || 'trigger-node',
+              targetNodeId:
+                typeof config.targetNodeId === 'string' ? config.targetNodeId : undefined,
               property: typeof config.property === 'string' ? config.property : 'data.status',
-              value: config.value
-            }
+              value: config.value,
+            },
           }
         case 'llm-call':
           return {
@@ -429,36 +536,50 @@ function normalizeActions(raw: unknown[]): ActionStep[] {
             type: 'llm-call' as const,
             config: {
               prompt: typeof config.prompt === 'string' ? config.prompt : '',
-              systemPrompt: typeof config.systemPrompt === 'string' ? config.systemPrompt : undefined,
-              variableName: typeof config.variableName === 'string' ? config.variableName : 'aiResponse',
+              systemPrompt:
+                typeof config.systemPrompt === 'string' ? config.systemPrompt : undefined,
+              variableName:
+                typeof config.variableName === 'string' ? config.variableName : 'aiResponse',
               maxTokens: typeof config.maxTokens === 'number' ? config.maxTokens : 500,
               temperature: typeof config.temperature === 'number' ? config.temperature : 0.7,
-              autoCreateOutput: config.autoCreateOutput !== false
-            }
+              autoCreateOutput: config.autoCreateOutput !== false,
+            },
           }
         case 'link-nodes':
           return {
             ...base,
             type: 'link-nodes' as const,
             config: {
-              source: config.source as 'trigger-node' | 'action-node' | 'specific-node' | 'created-node' || 'trigger-node',
-              sourceNodeId: typeof config.sourceNodeId === 'string' ? config.sourceNodeId : undefined,
-              target: config.target as 'trigger-node' | 'action-node' | 'specific-node' | 'created-node' || 'action-node',
-              targetNodeId: typeof config.targetNodeId === 'string' ? config.targetNodeId : undefined
-            }
+              source:
+                (config.source as
+                  | 'trigger-node'
+                  | 'action-node'
+                  | 'specific-node'
+                  | 'created-node') || 'trigger-node',
+              sourceNodeId:
+                typeof config.sourceNodeId === 'string' ? config.sourceNodeId : undefined,
+              target:
+                (config.target as
+                  | 'trigger-node'
+                  | 'action-node'
+                  | 'specific-node'
+                  | 'created-node') || 'action-node',
+              targetNodeId:
+                typeof config.targetNodeId === 'string' ? config.targetNodeId : undefined,
+            },
           }
         case 'wait':
           return {
             ...base,
             type: 'wait' as const,
             config: {
-              duration: typeof config.duration === 'number' ? config.duration : 1000
-            }
+              duration: typeof config.duration === 'number' ? config.duration : 1000,
+            },
           }
         default:
           return {
             ...base,
-            config
+            config,
           } as ActionStep
       }
     })
@@ -472,11 +593,14 @@ function normalizeQuestion(raw: unknown): AIClarifyingQuestion | null {
   if (typeof obj.question !== 'string') return null
 
   const base = {
-    id: typeof obj.id === 'string' ? obj.id : `q-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    id:
+      typeof obj.id === 'string'
+        ? obj.id
+        : `q-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     question: obj.question,
     context: typeof obj.context === 'string' ? obj.context : undefined,
     required: obj.required !== false,
-    default: typeof obj.default === 'string' ? obj.default : undefined
+    default: typeof obj.default === 'string' ? obj.default : undefined,
   }
 
   const type = obj.type as string
@@ -493,23 +617,23 @@ function normalizeQuestion(raw: unknown): AIClarifyingQuestion | null {
             const opt = o as Record<string, unknown>
             return {
               value: String(opt.value || ''),
-              label: String(opt.label || opt.value || '')
+              label: String(opt.label || opt.value || ''),
             }
           }
           return { value: String(o), label: String(o) }
-        })
+        }),
       }
     case 'text':
       return {
         ...base,
         type: 'text',
-        placeholder: typeof obj.placeholder === 'string' ? obj.placeholder : undefined
+        placeholder: typeof obj.placeholder === 'string' ? obj.placeholder : undefined,
       }
     case 'node-picker':
       return {
         ...base,
         type: 'node-picker',
-        nodeTypeFilter: typeof obj.nodeTypeFilter === 'string' ? obj.nodeTypeFilter : undefined
+        nodeTypeFilter: typeof obj.nodeTypeFilter === 'string' ? obj.nodeTypeFilter : undefined,
       }
     case 'slider':
       return {
@@ -518,7 +642,7 @@ function normalizeQuestion(raw: unknown): AIClarifyingQuestion | null {
         min: typeof obj.min === 'number' ? obj.min : 0,
         max: typeof obj.max === 'number' ? obj.max : 100,
         step: typeof obj.step === 'number' ? obj.step : 1,
-        unit: typeof obj.unit === 'string' ? obj.unit : undefined
+        unit: typeof obj.unit === 'string' ? obj.unit : undefined,
       }
     default:
       // Default to select if options are provided, text otherwise
@@ -528,8 +652,8 @@ function normalizeQuestion(raw: unknown): AIClarifyingQuestion | null {
           type: 'select',
           options: obj.options.map((o: unknown) => ({
             value: String(o),
-            label: String(o)
-          }))
+            label: String(o),
+          })),
         }
       }
       return { ...base, type: 'text' }
@@ -577,7 +701,7 @@ export function validateConfig(config: AIGeneratedConfig): ValidationResult {
     const stepStr = JSON.stringify(step)
     const varRefs = stepStr.match(/\{\{variables\.(\w+)\}\}/g)
     if (varRefs) {
-      varRefs.forEach(ref => {
+      varRefs.forEach((ref) => {
         const varName = ref.match(/\{\{variables\.(\w+)\}\}/)?.[1]
         if (varName && !definedVars.has(varName)) {
           errors.push(`Step ${stepNum}: Variable {{variables.${varName}}} used before defined`)
@@ -619,10 +743,10 @@ export function validateConfig(config: AIGeneratedConfig): ValidationResult {
   if (config.trigger.type === 'property-change') {
     const triggerProp = (config.trigger as { property?: string }).property
     const updatesSameProp = config.actions.some(
-      s =>
+      (s) =>
         s.type === 'update-property' &&
         s.config.property === triggerProp &&
-        s.config.target === 'action-node'
+        s.config.target === 'action-node',
     )
     if (updatesSameProp) {
       warnings.push('This action updates the same property it triggers on, which may cause loops')
@@ -637,7 +761,7 @@ export function validateConfig(config: AIGeneratedConfig): ValidationResult {
   return {
     valid: errors.length === 0,
     errors,
-    warnings
+    warnings,
   }
 }
 
@@ -646,10 +770,10 @@ export function validateConfig(config: AIGeneratedConfig): ValidationResult {
 // =============================================================================
 
 export {
-  VALID_TRIGGER_TYPES,
-  VALID_STEP_TYPES,
-  MAX_STEPS,
   MAX_QUESTION_ROUNDS,
   MAX_QUESTIONS_PER_ROUND,
-  SYSTEM_PROMPT
+  MAX_STEPS,
+  SYSTEM_PROMPT,
+  VALID_STEP_TYPES,
+  VALID_TRIGGER_TYPES,
 }

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useCallback } from 'react'
-import { Plus, X } from 'lucide-react'
-import { v4 as uuid } from 'uuid'
 import type { ActionCondition, ConditionOperator } from '@shared/actionTypes'
+import { Plus, X } from 'lucide-react'
+import { memo, useCallback } from 'react'
+import { v4 as uuid } from 'uuid'
 
 const OPERATOR_OPTIONS: { value: ConditionOperator; label: string }[] = [
   { value: 'equals', label: '=' },
@@ -15,13 +15,13 @@ const OPERATOR_OPTIONS: { value: ConditionOperator; label: string }[] = [
   { value: 'less-than', label: '<' },
   { value: 'is-empty', label: 'empty' },
   { value: 'is-not-empty', label: '!empty' },
-  { value: 'matches-regex', label: 'regex' }
+  { value: 'matches-regex', label: 'regex' },
 ]
 
 const TARGET_OPTIONS: { value: ActionCondition['target']; label: string }[] = [
   { value: 'trigger-node', label: 'Trigger Node' },
   { value: 'action-node', label: 'This Action' },
-  { value: 'specific-node', label: 'Specific Node' }
+  { value: 'specific-node', label: 'Specific Node' },
 ]
 
 interface ConditionListProps {
@@ -38,18 +38,24 @@ function ConditionListComponent({ conditions, onChange }: ConditionListProps): J
         field: 'status',
         operator: 'equals',
         value: '',
-        target: 'trigger-node'
-      }
+        target: 'trigger-node',
+      },
     ])
   }, [conditions, onChange])
 
-  const handleRemove = useCallback((id: string) => {
-    onChange(conditions.filter(c => c.id !== id))
-  }, [conditions, onChange])
+  const handleRemove = useCallback(
+    (id: string) => {
+      onChange(conditions.filter((c) => c.id !== id))
+    },
+    [conditions, onChange],
+  )
 
-  const handleUpdate = useCallback((id: string, updates: Partial<ActionCondition>) => {
-    onChange(conditions.map(c => c.id === id ? { ...c, ...updates } : c))
-  }, [conditions, onChange])
+  const handleUpdate = useCallback(
+    (id: string, updates: Partial<ActionCondition>) => {
+      onChange(conditions.map((c) => (c.id === id ? { ...c, ...updates } : c)))
+    },
+    [conditions, onChange],
+  )
 
   const needsValue = (op: ConditionOperator) => !['is-empty', 'is-not-empty'].includes(op)
 
@@ -71,16 +77,23 @@ function ConditionListComponent({ conditions, onChange }: ConditionListProps): J
       )}
 
       {conditions.map((condition) => (
-        <div key={condition.id} className="flex flex-col gap-1 p-2 rounded gui-panel-secondary text-xs">
+        <div
+          key={condition.id}
+          className="flex flex-col gap-1 p-2 rounded gui-panel-secondary text-xs"
+        >
           <div className="flex items-center gap-1">
             {/* Target selector */}
             <select
               value={condition.target}
-              onChange={(e) => handleUpdate(condition.id, { target: e.target.value as ActionCondition['target'] })}
+              onChange={(e) =>
+                handleUpdate(condition.id, { target: e.target.value as ActionCondition['target'] })
+              }
               className="text-[10px] gui-input rounded px-1 py-0.5 flex-shrink-0"
             >
-              {TARGET_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              {TARGET_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
               ))}
             </select>
 
@@ -106,11 +119,15 @@ function ConditionListComponent({ conditions, onChange }: ConditionListProps): J
             {/* Operator */}
             <select
               value={condition.operator}
-              onChange={(e) => handleUpdate(condition.id, { operator: e.target.value as ConditionOperator })}
+              onChange={(e) =>
+                handleUpdate(condition.id, { operator: e.target.value as ConditionOperator })
+              }
               className="text-[10px] gui-input rounded px-1 py-0.5"
             >
-              {OPERATOR_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              {OPERATOR_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
               ))}
             </select>
 

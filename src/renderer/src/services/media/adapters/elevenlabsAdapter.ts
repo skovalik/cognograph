@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { ProviderAdapter, type ImageGenParams, type MediaResult, type AudioGenParams } from '../providerAdapter'
+import {
+  type AudioGenParams,
+  type ImageGenParams,
+  type MediaResult,
+  ProviderAdapter,
+} from '../providerAdapter'
 
 export class ElevenLabsAdapter extends ProviderAdapter {
   readonly name = 'elevenlabs'
@@ -20,16 +25,16 @@ export class ElevenLabsAdapter extends ProviderAdapter {
         headers: {
           'xi-api-key': this.apiKey,
           'Content-Type': 'application/json',
-          'Accept': 'audio/mpeg'
+          Accept: 'audio/mpeg',
         },
         body: JSON.stringify({
           text: params.text,
           model_id: 'eleven_multilingual_v2',
           voice_settings: {
             stability: 0.5,
-            similarity_boost: 0.75
-          }
-        })
+            similarity_boost: 0.75,
+          },
+        }),
       })
 
       if (!res.ok) {
@@ -39,7 +44,11 @@ export class ElevenLabsAdapter extends ProviderAdapter {
       }
 
       const blob = await res.blob()
-      return { buffer: blob, mimeType: 'audio/mpeg', metadata: { model: 'eleven_multilingual_v2', voiceId } }
+      return {
+        buffer: blob,
+        mimeType: 'audio/mpeg',
+        metadata: { model: 'eleven_multilingual_v2', voiceId },
+      }
     })
   }
 }

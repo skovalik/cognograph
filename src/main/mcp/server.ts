@@ -10,13 +10,12 @@ import {
   CallToolRequestSchema,
   ListResourcesRequestSchema,
   ListToolsRequestSchema,
-  ReadResourceRequestSchema
+  ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js'
-
-import type { MCPSyncProvider } from './provider'
-import { TOOL_DEFINITIONS } from './tools'
 import { handleToolCall } from './handlers'
+import type { MCPSyncProvider } from './provider'
 import { getResourceList, handleResourceRead } from './resources'
+import { TOOL_DEFINITIONS } from './tools'
 
 /**
  * Create and start an MCP server using the given provider for data access.
@@ -26,14 +25,14 @@ export async function createMCPServer(provider: MCPSyncProvider): Promise<Server
   const server = new Server(
     {
       name: 'cognograph',
-      version: '1.0.0'
+      version: '1.0.0',
     },
     {
       capabilities: {
         resources: {},
-        tools: {}
-      }
-    }
+        tools: {},
+      },
+    },
   )
 
   // List available tools
@@ -51,19 +50,19 @@ export async function createMCPServer(provider: MCPSyncProvider): Promise<Server
         content: [
           {
             type: 'text',
-            text: JSON.stringify(result, null, 2)
-          }
-        ]
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
       }
     } catch (error) {
       return {
         content: [
           {
             type: 'text',
-            text: `Error: ${error instanceof Error ? error.message : String(error)}`
-          }
+            text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+          },
         ],
-        isError: true
+        isError: true,
       }
     }
   })
@@ -83,9 +82,9 @@ export async function createMCPServer(provider: MCPSyncProvider): Promise<Server
           {
             uri: request.params.uri,
             mimeType: 'application/json',
-            text: content
-          }
-        ]
+            text: content,
+          },
+        ],
       }
     } catch (error) {
       return {
@@ -93,9 +92,9 @@ export async function createMCPServer(provider: MCPSyncProvider): Promise<Server
           {
             uri: request.params.uri,
             mimeType: 'text/plain',
-            text: `Error: ${error instanceof Error ? error.message : String(error)}`
-          }
-        ]
+            text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
       }
     }
   })

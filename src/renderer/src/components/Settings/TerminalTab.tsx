@@ -8,21 +8,21 @@
  * and usage meter for free tier.
  */
 
-import { memo, useState, useEffect } from 'react'
-import { Terminal, Wifi, WifiOff, Cloud, HardDrive, Loader2 } from 'lucide-react'
-import { hasTerminalAccess } from '../../utils/terminalAccess'
+import { Cloud, HardDrive, Loader2, Terminal, Wifi, WifiOff } from 'lucide-react'
+import { memo, useEffect, useState } from 'react'
 import { useEntitlementsStore } from '../../stores/entitlementsStore'
+import { hasTerminalAccess } from '../../utils/terminalAccess'
 
 type TerminalPreference = 'local' | 'cloud' | 'ask'
 
 function TerminalTabComponent(): JSX.Element {
   const plan = useEntitlementsStore((s) => s.plan)
   const [agentConnected, setAgentConnected] = useState(false)
-  const [preference, setPreference] = useState<TerminalPreference>(() =>
-    (localStorage.getItem('cognograph:terminalPreference') as TerminalPreference) || 'ask'
+  const [preference, setPreference] = useState<TerminalPreference>(
+    () => (localStorage.getItem('cognograph:terminalPreference') as TerminalPreference) || 'ask',
   )
-  const [defaultShell, setDefaultShell] = useState(() =>
-    localStorage.getItem('cognograph:defaultShell') || ''
+  const [defaultShell, setDefaultShell] = useState(
+    () => localStorage.getItem('cognograph:defaultShell') || '',
   )
   const [probing, setProbing] = useState(false)
 
@@ -35,7 +35,9 @@ function TerminalTabComponent(): JSX.Element {
   const handleProbe = async () => {
     setProbing(true)
     try {
-      const res = await fetch('http://localhost:19836/health', { signal: AbortSignal.timeout(2000) })
+      const res = await fetch('http://localhost:19836/health', {
+        signal: AbortSignal.timeout(2000),
+      })
       const data = await res.json()
       if (data.status === 'ok') {
         localStorage.setItem('cognograph:localAgentConnected', 'true')
@@ -76,7 +78,14 @@ function TerminalTabComponent(): JSX.Element {
           <Terminal className="w-8 h-8 mx-auto mb-2 gui-text-secondary" />
           <p className="text-sm gui-text-secondary">No terminal access available</p>
           <p className="text-xs gui-text-secondary mt-1">
-            Run <code className="font-mono text-[10px] px-1 py-0.5 rounded" style={{ backgroundColor: 'var(--surface-secondary)' }}>npx cognograph-agent</code> to start the local agent.
+            Run{' '}
+            <code
+              className="font-mono text-[10px] px-1 py-0.5 rounded"
+              style={{ backgroundColor: 'var(--surface-secondary)' }}
+            >
+              npx cognograph-agent
+            </code>{' '}
+            to start the local agent.
           </p>
         </div>
       </div>
@@ -123,12 +132,30 @@ function TerminalTabComponent(): JSX.Element {
       <div>
         <label className="block text-xs font-medium gui-text mb-2">Preferred Source</label>
         <div className="space-y-1.5">
-          {([
-            { value: 'local' as const, icon: HardDrive, label: 'Local Agent', desc: 'Use local agent when available' },
-            { value: 'cloud' as const, icon: Cloud, label: 'Cloud Terminal', desc: plan === 'free' ? '30 min/day on free tier' : 'Unlimited on Pro' },
-            { value: 'ask' as const, icon: Terminal, label: 'Ask Each Time', desc: 'Choose when creating a terminal' },
-          ]).map(({ value, icon: Icon, label, desc }) => (
-            <label key={value} className="flex items-center gap-3 gui-card rounded-lg p-2.5 cursor-pointer">
+          {[
+            {
+              value: 'local' as const,
+              icon: HardDrive,
+              label: 'Local Agent',
+              desc: 'Use local agent when available',
+            },
+            {
+              value: 'cloud' as const,
+              icon: Cloud,
+              label: 'Cloud Terminal',
+              desc: plan === 'free' ? '30 min/day on free tier' : 'Unlimited on Pro',
+            },
+            {
+              value: 'ask' as const,
+              icon: Terminal,
+              label: 'Ask Each Time',
+              desc: 'Choose when creating a terminal',
+            },
+          ].map(({ value, icon: Icon, label, desc }) => (
+            <label
+              key={value}
+              className="flex items-center gap-3 gui-card rounded-lg p-2.5 cursor-pointer"
+            >
               <input
                 type="radio"
                 name="terminal-preference"
@@ -157,9 +184,7 @@ function TerminalTabComponent(): JSX.Element {
           placeholder="System default (bash, zsh, powershell)"
           className="gui-input w-full px-3 py-2 rounded text-xs font-mono"
         />
-        <p className="text-[10px] gui-text-secondary mt-1">
-          Leave empty for system default.
-        </p>
+        <p className="text-[10px] gui-text-secondary mt-1">Leave empty for system default.</p>
       </div>
     </div>
   )

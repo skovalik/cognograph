@@ -1,28 +1,29 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import React, { useEffect, useRef } from 'react';
-import { Renderer, Program, Mesh, Triangle, Texture } from 'ogl';
-import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
+import { Mesh, Program, Renderer, Texture, Triangle } from 'ogl'
+import type React from 'react'
+import { useEffect, useRef } from 'react'
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality'
 
-type Offset = { x?: number | string; y?: number | string };
-type AnimationType = 'rotate' | 'rotate3d' | 'hover';
+type Offset = { x?: number | string; y?: number | string }
+type AnimationType = 'rotate' | 'rotate3d' | 'hover'
 
 export type PrismaticBurstProps = {
-  intensity?: number;
-  speed?: number;
-  animationType?: AnimationType;
-  colors?: string[];
-  distort?: number;
-  paused?: boolean;
-  offset?: Offset;
-  hoverDampness?: number;
-  rayCount?: number;
-  mixBlendMode?: React.CSSProperties['mixBlendMode'] | 'none';
-  isDark?: boolean;
-  qualityRef?: React.RefObject<AdaptiveQualityState>;
-  reportFrame?: () => void;
-};
+  intensity?: number
+  speed?: number
+  animationType?: AnimationType
+  colors?: string[]
+  distort?: number
+  paused?: boolean
+  offset?: Offset
+  hoverDampness?: number
+  rayCount?: number
+  mixBlendMode?: React.CSSProperties['mixBlendMode'] | 'none'
+  isDark?: boolean
+  qualityRef?: React.RefObject<AdaptiveQualityState>
+  reportFrame?: () => void
+}
 
 const vertexShader = `#version 300 es
 in vec2 position;
@@ -32,7 +33,7 @@ void main() {
     vUv = uv;
     gl_Position = vec4(position, 0.0, 1.0);
 }
-`;
+`
 
 const fragmentShader = `#version 300 es
 precision highp float;
@@ -203,32 +204,32 @@ void main(){
     } else {
       fragColor = vec4(rawCol, brightness);
     }
-}`;
+}`
 
 const hexToRgb01 = (hex: string): [number, number, number] => {
-  let h = hex.trim();
-  if (h.startsWith('#')) h = h.slice(1);
+  let h = hex.trim()
+  if (h.startsWith('#')) h = h.slice(1)
   if (h.length === 3) {
     const r = h[0],
       g = h[1],
-      b = h[2];
-    h = r + r + g + g + b + b;
+      b = h[2]
+    h = r + r + g + g + b + b
   }
-  const intVal = parseInt(h, 16);
-  if (isNaN(intVal) || (h.length !== 6 && h.length !== 8)) return [1, 1, 1];
-  const r = ((intVal >> 16) & 255) / 255;
-  const g = ((intVal >> 8) & 255) / 255;
-  const b = (intVal & 255) / 255;
-  return [r, g, b];
-};
+  const intVal = parseInt(h, 16)
+  if (isNaN(intVal) || (h.length !== 6 && h.length !== 8)) return [1, 1, 1]
+  const r = ((intVal >> 16) & 255) / 255
+  const g = ((intVal >> 8) & 255) / 255
+  const b = (intVal & 255) / 255
+  return [r, g, b]
+}
 
 const toPx = (v: number | string | undefined): number => {
-  if (v == null) return 0;
-  if (typeof v === 'number') return v;
-  const s = String(v).trim();
-  const num = parseFloat(s.replace('px', ''));
-  return isNaN(num) ? 0 : num;
-};
+  if (v == null) return 0
+  if (typeof v === 'number') return v
+  const s = String(v).trim()
+  const num = parseFloat(s.replace('px', ''))
+  return isNaN(num) ? 0 : num
+}
 
 const PrismaticBurst = ({
   intensity = 2,
@@ -245,59 +246,59 @@ const PrismaticBurst = ({
   qualityRef,
   reportFrame: reportFrameFn,
 }: PrismaticBurstProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const programRef = useRef<Program | null>(null);
-  const rendererRef = useRef<Renderer | null>(null);
-  const mouseTargetRef = useRef<[number, number]>([0.5, 0.5]);
-  const mouseSmoothRef = useRef<[number, number]>([0.5, 0.5]);
-  const pausedRef = useRef<boolean>(paused);
-  const gradTexRef = useRef<Texture | null>(null);
-  const hoverDampRef = useRef<number>(hoverDampness);
-  const isVisibleRef = useRef<boolean>(true);
-  const meshRef = useRef<Mesh | null>(null);
-  const triRef = useRef<Triangle | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null)
+  const programRef = useRef<Program | null>(null)
+  const rendererRef = useRef<Renderer | null>(null)
+  const mouseTargetRef = useRef<[number, number]>([0.5, 0.5])
+  const mouseSmoothRef = useRef<[number, number]>([0.5, 0.5])
+  const pausedRef = useRef<boolean>(paused)
+  const gradTexRef = useRef<Texture | null>(null)
+  const hoverDampRef = useRef<number>(hoverDampness)
+  const isVisibleRef = useRef<boolean>(true)
+  const meshRef = useRef<Mesh | null>(null)
+  const triRef = useRef<Triangle | null>(null)
 
   useEffect(() => {
-    pausedRef.current = paused;
-  }, [paused]);
+    pausedRef.current = paused
+  }, [paused])
   useEffect(() => {
-    hoverDampRef.current = hoverDampness;
-  }, [hoverDampness]);
+    hoverDampRef.current = hoverDampness
+  }, [hoverDampness])
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const container = containerRef.current
+    if (!container) return
 
-    const dpr = 1.0;
-    const renderer = new Renderer({ dpr, alpha: true, antialias: false });
-    rendererRef.current = renderer;
+    const dpr = 1.0
+    const renderer = new Renderer({ dpr, alpha: true, antialias: false })
+    rendererRef.current = renderer
 
-    const gl = renderer.gl;
-    gl.clearColor(0, 0, 0, 0);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.canvas.style.position = 'absolute';
-    gl.canvas.style.inset = '0';
-    gl.canvas.style.width = '100%';
-    gl.canvas.style.height = '100%';
-    const effectiveBlend = isDark && mixBlendMode && mixBlendMode !== 'none' ? mixBlendMode : '';
-    gl.canvas.style.mixBlendMode = effectiveBlend;
-    container.appendChild(gl.canvas);
+    const gl = renderer.gl
+    gl.clearColor(0, 0, 0, 0)
+    gl.enable(gl.BLEND)
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+    gl.canvas.style.position = 'absolute'
+    gl.canvas.style.inset = '0'
+    gl.canvas.style.width = '100%'
+    gl.canvas.style.height = '100%'
+    const effectiveBlend = isDark && mixBlendMode && mixBlendMode !== 'none' ? mixBlendMode : ''
+    gl.canvas.style.mixBlendMode = effectiveBlend
+    container.appendChild(gl.canvas)
 
-    const white = new Uint8Array([255, 255, 255, 255]);
+    const white = new Uint8Array([255, 255, 255, 255])
     const gradientTex = new Texture(gl, {
       image: white,
       width: 1,
       height: 1,
       generateMipmaps: false,
-      flipY: false
-    });
+      flipY: false,
+    })
 
-    gradientTex.minFilter = gl.LINEAR;
-    gradientTex.magFilter = gl.LINEAR;
-    gradientTex.wrapS = gl.CLAMP_TO_EDGE;
-    gradientTex.wrapT = gl.CLAMP_TO_EDGE;
-    gradTexRef.current = gradientTex;
+    gradientTex.minFilter = gl.LINEAR
+    gradientTex.magFilter = gl.LINEAR
+    gradientTex.wrapS = gl.CLAMP_TO_EDGE
+    gradientTex.wrapT = gl.CLAMP_TO_EDGE
+    gradTexRef.current = gradientTex
 
     const program = new Program(gl, {
       vertex: vertexShader,
@@ -316,195 +317,196 @@ const PrismaticBurst = ({
         uGradient: { value: gradientTex },
         uNoiseAmount: { value: 0.8 },
         uRayCount: { value: 0 },
-        uIsDark: { value: isDark ? 1 : 0 }
-      }
-    });
+        uIsDark: { value: isDark ? 1 : 0 },
+      },
+    })
 
-    programRef.current = program;
+    programRef.current = program
 
-    const triangle = new Triangle(gl);
-    const mesh = new Mesh(gl, { geometry: triangle, program });
-    triRef.current = triangle;
-    meshRef.current = mesh;
+    const triangle = new Triangle(gl)
+    const mesh = new Mesh(gl, { geometry: triangle, program })
+    triRef.current = triangle
+    meshRef.current = mesh
 
     const resize = () => {
-      const w = container.clientWidth || 1;
-      const h = container.clientHeight || 1;
-      renderer.setSize(w, h);
-      program.uniforms.uResolution.value = [gl.drawingBufferWidth, gl.drawingBufferHeight];
-    };
-
-    let ro: ResizeObserver | null = null;
-    if ('ResizeObserver' in window) {
-      ro = new ResizeObserver(resize);
-      ro.observe(container);
-    } else {
-      (window as Window).addEventListener('resize', resize);
+      const w = container.clientWidth || 1
+      const h = container.clientHeight || 1
+      renderer.setSize(w, h)
+      program.uniforms.uResolution.value = [gl.drawingBufferWidth, gl.drawingBufferHeight]
     }
-    resize();
+
+    let ro: ResizeObserver | null = null
+    if ('ResizeObserver' in window) {
+      ro = new ResizeObserver(resize)
+      ro.observe(container)
+    } else {
+      ;(window as Window).addEventListener('resize', resize)
+    }
+    resize()
 
     const onPointer = (e: PointerEvent) => {
-      const rect = container.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / Math.max(rect.width, 1);
-      const y = (e.clientY - rect.top) / Math.max(rect.height, 1);
-      mouseTargetRef.current = [Math.min(Math.max(x, 0), 1), Math.min(Math.max(y, 0), 1)];
-    };
-    container.addEventListener('pointermove', onPointer, { passive: true });
+      const rect = container.getBoundingClientRect()
+      const x = (e.clientX - rect.left) / Math.max(rect.width, 1)
+      const y = (e.clientY - rect.top) / Math.max(rect.height, 1)
+      mouseTargetRef.current = [Math.min(Math.max(x, 0), 1), Math.min(Math.max(y, 0), 1)]
+    }
+    container.addEventListener('pointermove', onPointer, { passive: true })
 
-    let io: IntersectionObserver | null = null;
+    let io: IntersectionObserver | null = null
     if ('IntersectionObserver' in window) {
       io = new IntersectionObserver(
-        entries => {
-          if (entries[0]) isVisibleRef.current = entries[0].isIntersecting;
+        (entries) => {
+          if (entries[0]) isVisibleRef.current = entries[0].isIntersecting
         },
-        { root: null, threshold: 0.01 }
-      );
-      io.observe(container);
+        { root: null, threshold: 0.01 },
+      )
+      io.observe(container)
     }
-    const onVis = () => {};
-    document.addEventListener('visibilitychange', onVis);
+    const onVis = () => {}
+    document.addEventListener('visibilitychange', onVis)
 
-    let raf = 0;
-    let last = performance.now();
-    let accumTime = 0;
-    let frameCount = 0;
-    let currentScale = -1;
+    let raf = 0
+    let last = performance.now()
+    let accumTime = 0
+    let frameCount = 0
+    let currentScale = -1
 
     const update = (now: number) => {
-      const dt = Math.max(0, now - last) * 0.001;
-      last = now;
-      const visible = isVisibleRef.current && !document.hidden;
-      if (!pausedRef.current) accumTime += dt;
+      const dt = Math.max(0, now - last) * 0.001
+      last = now
+      const visible = isVisibleRef.current && !document.hidden
+      if (!pausedRef.current) accumTime += dt
       if (!visible || (qualityRef?.current && !qualityRef.current.shouldRender)) {
-        raf = requestAnimationFrame(update);
-        return;
+        raf = requestAnimationFrame(update)
+        return
       }
-      if (reportFrameFn) reportFrameFn();
+      if (reportFrameFn) reportFrameFn()
       if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) {
-        raf = requestAnimationFrame(update);
-        return;
+        raf = requestAnimationFrame(update)
+        return
       }
       if (qualityRef?.current) {
-        const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap;
+        const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap
         if (scale !== currentScale) {
-          currentScale = scale;
-          const w = container.clientWidth || 1;
-          const h = container.clientHeight || 1;
-          renderer.setSize(w * scale, h * scale);
+          currentScale = scale
+          const w = container.clientWidth || 1
+          const h = container.clientHeight || 1
+          renderer.setSize(w * scale, h * scale)
           // OGL setSize also sets canvas CSS dimensions — force back to 100% so
           // low-res content stretches to fill container (CSS upscaling, not shrinking)
-          const c = renderer.gl.canvas as HTMLCanvasElement;
-          c.style.width = '100%';
-          c.style.height = '100%';
-          program.uniforms.uResolution.value = [gl.drawingBufferWidth, gl.drawingBufferHeight];
+          const c = renderer.gl.canvas as HTMLCanvasElement
+          c.style.width = '100%'
+          c.style.height = '100%'
+          program.uniforms.uResolution.value = [gl.drawingBufferWidth, gl.drawingBufferHeight]
         }
       }
-      const tau = 0.02 + Math.max(0, Math.min(1, hoverDampRef.current)) * 0.5;
-      const alpha = 1 - Math.exp(-dt / tau);
-      const tgt = mouseTargetRef.current;
-      const sm = mouseSmoothRef.current;
-      sm[0] += (tgt[0] - sm[0]) * alpha;
-      sm[1] += (tgt[1] - sm[1]) * alpha;
-      program.uniforms.uMouse.value = sm as any;
-      program.uniforms.uTime.value = accumTime;
-      renderer.render({ scene: meshRef.current! });
-      raf = requestAnimationFrame(update);
-    };
-    raf = requestAnimationFrame(update);
+      const tau = 0.02 + Math.max(0, Math.min(1, hoverDampRef.current)) * 0.5
+      const alpha = 1 - Math.exp(-dt / tau)
+      const tgt = mouseTargetRef.current
+      const sm = mouseSmoothRef.current
+      sm[0] += (tgt[0] - sm[0]) * alpha
+      sm[1] += (tgt[1] - sm[1]) * alpha
+      program.uniforms.uMouse.value = sm as any
+      program.uniforms.uTime.value = accumTime
+      renderer.render({ scene: meshRef.current! })
+      raf = requestAnimationFrame(update)
+    }
+    raf = requestAnimationFrame(update)
 
     return () => {
-      cancelAnimationFrame(raf);
-      container.removeEventListener('pointermove', onPointer);
-      ro?.disconnect();
-      if (!ro) window.removeEventListener('resize', resize);
-      io?.disconnect();
-      document.removeEventListener('visibilitychange', onVis);
+      cancelAnimationFrame(raf)
+      container.removeEventListener('pointermove', onPointer)
+      ro?.disconnect()
+      if (!ro) window.removeEventListener('resize', resize)
+      io?.disconnect()
+      document.removeEventListener('visibilitychange', onVis)
       try {
-        container.removeChild(gl.canvas);
+        container.removeChild(gl.canvas)
       } catch (e) {
-        void e;
+        void e
       }
-      meshRef.current = null;
-      triRef.current = null;
-      programRef.current = null;
+      meshRef.current = null
+      triRef.current = null
+      programRef.current = null
       try {
-        const glCtx = rendererRef.current?.gl;
+        const glCtx = rendererRef.current?.gl
         if (glCtx) {
-          if (gradTexRef.current?.texture) glCtx.deleteTexture(gradTexRef.current.texture);
-          const loseCtx = glCtx.getExtension('WEBGL_lose_context');
-          if (loseCtx) loseCtx.loseContext();
+          if (gradTexRef.current?.texture) glCtx.deleteTexture(gradTexRef.current.texture)
+          const loseCtx = glCtx.getExtension('WEBGL_lose_context')
+          if (loseCtx) loseCtx.loseContext()
         }
       } catch (e) {
-        void e;
+        void e
       }
-      rendererRef.current = null;
-      gradTexRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    const canvas = rendererRef.current?.gl?.canvas as HTMLCanvasElement | undefined;
-    if (canvas) {
-      canvas.style.mixBlendMode = isDark && mixBlendMode && mixBlendMode !== 'none' ? mixBlendMode : '';
+      rendererRef.current = null
+      gradTexRef.current = null
     }
-  }, [mixBlendMode, isDark]);
+  }, [])
 
   useEffect(() => {
-    const program = programRef.current;
-    const renderer = rendererRef.current;
-    const gradTex = gradTexRef.current;
-    if (!program || !renderer || !gradTex) return;
+    const canvas = rendererRef.current?.gl?.canvas as HTMLCanvasElement | undefined
+    if (canvas) {
+      canvas.style.mixBlendMode =
+        isDark && mixBlendMode && mixBlendMode !== 'none' ? mixBlendMode : ''
+    }
+  }, [mixBlendMode, isDark])
 
-    program.uniforms.uIntensity.value = intensity ?? 1;
-    program.uniforms.uSpeed.value = speed ?? 1;
+  useEffect(() => {
+    const program = programRef.current
+    const renderer = rendererRef.current
+    const gradTex = gradTexRef.current
+    if (!program || !renderer || !gradTex) return
+
+    program.uniforms.uIntensity.value = intensity ?? 1
+    program.uniforms.uSpeed.value = speed ?? 1
 
     const animTypeMap: Record<AnimationType, number> = {
       rotate: 0,
       rotate3d: 1,
-      hover: 2
-    };
-    program.uniforms.uAnimType.value = animTypeMap[animationType ?? 'rotate'];
-
-    program.uniforms.uDistort.value = typeof distort === 'number' ? distort : 0;
-
-    const ox = toPx(offset?.x);
-    const oy = toPx(offset?.y);
-    program.uniforms.uOffset.value = [ox, oy];
-    program.uniforms.uRayCount.value = Math.max(0, Math.floor(rayCount ?? 0));
-    program.uniforms.uIsDark.value = isDark ? 1 : 0;
-
-    let count = 0;
-    if (Array.isArray(colors) && colors.length > 0) {
-      const gl = renderer.gl;
-      const capped = colors.slice(0, 64);
-      count = capped.length;
-      const data = new Uint8Array(count * 4);
-      for (let i = 0; i < count; i++) {
-        const [r, g, b] = hexToRgb01(capped[i]);
-        data[i * 4 + 0] = Math.round(r * 255);
-        data[i * 4 + 1] = Math.round(g * 255);
-        data[i * 4 + 2] = Math.round(b * 255);
-        data[i * 4 + 3] = 255;
-      }
-      gradTex.image = data;
-      gradTex.width = count;
-      gradTex.height = 1;
-      gradTex.minFilter = gl.LINEAR;
-      gradTex.magFilter = gl.LINEAR;
-      gradTex.wrapS = gl.CLAMP_TO_EDGE;
-      gradTex.wrapT = gl.CLAMP_TO_EDGE;
-      gradTex.flipY = false;
-      gradTex.generateMipmaps = false;
-      gradTex.format = gl.RGBA;
-      gradTex.type = gl.UNSIGNED_BYTE;
-      gradTex.needsUpdate = true;
-    } else {
-      count = 0;
+      hover: 2,
     }
-    program.uniforms.uColorCount.value = count;
-  }, [intensity, speed, animationType, colors, distort, offset, rayCount, isDark]);
+    program.uniforms.uAnimType.value = animTypeMap[animationType ?? 'rotate']
 
-  return <div className="w-full h-full relative overflow-hidden" ref={containerRef} />;
-};
+    program.uniforms.uDistort.value = typeof distort === 'number' ? distort : 0
 
-export default PrismaticBurst;
+    const ox = toPx(offset?.x)
+    const oy = toPx(offset?.y)
+    program.uniforms.uOffset.value = [ox, oy]
+    program.uniforms.uRayCount.value = Math.max(0, Math.floor(rayCount ?? 0))
+    program.uniforms.uIsDark.value = isDark ? 1 : 0
+
+    let count = 0
+    if (Array.isArray(colors) && colors.length > 0) {
+      const gl = renderer.gl
+      const capped = colors.slice(0, 64)
+      count = capped.length
+      const data = new Uint8Array(count * 4)
+      for (let i = 0; i < count; i++) {
+        const [r, g, b] = hexToRgb01(capped[i])
+        data[i * 4 + 0] = Math.round(r * 255)
+        data[i * 4 + 1] = Math.round(g * 255)
+        data[i * 4 + 2] = Math.round(b * 255)
+        data[i * 4 + 3] = 255
+      }
+      gradTex.image = data
+      gradTex.width = count
+      gradTex.height = 1
+      gradTex.minFilter = gl.LINEAR
+      gradTex.magFilter = gl.LINEAR
+      gradTex.wrapS = gl.CLAMP_TO_EDGE
+      gradTex.wrapT = gl.CLAMP_TO_EDGE
+      gradTex.flipY = false
+      gradTex.generateMipmaps = false
+      gradTex.format = gl.RGBA
+      gradTex.type = gl.UNSIGNED_BYTE
+      gradTex.needsUpdate = true
+    } else {
+      count = 0
+    }
+    program.uniforms.uColorCount.value = count
+  }, [intensity, speed, animationType, colors, distort, offset, rayCount, isDark])
+
+  return <div className="w-full h-full relative overflow-hidden" ref={containerRef} />
+}
+
+export default PrismaticBurst

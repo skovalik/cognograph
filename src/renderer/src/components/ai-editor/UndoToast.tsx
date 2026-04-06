@@ -9,8 +9,8 @@
  * Auto-dismisses after 10 seconds.
  */
 
-import { memo, useState, useEffect, useCallback } from 'react'
-import { Undo2, X, CheckCircle } from 'lucide-react'
+import { CheckCircle, Undo2, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useState } from 'react'
 
 interface UndoToastProps {
   operationCount: number
@@ -23,7 +23,7 @@ function UndoToastComponent({
   operationCount,
   onUndo,
   onDismiss,
-  autoHideDelay = 10000
+  autoHideDelay = 10000,
 }: UndoToastProps): JSX.Element {
   const [isUndoing, setIsUndoing] = useState(false)
   const [progress, setProgress] = useState(100)
@@ -76,11 +76,7 @@ function UndoToastComponent({
           <Undo2 className="undo-icon" />
           <span>{isUndoing ? 'Undoing...' : 'Undo'}</span>
         </button>
-        <button
-          className="dismiss-button"
-          onClick={onDismiss}
-          aria-label="Dismiss notification"
-        >
+        <button className="dismiss-button" onClick={onDismiss} aria-label="Dismiss notification">
           <X className="dismiss-icon" />
         </button>
       </div>

@@ -1,7 +1,7 @@
 /**
  * Web First-Run E2E Tests
  *
- * Tests the first-time user experience on canvas.cognograph.app (web build).
+ * Tests the first-time user experience on cognograph.app/workspace (web build).
  * Verifies onboarding flow, API key setup, and initial canvas interaction.
  */
 

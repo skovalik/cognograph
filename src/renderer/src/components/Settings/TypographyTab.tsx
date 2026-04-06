@@ -11,23 +11,18 @@
  * All changes apply immediately via the workspace store -- no save button.
  */
 
-import { memo, useCallback } from 'react'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { cn } from '@/lib/utils'
-import { FONT_THEMES } from '@shared/types'
 import type { FontTheme } from '@shared/types'
+import { FONT_THEMES } from '@shared/types'
+import { memo, useCallback } from 'react'
 import { Slider } from '@/components/ui/slider'
+import { cn } from '@/lib/utils'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const FONT_THEME_OPTIONS: FontTheme[] = [
-  'space-grotesk',
-  'satoshi',
-  'instrument',
-  'general-sans',
-]
+const FONT_THEME_OPTIONS: FontTheme[] = ['space-grotesk', 'satoshi', 'instrument', 'general-sans']
 
 // ---------------------------------------------------------------------------
 // Component
@@ -80,16 +75,10 @@ function TypographyTabComponent(): JSX.Element {
                 )}
               >
                 {/* Font preview rendered in its own typeface */}
-                <span
-                  className="text-lg leading-none"
-                  style={{ fontFamily: theme.sans }}
-                >
+                <span className="text-lg leading-none" style={{ fontFamily: theme.sans }}>
                   Aa
                 </span>
-                <span
-                  className="text-[10px] leading-tight"
-                  style={{ fontFamily: theme.sans }}
-                >
+                <span className="text-[10px] leading-tight" style={{ fontFamily: theme.sans }}>
                   {theme.label}
                 </span>
               </button>
@@ -106,9 +95,7 @@ function TypographyTabComponent(): JSX.Element {
           <label className="text-[11px] font-medium text-[var(--text-secondary)] uppercase tracking-wider">
             Font Size
           </label>
-          <span className="text-[11px] text-[var(--text-muted)] tabular-nums">
-            {fontSize}px
-          </span>
+          <span className="text-[11px] text-[var(--text-muted)] tabular-nums">{fontSize}px</span>
         </div>
         <Slider
           value={[fontSize]}

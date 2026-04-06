@@ -16,28 +16,32 @@
  * during rapid panning.
  */
 
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNodes, useEdges, useReactFlow, useViewport } from '@xyflow/react'
-import type { Node, Edge } from '@xyflow/react'
+import type { Edge, Node } from '@xyflow/react'
+import { useEdges, useNodes, useReactFlow, useViewport } from '@xyflow/react'
 import {
-  MessageSquare,
   CheckSquare,
-  StickyNote,
-  FolderKanban,
-  FileText,
-  Globe,
   Cpu,
+  FileText,
+  FolderKanban,
+  Globe,
+  LayoutGrid,
+  MessageSquare,
+  StickyNote,
   Zap,
-  LayoutGrid
 } from 'lucide-react'
-import { computeClusters } from '../../utils/clusterEngine'
-import type { Cluster, NodePosition, EdgeInfo } from '../../utils/clusterEngine'
+import type React from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
+import type { Cluster, EdgeInfo, NodePosition } from '../../utils/clusterEngine'
+import { computeClusters } from '../../utils/clusterEngine'
 
 // ---- Exported constants (testable) ----------------------------------------
 
 /** Lucide icon component for each node type */
-export const TYPE_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+export const TYPE_ICONS: Record<
+  string,
+  React.ComponentType<{ size?: number; className?: string }>
+> = {
   conversation: MessageSquare,
   task: CheckSquare,
   note: StickyNote,
@@ -46,7 +50,7 @@ export const TYPE_ICONS: Record<string, React.ComponentType<{ size?: number; cla
   workspace: Globe,
   orchestrator: Cpu,
   action: Zap,
-  text: LayoutGrid
+  text: LayoutGrid,
 }
 
 /** Background color (30% opacity) per node type */
@@ -59,7 +63,7 @@ export const TYPE_COLORS: Record<string, string> = {
   workspace: 'rgba(6, 182, 212, 0.3)',
   orchestrator: 'rgba(249, 115, 22, 0.3)',
   action: 'rgba(236, 72, 153, 0.3)',
-  text: 'rgba(107, 114, 128, 0.3)'
+  text: 'rgba(107, 114, 128, 0.3)',
 }
 
 /** Border color (50% opacity) per node type */
@@ -72,7 +76,7 @@ export const TYPE_BORDER_COLORS: Record<string, string> = {
   workspace: 'rgba(6, 182, 212, 0.5)',
   orchestrator: 'rgba(249, 115, 22, 0.5)',
   action: 'rgba(236, 72, 153, 0.5)',
-  text: 'rgba(107, 114, 128, 0.5)'
+  text: 'rgba(107, 114, 128, 0.5)',
 }
 
 // ---- Pure helpers (exported for testing) ----------------------------------
@@ -141,7 +145,7 @@ export const ClusterOverlay = memo(function ClusterOverlay(): JSX.Element | null
       x: node.position.x,
       y: node.position.y,
       type: (node.data as { type?: string })?.type || node.type || 'text',
-      status: (node.data as { status?: string })?.status
+      status: (node.data as { status?: string })?.status,
     }))
   }, [rfNodes, isUltraFar])
 
@@ -149,14 +153,14 @@ export const ClusterOverlay = memo(function ClusterOverlay(): JSX.Element | null
     if (!isUltraFar) return []
     return rfEdges.map((edge: Edge) => ({
       source: edge.source,
-      target: edge.target
+      target: edge.target,
     }))
   }, [rfEdges, isUltraFar])
 
   // Debounced cluster computation
   useEffect(() => {
     if (!isUltraFar) {
-      setClusters(prev => prev.length === 0 ? prev : [])
+      setClusters((prev) => (prev.length === 0 ? prev : []))
       return
     }
 
@@ -182,10 +186,10 @@ export const ClusterOverlay = memo(function ClusterOverlay(): JSX.Element | null
       fitView({
         nodes: cluster.nodeIds.map((id) => ({ id })),
         duration: 400,
-        padding: 0.2
+        padding: 0.2,
       })
     },
-    [fitView]
+    [fitView],
   )
 
   if (!isUltraFar || clusters.length === 0) return null
@@ -219,7 +223,7 @@ export const ClusterOverlay = memo(function ClusterOverlay(): JSX.Element | null
               width: size,
               height: size,
               background: bgColor,
-              border: `2px solid ${borderColor}`
+              border: `2px solid ${borderColor}`,
             }}
             onClick={() => handleBubbleClick(cluster)}
             role="button"
@@ -234,9 +238,7 @@ export const ClusterOverlay = memo(function ClusterOverlay(): JSX.Element | null
           >
             <IconComponent size={16} className="cluster-bubble-icon" />
             <span className="cluster-bubble-count">{cluster.summary.nodeCount}</span>
-            {statusText && (
-              <span className="cluster-bubble-status">{statusText}</span>
-            )}
+            {statusText && <span className="cluster-bubble-status">{statusText}</span>}
           </div>
         )
       })}

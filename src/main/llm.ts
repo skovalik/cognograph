@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { ipcMain, BrowserWindow, safeStorage } from 'electron'
-import Store from 'electron-store'
 import Anthropic from '@anthropic-ai/sdk'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { BrowserWindow, ipcMain, safeStorage } from 'electron'
+import Store from 'electron-store'
 import OpenAI from 'openai'
 import type { IPCResponse } from '../shared/ipc-types'
-import { createIPCSuccess, createIPCError, IPC_ERROR_CODES } from '../shared/ipc-types'
+import { createIPCError, createIPCSuccess, IPC_ERROR_CODES } from '../shared/ipc-types'
 import { LlmSendSchema } from './ipc/schemas'
 
 interface LLMRequest {
@@ -123,28 +123,34 @@ async function streamAnthropic(request: LLMRequest): Promise<void> {
   activeStreams.set(conversationId, controller)
 
   const messages = request.messages
-    .filter(m => m.role !== 'system' && m.content.trim() !== '')
-    .map(m => ({
+    .filter((m) => m.role !== 'system' && m.content.trim() !== '')
+    .map((m) => ({
       role: m.role as 'user' | 'assistant',
-      content: m.content
+      content: m.content,
     }))
 
   // Diagnostic logging for context/system prompt
   console.log('[LLM:Anthropic] System prompt length:', request.systemPrompt?.length || 0)
   console.log('[LLM:Anthropic] Messages count:', messages.length)
   if (request.systemPrompt && request.systemPrompt.length > 100) {
-    console.log('[LLM:Anthropic] System prompt preview:', request.systemPrompt.substring(0, 300) + '...')
+    console.log(
+      '[LLM:Anthropic] System prompt preview:',
+      request.systemPrompt.substring(0, 300) + '...',
+    )
   }
 
   let fullResponse = ''
 
-  const stream = await client.messages.stream({
-    model: request.model || 'claude-sonnet-4-6',
-    max_tokens: request.maxTokens || 64000,
-    temperature: request.temperature ?? 0.7,
-    system: request.systemPrompt || 'You are a helpful AI assistant.',
-    messages
-  }, { signal: controller.signal })
+  const stream = await client.messages.stream(
+    {
+      model: request.model || 'claude-sonnet-4-6',
+      max_tokens: request.maxTokens || 64000,
+      temperature: request.temperature ?? 0.7,
+      system: request.systemPrompt || 'You are a helpful AI assistant.',
+      messages,
+    },
+    { signal: controller.signal },
+  )
 
   for await (const event of stream) {
     if (event.type === 'content_block_delta') {
@@ -159,13 +165,15 @@ async function streamAnthropic(request: LLMRequest): Promise<void> {
   // Extract actual token usage from the finalized message (including cache tokens)
   // Note: cache token fields may not be in SDK types yet but exist in API responses
   const finalMessage = await stream.finalMessage()
-  const usage = finalMessage.usage ? {
-    inputTokens: finalMessage.usage.input_tokens,
-    outputTokens: finalMessage.usage.output_tokens,
-    cacheCreationTokens: (finalMessage.usage as any).cache_creation_input_tokens || 0,
-    cacheReadTokens: (finalMessage.usage as any).cache_read_input_tokens || 0,
-    model: request.model || 'claude-sonnet-4-6'
-  } : undefined
+  const usage = finalMessage.usage
+    ? {
+        inputTokens: finalMessage.usage.input_tokens,
+        outputTokens: finalMessage.usage.output_tokens,
+        cacheCreationTokens: (finalMessage.usage as any).cache_creation_input_tokens || 0,
+        cacheReadTokens: (finalMessage.usage as any).cache_read_input_tokens || 0,
+        model: request.model || 'claude-sonnet-4-6',
+      }
+    : undefined
 
   activeStreams.delete(conversationId)
   mainWindow.webContents.send('llm:complete', { conversationId, response: fullResponse, usage })
@@ -191,15 +199,15 @@ async function streamGemini(request: LLMRequest): Promise<void> {
 
   const model = genAI.getGenerativeModel({
     model: request.model || 'gemini-1.5-flash',
-    systemInstruction: request.systemPrompt || undefined
+    systemInstruction: request.systemPrompt || undefined,
   })
 
   // Build conversation history
   const history = request.messages
-    .filter(m => m.role !== 'system' && m.content.trim() !== '')
-    .map(m => ({
+    .filter((m) => m.role !== 'system' && m.content.trim() !== '')
+    .map((m) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }]
+      parts: [{ text: m.content }],
     }))
 
   // Get the last user message
@@ -210,8 +218,8 @@ async function streamGemini(request: LLMRequest): Promise<void> {
     history: history as Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>,
     generationConfig: {
       maxOutputTokens: request.maxTokens || 64000,
-      temperature: request.temperature ?? 0.7
-    }
+      temperature: request.temperature ?? 0.7,
+    },
   })
 
   let fullResponse = ''
@@ -230,11 +238,13 @@ async function streamGemini(request: LLMRequest): Promise<void> {
   // Gemini provides usageMetadata on the aggregated response
   const aggregated = await result.response
   const meta = aggregated.usageMetadata
-  const usage = meta ? {
-    inputTokens: meta.promptTokenCount ?? 0,
-    outputTokens: meta.candidatesTokenCount ?? 0,
-    model: request.model || 'gemini-1.5-flash'
-  } : undefined
+  const usage = meta
+    ? {
+        inputTokens: meta.promptTokenCount ?? 0,
+        outputTokens: meta.candidatesTokenCount ?? 0,
+        model: request.model || 'gemini-1.5-flash',
+      }
+    : undefined
 
   activeStreams.delete(conversationId)
   mainWindow.webContents.send('llm:complete', { conversationId, response: fullResponse, usage })
@@ -257,10 +267,10 @@ async function streamOpenAI(request: LLMRequest): Promise<void> {
   activeStreams.set(conversationId, controller)
 
   const messages = request.messages
-    .filter(m => m.content.trim() !== '')
-    .map(m => ({
+    .filter((m) => m.content.trim() !== '')
+    .map((m) => ({
       role: m.role,
-      content: m.content
+      content: m.content,
     }))
 
   if (request.systemPrompt) {
@@ -271,14 +281,17 @@ async function streamOpenAI(request: LLMRequest): Promise<void> {
 
   let openaiUsage: { prompt_tokens?: number; completion_tokens?: number } | undefined
 
-  const stream = await client.chat.completions.create({
-    model: request.model || 'gpt-4-turbo-preview',
-    max_tokens: request.maxTokens || 64000,
-    temperature: request.temperature ?? 0.7,
-    messages,
-    stream: true,
-    stream_options: { include_usage: true }
-  }, { signal: controller.signal })
+  const stream = await client.chat.completions.create(
+    {
+      model: request.model || 'gpt-4-turbo-preview',
+      max_tokens: request.maxTokens || 64000,
+      temperature: request.temperature ?? 0.7,
+      messages,
+      stream: true,
+      stream_options: { include_usage: true },
+    },
+    { signal: controller.signal },
+  )
 
   for await (const chunk of stream) {
     const content = chunk.choices[0]?.delta?.content || ''
@@ -292,11 +305,13 @@ async function streamOpenAI(request: LLMRequest): Promise<void> {
     }
   }
 
-  const usage = openaiUsage ? {
-    inputTokens: openaiUsage.prompt_tokens ?? 0,
-    outputTokens: openaiUsage.completion_tokens ?? 0,
-    model: request.model || 'gpt-4-turbo-preview'
-  } : undefined
+  const usage = openaiUsage
+    ? {
+        inputTokens: openaiUsage.prompt_tokens ?? 0,
+        outputTokens: openaiUsage.completion_tokens ?? 0,
+        model: request.model || 'gpt-4-turbo-preview',
+      }
+    : undefined
 
   activeStreams.delete(conversationId)
   mainWindow.webContents.send('llm:complete', { conversationId, response: fullResponse, usage })
@@ -323,17 +338,17 @@ async function extractionCall(request: ExtractionRequest): Promise<IPCResponse<s
       max_tokens: request.maxTokens || 1500,
       temperature: 0.3,
       system: request.systemPrompt,
-      messages: [{ role: 'user', content: request.userPrompt }]
+      messages: [{ role: 'user', content: request.userPrompt }],
     })
 
-    const textContent = response.content.find(block => block.type === 'text')
+    const textContent = response.content.find((block) => block.type === 'text')
     return createIPCSuccess(textContent?.text || '')
   } catch (error) {
     console.error('[LLM:extract] Error:', error)
     return createIPCError(
       IPC_ERROR_CODES.LLM_API_ERROR,
       error instanceof Error ? error.message : 'Unknown error',
-      error instanceof Error ? error.stack : undefined
+      error instanceof Error ? error.stack : undefined,
     )
   }
 }
@@ -380,7 +395,11 @@ export function registerLLMHandlers(): void {
         activeStreams.delete(conversationId)
         if (error.name === 'AbortError') {
           // Issue 9: Send cancelled flag so renderer can clean up placeholder messages
-          mainWindow.webContents.send('llm:complete', { conversationId, response: '', cancelled: true })
+          mainWindow.webContents.send('llm:complete', {
+            conversationId,
+            response: '',
+            cancelled: true,
+          })
         } else {
           console.error('[LLM] Error:', error.message)
           mainWindow.webContents.send('llm:error', { conversationId, error: error.message })

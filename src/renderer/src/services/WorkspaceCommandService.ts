@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import type { NodeData } from '@shared/types'
 import { v4 as uuid } from 'uuid'
-import { useWorkspaceStore } from '../stores/workspaceStore'
+import type { AgentStreamChunk } from '../../../preload/index'
 import { useConnectorStore } from '../stores/connectorStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
+import { layoutEvents } from '../utils/layoutEvents'
 import {
   initAgentService,
   registerExternalStreamHandler,
   unregisterExternalStreamHandler,
 } from './agentService'
-import { getChatToolDefinitions, executeTool } from './agentTools'
-import { getWorkspaceToolDefinitions, executeWorkspaceTool } from './workspaceTools'
-import { layoutEvents } from '../utils/layoutEvents'
-import type { AgentStreamChunk } from '../../../preload/index'
-import type { NodeData } from '@shared/types'
+import { executeTool, getChatToolDefinitions } from './agentTools'
+import { executeWorkspaceTool, getWorkspaceToolDefinitions } from './workspaceTools'
 
 // ── Tier 1 Pattern Definitions ──────────────────────────────────────────────
 
@@ -25,7 +25,10 @@ interface Tier1Pattern {
 function getViewportCenter(): { x: number; y: number } {
   // Get center of current viewport in flow coordinates.
   // window.__cognograph_viewport is set by the onViewportChange handler in App.tsx.
-  const vp = (window as any).__cognograph_viewport as { x: number; y: number; zoom: number } | undefined
+  // biome-ignore lint/suspicious/noExplicitAny: global viewport bridge
+  const vp = (window as any).__cognograph_viewport as
+    | { x: number; y: number; zoom: number }
+    | undefined
   if (vp) {
     return {
       x: (-vp.x + window.innerWidth / 2) / vp.zoom + (Math.random() - 0.5) * 50,
@@ -43,7 +46,7 @@ const TIER1_PATTERNS: Tier1Pattern[] = [
     action: () => {
       window.dispatchEvent(new Event('save-workspace'))
       return { narration: 'Workspace saved.' }
-    }
+    },
   },
   // Undo / Redo
   {
@@ -51,18 +54,19 @@ const TIER1_PATTERNS: Tier1Pattern[] = [
     action: () => {
       useWorkspaceStore.getState().undo()
       return { narration: 'Undone.' }
-    }
+    },
   },
   {
     pattern: /^redo$/i,
     action: () => {
       useWorkspaceStore.getState().redo()
       return { narration: 'Redone.' }
-    }
+    },
   },
   // New node by type
   {
-    pattern: /^(?:new|create|add)\s+(note|task|conversation|chat|project|artifact|text|action|orchestrator|workspace)$/i,
+    pattern:
+      /^(?:new|create|add)\s+(note|task|conversation|chat|project|artifact|text|action|orchestrator|workspace)$/i,
     action: (match) => {
       const raw = (match[1] ?? 'note').toLowerCase()
       // 'chat' is a user alias for 'conversation' — remap it
@@ -70,7 +74,7 @@ const TIER1_PATTERNS: Tier1Pattern[] = [
       const pos = getViewportCenter()
       const id = useWorkspaceStore.getState().addNode(type, pos)
       return { narration: `Created new ${type}.`, affectedNodeIds: [id] }
-    }
+    },
   },
   // New agent
   {
@@ -79,17 +83,17 @@ const TIER1_PATTERNS: Tier1Pattern[] = [
       const pos = getViewportCenter()
       const id = useWorkspaceStore.getState().addAgentNode(pos)
       return { narration: 'Created new agent.', affectedNodeIds: [id] }
-    }
+    },
   },
   // Select all
   {
     pattern: /^select\s+all$/i,
     action: () => {
       const nodes = useWorkspaceStore.getState().nodes
-      const ids = nodes.map(n => n.id)
+      const ids = nodes.map((n) => n.id)
       useWorkspaceStore.getState().setSelectedNodes(ids)
       return { narration: `Selected ${ids.length} nodes.`, affectedNodeIds: ids }
-    }
+    },
   },
   // Deselect
   {
@@ -97,7 +101,7 @@ const TIER1_PATTERNS: Tier1Pattern[] = [
     action: () => {
       useWorkspaceStore.getState().setSelectedNodes([])
       return { narration: 'Selection cleared.' }
-    }
+    },
   },
   // Delete selected
   {
@@ -108,9 +112,9 @@ const TIER1_PATTERNS: Tier1Pattern[] = [
       useWorkspaceStore.getState().deleteNodes(selected)
       return {
         narration: `Deleted ${selected.length} node${selected.length > 1 ? 's' : ''}.`,
-        affectedNodeIds: selected
+        affectedNodeIds: selected,
       }
-    }
+    },
   },
   // Fit view
   {
@@ -118,17 +122,17 @@ const TIER1_PATTERNS: Tier1Pattern[] = [
     action: () => {
       window.dispatchEvent(new CustomEvent('fit-view'))
       return { narration: 'Fitted view.' }
-    }
+    },
   },
   // Zoom to percentage
   {
     pattern: /^zoom\s+(\d+)%?$/i,
     action: (match) => {
       const pct = match[1] ?? '100'
-      const zoom = parseInt(pct) / 100
+      const zoom = parseInt(pct, 10) / 100
       window.dispatchEvent(new CustomEvent('set-zoom', { detail: zoom }))
       return { narration: `Zoomed to ${pct}%.` }
-    }
+    },
   },
   // Toggle theme
   {
@@ -137,7 +141,7 @@ const TIER1_PATTERNS: Tier1Pattern[] = [
       const mode = match[0].toLowerCase().includes('dark') ? 'dark' : 'light'
       useWorkspaceStore.getState().setThemeMode(mode, 'manual')
       return { narration: `Switched to ${mode} mode.` }
-    }
+    },
   },
   // Open settings
   {
@@ -145,7 +149,7 @@ const TIER1_PATTERNS: Tier1Pattern[] = [
     action: () => {
       window.dispatchEvent(new Event('open-settings'))
       return { narration: 'Settings opened.' }
-    }
+    },
   },
   // Help
   {
@@ -153,18 +157,19 @@ const TIER1_PATTERNS: Tier1Pattern[] = [
     action: () => {
       window.dispatchEvent(new Event('toggle-shortcuts-help'))
       return { narration: 'Keyboard shortcuts opened.' }
-    }
+    },
   },
 ]
 
 // ── Command Queue ───────────────────────────────────────────────────────────
 
-let commandQueue: Array<() => Promise<void>> = []
+const commandQueue: Array<() => Promise<void>> = []
 let isExecuting = false
 
 async function processQueue(): Promise<void> {
   if (isExecuting || commandQueue.length === 0) return
   isExecuting = true
+  // biome-ignore lint/style/noNonNullAssertion: length check above guarantees element
   const next = commandQueue.shift()!
   try {
     await next()
@@ -178,7 +183,7 @@ async function processQueue(): Promise<void> {
 
 export async function executeCommand(
   input: string,
-  options?: { fileContext?: { filename: string; content: string } }
+  options?: { fileContext?: { filename: string; content: string } },
 ): Promise<void> {
   const trimmed = input.trim()
   if (!trimmed) return
@@ -225,21 +230,25 @@ const TIER2_GUARDRAIL = 20
 
 const WORKSPACE_SYSTEM_PROMPT = `You are the Cognograph workspace command interface. You execute workspace operations ONLY via tool calls.
 
-CRITICAL: Your FIRST response MUST contain tool calls. NEVER respond with only text. NEVER say "I'll do this in stages" or explain a plan — just start calling tools immediately.
+CRITICAL: Your FIRST response MUST contain tool calls. NEVER respond with only text. Text-only responses are forbidden.
 
 Rules:
-- ALWAYS start your response with tool calls. Text-only responses are forbidden.
+- ALWAYS start by calling tools. No planning, no narrating, no asking permission.
+- Complete the ENTIRE request in one pass. Never stop partway through.
 - Do NOT create agent nodes. Execute everything directly.
 - Use batch_create for multiple related nodes — it accepts an array of node specs and creates them all at once with edges.
 - You can make up to 25 tool calls per request. Use as many as needed.
-- For complex requests: put ALL the content directly in node content fields. Use contentType: "html" for HTML artifacts, "markdown" for rich text. Make the content substantial and complete.
-- After all tool calls are done, narrate what you created in 1-2 sentences. Reference node titles, not IDs.
+- For HTML artifacts (contentType: "html"): write clean, self-contained HTML+CSS. Keep it under 200 lines — concise and functional, not bloated. Inline styles preferred over large style blocks.
+- For markdown nodes: keep content focused and substantive but not padded.
+- After all tool calls, narrate what you created in 1-2 sentences max.
+- If you hit the output limit mid-generation, you'll be asked to continue. Pick up exactly where you left off — don't repeat content.
 - When the user says "this", "these", or "selected", check the selection context.`
 
 /**
  * Build a context string from the current workspace state.
  * Includes selected nodes and recent nodes for LLM awareness.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: context builder branches by node state
 function buildWorkspaceContext(): string {
   const store = useWorkspaceStore.getState()
   const nodes = store.nodes
@@ -253,14 +262,16 @@ function buildWorkspaceContext(): string {
   if (selected.length > 0) {
     context += `\n## Selected Nodes (${selected.length})\n`
     for (const id of selected) {
-      const node = nodes.find(n => n.id === id)
+      const node = nodes.find((n) => n.id === id)
       if (node) {
+        // biome-ignore lint/suspicious/noExplicitAny: node.data is union typed
         const nd = node.data as any
         context += `\n### [${nd.type}] "${nd.title || 'Untitled'}" (id: ${id})\n`
         if (nd.description) context += `Description: ${nd.description}\n`
         if (nd.content) {
           // Include content (truncate to 2000 chars per node to keep context manageable)
-          const content = nd.content.length > 2000 ? nd.content.slice(0, 2000) + '\n...(truncated)' : nd.content
+          const content =
+            nd.content.length > 2000 ? `${nd.content.slice(0, 2000)}\n...(truncated)` : nd.content
           context += `Content:\n${content}\n`
         }
       }
@@ -268,6 +279,7 @@ function buildWorkspaceContext(): string {
   }
 
   // Recent nodes (last 20) for broader context
+  // biome-ignore lint/suspicious/noExplicitAny: node.data union type
   const sortedNodes = [...nodes]
     .sort((a, b) => ((b.data as any).updatedAt || 0) - ((a.data as any).updatedAt || 0))
     .slice(0, 20)
@@ -287,12 +299,14 @@ function buildWorkspaceContext(): string {
  * (since addWorkspaceMessage only accepts role + content). This function
  * reconstructs proper Anthropic content blocks.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: message reconstruction is inherently branchy
 function buildWorkspaceMessagesForAPI(): Array<{ role: string; content: unknown }> {
   const { messages } = useWorkspaceStore.getState().workspaceConversation
   const apiMessages: Array<{ role: string; content: unknown }> = []
 
   let i = 0
   while (i < messages.length) {
+    // biome-ignore lint/style/noNonNullAssertion: bounds-checked by while condition
     const msg = messages[i]!
 
     // Skip empty assistant placeholders
@@ -319,9 +333,11 @@ function buildWorkspaceMessagesForAPI(): Array<{ role: string; content: unknown 
             type: 'tool_use',
             id: parsed.toolUseId,
             name: parsed.toolName,
-            input: parsed.toolInput
+            input: parsed.toolInput,
           })
-        } catch { /* skip malformed */ }
+        } catch {
+          /* skip malformed */
+        }
         apiMessages.push({ role: 'assistant', content: contentBlocks })
         i += 2
       } else {
@@ -334,14 +350,18 @@ function buildWorkspaceMessagesForAPI(): Array<{ role: string; content: unknown 
         const parsed = JSON.parse(msg.content)
         apiMessages.push({
           role: 'assistant',
-          content: [{
-            type: 'tool_use',
-            id: parsed.toolUseId,
-            name: parsed.toolName,
-            input: parsed.toolInput
-          }]
+          content: [
+            {
+              type: 'tool_use',
+              id: parsed.toolUseId,
+              name: parsed.toolName,
+              input: parsed.toolInput,
+            },
+          ],
         })
-      } catch { /* skip malformed */ }
+      } catch {
+        /* skip malformed */
+      }
       i++
     } else if (msg.role === 'tool_result') {
       // Find the corresponding tool_use to get the tool_use_id
@@ -352,13 +372,15 @@ function buildWorkspaceMessagesForAPI(): Array<{ role: string; content: unknown 
           try {
             const parsed = JSON.parse(prev.content)
             toolUseId = parsed.toolUseId
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
           break
         }
       }
       apiMessages.push({
         role: 'user',
-        content: [{ type: 'tool_result', tool_use_id: toolUseId, content: msg.content }]
+        content: [{ type: 'tool_result', tool_use_id: toolUseId, content: msg.content }],
       })
       i++
     } else {
@@ -369,10 +391,35 @@ function buildWorkspaceMessagesForAPI(): Array<{ role: string; content: unknown 
   return apiMessages
 }
 
-async function executeTier2(input: string, options?: { fileContext?: { filename: string; content: string } }): Promise<void> {
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: LLM tool loop is inherently branchy
+async function executeTier2(
+  input: string,
+  options?: { fileContext?: { filename: string; content: string } },
+): Promise<void> {
   const store = useWorkspaceStore.getState()
+  const originWorkspaceId = store.workspaceId
   const entryId = uuid()
   const startTime = Date.now()
+
+  // Guard: workspace changed mid-execution — abort to prevent cross-contamination
+  const isStaleWorkspace = (): boolean =>
+    useWorkspaceStore.getState().workspaceId !== originWorkspaceId
+
+  // Guard: no AI provider configured — can't execute LLM commands
+  const connector = useConnectorStore.getState().getDefaultConnector()
+  if (!connector) {
+    store.appendCommandLog({
+      id: entryId,
+      input,
+      tier: 2,
+      status: 'error',
+      narration: 'No AI provider configured. Open Settings to add an API key.',
+      affectedNodeIds: [],
+      timestamp: startTime,
+      duration: 0,
+    })
+    return
+  }
 
   // Ensure agentService stream listener is registered
   initAgentService()
@@ -398,7 +445,7 @@ async function executeTier2(input: string, options?: { fileContext?: { filename:
   // 3. Add user message to workspace conversation
   store.addWorkspaceMessage('user', input)
 
-  // 4. Get tool definitions — standard canvas tools + workspace tools
+  // 4. Get tool definitions — standard canvas tools only (no agent/action/region/plan for web demo)
   const isWeb = !(window as any).__ELECTRON__
   const tools = isWeb
     ? getChatToolDefinitions()
@@ -406,6 +453,7 @@ async function executeTier2(input: string, options?: { fileContext?: { filename:
 
   // 5. Tool loop — mirrors chatToolService pattern
   let toolCallCount = 0
+  let autoContinueCount = 0
   let totalInputTokens = 0
   let totalOutputTokens = 0
   let accumulatedText = ''
@@ -415,8 +463,11 @@ async function executeTier2(input: string, options?: { fileContext?: { filename:
 
   try {
     while (toolCallCount < TIER2_TOOL_LIMIT) {
+      // Guard: workspace switched — abort to prevent cross-contamination
+      if (isStaleWorkspace()) break
+
       // Check if cancelled by user via response panel
-      const currentEntry = useWorkspaceStore.getState().commandLog.find(e => e.id === entryId)
+      const currentEntry = useWorkspaceStore.getState().commandLog.find((e) => e.id === entryId)
       if (currentEntry?.status === 'cancelled') break
 
       accumulatedText = ''
@@ -443,12 +494,16 @@ async function executeTier2(input: string, options?: { fileContext?: { filename:
               if (activeToolCall) pendingToolCalls.push(activeToolCall)
               activeToolCall = { id: chunk.toolUseId, name: chunk.toolName, inputJson: '' }
               // Show progress in command log so user knows it's working
-              store.updateCommandLogEntry(entryId, { narration: `Creating ${chunk.toolName === 'batch_create' ? 'nodes' : chunk.toolName}...` })
+              store.updateCommandLogEntry(entryId, {
+                narration: `Creating ${chunk.toolName === 'batch_create' ? 'nodes' : chunk.toolName}...`,
+              })
             } else if (chunk.type === 'tool_use_delta' && activeToolCall) {
               activeToolCall.inputJson += chunk.toolInput
               // Update progress with content size hint
               if (activeToolCall.inputJson.length % 2000 < 100) {
-                store.updateCommandLogEntry(entryId, { narration: `Generating content... (${Math.round(activeToolCall.inputJson.length / 1000)}k chars)` })
+                store.updateCommandLogEntry(entryId, {
+                  narration: `Generating content... (${Math.round(activeToolCall.inputJson.length / 1000)}k chars)`,
+                })
               }
             } else if (chunk.type === 'tool_use_end') {
               // Finalize current tool call
@@ -468,7 +523,7 @@ async function executeTier2(input: string, options?: { fileContext?: { filename:
               store.updateCommandLogEntry(entryId, { narration: accumulatedText })
               resolve({ stopReason: 'error' })
             }
-          }
+          },
         })
 
         // Build messages from workspace conversation
@@ -491,6 +546,26 @@ async function executeTier2(input: string, options?: { fileContext?: { filename:
       // Unregister this iteration's handler
       unregisterExternalStreamHandler(requestId)
 
+      // Update the empty assistant placeholder with actual streamed content.
+      // Line 473 adds an empty assistant message before streaming starts;
+      // streaming only updates commandLog.narration, leaving the workspace
+      // conversation message empty. This breaks multi-turn context because
+      // buildWorkspaceMessagesForAPI() skips empty assistant messages.
+      if (accumulatedText) {
+        const msgs = useWorkspaceStore.getState().workspaceConversation.messages
+        for (let j = msgs.length - 1; j >= 0; j--) {
+          if (msgs[j]!.role === 'assistant') {
+            useWorkspaceStore.setState((state) => {
+              const target = state.workspaceConversation.messages[j]
+              if (target && target.role === 'assistant') {
+                target.content = accumulatedText
+              }
+            })
+            break
+          }
+        }
+      }
+
       // Accumulate tokens
       if (usage) {
         totalInputTokens += usage.input_tokens
@@ -503,40 +578,71 @@ async function executeTier2(input: string, options?: { fileContext?: { filename:
         break
       }
 
-      // Tool use handling — execute ALL tool calls from this turn
-      if (stopReason === 'tool_use' && pendingToolCalls.length > 0) {
+      // ── Execute any parseable tool calls (from tool_use OR max_tokens stops) ──
+      // When max_tokens hits mid-tool-call, the last tool's JSON may be truncated.
+      // We execute what we can and continue the loop so the model can finish.
+      if (pendingToolCalls.length > 0) {
+        let executedAny = false
         for (const toolCall of pendingToolCalls) {
+          // Parse tool input — skip truncated JSON from max_tokens cutoff
+          let toolInput: Record<string, unknown>
+          try {
+            toolInput = JSON.parse(toolCall.inputJson)
+          } catch {
+            // Truncated tool call (max_tokens cut off mid-JSON) — skip it
+            // Store as failed so the model sees it in conversation history
+            store.addWorkspaceMessage(
+              'tool_use',
+              JSON.stringify({
+                toolName: toolCall.name,
+                toolInput: {},
+                toolUseId: toolCall.id,
+              }),
+            )
+            store.addWorkspaceMessage(
+              'tool_result',
+              'Error: Tool call was truncated (output token limit reached). Retry with less content per node.',
+            )
+            continue
+          }
+
           toolCallCount++
 
           // Guardrail
           if (toolCallCount > TIER2_GUARDRAIL) {
-            accumulatedText += '\n\n[Reached complexity limit. Consider creating an agent for this task.]'
+            accumulatedText += '\n\n[Reached complexity limit.]'
             break
           }
 
-          // Parse tool input
-          let toolInput: Record<string, unknown>
-          try { toolInput = JSON.parse(toolCall.inputJson) }
-          catch { toolInput = {} }
-
           // Store tool_use as JSON in content (workspace conversation format)
-          store.addWorkspaceMessage('tool_use', JSON.stringify({
-            toolName: toolCall.name,
-            toolInput,
-            toolUseId: toolCall.id,
-          }))
+          store.addWorkspaceMessage(
+            'tool_use',
+            JSON.stringify({
+              toolName: toolCall.name,
+              toolInput,
+              toolUseId: toolCall.id,
+            }),
+          )
 
           // Execute tool — check workspace tools first, then standard canvas tools
-          const WORKSPACE_TOOL_NAMES = ['create_agent', 'create_action', 'create_region', 'execute_plan']
+          const WORKSPACE_TOOL_NAMES = [
+            'create_agent',
+            'create_action',
+            'create_region',
+            'execute_plan',
+          ]
           const isWorkspaceTool = WORKSPACE_TOOL_NAMES.includes(toolCall.name)
           const result = isWorkspaceTool
             ? await executeWorkspaceTool(toolCall.name, toolInput)
             : await executeTool(toolCall.name, toolInput, 'workspace-command-conversation')
 
           // Store tool_result
-          store.addWorkspaceMessage('tool_result',
-            result.success ? JSON.stringify(result.result, null, 2) : `Error: ${result.error}`
+          store.addWorkspaceMessage(
+            'tool_result',
+            result.success ? JSON.stringify(result.result, null, 2) : `Error: ${result.error}`,
           )
+
+          executedAny = true
 
           // Track created nodes/edges for layout pipeline
           if (result.success && toolCall.name === 'create_node' && result.result?.nodeId) {
@@ -553,59 +659,112 @@ async function executeTier2(input: string, options?: { fileContext?: { filename:
         // Check if guardrail was hit
         if (toolCallCount > TIER2_GUARDRAIL) break
 
-        // Refresh context after mutating tool calls
-        context = buildWorkspaceContext()
-
-        // Prepare for continuation
-        requestId = uuid()
-        continue
-      }
-
-      // Auto-continue: if LLM narrated mid-task instead of calling tools,
-      // inject a "Continue." message so it picks back up with tool calls.
-      // Only do this if we've already made at least one tool call (work in progress)
-      // and the text suggests more work is coming.
-      if (stopReason === 'end_turn' && toolCallCount > 0 && toolCallCount < TIER2_GUARDRAIL) {
-        const lowerText = accumulatedText.toLowerCase()
-        const continuePatterns = ['let me', "i'll", 'now i', 'next', 'moving on', 'continue', 'creating', 'will create']
-        const shouldContinue = continuePatterns.some(p => lowerText.includes(p))
-        if (shouldContinue) {
-          store.addWorkspaceMessage('user', 'Continue. Execute the remaining operations via tool calls immediately.')
+        // If we executed tools, refresh context and continue the loop.
+        // This handles both normal tool_use AND max_tokens-with-tools cases —
+        // the model gets to see its tool results and continue where it left off.
+        if (executedAny) {
+          context = buildWorkspaceContext()
           requestId = uuid()
           continue
         }
       }
 
-      // end_turn, stop_sequence, max_tokens — we're done
+      // ── max_tokens with no executable tools: model was cut off mid-generation ──
+      // The model ran out of output budget. Continue so it can finish,
+      // but only if it was actually doing work (not just narrating infinitely).
+      if (stopReason === 'max_tokens' && toolCallCount > 0 && autoContinueCount < 3) {
+        autoContinueCount++
+        store.addWorkspaceMessage(
+          'user',
+          'You hit the output limit. Continue creating the remaining items. Keep content concise.',
+        )
+        store.updateCommandLogEntry(entryId, {
+          narration: `${accumulatedText}\n\n_(Continuing — output limit reached...)_`,
+        })
+        requestId = uuid()
+        continue
+      }
+
+      // ── end_turn: model stopped voluntarily ──
+      // If it narrated mid-task ("say the word", "shall I"), nudge it to continue.
+      // Max 2 attempts to prevent infinite loops.
+      if (
+        stopReason === 'end_turn' &&
+        toolCallCount > 0 &&
+        toolCallCount < TIER2_GUARDRAIL &&
+        autoContinueCount < 2
+      ) {
+        const lowerText = accumulatedText.toLowerCase()
+        const incompletePatterns = [
+          'let me',
+          "i'll",
+          'now i',
+          'next',
+          'moving on',
+          'continue',
+          'creating',
+          'will create',
+          'say the word',
+          'shall i',
+          'want me to',
+          'would you like',
+          'ready to',
+          'remaining',
+          'step 3',
+          'step 4',
+          'still need',
+        ]
+        if (incompletePatterns.some((p) => lowerText.includes(p))) {
+          autoContinueCount++
+          store.addWorkspaceMessage(
+            'user',
+            'Do NOT narrate or ask permission. Call the remaining tools NOW.',
+          )
+          requestId = uuid()
+          continue
+        }
+      }
+
+      // ── Terminal states ──
+      // max_tokens with zero tool calls = model never started working (prompt too big?)
+      if (stopReason === 'max_tokens' && toolCallCount === 0) {
+        accumulatedText =
+          'The request was too complex to process in one pass. Try a simpler prompt, or break it into steps.'
+      }
       break
     }
   } catch (error) {
     accumulatedText = `Error: ${(error as Error).message}`
   }
 
-  // 6. Update command log entry with final results
-  store.updateCommandLogEntry(entryId, {
-    status: 'done',
-    narration: accumulatedText || 'Done.',
-    affectedNodeIds: createdNodeIds,
-    affectedEdgeIds: createdEdgeIds,
-    duration: Date.now() - startTime,
-    tokenUsage: totalInputTokens > 0
-      ? { input: totalInputTokens, output: totalOutputTokens, cost: 0 }
-      : undefined,
-  })
+  // 6. Update command log entry with final results (only if still on same workspace)
+  if (!isStaleWorkspace()) {
+    store.updateCommandLogEntry(entryId, {
+      status: 'done',
+      narration: accumulatedText || 'Done.',
+      affectedNodeIds: createdNodeIds,
+      affectedEdgeIds: createdEdgeIds,
+      duration: Date.now() - startTime,
+      tokenUsage:
+        totalInputTokens > 0
+          ? { input: totalInputTokens, output: totalOutputTokens, cost: 0 }
+          : undefined,
+    })
+  }
 
   // 7. Layout pipeline for created nodes — dispatch via layoutEvents
   //    chatToolService already listens for 'run-layout' events and handles
   //    auto-fit, topology detection, collision avoidance, and camera focus.
   if (createdNodeIds.length > 0) {
-    layoutEvents.dispatchEvent(new CustomEvent('run-layout', {
-      detail: {
-        nodeIds: createdNodeIds,
-        edgeIds: createdEdgeIds,
-        conversationId: undefined // No source conversation node
-      }
-    }))
+    layoutEvents.dispatchEvent(
+      new CustomEvent('run-layout', {
+        detail: {
+          nodeIds: createdNodeIds,
+          edgeIds: createdEdgeIds,
+          conversationId: undefined, // No source conversation node
+        },
+      }),
+    )
   } else if (toolCallCount === 0) {
     // Pure narration, no tools called — just a text response.
     // No layout needed.

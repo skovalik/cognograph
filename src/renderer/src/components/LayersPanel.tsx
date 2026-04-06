@@ -1,35 +1,35 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useMemo, useCallback, useState } from 'react'
+import type { NodeData } from '@shared/types'
 import {
-  Search,
-  MessageSquare,
-  Folder,
-  FileText,
-  CheckSquare,
-  Code,
+  ArrowDownAZ,
   Boxes,
+  CheckSquare,
   ChevronDown,
   ChevronRight,
-  ArrowDownAZ,
   Clock,
-  Network,
-  Type,
-  GripVertical,
+  Code,
   Eye,
   EyeOff,
-  Workflow
+  FileText,
+  Folder,
+  GripVertical,
+  HardDrive,
+  MessageSquare,
+  Network,
+  Search,
+  Type,
+  Workflow,
 } from 'lucide-react'
-import { useWorkspaceStore } from '../stores/workspaceStore'
+import * as path from 'path'
+import { memo, useCallback, useMemo, useState } from 'react'
+import { cn } from '../lib/utils'
 import { useContextMenuStore } from '../stores/contextMenuStore'
-import { useFileListingStore, EXPAND_THRESHOLD_MS } from '../stores/fileListingStore'
+import { EXPAND_THRESHOLD_MS, useFileListingStore } from '../stores/fileListingStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 import { FileEntryRow } from './FileEntryRow'
 import { ScrollArea } from './ui'
-import { cn } from '../lib/utils'
-import { HardDrive } from 'lucide-react'
-import type { NodeData } from '@shared/types'
-import * as path from 'path'
 
 interface LayerNode {
   id: string
@@ -93,7 +93,10 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
       let title = node.data.title as string
       if (node.data.type === 'text') {
         const content = (node.data.content as string) || ''
-        const plainText = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+        const plainText = content
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
         title = plainText.slice(0, 40) || 'Text'
       }
       const layerNode: LayerNode = {
@@ -103,7 +106,7 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
         parentId,
         children: [],
         depth: 0,
-        createdAt: node.data.createdAt
+        createdAt: node.data.createdAt,
       }
       nodeMap.set(node.id, layerNode)
     })
@@ -144,7 +147,10 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
       layerNode.filesystemChildren = listing.entries.map((entry) => ({
         id: `__fs:${layerNode.id}:${entry.name}`,
         title: entry.name,
-        type: entry.type === 'directory' ? 'project' as NodeData['type'] : 'artifact' as NodeData['type'],
+        type:
+          entry.type === 'directory'
+            ? ('project' as NodeData['type'])
+            : ('artifact' as NodeData['type']),
         parentId: layerNode.id,
         children: [],
         depth: layerNode.depth + 2, // +2 because they sit under the "Files" divider
@@ -182,7 +188,15 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
         case 'type':
           // Group by type, then by title
           if (a.type !== b.type) {
-            const typeOrder = ['project', 'workspace', 'conversation', 'note', 'task', 'artifact', 'text']
+            const typeOrder = [
+              'project',
+              'workspace',
+              'conversation',
+              'note',
+              'task',
+              'artifact',
+              'text',
+            ]
             return typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type)
           }
           return a.title.localeCompare(b.title)
@@ -246,19 +260,22 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
   }, [sortedNodes, layersFilter])
 
   // Helper to get all descendant node IDs for a given node
-  const getDescendantIds = useCallback((nodeId: string): string[] => {
-    const descendants: string[] = []
-    const findDescendants = (id: string): void => {
-      nodes.forEach((n) => {
-        if ((n.data as { parentId?: string }).parentId === id) {
-          descendants.push(n.id)
-          findDescendants(n.id)
-        }
-      })
-    }
-    findDescendants(nodeId)
-    return descendants
-  }, [nodes])
+  const getDescendantIds = useCallback(
+    (nodeId: string): string[] => {
+      const descendants: string[] = []
+      const findDescendants = (id: string): void => {
+        nodes.forEach((n) => {
+          if ((n.data as { parentId?: string }).parentId === id) {
+            descendants.push(n.id)
+            findDescendants(n.id)
+          }
+        })
+      }
+      findDescendants(nodeId)
+      return descendants
+    },
+    [nodes],
+  )
 
   const handleNodeClick = useCallback(
     (nodeId: string, event: React.MouseEvent) => {
@@ -290,7 +307,7 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
       }
       openProperties()
     },
-    [selectedNodeIds, setSelectedNodes, openProperties, nodes, getDescendantIds]
+    [selectedNodeIds, setSelectedNodes, openProperties, nodes, getDescendantIds],
   )
 
   const handleNodeDoubleClick = useCallback(
@@ -300,24 +317,27 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
       setSelectedNodes([nodeId])
       openProperties()
     },
-    [setSelectedNodes, openProperties]
+    [setSelectedNodes, openProperties],
   )
 
   // Drag-and-drop handlers
-  const handleDragStart = useCallback((e: React.DragEvent, nodeId: string) => {
-    // If dragging a selected node, drag all selected nodes
-    // Otherwise just drag this one node
-    const nodesToDrag = selectedNodeIds.includes(nodeId) ? selectedNodeIds : [nodeId]
-    e.dataTransfer.setData('application/json', JSON.stringify(nodesToDrag))
-    e.dataTransfer.effectAllowed = 'move'
-    setDraggedNodeId(nodeId)
-  }, [selectedNodeIds])
+  const handleDragStart = useCallback(
+    (e: React.DragEvent, nodeId: string) => {
+      // If dragging a selected node, drag all selected nodes
+      // Otherwise just drag this one node
+      const nodesToDrag = selectedNodeIds.includes(nodeId) ? selectedNodeIds : [nodeId]
+      e.dataTransfer.setData('application/json', JSON.stringify(nodesToDrag))
+      e.dataTransfer.effectAllowed = 'move'
+      setDraggedNodeId(nodeId)
+    },
+    [selectedNodeIds],
+  )
 
   // Helper to flatten layer hierarchy for index-based reorder
   const flatNodeIds = useMemo(() => {
     const ids: string[] = []
     const flatten = (nodes: LayerNode[]): void => {
-      nodes.forEach(n => {
+      nodes.forEach((n) => {
         ids.push(n.id)
         if (n.children.length > 0 && expandedNodeIds.has(n.id)) {
           flatten(n.children)
@@ -356,7 +376,7 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
         setDropPosition('after')
       }
     },
-    [nodes, draggedNodeId]
+    [nodes, draggedNodeId],
   )
 
   const handleDrop = useCallback(
@@ -400,7 +420,7 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
       setDraggedNodeId(null)
       setDropPosition(null)
     },
-    [nodes, addNodeToProject, dropPosition, flatNodeIds, reorderLayers]
+    [nodes, addNodeToProject, dropPosition, flatNodeIds, reorderLayers],
   )
 
   const handleDragLeave = useCallback(() => {
@@ -427,23 +447,17 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
         if (selectedNodeIds.length > 1) {
           openContextMenu(
             { x: event.clientX, y: event.clientY },
-            { type: 'nodes', nodeIds: selectedNodeIds }
+            { type: 'nodes', nodeIds: selectedNodeIds },
           )
         } else {
-          openContextMenu(
-            { x: event.clientX, y: event.clientY },
-            { type: 'node', nodeId }
-          )
+          openContextMenu({ x: event.clientX, y: event.clientY }, { type: 'node', nodeId })
         }
       } else {
         setSelectedNodes([nodeId])
-        openContextMenu(
-          { x: event.clientX, y: event.clientY },
-          { type: 'node', nodeId }
-        )
+        openContextMenu({ x: event.clientX, y: event.clientY }, { type: 'node', nodeId })
       }
     },
-    [selectedNodeIds, setSelectedNodes, openContextMenu]
+    [selectedNodeIds, setSelectedNodes, openContextMenu],
   )
 
   // Theme-aware classes - using GUI CSS variables
@@ -471,15 +485,15 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
       </div>
 
       {/* Sort mode toggle */}
-      <div className={`px-2 py-1.5 border-b ${borderClass} flex items-center ${isCompact ? 'justify-center' : 'justify-between'}`}>
+      <div
+        className={`px-2 py-1.5 border-b ${borderClass} flex items-center ${isCompact ? 'justify-center' : 'justify-between'}`}
+      >
         {!isCompact && <span className="text-xs gui-text-secondary">Sort by:</span>}
         <div className="flex gap-1">
           <button
             onClick={() => setLayersSortMode('hierarchy')}
             className={`p-1 rounded transition-colors ${
-              layersSortMode === 'hierarchy'
-                ? activeButtonClass
-                : inactiveButtonClass
+              layersSortMode === 'hierarchy' ? activeButtonClass : inactiveButtonClass
             }`}
             title="Hierarchy"
             aria-label="Sort by hierarchy"
@@ -490,9 +504,7 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
           <button
             onClick={() => setLayersSortMode('type')}
             className={`p-1 rounded transition-colors ${
-              layersSortMode === 'type'
-                ? activeButtonClass
-                : inactiveButtonClass
+              layersSortMode === 'type' ? activeButtonClass : inactiveButtonClass
             }`}
             title="By Type"
             aria-label="Sort by type"
@@ -503,9 +515,7 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
           <button
             onClick={() => setLayersSortMode('recent')}
             className={`p-1 rounded transition-colors ${
-              layersSortMode === 'recent'
-                ? activeButtonClass
-                : inactiveButtonClass
+              layersSortMode === 'recent' ? activeButtonClass : inactiveButtonClass
             }`}
             title="Recent"
             aria-label="Sort by recent"
@@ -517,9 +527,7 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
             <button
               onClick={() => setLayersSortMode('manual')}
               className={`p-1 rounded transition-colors ${
-                layersSortMode === 'manual'
-                  ? activeButtonClass
-                  : inactiveButtonClass
+                layersSortMode === 'manual' ? activeButtonClass : inactiveButtonClass
               }`}
               title="Manual (drag to reorder)"
               aria-label="Sort manually"
@@ -533,8 +541,9 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
 
       {/* Show Members toggle - only show when a project is selected */}
       {(() => {
-        const selectedProject = selectedNodeIds.length === 1 &&
-          nodes.find(n => n.id === selectedNodeIds[0] && n.data.type === 'project')
+        const selectedProject =
+          selectedNodeIds.length === 1 &&
+          nodes.find((n) => n.id === selectedNodeIds[0] && n.data.type === 'project')
         if (!selectedProject) return null
 
         const isShowingMembers = showMembersProjectId === selectedProject.id
@@ -552,8 +561,14 @@ function LayersPanelComponent({ sidebarWidth = 260 }: LayersPanelProps): JSX.Ele
               }`}
               title={isShowingMembers ? 'Hide members view' : 'Show only members of this project'}
             >
-              {isShowingMembers ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-              <span className="truncate max-w-[80px]">{String(selectedProject.data.title || 'Untitled')}</span>
+              {isShowingMembers ? (
+                <Eye className="w-3.5 h-3.5" />
+              ) : (
+                <EyeOff className="w-3.5 h-3.5" />
+              )}
+              <span className="truncate max-w-[80px]">
+                {String(selectedProject.data.title || 'Untitled')}
+              </span>
             </button>
           </div>
         )
@@ -637,7 +652,7 @@ function LayerItemComponent({
   dropPosition,
   isLightMode,
   nodeColors,
-  onContextMenu
+  onContextMenu,
 }: LayerItemProps): JSX.Element {
   const isSelected = selectedNodeIds.includes(node.id)
   const isExpanded = expandedNodeIds.has(node.id)
@@ -675,7 +690,9 @@ function LayerItemComponent({
   // Theme-aware classes for the item - keep selection/drag colors, use GUI text
   const defaultClass = 'gui-text'
   const selectedClass = isLightMode ? 'bg-blue-100' : 'bg-blue-900/50'
-  const dragOverClass = isLightMode ? 'bg-blue-100 ring-1 ring-blue-500' : 'bg-blue-900/40 ring-1 ring-blue-500'
+  const dragOverClass = isLightMode
+    ? 'bg-blue-100 ring-1 ring-blue-500'
+    : 'bg-blue-900/40 ring-1 ring-blue-500'
   const expandButtonHoverClass = 'gui-button'
 
   return (
@@ -686,11 +703,7 @@ function LayerItemComponent({
       )}
       <div
         className={`flex items-center gap-1 px-2 py-1 cursor-pointer transition-colors ${
-          isSelected
-            ? selectedClass
-            : showDropInside
-              ? dragOverClass
-              : defaultClass
+          isSelected ? selectedClass : showDropInside ? dragOverClass : defaultClass
         }`}
         style={{ paddingLeft: `${8 + node.depth * 16}px` }}
         draggable
@@ -729,9 +742,7 @@ function LayerItemComponent({
         <span className="text-xs truncate flex-1">{node.title}</span>
 
         {/* Child count badge */}
-        {hasChildren && (
-          <span className="text-xs gui-text-secondary">{node.children.length}</span>
-        )}
+        {hasChildren && <span className="text-xs gui-text-secondary">{node.children.length}</span>}
       </div>
 
       {/* Drop indicator: after */}
@@ -767,42 +778,45 @@ function LayerItemComponent({
       )}
 
       {/* Filesystem children section */}
-      {node.filesystemChildren && node.filesystemChildren.length > 0 && isExpanded && (() => {
-        const fsSectionId = `__fs-section:${node.id}`
-        const isFsExpanded = expandedNodeIds.has(fsSectionId)
-        return (
-          <div style={{ paddingLeft: `${8 + (node.depth + 1) * 16}px` }}>
-            <button
-              className="flex items-center gap-1 w-full py-0.5 text-[10px] gui-text-secondary hover:gui-text transition-colors"
-              onClick={(e) => {
-                e.stopPropagation()
-                onToggleExpand(fsSectionId)
-              }}
-            >
-              {isFsExpanded ? (
-                <ChevronDown className="w-2.5 h-2.5" />
-              ) : (
-                <ChevronRight className="w-2.5 h-2.5" />
+      {node.filesystemChildren &&
+        node.filesystemChildren.length > 0 &&
+        isExpanded &&
+        (() => {
+          const fsSectionId = `__fs-section:${node.id}`
+          const isFsExpanded = expandedNodeIds.has(fsSectionId)
+          return (
+            <div style={{ paddingLeft: `${8 + (node.depth + 1) * 16}px` }}>
+              <button
+                className="flex items-center gap-1 w-full py-0.5 text-[10px] gui-text-secondary hover:gui-text transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggleExpand(fsSectionId)
+                }}
+              >
+                {isFsExpanded ? (
+                  <ChevronDown className="w-2.5 h-2.5" />
+                ) : (
+                  <ChevronRight className="w-2.5 h-2.5" />
+                )}
+                <HardDrive className="w-2.5 h-2.5" />
+                <span>Files ({node.filesystemChildren.length})</span>
+              </button>
+              {isFsExpanded && (
+                <div role="list" aria-label="Filesystem entries">
+                  {node.filesystemChildren.map((fc) => (
+                    <FileEntryRow
+                      key={fc.id}
+                      name={fc.title}
+                      type={fc.type === 'project' ? 'directory' : 'file'}
+                      fullPath={fc.fsPath || ''}
+                      compact
+                    />
+                  ))}
+                </div>
               )}
-              <HardDrive className="w-2.5 h-2.5" />
-              <span>Files ({node.filesystemChildren.length})</span>
-            </button>
-            {isFsExpanded && (
-              <div role="list" aria-label="Filesystem entries">
-                {node.filesystemChildren.map((fc) => (
-                  <FileEntryRow
-                    key={fc.id}
-                    name={fc.title}
-                    type={fc.type === 'project' ? 'directory' : 'file'}
-                    fullPath={fc.fsPath || ''}
-                    compact
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )
-      })()}
+            </div>
+          )
+        })()}
 
       {/* Drop indicator: after (when has children or after expanded) */}
       {showDropAfter && hasChildren && (

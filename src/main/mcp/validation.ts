@@ -6,23 +6,51 @@
 
 export type ValidNodeType = 'task' | 'note' | 'conversation' | 'text' | 'project' | 'artifact'
 
-const VALID_NODE_TYPES: ValidNodeType[] = ['task', 'note', 'conversation', 'text', 'project', 'artifact']
+const VALID_NODE_TYPES: ValidNodeType[] = [
+  'task',
+  'note',
+  'conversation',
+  'text',
+  'project',
+  'artifact',
+]
 
 const VALID_STATUSES = ['todo', 'in-progress', 'done'] as const
 const VALID_PRIORITIES = ['none', 'low', 'medium', 'high'] as const
 const VALID_COMPLEXITIES = ['trivial', 'simple', 'moderate', 'complex', 'very-complex'] as const
-const VALID_NOTE_MODES = ['general', 'persona', 'reference', 'examples', 'background', 'design-tokens', 'page', 'component', 'content-model', 'wp-config'] as const
+const VALID_NOTE_MODES = [
+  'general',
+  'persona',
+  'reference',
+  'examples',
+  'background',
+  'design-tokens',
+  'page',
+  'component',
+  'content-model',
+  'wp-config',
+] as const
 const VALID_PAGE_STATUSES = ['planned', 'wireframed', 'designed', 'built', 'live'] as const
 const VALID_COMPONENT_STATUSES = ['planned', 'designed', 'built', 'tested'] as const
 
 // Allowed mutable fields per node type
 const ALLOWED_FIELDS: Record<ValidNodeType, string[]> = {
   task: ['title', 'description', 'status', 'priority', 'complexity', 'tags', 'color'],
-  note: ['title', 'content', 'tags', 'color', 'noteMode', 'page', 'component', 'contentModel', 'wpConfig'],
+  note: [
+    'title',
+    'content',
+    'tags',
+    'color',
+    'noteMode',
+    'page',
+    'component',
+    'contentModel',
+    'wpConfig',
+  ],
   conversation: ['title', 'tags', 'color'],
   text: ['content', 'color'],
   project: ['title', 'description', 'color'],
-  artifact: ['title', 'content', 'tags', 'color']
+  artifact: ['title', 'content', 'tags', 'color'],
 }
 
 export function isValidNodeType(type: string): type is ValidNodeType {
@@ -36,7 +64,7 @@ export function isValidNodeType(type: string): type is ValidNodeType {
  */
 export function validateNodeChanges(
   nodeType: string,
-  changes: Record<string, unknown>
+  changes: Record<string, unknown>,
 ): Record<string, unknown> {
   if (!isValidNodeType(nodeType)) {
     throw new Error(`Cannot update node of type '${nodeType}'`)
@@ -50,25 +78,29 @@ export function validateNodeChanges(
 
     // Validate enum fields
     if (key === 'status' && nodeType === 'task') {
-      if (!VALID_STATUSES.includes(value as typeof VALID_STATUSES[number])) {
+      if (!VALID_STATUSES.includes(value as (typeof VALID_STATUSES)[number])) {
         throw new Error(`Invalid status '${value}'. Must be one of: ${VALID_STATUSES.join(', ')}`)
       }
     }
     if (key === 'priority' && nodeType === 'task') {
-      if (!VALID_PRIORITIES.includes(value as typeof VALID_PRIORITIES[number])) {
-        throw new Error(`Invalid priority '${value}'. Must be one of: ${VALID_PRIORITIES.join(', ')}`)
+      if (!VALID_PRIORITIES.includes(value as (typeof VALID_PRIORITIES)[number])) {
+        throw new Error(
+          `Invalid priority '${value}'. Must be one of: ${VALID_PRIORITIES.join(', ')}`,
+        )
       }
     }
     if (key === 'complexity' && nodeType === 'task') {
-      if (!VALID_COMPLEXITIES.includes(value as typeof VALID_COMPLEXITIES[number])) {
+      if (!VALID_COMPLEXITIES.includes(value as (typeof VALID_COMPLEXITIES)[number])) {
         throw new Error(
-          `Invalid complexity '${value}'. Must be one of: ${VALID_COMPLEXITIES.join(', ')}`
+          `Invalid complexity '${value}'. Must be one of: ${VALID_COMPLEXITIES.join(', ')}`,
         )
       }
     }
     if (key === 'noteMode' && nodeType === 'note') {
-      if (!VALID_NOTE_MODES.includes(value as typeof VALID_NOTE_MODES[number])) {
-        throw new Error(`Invalid noteMode '${value}'. Must be one of: ${VALID_NOTE_MODES.join(', ')}`)
+      if (!VALID_NOTE_MODES.includes(value as (typeof VALID_NOTE_MODES)[number])) {
+        throw new Error(
+          `Invalid noteMode '${value}'. Must be one of: ${VALID_NOTE_MODES.join(', ')}`,
+        )
       }
     }
     if (key === 'page' && nodeType === 'note') {
@@ -76,8 +108,13 @@ export function validateNodeChanges(
         throw new Error(`'page' must be an object`)
       }
       const page = value as Record<string, unknown>
-      if (page.status !== undefined && !VALID_PAGE_STATUSES.includes(page.status as typeof VALID_PAGE_STATUSES[number])) {
-        throw new Error(`Invalid page status '${page.status}'. Must be one of: ${VALID_PAGE_STATUSES.join(', ')}`)
+      if (
+        page.status !== undefined &&
+        !VALID_PAGE_STATUSES.includes(page.status as (typeof VALID_PAGE_STATUSES)[number])
+      ) {
+        throw new Error(
+          `Invalid page status '${page.status}'. Must be one of: ${VALID_PAGE_STATUSES.join(', ')}`,
+        )
       }
     }
     if (key === 'component' && nodeType === 'note') {
@@ -85,8 +122,13 @@ export function validateNodeChanges(
         throw new Error(`'component' must be an object`)
       }
       const comp = value as Record<string, unknown>
-      if (comp.status !== undefined && !VALID_COMPONENT_STATUSES.includes(comp.status as typeof VALID_COMPONENT_STATUSES[number])) {
-        throw new Error(`Invalid component status '${comp.status}'. Must be one of: ${VALID_COMPONENT_STATUSES.join(', ')}`)
+      if (
+        comp.status !== undefined &&
+        !VALID_COMPONENT_STATUSES.includes(comp.status as (typeof VALID_COMPONENT_STATUSES)[number])
+      ) {
+        throw new Error(
+          `Invalid component status '${comp.status}'. Must be one of: ${VALID_COMPONENT_STATUSES.join(', ')}`,
+        )
       }
     }
     if (key === 'contentModel' && nodeType === 'note') {
@@ -122,7 +164,7 @@ export function validateNodeChanges(
  */
 export function validateCreateNodeData(
   type: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
 ): Record<string, unknown> {
   if (!isValidNodeType(type)) {
     throw new Error(`Invalid node type '${type}'. Must be one of: ${VALID_NODE_TYPES.join(', ')}`)
@@ -132,7 +174,7 @@ export function validateCreateNodeData(
   const base: Record<string, unknown> = {
     type,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
   }
 
   switch (type) {
@@ -147,7 +189,7 @@ export function validateCreateNodeData(
           ? validateEnum(data.complexity, VALID_COMPLEXITIES, undefined)
           : undefined,
         tags: validateTags(data.tags),
-        color: typeof data.color === 'string' ? data.color : undefined
+        color: typeof data.color === 'string' ? data.color : undefined,
       }
 
     case 'note':
@@ -155,14 +197,23 @@ export function validateCreateNodeData(
         ...base,
         title: validateString(data.title, 'title') || 'Untitled Note',
         content: typeof data.content === 'string' ? data.content : '',
-        noteMode: data.noteMode ? validateEnum(data.noteMode, VALID_NOTE_MODES, undefined) : undefined,
+        noteMode: data.noteMode
+          ? validateEnum(data.noteMode, VALID_NOTE_MODES, undefined)
+          : undefined,
         tags: validateTags(data.tags),
         color: typeof data.color === 'string' ? data.color : undefined,
         // Structured data pass-through for web project note modes
-        contentModel: typeof data.contentModel === 'object' && data.contentModel !== null ? data.contentModel : undefined,
-        wpConfig: typeof data.wpConfig === 'object' && data.wpConfig !== null ? data.wpConfig : undefined,
+        contentModel:
+          typeof data.contentModel === 'object' && data.contentModel !== null
+            ? data.contentModel
+            : undefined,
+        wpConfig:
+          typeof data.wpConfig === 'object' && data.wpConfig !== null ? data.wpConfig : undefined,
         page: typeof data.page === 'object' && data.page !== null ? data.page : undefined,
-        component: typeof data.component === 'object' && data.component !== null ? data.component : undefined,
+        component:
+          typeof data.component === 'object' && data.component !== null
+            ? data.component
+            : undefined,
       }
 
     case 'conversation':
@@ -172,14 +223,14 @@ export function validateCreateNodeData(
         messages: [],
         provider: 'anthropic',
         tags: validateTags(data.tags),
-        color: typeof data.color === 'string' ? data.color : undefined
+        color: typeof data.color === 'string' ? data.color : undefined,
       }
 
     case 'text':
       return {
         ...base,
         content: typeof data.content === 'string' ? data.content : '',
-        color: typeof data.color === 'string' ? data.color : undefined
+        color: typeof data.color === 'string' ? data.color : undefined,
       }
 
     case 'project':
@@ -189,7 +240,7 @@ export function validateCreateNodeData(
         description: typeof data.description === 'string' ? data.description : '',
         collapsed: false,
         childNodeIds: [],
-        color: typeof data.color === 'string' ? data.color : '#8b5cf6'
+        color: typeof data.color === 'string' ? data.color : '#8b5cf6',
       }
 
     case 'artifact':
@@ -197,7 +248,11 @@ export function validateCreateNodeData(
         ...base,
         title: validateString(data.title, 'title') || 'Untitled Artifact',
         content: typeof data.content === 'string' ? data.content : '',
-        contentType: typeof data.contentType === 'string' && ['html', 'code', 'text'].includes(data.contentType) ? data.contentType : 'text',
+        contentType:
+          typeof data.contentType === 'string' &&
+          ['html', 'code', 'text'].includes(data.contentType)
+            ? data.contentType
+            : 'text',
         source: { type: 'created', method: 'manual' },
         version: 1,
         versionHistory: [],
@@ -206,7 +261,7 @@ export function validateCreateNodeData(
         collapsed: false,
         previewLines: 10,
         tags: validateTags(data.tags),
-        color: typeof data.color === 'string' ? data.color : undefined
+        color: typeof data.color === 'string' ? data.color : undefined,
       }
 
     default:
@@ -223,7 +278,7 @@ function validateString(value: unknown, _field: string): string | undefined {
 function validateEnum<T extends string>(
   value: unknown,
   allowed: readonly T[],
-  defaultValue: T | undefined
+  defaultValue: T | undefined,
 ): T | undefined {
   if (value === undefined || value === null) return defaultValue
   if (typeof value !== 'string') return defaultValue

@@ -35,7 +35,7 @@ export class TokenBucketRateLimiter {
     this.refillRate = options.tokensPerSecond ?? 1
     this.state = {
       tokens: this.capacity,
-      lastRefill: Date.now()
+      lastRefill: Date.now(),
     }
   }
 
@@ -53,7 +53,7 @@ export class TokenBucketRateLimiter {
     // If no tokens available, wait
     if (this.state.tokens < 1) {
       const waitTime = this.refillInterval - (now - this.state.lastRefill)
-      await new Promise(resolve => setTimeout(resolve, waitTime))
+      await new Promise((resolve) => setTimeout(resolve, waitTime))
       this.state.tokens = 1
       this.state.lastRefill = Date.now()
     }

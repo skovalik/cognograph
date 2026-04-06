@@ -12,12 +12,9 @@
  *   (none) → default chat/command
  */
 
-import { describe, it, expect } from 'vitest'
-import {
-  detectPrefixMode,
-  getPrefixQuery,
-} from '../BottomCommandBar'
+import { describe, expect, it } from 'vitest'
 import type { PrefixMode } from '../BottomCommandBar'
+import { detectPrefixMode, getPrefixQuery } from '../BottomCommandBar'
 
 // =============================================================================
 // detectPrefixMode
@@ -92,10 +89,10 @@ describe('slash command matching', () => {
   // Simulate the filtering logic from the component
   function filterCommands(
     query: string,
-    commands: Array<{ label: string; alias?: string; description?: string; disabled?: boolean }>
+    commands: Array<{ label: string; alias?: string; description?: string; disabled?: boolean }>,
   ) {
     const q = query.toLowerCase()
-    return commands.filter(cmd => {
+    return commands.filter((cmd) => {
       if (cmd.disabled) return false
       if (!q) return true
       return (
@@ -155,10 +152,10 @@ describe('slash command matching', () => {
 describe('node mention matching', () => {
   function filterNodes(
     query: string,
-    nodes: Array<{ title: string; type: string; isArchived?: boolean }>
+    nodes: Array<{ title: string; type: string; isArchived?: boolean }>,
   ) {
     const q = query.toLowerCase()
-    return nodes.filter(node => {
+    return nodes.filter((node) => {
       if (node.isArchived) return false
       if (!q) return true
       return node.title.toLowerCase().includes(q) || node.type.toLowerCase().includes(q)

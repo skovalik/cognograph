@@ -8,9 +8,9 @@
 // LLMConnector, MCPConnector, Connector, ConnectorState
 // =============================================================================
 
-import type { Node, Edge } from '@xyflow/react'
-import type { NodeData, Message } from './nodes'
+import type { Edge, Node } from '@xyflow/react'
 import type { EdgeData } from './edges'
+import type { Message, NodeData } from './nodes'
 
 // -----------------------------------------------------------------------------
 // History Types (for Undo/Redo)
@@ -20,13 +20,54 @@ export type HistoryAction =
   | { type: 'ADD_NODE'; node: Node<NodeData> }
   | { type: 'DELETE_NODE'; node: Node<NodeData> }
   | { type: 'UPDATE_NODE'; nodeId: string; before: Partial<NodeData>; after: Partial<NodeData> }
-  | { type: 'BULK_UPDATE_NODES'; updates: Array<{ nodeId: string; before: NodeData; after: NodeData }> }
-  | { type: 'ALIGN_NODES'; updates: Array<{ nodeId: string; before: { x: number; y: number }; after: { x: number; y: number } }> }
-  | { type: 'DISTRIBUTE_NODES'; updates: Array<{ nodeId: string; before: { x: number; y: number }; after: { x: number; y: number } }> }
-  | { type: 'SNAP_TO_GRID'; updates: Array<{ nodeId: string; before: { x: number; y: number }; after: { x: number; y: number } }> }
-  | { type: 'ARRANGE_GRID'; updates: Array<{ nodeId: string; before: { x: number; y: number }; after: { x: number; y: number } }> }
-  | { type: 'MOVE_NODE'; nodeId: string; before: { x: number; y: number }; after: { x: number; y: number } }
-  | { type: 'RESIZE_NODE'; nodeId: string; before: { width: number; height: number }; after: { width: number; height: number } }
+  | {
+      type: 'BULK_UPDATE_NODES'
+      updates: Array<{ nodeId: string; before: NodeData; after: NodeData }>
+    }
+  | {
+      type: 'ALIGN_NODES'
+      updates: Array<{
+        nodeId: string
+        before: { x: number; y: number }
+        after: { x: number; y: number }
+      }>
+    }
+  | {
+      type: 'DISTRIBUTE_NODES'
+      updates: Array<{
+        nodeId: string
+        before: { x: number; y: number }
+        after: { x: number; y: number }
+      }>
+    }
+  | {
+      type: 'SNAP_TO_GRID'
+      updates: Array<{
+        nodeId: string
+        before: { x: number; y: number }
+        after: { x: number; y: number }
+      }>
+    }
+  | {
+      type: 'ARRANGE_GRID'
+      updates: Array<{
+        nodeId: string
+        before: { x: number; y: number }
+        after: { x: number; y: number }
+      }>
+    }
+  | {
+      type: 'MOVE_NODE'
+      nodeId: string
+      before: { x: number; y: number }
+      after: { x: number; y: number }
+    }
+  | {
+      type: 'RESIZE_NODE'
+      nodeId: string
+      before: { width: number; height: number }
+      after: { width: number; height: number }
+    }
   | { type: 'ADD_EDGE'; edge: Edge<EdgeData> }
   | { type: 'DELETE_EDGE'; edge: Edge<EdgeData> }
   | { type: 'UPDATE_EDGE'; edgeId: string; before: Partial<EdgeData>; after: Partial<EdgeData> }
@@ -85,13 +126,16 @@ export interface ConnectorState {
 
 export const DEFAULT_CONNECTOR_STATE: ConnectorState = {
   connectors: [],
-  defaultLLMId: null
+  defaultLLMId: null,
 }
 
-export const CONNECTOR_PROVIDER_INFO: Record<ConnectorProvider, { label: string; defaultModel: string; requiresBaseUrl: boolean }> = {
+export const CONNECTOR_PROVIDER_INFO: Record<
+  ConnectorProvider,
+  { label: string; defaultModel: string; requiresBaseUrl: boolean }
+> = {
   anthropic: { label: 'Anthropic', defaultModel: 'claude-sonnet-4-6', requiresBaseUrl: false },
   openai: { label: 'OpenAI', defaultModel: 'gpt-4-turbo-preview', requiresBaseUrl: false },
   gemini: { label: 'Google Gemini', defaultModel: 'gemini-1.5-flash', requiresBaseUrl: false },
   ollama: { label: 'Ollama (Local)', defaultModel: 'llama3', requiresBaseUrl: true },
-  custom: { label: 'Custom (OpenAI-compatible)', defaultModel: '', requiresBaseUrl: true }
+  custom: { label: 'Custom (OpenAI-compatible)', defaultModel: '', requiresBaseUrl: true },
 }

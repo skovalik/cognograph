@@ -8,11 +8,11 @@
  * Extracted from workspaceStore as part of Week 2 Stream B Track 2 Phase 2.2a.
  */
 
-import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
-import { subscribeWithSelector } from 'zustand/middleware'
+import type { ExtractionSettings, PendingExtraction } from '@shared/types'
 import { v4 as uuid } from 'uuid'
-import type { PendingExtraction, ExtractionSettings } from '@shared/types'
+import { create } from 'zustand'
+import { subscribeWithSelector } from 'zustand/middleware'
+import { immer } from 'zustand/middleware/immer'
 import type { ExtractionDragState, LastAcceptedExtraction } from './types'
 
 // =============================================================================
@@ -35,13 +35,15 @@ interface ExtractionState {
 
 interface ExtractionActions {
   // Pending extractions
-  addPendingExtraction: (extraction: Omit<PendingExtraction, 'id' | 'status' | 'createdAt'>) => string
+  addPendingExtraction: (
+    extraction: Omit<PendingExtraction, 'id' | 'status' | 'createdAt'>,
+  ) => string
   editExtraction: (extractionId: string, data: Partial<PendingExtraction['suggestedData']>) => void
   dismissExtraction: (extractionId: string) => void
   clearAllExtractions: (sourceNodeId?: string) => void
   acceptExtraction: (
     extractionId: string,
-    position?: { x: number; y: number }
+    position?: { x: number; y: number },
   ) => { nodeId: string; edgeId: string } | null
 
   // Extraction filtering
@@ -89,7 +91,7 @@ const initialState: ExtractionState = {
   openExtractionPanelNodeId: null,
   extractionDrag: null,
   lastAcceptedExtraction: null,
-  extractionSettings: new Map()
+  extractionSettings: new Map(),
 }
 
 // =============================================================================
@@ -111,7 +113,7 @@ export const useExtractionStore = create<ExtractionStore>()(
           ...extraction,
           id,
           status: 'pending',
-          createdAt: Date.now()
+          createdAt: Date.now(),
         }
 
         set((state) => {
@@ -140,7 +142,7 @@ export const useExtractionStore = create<ExtractionStore>()(
         set((state) => {
           if (sourceNodeId) {
             state.pendingExtractions = state.pendingExtractions.filter(
-              (e) => e.sourceNodeId !== sourceNodeId
+              (e) => e.sourceNodeId !== sourceNodeId,
             )
           } else {
             state.pendingExtractions = []
@@ -163,7 +165,7 @@ export const useExtractionStore = create<ExtractionStore>()(
             extractionData: extraction,
             createdNodeId: nodeId,
             createdEdgeId: edgeId,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           }
 
           // Remove from pending
@@ -226,7 +228,7 @@ export const useExtractionStore = create<ExtractionStore>()(
             extractionId,
             position,
             type: extraction.type,
-            title: extraction.suggestedData.title
+            title: extraction.suggestedData.title,
           }
         })
       },
@@ -327,9 +329,9 @@ export const useExtractionStore = create<ExtractionStore>()(
           settings.extractedTitles.push(title)
           state.extractionSettings.set(nodeId, settings)
         })
-      }
-    }))
-  )
+      },
+    })),
+  ),
 )
 
 // =============================================================================
@@ -343,13 +345,15 @@ export const useExtractionsForNode = (nodeId: string): PendingExtraction[] =>
   useExtractionStore((state) => state.pendingExtractions.filter((e) => e.sourceNodeId === nodeId))
 
 export const useExtractionCountForNode = (nodeId: string): number =>
-  useExtractionStore((state) => state.pendingExtractions.filter((e) => e.sourceNodeId === nodeId).length)
+  useExtractionStore(
+    (state) => state.pendingExtractions.filter((e) => e.sourceNodeId === nodeId).length,
+  )
 
 export const useSortedExtractionsForNode = (nodeId: string): PendingExtraction[] =>
   useExtractionStore((state) =>
     state.pendingExtractions
       .filter((e) => e.sourceNodeId === nodeId)
-      .sort((a, b) => b.confidence - a.confidence)
+      .sort((a, b) => b.confidence - a.confidence),
   )
 
 export const useIsExtracting = (): string | null =>

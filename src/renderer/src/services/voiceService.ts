@@ -47,7 +47,7 @@ const COMMAND_PATTERNS: Array<{ pattern: RegExp; command: VoiceCommand }> = [
   { pattern: /help/i, command: 'help' },
   { pattern: /shortcuts/i, command: 'help' },
   { pattern: /delete/i, command: 'delete' },
-  { pattern: /remove/i, command: 'delete' }
+  { pattern: /remove/i, command: 'delete' },
 ]
 
 // Settings store
@@ -68,12 +68,12 @@ export const useVoiceSettings = create<VoiceSettingsState>()(
       continuous: false, // Single command mode by default
       setEnabled: (enabled) => set({ enabled }),
       setLanguage: (language) => set({ language }),
-      setContinuous: (continuous) => set({ continuous })
+      setContinuous: (continuous) => set({ continuous }),
     }),
     {
-      name: 'cognograph-voice-settings'
-    }
-  )
+      name: 'cognograph-voice-settings',
+    },
+  ),
 )
 
 // Voice service state
@@ -103,7 +103,8 @@ const getSpeechRecognition = (): typeof SpeechRecognition | null => {
     return (window as unknown as { SpeechRecognition: typeof SpeechRecognition }).SpeechRecognition
   }
   if ('webkitSpeechRecognition' in window) {
-    return (window as unknown as { webkitSpeechRecognition: typeof SpeechRecognition }).webkitSpeechRecognition
+    return (window as unknown as { webkitSpeechRecognition: typeof SpeechRecognition })
+      .webkitSpeechRecognition
   }
   return null
 }
@@ -178,7 +179,7 @@ export const useVoiceService = create<VoiceServiceStore>((set, get) => ({
       recognition.onerror = (event) => {
         set({
           error: `Voice recognition error: ${event.error}`,
-          isListening: false
+          isListening: false,
         })
       }
 
@@ -207,11 +208,11 @@ export const useVoiceService = create<VoiceServiceStore>((set, get) => ({
     return () => {
       commandCallbacks.delete(callback)
     }
-  }
+  },
 }))
 
 export default {
   useVoiceSettings,
   useVoiceService,
-  parseCommand
+  parseCommand,
 }

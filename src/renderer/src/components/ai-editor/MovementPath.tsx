@@ -9,8 +9,8 @@
  * Scales with viewport zoom level.
  */
 
-import { memo } from 'react'
 import { MoveRight } from 'lucide-react'
+import { memo } from 'react'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 
 interface MovementPathProps {
@@ -28,7 +28,7 @@ function MovementPathComponent({
   to,
   nodeDimensions = { width: 280, height: 140 },
   zoom,
-  nodeTitle
+  nodeTitle,
 }: MovementPathProps): JSX.Element {
   const reducedMotion = useReducedMotion()
 
@@ -77,7 +77,7 @@ function MovementPathComponent({
         width,
         height,
         pointerEvents: 'none',
-        zIndex: 999
+        zIndex: 999,
       }}
     >
       <svg width={width} height={height} className="movement-path-svg">
@@ -92,13 +92,7 @@ function MovementPathComponent({
         />
 
         {/* Start dot */}
-        <circle
-          cx={relFromX}
-          cy={relFromY}
-          r={dotRadius}
-          fill="#f59e0b"
-          opacity={0.5}
-        />
+        <circle cx={relFromX} cy={relFromY} r={dotRadius} fill="#f59e0b" opacity={0.5} />
 
         {/* End arrow */}
         <polygon
@@ -118,7 +112,7 @@ function MovementPathComponent({
           width: nodeDimensions.width,
           height: nodeDimensions.height,
           borderWidth: Math.max(1, 2 * zoom),
-          borderRadius: Math.max(4, 8 * zoom)
+          borderRadius: Math.max(4, 8 * zoom),
         }}
       />
 
@@ -131,7 +125,7 @@ function MovementPathComponent({
           top: midY - minY - 12 * zoom,
           fontSize: badgeFontSize,
           padding: `${badgePadding}px ${badgePadding * 2}px`,
-          borderRadius: Math.max(2, 4 * zoom)
+          borderRadius: Math.max(2, 4 * zoom),
         }}
       >
         <MoveRight style={{ width: badgeIconSize, height: badgeIconSize }} />

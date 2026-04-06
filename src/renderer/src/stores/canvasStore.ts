@@ -10,17 +10,17 @@
  * Created as part of Batch 0B: Split workspaceStore
  */
 
-import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
-import { subscribeWithSelector } from 'zustand/middleware'
+import type { EdgeData, NodeData } from '@shared/types'
+import { DEFAULT_EDGE_DATA } from '@shared/types'
+import type { Connection, Edge, EdgeChange, Node, NodeChange } from '@xyflow/react'
+import { applyEdgeChanges, applyNodeChanges } from '@xyflow/react'
 import { enableMapSet } from 'immer'
 import { v4 as uuid } from 'uuid'
-import { applyNodeChanges, applyEdgeChanges } from '@xyflow/react'
-import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react'
-import type { NodeData, EdgeData } from '@shared/types'
-import type { CanvasState } from './types'
+import { create } from 'zustand'
+import { subscribeWithSelector } from 'zustand/middleware'
+import { immer } from 'zustand/middleware/immer'
 import { createNodeData, DEFAULT_NODE_DIMENSIONS } from './nodeFactories'
-import { DEFAULT_EDGE_DATA } from '@shared/types'
+import type { CanvasState } from './types'
 
 // Enable Immer support for Map and Set
 enableMapSet()
@@ -115,7 +115,7 @@ const initialCanvasState: CanvasState = {
   streamingConversations: new Set(),
   recentlySpawnedNodes: new Set(),
   spawningNodeIds: [],
-  nodeUpdatedAt: new Map()
+  nodeUpdatedAt: new Map(),
 }
 
 // =============================================================================
@@ -155,7 +155,7 @@ export const useCanvasStore = create<CanvasStore>()(
             width: dimensions.width,
             height: dimensions.height,
             selected: true,
-            zIndex: maxZ + 1
+            zIndex: maxZ + 1,
           }
 
           // Deselect all other nodes
@@ -213,7 +213,7 @@ export const useCanvasStore = create<CanvasStore>()(
           state.nodes = state.nodes.filter((n) => !nodeIds.includes(n.id))
           // Remove connected edges
           state.edges = state.edges.filter(
-            (e) => !nodeIds.includes(e.source) && !nodeIds.includes(e.target)
+            (e) => !nodeIds.includes(e.source) && !nodeIds.includes(e.target),
           )
           // Update selection
           state.selectedNodeIds = state.selectedNodeIds.filter((id) => !nodeIds.includes(id))
@@ -265,9 +265,7 @@ export const useCanvasStore = create<CanvasStore>()(
         const id = uuid()
         set((state) => {
           // Prevent duplicate edges
-          const exists = state.edges.some(
-            (e) => e.source === source && e.target === target
-          )
+          const exists = state.edges.some((e) => e.source === source && e.target === target)
           if (!exists) {
             const edge: Edge<EdgeData> = {
               id,
@@ -276,8 +274,8 @@ export const useCanvasStore = create<CanvasStore>()(
               data: {
                 ...DEFAULT_EDGE_DATA,
                 createdAt: Date.now(),
-                updatedAt: Date.now()
-              }
+                updatedAt: Date.now(),
+              },
             }
             state.edges.push(edge)
           }
@@ -325,8 +323,8 @@ export const useCanvasStore = create<CanvasStore>()(
               targetHandle: newConnection.targetHandle ?? undefined,
               data: {
                 ...state.edges[edgeIndex].data,
-                updatedAt: Date.now()
-              } as EdgeData
+                updatedAt: Date.now(),
+              } as EdgeData,
             }
           }
         })
@@ -390,7 +388,7 @@ export const useCanvasStore = create<CanvasStore>()(
         set((state) => {
           const nodesToCopy = state.nodes.filter((n) => ids.includes(n.id))
           const edgesToCopy = state.edges.filter(
-            (e) => ids.includes(e.source) && ids.includes(e.target)
+            (e) => ids.includes(e.source) && ids.includes(e.target),
           )
           state.clipboardNodes = JSON.parse(JSON.stringify(nodesToCopy))
           state.clipboardEdges = JSON.parse(JSON.stringify(edgesToCopy))
@@ -402,7 +400,7 @@ export const useCanvasStore = create<CanvasStore>()(
         set((state) => {
           const nodesToCut = state.nodes.filter((n) => ids.includes(n.id))
           const edgesToCut = state.edges.filter(
-            (e) => ids.includes(e.source) && ids.includes(e.target)
+            (e) => ids.includes(e.source) && ids.includes(e.target),
           )
           state.clipboardNodes = JSON.parse(JSON.stringify(nodesToCut))
           state.clipboardEdges = JSON.parse(JSON.stringify(edgesToCut))
@@ -437,10 +435,10 @@ export const useCanvasStore = create<CanvasStore>()(
               id: newId,
               position: {
                 x: node.position.x + offsetX,
-                y: node.position.y + offsetY
+                y: node.position.y + offsetY,
               },
               selected: true,
-              zIndex: maxZ + 1 + newIds.length
+              zIndex: maxZ + 1 + newIds.length,
             }
             st.nodes.push(newNode)
           }
@@ -454,7 +452,7 @@ export const useCanvasStore = create<CanvasStore>()(
                 ...JSON.parse(JSON.stringify(edge)),
                 id: uuid(),
                 source: newSource,
-                target: newTarget
+                target: newTarget,
               }
               st.edges.push(newEdge)
             }
@@ -588,9 +586,7 @@ export const useCanvasStore = create<CanvasStore>()(
             const source = nodeIds[i]
             const target = nodeIds[i + 1]
             // Check if edge already exists
-            const exists = state.edges.some(
-              (e) => e.source === source && e.target === target
-            )
+            const exists = state.edges.some((e) => e.source === source && e.target === target)
             if (!exists) {
               const edge: Edge<EdgeData> = {
                 id: uuid(),
@@ -599,8 +595,8 @@ export const useCanvasStore = create<CanvasStore>()(
                 data: {
                   ...DEFAULT_EDGE_DATA,
                   createdAt: Date.now(),
-                  updatedAt: Date.now()
-                }
+                  updatedAt: Date.now(),
+                },
               }
               state.edges.push(edge)
             }
@@ -612,7 +608,7 @@ export const useCanvasStore = create<CanvasStore>()(
         set((state) => {
           // Remove edges between any of the selected nodes
           state.edges = state.edges.filter(
-            (e) => !(nodeIds.includes(e.source) && nodeIds.includes(e.target))
+            (e) => !(nodeIds.includes(e.source) && nodeIds.includes(e.target)),
           )
         })
       },
@@ -659,7 +655,7 @@ export const useCanvasStore = create<CanvasStore>()(
         set((state) => {
           // Check if edge already exists
           const exists = state.edges.some(
-            (e) => e.source === connection.source && e.target === connection.target
+            (e) => e.source === connection.source && e.target === connection.target,
           )
           if (!exists) {
             const edge: Edge<EdgeData> = {
@@ -671,8 +667,8 @@ export const useCanvasStore = create<CanvasStore>()(
               data: {
                 ...DEFAULT_EDGE_DATA,
                 createdAt: Date.now(),
-                updatedAt: Date.now()
-              }
+                updatedAt: Date.now(),
+              },
             }
             state.edges.push(edge)
           }
@@ -737,9 +733,9 @@ export const useCanvasStore = create<CanvasStore>()(
         set((state) => {
           state.nodeUpdatedAt.set(nodeId, Date.now())
         })
-      }
-    }))
-  )
+      },
+    })),
+  ),
 )
 
 // =============================================================================

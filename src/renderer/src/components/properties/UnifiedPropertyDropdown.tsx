@@ -12,30 +12,30 @@
  * - Editing: Inline edit form within the same dropdown (name, color, icon)
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react'
+import type { PropertyOption } from '@shared/types'
 import {
-  ChevronDown,
-  ChevronUp,
-  ChevronLeft,
+  AlertTriangle,
+  Calendar,
   Check,
-  Pencil,
-  Plus,
-  X,
+  ChevronDown,
+  ChevronLeft,
+  ChevronUp,
   // Quick icons for selection
   Circle,
-  Star,
-  Flag,
-  Tag,
-  AlertTriangle,
-  Zap,
-  Target,
   Clock,
-  Calendar,
-  type LucideIcon
+  Flag,
+  type LucideIcon,
+  Pencil,
+  Plus,
+  Star,
+  Tag,
+  Target,
+  X,
+  Zap,
 } from 'lucide-react'
-import type { PropertyOption } from '@shared/types'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { EscapePriority, escapeManager } from '../../utils/EscapeManager'
 import { ICON_MAP } from '../IconPicker'
-import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 
 // Quick icon selection for edit mode
 const QUICK_ICONS: { name: string; icon: LucideIcon }[] = [
@@ -48,7 +48,7 @@ const QUICK_ICONS: { name: string; icon: LucideIcon }[] = [
   { name: 'zap', icon: Zap },
   { name: 'target', icon: Target },
   { name: 'clock', icon: Clock },
-  { name: 'calendar', icon: Calendar }
+  { name: 'calendar', icon: Calendar },
 ]
 
 // Preset colors
@@ -61,7 +61,7 @@ const PRESET_COLORS = [
   '#14b8a6', // teal
   '#3b82f6', // blue
   '#8b5cf6', // purple
-  '#ec4899' // pink
+  '#ec4899', // pink
 ]
 
 type DropdownMode = 'closed' | 'selecting' | 'editing'
@@ -91,7 +91,7 @@ function UnifiedPropertyDropdownComponent({
   placeholder = 'Select...',
   disabled = false,
   allowCreate = true,
-  allowEdit = true
+  allowEdit = true,
 }: UnifiedPropertyDropdownProps): JSX.Element {
   // State machine
   const [mode, setMode] = useState<DropdownMode>('closed')
@@ -113,12 +113,12 @@ function UnifiedPropertyDropdownComponent({
 
   // Filter options by search
   const filteredOptions = options.filter((opt) =>
-    opt.label.toLowerCase().includes(searchQuery.toLowerCase())
+    opt.label.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
   // Check if search query matches any option
   const queryMatchesOption = options.some(
-    (o) => o.label.toLowerCase() === searchQuery.toLowerCase()
+    (o) => o.label.toLowerCase() === searchQuery.toLowerCase(),
   )
 
   // Close on click outside
@@ -181,7 +181,7 @@ function UnifiedPropertyDropdownComponent({
       onSelect(optionValue)
       handleClose()
     },
-    [onSelect, handleClose]
+    [onSelect, handleClose],
   )
 
   const handleStartEdit = useCallback((option: PropertyOption, e: React.MouseEvent) => {
@@ -207,7 +207,7 @@ function UnifiedPropertyDropdownComponent({
     onUpdateOption(editingOption.value, {
       label: editName.trim(),
       color: editColor,
-      icon: editIcon
+      icon: editIcon,
     })
     handleBackToSelection()
   }, [editingOption, editName, editColor, editIcon, onUpdateOption, handleBackToSelection])
@@ -222,7 +222,7 @@ function UnifiedPropertyDropdownComponent({
     if (!searchQuery.trim() || !onCreateOption) return
     onCreateOption({
       label: searchQuery.trim(),
-      color: '#6b7280'
+      color: '#6b7280',
     })
     setSearchQuery('')
   }, [searchQuery, onCreateOption])
@@ -312,7 +312,9 @@ function UnifiedPropertyDropdownComponent({
                       className={`flex items-center justify-between px-3 py-2 cursor-pointer group hover:brightness-110 ${
                         isSelected ? 'bg-[var(--gui-accent-primary)]/10' : ''
                       }`}
-                      style={{ backgroundColor: isSelected ? undefined : 'var(--gui-panel-bg-secondary)' }}
+                      style={{
+                        backgroundColor: isSelected ? undefined : 'var(--gui-panel-bg-secondary)',
+                      }}
                     >
                       <div className="flex items-center gap-2">
                         <div
@@ -324,7 +326,12 @@ function UnifiedPropertyDropdownComponent({
                         <span className="text-sm gui-text">{option.label}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        {isSelected && <Check className="w-4 h-4" style={{ color: 'var(--gui-accent-primary)' }} />}
+                        {isSelected && (
+                          <Check
+                            className="w-4 h-4"
+                            style={{ color: 'var(--gui-accent-primary)' }}
+                          />
+                        )}
                         {allowEdit && (
                           <button
                             onClick={(e) => handleStartEdit(option, e)}
@@ -347,7 +354,9 @@ function UnifiedPropertyDropdownComponent({
                     style={{ backgroundColor: 'var(--gui-panel-bg-secondary)' }}
                   >
                     <Plus className="w-4 h-4" style={{ color: 'var(--gui-accent-primary)' }} />
-                    <span className="text-sm" style={{ color: 'var(--gui-accent-primary)' }}>Create "{searchQuery}"</span>
+                    <span className="text-sm" style={{ color: 'var(--gui-accent-primary)' }}>
+                      Create "{searchQuery}"
+                    </span>
                   </div>
                 )}
 
@@ -357,15 +366,12 @@ function UnifiedPropertyDropdownComponent({
                   </div>
                 )}
               </div>
-
             </>
           ) : (
             // Edit mode
             <>
               {/* Back header */}
-              <div
-                className="flex items-center gap-2 px-3 py-2 border-b gui-border gui-panel"
-              >
+              <div className="flex items-center gap-2 px-3 py-2 border-b gui-border gui-panel">
                 <button
                   onClick={handleBackToSelection}
                   className="gui-text-secondary hover:gui-text"
@@ -405,7 +411,8 @@ function UnifiedPropertyDropdownComponent({
                         className="w-6 h-6 rounded transition-all"
                         style={{
                           backgroundColor: color,
-                          boxShadow: editColor === color ? '0 0 0 2px var(--gui-accent-primary)' : undefined
+                          boxShadow:
+                            editColor === color ? '0 0 0 2px var(--gui-accent-primary)' : undefined,
                         }}
                       />
                     ))}
@@ -421,7 +428,7 @@ function UnifiedPropertyDropdownComponent({
                       onClick={() => setEditIcon(undefined)}
                       className="w-6 h-6 rounded gui-input border flex items-center justify-center"
                       style={{
-                        borderColor: !editIcon ? 'var(--gui-accent-primary)' : undefined
+                        borderColor: !editIcon ? 'var(--gui-accent-primary)' : undefined,
                       }}
                     >
                       <X className="w-3 h-3 opacity-50" />
@@ -432,7 +439,7 @@ function UnifiedPropertyDropdownComponent({
                         onClick={() => setEditIcon(name)}
                         className="w-6 h-6 rounded gui-input border flex items-center justify-center"
                         style={{
-                          borderColor: editIcon === name ? 'var(--gui-accent-primary)' : undefined
+                          borderColor: editIcon === name ? 'var(--gui-accent-primary)' : undefined,
                         }}
                       >
                         <Icon className="w-3.5 h-3.5" style={{ color: editColor }} />
@@ -443,9 +450,7 @@ function UnifiedPropertyDropdownComponent({
               </div>
 
               {/* Footer actions */}
-              <div
-                className="flex items-center justify-between px-3 py-2 border-t gui-border gui-panel"
-              >
+              <div className="flex items-center justify-between px-3 py-2 border-t gui-border gui-panel">
                 {onDeleteOption && !showDeleteConfirm ? (
                   <button
                     onClick={() => setShowDeleteConfirm(true)}

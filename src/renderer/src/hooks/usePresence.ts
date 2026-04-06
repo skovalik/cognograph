@@ -8,9 +8,9 @@
  * without overwhelming the network.
  */
 
-import { useEffect, useRef, useCallback } from 'react'
-import { useCollaborativeProvider } from '../sync'
+import { useCallback, useEffect, useRef } from 'react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
+import { useCollaborativeProvider } from '../sync'
 
 const THROTTLE_MS = 50
 
@@ -31,7 +31,7 @@ export function usePresence(): {
       (selectedNodeIds) => {
         const awareness = collaborativeProvider.getAwareness()
         awareness.setLocalStateField('selectedNodeIds', selectedNodeIds)
-      }
+      },
     )
 
     return unsub
@@ -61,10 +61,10 @@ export function usePresence(): {
             x: viewport.x,
             y: viewport.y,
             width: window.innerWidth / viewport.zoom,
-            height: window.innerHeight / viewport.zoom
+            height: window.innerHeight / viewport.zoom,
           })
         }, 200)
-      }
+      },
     )
 
     return () => {
@@ -73,27 +73,30 @@ export function usePresence(): {
     }
   }, [collaborativeProvider])
 
-  const broadcastCursor = useCallback((canvasX: number, canvasY: number) => {
-    if (!collaborativeProvider) return
+  const broadcastCursor = useCallback(
+    (canvasX: number, canvasY: number) => {
+      if (!collaborativeProvider) return
 
-    const now = Date.now()
-    if (now - lastUpdateRef.current < THROTTLE_MS) {
-      // Throttle: schedule a trailing update
-      if (!pendingUpdateRef.current) {
-        pendingUpdateRef.current = setTimeout(() => {
-          pendingUpdateRef.current = null
-          const awareness = collaborativeProvider.getAwareness()
-          awareness.setLocalStateField('cursor', { x: canvasX, y: canvasY })
-          lastUpdateRef.current = Date.now()
-        }, THROTTLE_MS)
+      const now = Date.now()
+      if (now - lastUpdateRef.current < THROTTLE_MS) {
+        // Throttle: schedule a trailing update
+        if (!pendingUpdateRef.current) {
+          pendingUpdateRef.current = setTimeout(() => {
+            pendingUpdateRef.current = null
+            const awareness = collaborativeProvider.getAwareness()
+            awareness.setLocalStateField('cursor', { x: canvasX, y: canvasY })
+            lastUpdateRef.current = Date.now()
+          }, THROTTLE_MS)
+        }
+        return
       }
-      return
-    }
 
-    lastUpdateRef.current = now
-    const awareness = collaborativeProvider.getAwareness()
-    awareness.setLocalStateField('cursor', { x: canvasX, y: canvasY })
-  }, [collaborativeProvider])
+      lastUpdateRef.current = now
+      const awareness = collaborativeProvider.getAwareness()
+      awareness.setLocalStateField('cursor', { x: canvasX, y: canvasY })
+    },
+    [collaborativeProvider],
+  )
 
   const clearCursor = useCallback(() => {
     if (!collaborativeProvider) return

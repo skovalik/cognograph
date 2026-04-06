@@ -48,5 +48,5 @@ export const useContextSelectionStore = create<ContextSelectionState>()((set, ge
 
   isSelected: (nodeId: string): boolean => {
     return get().selectedNodeIds.has(nodeId)
-  }
+  },
 }))

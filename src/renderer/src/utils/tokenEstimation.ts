@@ -55,7 +55,7 @@ export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   'gpt-4.1': 1047576,
   'gpt-4.1-mini': 1047576,
   'gpt-4.1-nano': 1047576,
-  'o3': 200000,
+  o3: 200000,
   'o3-mini': 200000,
   'o4-mini': 200000,
   // OpenAI models (previous generation)
@@ -130,7 +130,7 @@ export function calculateTokenUsage(
   contextText: string,
   messages: { content: string }[],
   systemPrompt?: string,
-  model?: string
+  model?: string,
 ): TokenUsage {
   const contextTokens = estimateTokens(contextText)
   const messageTokens = messages.reduce((sum, m) => sum + estimateTokens(m.content), 0)
@@ -145,6 +145,6 @@ export function calculateTokenUsage(
     systemTokens,
     totalTokens,
     maxTokens,
-    percentage
+    percentage,
   }
 }

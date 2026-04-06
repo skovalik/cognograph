@@ -8,16 +8,16 @@
  * Walks nodes depth-first by project hierarchy.
  */
 
-import type { Node, Edge } from '@xyflow/react'
 import type {
-  NodeData,
-  ConversationNodeData,
-  NoteNodeData,
-  TaskNodeData,
-  ProjectNodeData,
   ArtifactNodeData,
-  TextNodeData
+  ConversationNodeData,
+  NodeData,
+  NoteNodeData,
+  ProjectNodeData,
+  TaskNodeData,
+  TextNodeData,
 } from '@shared/types'
+import type { Edge, Node } from '@xyflow/react'
 
 export type ExportFormat = 'markdown' | 'html' | 'json'
 export type ExportScope = 'all' | 'selected'
@@ -102,17 +102,29 @@ function formatTextMd(data: TextNodeData): string {
 
 function formatNodeMd(data: NodeData): string {
   switch (data.type) {
-    case 'conversation': return formatConversationMd(data as ConversationNodeData)
-    case 'note': return formatNoteMd(data as NoteNodeData)
-    case 'task': return formatTaskMd(data as TaskNodeData)
-    case 'project': return formatProjectMd(data as ProjectNodeData)
-    case 'artifact': return formatArtifactMd(data as ArtifactNodeData)
-    case 'text': return formatTextMd(data as TextNodeData)
+    case 'conversation':
+      return formatConversationMd(data as ConversationNodeData)
+    case 'note':
+      return formatNoteMd(data as NoteNodeData)
+    case 'task':
+      return formatTaskMd(data as TaskNodeData)
+    case 'project':
+      return formatProjectMd(data as ProjectNodeData)
+    case 'artifact':
+      return formatArtifactMd(data as ArtifactNodeData)
+    case 'text':
+      return formatTextMd(data as TextNodeData)
     case 'orchestrator': {
-      const orchData = data as { title: string; strategy: string; connectedAgents: unknown[]; description?: string }
+      const orchData = data as {
+        title: string
+        strategy: string
+        connectedAgents: unknown[]
+        description?: string
+      }
       return `### ${orchData.title}\n*Orchestrator — ${orchData.strategy} strategy, ${orchData.connectedAgents.length} agents*\n${orchData.description || ''}\n`
     }
-    default: return `### ${data.title || 'Untitled'}\n*${data.type} node*\n`
+    default:
+      return `### ${data.title || 'Untitled'}\n*${data.type} node*\n`
   }
 }
 
@@ -142,7 +154,7 @@ function formatEdgesMd(edges: Edge[], nodeMap: Map<string, Node<NodeData>>): str
 export function exportAsMarkdown(
   nodes: Node<NodeData>[],
   edges: Edge[],
-  options: ExportOptions
+  options: ExportOptions,
 ): string {
   const lines: string[] = []
   lines.push(`# ${options.workspaceName}\n`)
@@ -183,12 +195,12 @@ export function exportAsMarkdown(
   }
 
   // Group by type for root-level nodes
-  const projects = rootNodes.filter(n => n.data.type === 'project')
-  const conversations = rootNodes.filter(n => n.data.type === 'conversation')
-  const notes = rootNodes.filter(n => n.data.type === 'note')
-  const tasks = rootNodes.filter(n => n.data.type === 'task')
-  const others = rootNodes.filter(n =>
-    !['project', 'conversation', 'note', 'task'].includes(n.data.type)
+  const projects = rootNodes.filter((n) => n.data.type === 'project')
+  const conversations = rootNodes.filter((n) => n.data.type === 'conversation')
+  const notes = rootNodes.filter((n) => n.data.type === 'note')
+  const tasks = rootNodes.filter((n) => n.data.type === 'task')
+  const others = rootNodes.filter(
+    (n) => !['project', 'conversation', 'note', 'task'].includes(n.data.type),
   )
 
   // Render projects with children
@@ -239,12 +251,12 @@ export function exportAsMarkdown(
 export function exportAsHtml(
   nodes: Node<NodeData>[],
   edges: Edge[],
-  options: ExportOptions
+  options: ExportOptions,
 ): string {
   const markdown = exportAsMarkdown(nodes, edges, options)
 
   // Simple markdown-to-HTML conversion (no external dependency needed)
-  let html = markdown
+  const html = markdown
     // Headers
     .replace(/^### (.+)$/gm, '<h3>$1</h3>')
     .replace(/^## (.+)$/gm, '<h2>$1</h2>')
@@ -303,27 +315,33 @@ export function exportAsHtml(
 export function exportAsJson(
   nodes: Node<NodeData>[],
   edges: Edge[],
-  options: ExportOptions
+  options: ExportOptions,
 ): string {
-  return JSON.stringify({
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    workspaceName: options.workspaceName,
-    nodeCount: nodes.length,
-    edgeCount: edges.length,
-    nodes: nodes.map(n => ({
-      id: n.id,
-      type: n.data.type,
-      position: n.position,
-      data: n.data
-    })),
-    edges: options.includeEdges ? edges.map(e => ({
-      id: e.id,
-      source: e.source,
-      target: e.target,
-      data: e.data
-    })) : []
-  }, null, 2)
+  return JSON.stringify(
+    {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      workspaceName: options.workspaceName,
+      nodeCount: nodes.length,
+      edgeCount: edges.length,
+      nodes: nodes.map((n) => ({
+        id: n.id,
+        type: n.data.type,
+        position: n.position,
+        data: n.data,
+      })),
+      edges: options.includeEdges
+        ? edges.map((e) => ({
+            id: e.id,
+            source: e.source,
+            target: e.target,
+            data: e.data,
+          }))
+        : [],
+    },
+    null,
+    2,
+  )
 }
 
 // =============================================================================
@@ -333,12 +351,15 @@ export function exportAsJson(
 export function exportWorkspace(
   nodes: Node<NodeData>[],
   edges: Edge[],
-  options: ExportOptions
+  options: ExportOptions,
 ): string {
   switch (options.format) {
-    case 'markdown': return exportAsMarkdown(nodes, edges, options)
-    case 'html': return exportAsHtml(nodes, edges, options)
-    case 'json': return exportAsJson(nodes, edges, options)
+    case 'markdown':
+      return exportAsMarkdown(nodes, edges, options)
+    case 'html':
+      return exportAsHtml(nodes, edges, options)
+    case 'json':
+      return exportAsJson(nodes, edges, options)
   }
 }
 
@@ -347,9 +368,12 @@ export function exportWorkspace(
  */
 export function getExportExtension(format: ExportFormat): string {
   switch (format) {
-    case 'markdown': return 'md'
-    case 'html': return 'html'
-    case 'json': return 'json'
+    case 'markdown':
+      return 'md'
+    case 'html':
+      return 'html'
+    case 'json':
+      return 'json'
   }
 }
 
@@ -358,8 +382,11 @@ export function getExportExtension(format: ExportFormat): string {
  */
 export function getExportMimeType(format: ExportFormat): string {
   switch (format) {
-    case 'markdown': return 'text/markdown'
-    case 'html': return 'text/html'
-    case 'json': return 'application/json'
+    case 'markdown':
+      return 'text/markdown'
+    case 'html':
+      return 'text/html'
+    case 'json':
+      return 'application/json'
   }
 }

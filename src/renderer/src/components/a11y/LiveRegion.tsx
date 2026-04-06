@@ -30,7 +30,7 @@ interface LiveRegionProps {
 function LiveRegionComponent({
   message,
   priority = 'polite',
-  clearAfter
+  clearAfter,
 }: LiveRegionProps): JSX.Element {
   const regionRef = useRef<HTMLDivElement>(null)
   const previousMessage = useRef<string>('')
@@ -85,7 +85,7 @@ function LiveRegionComponent({
         overflow: 'hidden',
         clip: 'rect(0, 0, 0, 0)',
         whiteSpace: 'nowrap',
-        border: 0
+        border: 0,
       }}
     >
       {message}

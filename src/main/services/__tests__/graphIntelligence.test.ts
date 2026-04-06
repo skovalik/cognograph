@@ -12,7 +12,7 @@
  * - Full topology analysis
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { analyzeTopology } from '../graphIntelligence'
 
 // Mock electron
@@ -53,12 +53,7 @@ interface TestEdge {
   bidirectional?: boolean
 }
 
-function createNode(
-  id: string,
-  type = 'note',
-  title = `Node ${id}`,
-  daysOld = 0
-): TestNode {
+function createNode(id: string, type = 'note', title = `Node ${id}`, daysOld = 0): TestNode {
   const now = Date.now()
   return {
     id,
@@ -70,11 +65,7 @@ function createNode(
   }
 }
 
-function createEdge(
-  source: string,
-  target: string,
-  bidirectional = false
-): TestEdge {
+function createEdge(source: string, target: string, bidirectional = false): TestEdge {
   return {
     id: `${source}-${target}`,
     source,
@@ -116,28 +107,16 @@ describe('Graph Intelligence - analyzeTopology', () => {
         timestamp: Date.now(),
       })
 
-      const orphanInsights = insights.filter(
-        (i) => i.type === 'orphaned-cluster'
-      )
+      const orphanInsights = insights.filter((i) => i.type === 'orphaned-cluster')
       expect(orphanInsights.length).toBeGreaterThanOrEqual(1)
       // The smaller cluster (n5, n6) should be flagged
-      const smallCluster = orphanInsights.find((i) =>
-        i.affectedNodeIds.includes('n5')
-      )
+      const smallCluster = orphanInsights.find((i) => i.affectedNodeIds.includes('n5'))
       expect(smallCluster).toBeDefined()
     })
 
     it('should detect isolated nodes', () => {
-      const nodes = [
-        createNode('n1'),
-        createNode('n2'),
-        createNode('n3'),
-        createNode('isolated'),
-      ]
-      const edges = [
-        createEdge('n1', 'n2'),
-        createEdge('n2', 'n3'),
-      ]
+      const nodes = [createNode('n1'), createNode('n2'), createNode('n3'), createNode('isolated')]
+      const edges = [createEdge('n1', 'n2'), createEdge('n2', 'n3')]
 
       const insights = analyzeTopology({
         nodes,
@@ -146,23 +125,14 @@ describe('Graph Intelligence - analyzeTopology', () => {
       })
 
       const isolatedInsight = insights.find(
-        (i) =>
-          i.type === 'orphaned-cluster' &&
-          i.affectedNodeIds.includes('isolated')
+        (i) => i.type === 'orphaned-cluster' && i.affectedNodeIds.includes('isolated'),
       )
       expect(isolatedInsight).toBeDefined()
     })
 
     it('should not flag a fully connected graph', () => {
-      const nodes = [
-        createNode('n1'),
-        createNode('n2'),
-        createNode('n3'),
-      ]
-      const edges = [
-        createEdge('n1', 'n2'),
-        createEdge('n2', 'n3'),
-      ]
+      const nodes = [createNode('n1'), createNode('n2'), createNode('n3')]
+      const edges = [createEdge('n1', 'n2'), createEdge('n2', 'n3')]
 
       const insights = analyzeTopology({
         nodes,
@@ -170,9 +140,7 @@ describe('Graph Intelligence - analyzeTopology', () => {
         timestamp: Date.now(),
       })
 
-      const orphanInsights = insights.filter(
-        (i) => i.type === 'orphaned-cluster'
-      )
+      const orphanInsights = insights.filter((i) => i.type === 'orphaned-cluster')
       expect(orphanInsights).toHaveLength(0)
     })
 
@@ -186,11 +154,7 @@ describe('Graph Intelligence - analyzeTopology', () => {
     })
 
     it('should handle graph with no edges', () => {
-      const nodes = [
-        createNode('n1'),
-        createNode('n2'),
-        createNode('n3'),
-      ]
+      const nodes = [createNode('n1'), createNode('n2'), createNode('n3')]
 
       const insights = analyzeTopology({
         nodes,
@@ -198,9 +162,7 @@ describe('Graph Intelligence - analyzeTopology', () => {
         timestamp: Date.now(),
       })
 
-      const isolatedInsight = insights.find(
-        (i) => i.type === 'orphaned-cluster'
-      )
+      const isolatedInsight = insights.find((i) => i.type === 'orphaned-cluster')
       expect(isolatedInsight).toBeDefined()
       expect(isolatedInsight!.affectedNodeIds).toHaveLength(3)
     })
@@ -242,9 +204,7 @@ describe('Graph Intelligence - analyzeTopology', () => {
       })
 
       const hubInsight = insights.find(
-        (i) =>
-          i.type === 'unbalanced-graph' &&
-          i.affectedNodeIds.includes('hub')
+        (i) => i.type === 'unbalanced-graph' && i.affectedNodeIds.includes('hub'),
       )
       expect(hubInsight).toBeDefined()
     })
@@ -271,9 +231,7 @@ describe('Graph Intelligence - analyzeTopology', () => {
         timestamp: Date.now(),
       })
 
-      const hubInsights = insights.filter(
-        (i) => i.type === 'unbalanced-graph'
-      )
+      const hubInsights = insights.filter((i) => i.type === 'unbalanced-graph')
       expect(hubInsights).toHaveLength(0)
     })
   })
@@ -301,9 +259,7 @@ describe('Graph Intelligence - analyzeTopology', () => {
       })
 
       const missingInsight = insights.find(
-        (i) =>
-          i.type === 'missing-connection' &&
-          i.description.includes('task')
+        (i) => i.type === 'missing-connection' && i.description.includes('task'),
       )
       expect(missingInsight).toBeDefined()
       expect(missingInsight!.affectedNodeIds).toContain('t2')
@@ -328,9 +284,7 @@ describe('Graph Intelligence - analyzeTopology', () => {
       })
 
       const agentInsight = insights.find(
-        (i) =>
-          i.type === 'missing-connection' &&
-          i.description.includes('agent')
+        (i) => i.type === 'missing-connection' && i.description.includes('agent'),
       )
       expect(agentInsight).toBeDefined()
       expect(agentInsight!.affectedNodeIds).toContain('a2')

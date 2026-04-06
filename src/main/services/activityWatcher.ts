@@ -19,12 +19,12 @@
  * @module activityWatcher
  */
 
-import { watch, readFileSync, existsSync, mkdirSync, statSync } from 'fs'
-import { BrowserWindow } from 'electron'
-import path from 'path'
-import type { FSWatcher } from 'fs'
 import type { CCActivityEvent, CCBridgeConfig } from '@shared/bridge-types'
 import { DEFAULT_CC_BRIDGE_CONFIG } from '@shared/bridge-types'
+import { BrowserWindow } from 'electron'
+import type { FSWatcher } from 'fs'
+import { existsSync, mkdirSync, readFileSync, statSync, watch } from 'fs'
+import path from 'path'
 
 // -----------------------------------------------------------------------------
 // Module State
@@ -49,10 +49,7 @@ const MAX_HISTORY = 1000
  * @param projectDir - The project root directory where .cognograph-activity/ lives.
  * @param config - Optional bridge configuration overrides.
  */
-export function startActivityWatcher(
-  projectDir: string,
-  config?: Partial<CCBridgeConfig>
-): void {
+export function startActivityWatcher(projectDir: string, config?: Partial<CCBridgeConfig>): void {
   // Merge config
   currentConfig = { ...DEFAULT_CC_BRIDGE_CONFIG, ...config }
 

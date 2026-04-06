@@ -6,12 +6,12 @@
 // =============================================================================
 // Post-apply feedback widget
 
-import { memo, useState, useEffect } from 'react'
-import { ThumbsUp, ThumbsDown, X, Check } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { aiConfigLearning } from '../../services/aiConfigLearning'
-import { aiConfigAnalytics } from '../../services/aiConfigAnalytics'
 import type { AIGeneratedConfig } from '@shared/actionTypes'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Check, ThumbsDown, ThumbsUp, X } from 'lucide-react'
+import { memo, useEffect, useState } from 'react'
+import { aiConfigAnalytics } from '../../services/aiConfigAnalytics'
+import { aiConfigLearning } from '../../services/aiConfigLearning'
 
 interface AIConfigFeedbackProps {
   sessionId: string
@@ -27,7 +27,7 @@ function AIConfigFeedbackComponent({
   sessionId,
   config,
   questionRounds,
-  onDismiss
+  onDismiss,
 }: AIConfigFeedbackProps): JSX.Element | null {
   const [visible, setVisible] = useState(false)
   const [expanded, setExpanded] = useState(false)
@@ -65,7 +65,7 @@ function AIConfigFeedbackComponent({
       hadModifications: false,
       config,
       questionRounds,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     })
 
     setSubmitted(true)

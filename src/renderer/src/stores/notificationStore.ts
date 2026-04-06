@@ -50,7 +50,7 @@ interface NotificationStoreActions {
   notify: (
     message: string,
     priority?: NotificationPriority,
-    options?: { nodeId?: string; action?: NotificationAction }
+    options?: { nodeId?: string; action?: NotificationAction },
   ) => string
 
   /** Dismiss a single notification by id */
@@ -76,7 +76,7 @@ export const MAX_VISIBLE = 5
 export const TIMEOUT_MS: Record<NotificationPriority, number> = {
   error: 10_000,
   warning: 5_000,
-  info: 3_000
+  info: 3_000,
 }
 
 /** Window for folding duplicate messages (ms) */
@@ -86,7 +86,7 @@ export const FOLD_WINDOW_MS = 5_000
 const PRIORITY_WEIGHT: Record<NotificationPriority, number> = {
   error: 0,
   warning: 1,
-  info: 2
+  info: 2,
 }
 
 // =============================================================================
@@ -149,19 +149,15 @@ export const useNotificationStore = create<NotificationStore>()(
       // --- Fold duplicates: same message + priority within FOLD_WINDOW_MS ---
       const existing = state.notifications.find(
         (n) =>
-          n.message === message &&
-          n.priority === priority &&
-          now - n.timestamp < FOLD_WINDOW_MS
+          n.message === message && n.priority === priority && now - n.timestamp < FOLD_WINDOW_MS,
       )
 
       if (existing) {
         // Increment counter and refresh timestamp
         set({
           notifications: state.notifications.map((n) =>
-            n.id === existing.id
-              ? { ...n, count: n.count + 1, timestamp: now }
-              : n
-          )
+            n.id === existing.id ? { ...n, count: n.count + 1, timestamp: now } : n,
+          ),
         })
         // Reset auto-dismiss timer for the folded notification
         scheduleAutoDismiss(existing.id, TIMEOUT_MS[priority], get().dismiss)
@@ -177,7 +173,7 @@ export const useNotificationStore = create<NotificationStore>()(
         count: 1,
         timestamp: now,
         nodeId: options?.nodeId,
-        action: options?.action
+        action: options?.action,
       }
 
       set({ notifications: [notification, ...state.notifications] })
@@ -191,7 +187,7 @@ export const useNotificationStore = create<NotificationStore>()(
     dismiss: (id) => {
       clearAutoDismiss(id)
       set((state) => ({
-        notifications: state.notifications.filter((n) => n.id !== id)
+        notifications: state.notifications.filter((n) => n.id !== id),
       }))
     },
 
@@ -209,8 +205,8 @@ export const useNotificationStore = create<NotificationStore>()(
         return b.timestamp - a.timestamp
       })
       return sorted.slice(0, MAX_VISIBLE)
-    }
-  }))
+    },
+  })),
 )
 
 // =============================================================================
@@ -220,7 +216,7 @@ export const useNotificationStore = create<NotificationStore>()(
 export function notify(
   message: string,
   priority?: NotificationPriority,
-  options?: { nodeId?: string; action?: NotificationAction }
+  options?: { nodeId?: string; action?: NotificationAction },
 ): string {
   return useNotificationStore.getState().notify(message, priority, options)
 }

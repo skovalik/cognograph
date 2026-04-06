@@ -8,9 +8,9 @@
  * Respects prefers-reduced-motion preference.
  */
 
-import { memo } from 'react'
-import { Sparkles, Brain, Radio, Eye, Cog, FileCheck, XCircle } from 'lucide-react'
 import type { AIEditorMode, StreamingPhase } from '@shared/types'
+import { Brain, Cog, Eye, FileCheck, Radio, Sparkles, XCircle } from 'lucide-react'
+import { memo } from 'react'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 import LiveRegion from '../a11y/LiveRegion'
 
@@ -27,26 +27,26 @@ const modeMessages: Record<AIEditorMode, string[]> = {
     'Analyzing issues...',
     'Finding problems...',
     'Planning fixes...',
-    'Checking connections...'
+    'Checking connections...',
   ],
   refactor: [
     'Analyzing structure...',
     'Planning improvements...',
     'Reorganizing nodes...',
-    'Optimizing layout...'
+    'Optimizing layout...',
   ],
   organize: [
     'Analyzing positions...',
     'Calculating layout...',
     'Arranging nodes...',
-    'Aligning elements...'
+    'Aligning elements...',
   ],
   generate: [
     'Understanding context...',
     'Planning new nodes...',
     'Generating content...',
-    'Creating structure...'
-  ]
+    'Creating structure...',
+  ],
 }
 
 const phaseMessages: Partial<Record<StreamingPhase, string>> = {
@@ -58,7 +58,7 @@ const phaseMessages: Partial<Record<StreamingPhase, string>> = {
   parsing: 'Finalizing plan...',
   complete: 'Complete!',
   cancelled: 'Cancelled',
-  error: 'Error occurred'
+  error: 'Error occurred',
 }
 
 const PhaseIcon: React.FC<{ phase?: StreamingPhase }> = ({ phase }) => {
@@ -78,7 +78,13 @@ const PhaseIcon: React.FC<{ phase?: StreamingPhase }> = ({ phase }) => {
   }
 }
 
-function LoadingStateComponent({ mode, message, streamingPhase, streamingText, onCancel }: LoadingStateProps): JSX.Element {
+function LoadingStateComponent({
+  mode,
+  message,
+  streamingPhase,
+  streamingText,
+  onCancel,
+}: LoadingStateProps): JSX.Element {
   const reducedMotion = useReducedMotion()
   const messages = modeMessages[mode]
   const displayMessage = streamingPhase
@@ -86,9 +92,8 @@ function LoadingStateComponent({ mode, message, streamingPhase, streamingText, o
     : message || messages[Math.floor(Math.random() * messages.length)]
 
   // Truncate streaming text for preview
-  const textPreview = streamingText && streamingText.length > 100
-    ? streamingText.slice(-100) + '...'
-    : streamingText
+  const textPreview =
+    streamingText && streamingText.length > 100 ? streamingText.slice(-100) + '...' : streamingText
 
   return (
     <div
@@ -114,7 +119,9 @@ function LoadingStateComponent({ mode, message, streamingPhase, streamingText, o
       </div>
 
       <div className="loading-text">
-        <span className="loading-message" aria-live="polite">{displayMessage}</span>
+        <span className="loading-message" aria-live="polite">
+          {displayMessage}
+        </span>
         <span className="loading-dots" aria-hidden="true">
           <span className="dot" />
           <span className="dot" />

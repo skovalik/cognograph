@@ -66,10 +66,7 @@ const mcpPassthroughSchema = z.record(z.string(), z.unknown())
  * @param executor — Function that sends tool calls to the MCP client
  * @returns A frozen Tool object ready for assembleToolPool()
  */
-export function adaptMCPTool(
-  mcpTool: MCPToolDefinition,
-  executor: MCPToolExecutor,
-): Tool {
+export function adaptMCPTool(mcpTool: MCPToolDefinition, executor: MCPToolExecutor): Tool {
   // Prefix MCP tool names with server ID to avoid cross-server collisions.
   // If the name already contains the server prefix (legacy), don't double-prefix.
   const qualifiedName = mcpTool.name.includes('__')
@@ -112,10 +109,7 @@ export function adaptMCPTool(
         content: [
           {
             type: 'text',
-            text:
-              typeof result.result === 'string'
-                ? result.result
-                : JSON.stringify(result.result),
+            text: typeof result.result === 'string' ? result.result : JSON.stringify(result.result),
           },
         ],
       }
@@ -134,9 +128,6 @@ export function adaptMCPTool(
  * @param executor — Function that sends tool calls to the MCP client
  * @returns Array of frozen Tool objects
  */
-export function adaptMCPTools(
-  mcpTools: MCPToolDefinition[],
-  executor: MCPToolExecutor,
-): Tool[] {
+export function adaptMCPTools(mcpTools: MCPToolDefinition[], executor: MCPToolExecutor): Tool[] {
   return mcpTools.map((t) => adaptMCPTool(t, executor))
 }

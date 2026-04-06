@@ -16,18 +16,18 @@ import { getPageIcon } from './propertyMapper'
 export interface UpsertResult {
   success: boolean
   pageId?: string
-  lastEditedTime?: number  // Unix ms from Notion API response
+  lastEditedTime?: number // Unix ms from Notion API response
   error?: string
-  errorCode?: string       // Notion error code for translation (Section 9f)
-  shouldSuspend?: boolean  // true on 401 — stop all sync
-  is404?: boolean          // true when PATCH target was deleted
+  errorCode?: string // Notion error code for translation (Section 9f)
+  shouldSuspend?: boolean // true on 401 — stop all sync
+  is404?: boolean // true when PATCH target was deleted
 }
 
 interface PageCreateOptions {
   parent: { database_id: string } | { page_id: string }
   properties: Record<string, unknown>
   icon?: { emoji: string }
-  children?: unknown[]  // Notion block objects (for note/artifact content)
+  children?: unknown[] // Notion block objects (for note/artifact content)
 }
 
 interface PageUpdateOptions {
@@ -51,7 +51,7 @@ export class UpsertService {
     nodeId: string,
     mapped: MappedNotionProperties,
     nodeType: string,
-    nodeData: { noteMode?: string; contentType?: string }
+    nodeData: { noteMode?: string; contentType?: string },
   ): Promise<UpsertResult> {
     // Step 1: Query for existing page
     const existingPageId = await this.findPageByNodeId(dbId, nodeId)
@@ -66,7 +66,7 @@ export class UpsertService {
     return this.createPage({
       parent: { database_id: dbId },
       properties: mapped.properties,
-      ...(icon && { icon })
+      ...(icon && { icon }),
     })
   }
 
@@ -82,7 +82,7 @@ export class UpsertService {
     nodeType: 'note' | 'artifact',
     nodeData: { noteMode?: string; contentType?: string },
     existingPageId?: string,
-    contentBlocks?: unknown[]
+    contentBlocks?: unknown[],
   ): Promise<UpsertResult> {
     if (existingPageId) {
       // Update existing page properties (content blocks handled separately)
@@ -95,9 +95,10 @@ export class UpsertService {
       parent: { page_id: parentPageId },
       properties: pageProperties,
       ...(icon && { icon }),
-      ...(contentBlocks && contentBlocks.length > 0 && {
-        children: contentBlocks.slice(0, 100) // Notion limit: 100 blocks per create
-      })
+      ...(contentBlocks &&
+        contentBlocks.length > 0 && {
+          children: contentBlocks.slice(0, 100), // Notion limit: 100 blocks per create
+        }),
     })
   }
 
@@ -111,10 +112,7 @@ export class UpsertService {
    * Section 6f: If crash between delete and append, snapshot has old contentHash
    * → next push re-sends full content.
    */
-  async replacePageContent(
-    pageId: string,
-    newBlocks: unknown[]
-  ): Promise<UpsertResult> {
+  async replacePageContent(pageId: string, newBlocks: unknown[]): Promise<UpsertResult> {
     // Step 1: List existing child blocks
     const listResult = await this.listChildBlocks(pageId)
     if (!listResult.success) {
@@ -125,14 +123,14 @@ export class UpsertService {
     for (const blockId of listResult.blockIds!) {
       const deleteResult = await notionService.request(
         async (client) => client.blocks.delete({ block_id: blockId }),
-        'deleteBlock'
+        'deleteBlock',
       )
       if (!deleteResult.success) {
         return {
           success: false,
           error: deleteResult.error,
           errorCode: (deleteResult as any).code,
-          shouldSuspend: deleteResult.shouldSuspend
+          shouldSuspend: deleteResult.shouldSuspend,
         }
       }
     }
@@ -143,18 +141,19 @@ export class UpsertService {
 
     for (const chunk of chunks) {
       const appendResult = await notionService.request(
-        async (client) => client.blocks.children.append({
-          block_id: pageId,
-          children: chunk as any
-        }),
-        'appendBlocks'
+        async (client) =>
+          client.blocks.children.append({
+            block_id: pageId,
+            children: chunk as any,
+          }),
+        'appendBlocks',
       )
       if (!appendResult.success) {
         return {
           success: false,
           error: appendResult.error,
           errorCode: (appendResult as any).code,
-          shouldSuspend: appendResult.shouldSuspend
+          shouldSuspend: appendResult.shouldSuspend,
         }
       }
     }
@@ -162,7 +161,7 @@ export class UpsertService {
     // Step 4: Retrieve page to get final last_edited_time (R5 QA note)
     const retrieveResult = await notionService.request(
       async (client) => client.pages.retrieve({ page_id: pageId }),
-      'retrievePageAfterContentUpdate'
+      'retrievePageAfterContentUpdate',
     )
     if (retrieveResult.success) {
       const page = retrieveResult.data as any
@@ -178,14 +177,15 @@ export class UpsertService {
    */
   async findPageByNodeId(dbId: string, nodeId: string): Promise<string | null> {
     const result = await notionService.request(
-      async (client) => client.databases.query({
-        database_id: dbId,
-        filter: {
-          property: 'Cognograph Node ID',
-          rich_text: { equals: nodeId }
-        }
-      }),
-      'queryByNodeId'
+      async (client) =>
+        client.databases.query({
+          database_id: dbId,
+          filter: {
+            property: 'Cognograph Node ID',
+            rich_text: { equals: nodeId },
+          },
+        }),
+      'queryByNodeId',
     )
 
     if (!result.success) return null
@@ -195,7 +195,7 @@ export class UpsertService {
 
     if (pages.length > 1) {
       console.warn(
-        `[UpsertService] Found ${pages.length} pages for nodeId=${nodeId} in DB ${dbId.slice(0, 8)}..., using first`
+        `[UpsertService] Found ${pages.length} pages for nodeId=${nodeId} in DB ${dbId.slice(0, 8)}..., using first`,
       )
     }
 
@@ -216,7 +216,7 @@ export class UpsertService {
   }> {
     const result = await notionService.request(
       async (client) => client.pages.retrieve({ page_id: pageId }),
-      'retrievePage'
+      'retrievePage',
     )
 
     if (!result.success) {
@@ -225,7 +225,7 @@ export class UpsertService {
         success: false,
         error: result.error,
         is404,
-        shouldSuspend: result.shouldSuspend
+        shouldSuspend: result.shouldSuspend,
       }
     }
 
@@ -233,7 +233,7 @@ export class UpsertService {
     return {
       success: true,
       page,
-      lastEditedTime: new Date(page.last_edited_time).getTime()
+      lastEditedTime: new Date(page.last_edited_time).getTime(),
     }
   }
 
@@ -244,14 +244,14 @@ export class UpsertService {
   private async createPage(options: PageCreateOptions): Promise<UpsertResult> {
     const result = await notionService.request(
       async (client) => client.pages.create(options as any),
-      'createPage'
+      'createPage',
     )
 
     if (!result.success) {
       return {
         success: false,
         error: result.error,
-        shouldSuspend: result.shouldSuspend
+        shouldSuspend: result.shouldSuspend,
       }
     }
 
@@ -259,17 +259,21 @@ export class UpsertService {
     return {
       success: true,
       pageId: page.id,
-      lastEditedTime: new Date(page.last_edited_time).getTime()
+      lastEditedTime: new Date(page.last_edited_time).getTime(),
     }
   }
 
-  private async updatePage(pageId: string, properties: Record<string, unknown>): Promise<UpsertResult> {
+  private async updatePage(
+    pageId: string,
+    properties: Record<string, unknown>,
+  ): Promise<UpsertResult> {
     const result = await notionService.request(
-      async (client) => client.pages.update({
-        page_id: pageId,
-        properties
-      } as any),
-      'updatePage'
+      async (client) =>
+        client.pages.update({
+          page_id: pageId,
+          properties,
+        } as any),
+      'updatePage',
     )
 
     if (!result.success) {
@@ -278,7 +282,7 @@ export class UpsertService {
         success: false,
         error: result.error,
         is404,
-        shouldSuspend: result.shouldSuspend
+        shouldSuspend: result.shouldSuspend,
       }
     }
 
@@ -286,7 +290,7 @@ export class UpsertService {
     return {
       success: true,
       pageId: page.id,
-      lastEditedTime: new Date(page.last_edited_time).getTime()
+      lastEditedTime: new Date(page.last_edited_time).getTime(),
     }
   }
 
@@ -301,18 +305,19 @@ export class UpsertService {
 
     do {
       const result = await notionService.request(
-        async (client) => client.blocks.children.list({
-          block_id: pageId,
-          ...(cursor && { start_cursor: cursor })
-        }),
-        'listChildBlocks'
+        async (client) =>
+          client.blocks.children.list({
+            block_id: pageId,
+            ...(cursor && { start_cursor: cursor }),
+          }),
+        'listChildBlocks',
       )
 
       if (!result.success) {
         return {
           success: false,
           error: result.error,
-          shouldSuspend: result.shouldSuspend
+          shouldSuspend: result.shouldSuspend,
         }
       }
 

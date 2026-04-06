@@ -8,71 +8,74 @@
  * Shows different menu items based on the target type.
  */
 
-import { memo, useCallback, useEffect, useRef } from 'react'
+import type { NodeData } from '@shared/types'
+import { type Node as FlowNode, useUpdateNodeInternals } from '@xyflow/react'
 import {
-  MessageSquare,
-  FileText,
-  CheckSquare,
-  Layers,
-  Trash2,
-  Save,
-  Copy,
-  ExternalLink,
-  Settings2,
-  FolderOpen,
-  Code,
-  Folder,
+  Archive,
   ArrowUpDown,
-  Undo2,
-  Redo2,
-  Download,
+  Bot,
   Boxes,
-  Wand2,
+  CheckSquare,
   ChevronDown,
   ChevronUp,
+  ClipboardPaste,
+  Code,
+  Copy,
+  Download,
+  ExternalLink,
+  Eye,
+  FileText,
+  Folder,
+  FolderOpen,
+  GitBranch,
+  Info,
+  Layers,
+  Link2,
+  MapPin,
+  Maximize2,
+  MessageSquare,
   Palette,
   Pin,
   PinOff,
-  Eye,
-  Star,
-  Type,
-  Link2,
-  Unlink2,
-  GitBranch,
-  Zap,
   Plus,
+  Redo2,
   RotateCcw,
-  Info,
-  Archive,
+  Save,
+  Scissors,
   Send,
-  Workflow,
-  Bot,
-  MapPin,
+  Settings2,
+  Star,
   Terminal,
-  Maximize2,
+  Trash2,
+  Type,
+  Undo2,
+  Unlink2,
+  Wand2,
+  Workflow,
+  Zap,
 } from 'lucide-react'
-import { hasTerminalAccess } from '../utils/terminalAccess'
-import { calculateAutoFitDimensions, AUTO_FIT_CONSTRAINTS } from '../utils/textMeasure'
+import { memo, useCallback, useEffect, useRef } from 'react'
 import { toast } from 'react-hot-toast'
-import {
-  useContextMenuStore,
-  useIsContextMenuOpen,
-  useContextMenuTarget,
-  useContextMenuPosition
-} from '../stores/contextMenuStore'
-import { Separator } from './ui'
-import { useWorkspaceStore } from '../stores/workspaceStore'
-import { useTemplateStore } from '../stores/templateStore'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { useAIEditorStore } from '../stores/aiEditorStore'
-import { useUIStore } from '../stores/uiStore'
-import { suggestTemplateName } from '../utils/templateUtils'
-import { useUpdateNodeInternals, type Node as FlowNode } from '@xyflow/react'
-import { logger } from '../utils/logger'
-import type { NodeData } from '@shared/types'
-import { getConversionTargets } from '../utils/nodeConversion'
 import { useCCBridgeStore } from '../stores/ccBridgeStore'
-import { useSpatialRegionStore } from '../stores/spatialRegionStore'
-import { escapeManager, EscapePriority } from '../utils/EscapeManager'
+import {
+  useContextMenuPosition,
+  useContextMenuStore,
+  useContextMenuTarget,
+  useIsContextMenuOpen,
+} from '../stores/contextMenuStore'
+// Spatial regions removed from UI — import retained for reference
+// import { useSpatialRegionStore } from '../stores/spatialRegionStore'
+import { useTemplateStore } from '../stores/templateStore'
+import { useUIStore } from '../stores/uiStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
+import { EscapePriority, escapeManager } from '../utils/EscapeManager'
+import { getConversionTargets } from '../utils/nodeConversion'
+import { suggestTemplateName } from '../utils/templateUtils'
+import { hasTerminalAccess } from '../utils/terminalAccess'
+import { AUTO_FIT_CONSTRAINTS, calculateAutoFitDimensions } from '../utils/textMeasure'
+import { Separator } from './ui'
 
 // -----------------------------------------------------------------------------
 // Menu Item Component
@@ -93,7 +96,7 @@ function MenuItem({
   onClick,
   shortcut,
   danger,
-  disabled
+  disabled,
 }: MenuItemProps): JSX.Element {
   const handleClick = useCallback(() => {
     if (!disabled) {
@@ -161,7 +164,18 @@ function findRootNode(nodes: FlowNode<NodeData>[]): FlowNode<NodeData> {
 }
 
 // Color presets for multi-select color change
-const COLOR_PRESETS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#6b7280', '#ffffff']
+const COLOR_PRESETS = [
+  '#ef4444',
+  '#f97316',
+  '#eab308',
+  '#22c55e',
+  '#06b6d4',
+  '#3b82f6',
+  '#8b5cf6',
+  '#ec4899',
+  '#6b7280',
+  '#ffffff',
+]
 
 // -----------------------------------------------------------------------------
 // Main Component
@@ -173,6 +187,7 @@ function ContextMenuComponent(): JSX.Element | null {
   const position = useContextMenuPosition()
   const close = useContextMenuStore((s) => s.close)
   const menuRef = useRef<HTMLDivElement>(null)
+  const isMobile = useIsMobile()
 
   // Workspace actions
   const addNode = useWorkspaceStore((s) => s.addNode)
@@ -196,6 +211,10 @@ function ContextMenuComponent(): JSX.Element | null {
   const redo = useWorkspaceStore((s) => s.redo)
   const canUndo = useWorkspaceStore((s) => s.canUndo)
   const canRedo = useWorkspaceStore((s) => s.canRedo)
+  const copyNodesAction = useWorkspaceStore((s) => s.copyNodes)
+  const cutNodesAction = useWorkspaceStore((s) => s.cutNodes)
+  const pasteNodesAction = useWorkspaceStore((s) => s.pasteNodes)
+  const clipboardNodes = useWorkspaceStore((s) => s.clipboardNodes)
 
   // Fit-to-content hooks
   const updateNodeInternals = useUpdateNodeInternals()
@@ -251,7 +270,7 @@ function ContextMenuComponent(): JSX.Element | null {
       }
       close()
     },
-    [target, addNode, close]
+    [target, addNode, close],
   )
 
   // Handle add agent node
@@ -277,30 +296,14 @@ function ContextMenuComponent(): JSX.Element | null {
           terminalState: 'idle',
           startedAt: Date.now(),
           lastActivityAt: Date.now(),
-          accentColor: '#22d3ee',
+          accentColor: 'var(--accent-glow)',
         },
       })
     }
     close()
   }, [target, addNode, close])
 
-  // Handle add spatial region (Fix 2.6)
-  const addRegion = useSpatialRegionStore((s) => s.addRegion)
-  const handleAddRegion = useCallback(() => {
-    if (target?.type === 'canvas') {
-      addRegion({
-        name: 'New Region',
-        bounds: {
-          x: target.position.x,
-          y: target.position.y,
-          width: 600,
-          height: 400
-        }
-      })
-      toast.success('Region created')
-    }
-    close()
-  }, [target, addRegion, close])
+  // Spatial regions removed from UI — store retained for future use
 
   // Handle add node to project
   const handleAddNodeToProject = useCallback(
@@ -311,7 +314,7 @@ function ContextMenuComponent(): JSX.Element | null {
       }
       close()
     },
-    [target, addNode, addNodeToProject, close]
+    [target, addNode, addNodeToProject, close],
   )
 
   // Handle paste template
@@ -333,7 +336,7 @@ function ContextMenuComponent(): JSX.Element | null {
 
     const selectedNodes = nodes.filter((n) => nodeIdsToSave.includes(n.id))
     const selectedEdges = edges.filter(
-      (e) => nodeIdsToSave.includes(e.source) && nodeIdsToSave.includes(e.target)
+      (e) => nodeIdsToSave.includes(e.source) && nodeIdsToSave.includes(e.target),
     )
 
     const bounds = calculateBounds(selectedNodes)
@@ -344,7 +347,7 @@ function ContextMenuComponent(): JSX.Element | null {
       edgeIds: selectedEdges.map((e) => e.id),
       suggestedName: suggestTemplateName(selectedNodes),
       bounds,
-      rootNodeId: rootNode.id
+      rootNodeId: rootNode.id,
     })
 
     close()
@@ -390,29 +393,37 @@ function ContextMenuComponent(): JSX.Element | null {
     const savedClipboardEdges = store.clipboardEdges
     const savedClipboardState = store.clipboardState
     if (target?.type === 'node') {
-      const node = store.nodes.find(n => n.id === target.nodeId)
+      const node = store.nodes.find((n) => n.id === target.nodeId)
       if (node) {
         store.copyNodes([target.nodeId])
         store.pasteNodes({ x: node.position.x + 40, y: node.position.y + 40 })
       }
     } else if (target?.type === 'nodes') {
       store.copyNodes(target.nodeIds)
-      const selectedNodes = store.nodes.filter(n => target.nodeIds.includes(n.id))
+      const selectedNodes = store.nodes.filter((n) => target.nodeIds.includes(n.id))
       if (selectedNodes.length > 0) {
         const avgX = selectedNodes.reduce((sum, n) => sum + n.position.x, 0) / selectedNodes.length
         const avgY = selectedNodes.reduce((sum, n) => sum + n.position.y, 0) / selectedNodes.length
         store.pasteNodes({ x: avgX + 40, y: avgY + 40 })
       }
     }
-    useWorkspaceStore.setState({ clipboardNodes: savedClipboardNodes, clipboardEdges: savedClipboardEdges, clipboardState: savedClipboardState })
+    useWorkspaceStore.setState({
+      clipboardNodes: savedClipboardNodes,
+      clipboardEdges: savedClipboardEdges,
+      clipboardState: savedClipboardState,
+    })
     close()
   }, [target, close])
 
   // Handle fit to content
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: multi-node-type dimension calculation
   const handleFitToContent = useCallback(() => {
     if (target?.type !== 'node') return
     const node = nodes.find((n) => n.id === target.nodeId)
-    if (!node) { close(); return }
+    if (!node) {
+      close()
+      return
+    }
 
     const nodeData = node.data as Record<string, unknown>
     const nodeType = nodeData.type as string
@@ -462,7 +473,13 @@ function ContextMenuComponent(): JSX.Element | null {
     }
 
     const currentW = node.measured?.width ?? (node.width as number) ?? 280
-    const { width: fitW, height: fitH } = calculateAutoFitDimensions(title, content, headerH, footerH, currentW)
+    const { width: fitW, height: fitH } = calculateAutoFitDimensions(
+      title,
+      content,
+      headerH,
+      footerH,
+      currentW,
+    )
     const finalWidth = Math.max(AUTO_FIT_CONSTRAINTS.minWidth, fitW)
     const finalHeight = Math.max(AUTO_FIT_CONSTRAINTS.minHeight, fitH)
 
@@ -472,26 +489,46 @@ function ContextMenuComponent(): JSX.Element | null {
     commitNodeResize(target.nodeId)
     toast.success('Fitted to content', { duration: 1500, icon: '📐' })
     close()
-  }, [target, nodes, startNodeResize, updateNodeDimensions, updateNodeInternals, commitNodeResize, close])
+  }, [
+    target,
+    nodes,
+    startNodeResize,
+    updateNodeDimensions,
+    updateNodeInternals,
+    commitNodeResize,
+    close,
+  ])
 
   if (!isOpen || !target) return null
 
   // Calculate menu position — pinned below top nav, follows cursor horizontally
-  const menuStyle: React.CSSProperties = {
-    position: 'fixed',
-    left: Math.min(position.x, window.innerWidth - 200),
-    top: 72,
-    maxHeight: 'calc(100vh - 88px)',
-    overflowY: 'auto',
-  }
+  const menuStyle: React.CSSProperties = isMobile
+    ? {
+        position: 'fixed',
+        left: Math.max(8, Math.min(position.x - 90, window.innerWidth - 200)),
+        top: Math.max(72, Math.min(position.y - 20, window.innerHeight - 400)),
+        maxHeight: 'calc(100vh - 88px)',
+        overflowY: 'auto',
+        zIndex: 100,
+      }
+    : {
+        position: 'fixed',
+        left: Math.min(position.x, window.innerWidth - 200),
+        top: 72,
+        maxHeight: 'calc(100vh - 88px)',
+        overflowY: 'auto',
+      }
 
   // Render different menus based on target type
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: menu renders multiple target types with many items
   const renderMenuItems = (): JSX.Element => {
     switch (target.type) {
       case 'canvas':
         return (
           <>
-            <div className="px-3 py-2 text-xs font-medium text-[var(--text-muted)] uppercase">Create</div>
+            <div className="px-3 py-2 text-xs font-medium text-[var(--text-muted)] uppercase">
+              Create
+            </div>
             <MenuItem
               icon={<MessageSquare className="w-4 h-4" />}
               label="New Conversation"
@@ -549,13 +586,10 @@ function ContextMenuComponent(): JSX.Element | null {
               label="New Orchestrator"
               onClick={() => handleAddNode('orchestrator')}
             />
-            <MenuItem
-              icon={<MapPin className="w-4 h-4" />}
-              label="New Region"
-              onClick={handleAddRegion}
-            />
             <MenuSeparator />
-            <div className="px-3 py-2 text-xs font-medium text-[var(--text-muted)] uppercase">Templates</div>
+            <div className="px-3 py-2 text-xs font-medium text-[var(--text-muted)] uppercase">
+              Templates
+            </div>
             <MenuItem
               icon={<FolderOpen className="w-4 h-4" />}
               label="Browse Templates"
@@ -577,21 +611,43 @@ function ContextMenuComponent(): JSX.Element | null {
             )}
             {/* Template file import — deferred to post-audit roadmap Phase 4 */}
             <MenuSeparator />
-            <div className="px-3 py-2 text-xs font-medium text-[var(--text-muted)] uppercase">Edit</div>
+            <div className="px-3 py-2 text-xs font-medium text-[var(--text-muted)] uppercase">
+              Edit
+            </div>
             <MenuItem
               icon={<Undo2 className="w-4 h-4" />}
               label="Undo"
-              onClick={() => { undo(); close() }}
+              onClick={() => {
+                undo()
+                close()
+              }}
               shortcut="Ctrl+Z"
               disabled={!canUndo()}
             />
             <MenuItem
               icon={<Redo2 className="w-4 h-4" />}
               label="Redo"
-              onClick={() => { redo(); close() }}
+              onClick={() => {
+                redo()
+                close()
+              }}
               shortcut="Ctrl+Y"
               disabled={!canRedo()}
             />
+            {clipboardNodes.length > 0 && (
+              <>
+                <MenuSeparator />
+                <MenuItem
+                  icon={<ClipboardPaste className="w-4 h-4" />}
+                  label="Paste"
+                  onClick={() => {
+                    pasteNodesAction(target.position)
+                    close()
+                  }}
+                  shortcut="Ctrl+V"
+                />
+              </>
+            )}
           </>
         )
 
@@ -618,6 +674,7 @@ function ContextMenuComponent(): JSX.Element | null {
         }
 
         // Download handler for artifacts
+        // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: artifact download handles multiple formats + API bridges
         const handleDownloadArtifact = async (): Promise<void> => {
           if (!node || node.data.type !== 'artifact') return
           const artifactData = node.data as import('@shared/types').ArtifactNodeData
@@ -629,7 +686,7 @@ function ContextMenuComponent(): JSX.Element | null {
 
           if (artifactData.files && artifactData.files.length > 0) {
             const activeFile = artifactData.activeFileId
-              ? artifactData.files.find(f => f.id === artifactData.activeFileId)
+              ? artifactData.files.find((f) => f.id === artifactData.activeFileId)
               : artifactData.files[0]
             if (activeFile) {
               content = activeFile.content
@@ -644,23 +701,30 @@ function ContextMenuComponent(): JSX.Element | null {
               content,
               contentType,
               language,
-              files: artifactData.files && artifactData.files.length > 1
-                ? artifactData.files.map(f => ({ filename: f.filename, content: f.content, contentType: f.contentType }))
-                : undefined,
-              isBase64: contentType === 'image'
+              files:
+                artifactData.files && artifactData.files.length > 1
+                  ? artifactData.files.map((f) => ({
+                      filename: f.filename,
+                      content: f.content,
+                      contentType: f.contentType,
+                    }))
+                  : undefined,
+              isBase64: contentType === 'image',
             })
 
             if (result.success) {
               toast.success('Artifact saved')
               if (result.note) {
-                toast(result.note, { icon: <Info size={16} className="text-blue-400" />, duration: 4000 })
+                toast(result.note, {
+                  icon: <Info size={16} className="text-blue-400" />,
+                  duration: 4000,
+                })
               }
             } else if (!result.canceled) {
-              toast.error('Failed to save: ' + (result.error || 'Unknown error'))
+              toast.error(`Failed to save: ${result.error || 'Unknown error'}`)
             }
-          } catch (error) {
+          } catch (_error) {
             toast.error('Failed to save artifact')
-            console.error('Download error:', error)
           }
           close()
         }
@@ -690,17 +754,25 @@ function ContextMenuComponent(): JSX.Element | null {
             {isProject && (
               <>
                 <MenuItem
-                  icon={node.data.type === 'project' && (node.data as import('@shared/types').ProjectNodeData).collapsed
-                    ? <ChevronDown className="w-4 h-4" />
-                    : <ChevronUp className="w-4 h-4" />
+                  icon={
+                    node.data.type === 'project' &&
+                    (node.data as import('@shared/types').ProjectNodeData).collapsed ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronUp className="w-4 h-4" />
+                    )
                   }
-                  label={node.data.type === 'project' && (node.data as import('@shared/types').ProjectNodeData).collapsed
-                    ? 'Expand'
-                    : 'Collapse'
+                  label={
+                    node.data.type === 'project' &&
+                    (node.data as import('@shared/types').ProjectNodeData).collapsed
+                      ? 'Expand'
+                      : 'Collapse'
                   }
                   onClick={() => {
-                    const projectData = node!.data as import('@shared/types').ProjectNodeData
-                    useWorkspaceStore.getState().updateNode(target.nodeId, { collapsed: !projectData.collapsed })
+                    const projectData = node?.data as import('@shared/types').ProjectNodeData
+                    useWorkspaceStore
+                      .getState()
+                      .updateNode(target.nodeId, { collapsed: !projectData.collapsed })
                     close()
                   }}
                 />
@@ -750,7 +822,7 @@ function ContextMenuComponent(): JSX.Element | null {
                     <Palette className="w-3 h-3" /> Color
                   </span>
                   <div className="flex flex-wrap gap-1 py-1">
-                    {COLOR_PRESETS.map(color => (
+                    {COLOR_PRESETS.map((color) => (
                       <button
                         key={color}
                         className="w-5 h-5 rounded-full border border-white/20 hover:scale-125 transition-transform"
@@ -777,7 +849,7 @@ function ContextMenuComponent(): JSX.Element | null {
             )}
             <MenuItem
               icon={<Settings2 className="w-4 h-4" />}
-              label={isArtifact ? "Open Properties..." : "Properties"}
+              label={isArtifact ? 'Open Properties...' : 'Properties'}
               onClick={() => {
                 // Select node to open properties panel (or floating modal for artifacts based on preference)
                 useWorkspaceStore.getState().setSelectedNodes([target.nodeId])
@@ -795,20 +867,28 @@ function ContextMenuComponent(): JSX.Element | null {
               icon={<Type className="w-4 h-4" />}
               label="Rename"
               onClick={() => {
-                window.dispatchEvent(new CustomEvent('rename-node', { detail: { nodeId: target.nodeId } }))
+                window.dispatchEvent(
+                  new CustomEvent('rename-node', { detail: { nodeId: target.nodeId } }),
+                )
                 close()
               }}
               shortcut="F2"
             />
             <MenuItem
               icon={(() => {
-                const isPinned = useWorkspaceStore.getState().pinnedWindows.some(w => w.nodeId === target.nodeId)
+                const isPinned = useWorkspaceStore
+                  .getState()
+                  .pinnedWindows.some((w) => w.nodeId === target.nodeId)
                 return isPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />
               })()}
-              label={useWorkspaceStore.getState().pinnedWindows.some(w => w.nodeId === target.nodeId) ? 'Unpin from screen' : 'Pin to screen'}
+              label={
+                useWorkspaceStore.getState().pinnedWindows.some((w) => w.nodeId === target.nodeId)
+                  ? 'Unpin from screen'
+                  : 'Pin to screen'
+              }
               onClick={() => {
                 const store = useWorkspaceStore.getState()
-                const isPinned = store.pinnedWindows.some(w => w.nodeId === target.nodeId)
+                const isPinned = store.pinnedWindows.some((w) => w.nodeId === target.nodeId)
                 if (isPinned) {
                   store.unpinNode(target.nodeId)
                 } else {
@@ -819,7 +899,11 @@ function ContextMenuComponent(): JSX.Element | null {
             />
             <MenuItem
               icon={<Eye className="w-4 h-4" />}
-              label={useWorkspaceStore.getState().focusModeNodeId === target.nodeId ? 'Exit Focus Mode' : 'Focus on this node'}
+              label={
+                useWorkspaceStore.getState().focusModeNodeId === target.nodeId
+                  ? 'Exit Focus Mode'
+                  : 'Focus on this node'
+              }
               onClick={() => {
                 const store = useWorkspaceStore.getState()
                 if (store.focusModeNodeId === target.nodeId) {
@@ -833,7 +917,11 @@ function ContextMenuComponent(): JSX.Element | null {
             />
             <MenuItem
               icon={<Star className="w-4 h-4" />}
-              label={useWorkspaceStore.getState().bookmarkedNodeId === target.nodeId ? 'Remove bookmark' : 'Bookmark this node'}
+              label={
+                useWorkspaceStore.getState().bookmarkedNodeId === target.nodeId
+                  ? 'Remove bookmark'
+                  : 'Bookmark this node'
+              }
               onClick={() => {
                 const store = useWorkspaceStore.getState()
                 if (store.bookmarkedNodeId === target.nodeId) {
@@ -848,7 +936,7 @@ function ContextMenuComponent(): JSX.Element | null {
             <MenuItem
               icon={<MapPin className="w-4 h-4" />}
               label={(() => {
-                const node = useWorkspaceStore.getState().nodes.find(n => n.id === target.nodeId)
+                const node = useWorkspaceStore.getState().nodes.find((n) => n.id === target.nodeId)
                 return node?.data.isLandmark ? 'Remove Landmark' : 'Set as Landmark'
               })()}
               onClick={() => {
@@ -864,10 +952,13 @@ function ContextMenuComponent(): JSX.Element | null {
               return (
                 <>
                   <MenuSeparator />
-                  <div className="px-3 py-1 text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                  <div
+                    className="px-3 py-1 text-[10px] font-medium uppercase tracking-wider"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
                     Connected
                   </div>
-                  {connected.slice(0, 6).map(cn => (
+                  {connected.slice(0, 6).map((cn) => (
                     <MenuItem
                       key={cn.id}
                       icon={<Link2 className="w-4 h-4" />}
@@ -908,6 +999,42 @@ function ContextMenuComponent(): JSX.Element | null {
               onClick={handleDuplicate}
               shortcut="Ctrl+D"
             />
+            <MenuItem
+              icon={<Copy className="w-4 h-4" />}
+              label="Copy"
+              onClick={() => {
+                copyNodesAction(
+                  selectedNodeIds.includes(target.nodeId) ? selectedNodeIds : [target.nodeId],
+                )
+                toast.success('Copied')
+                close()
+              }}
+              shortcut="Ctrl+C"
+            />
+            <MenuItem
+              icon={<Scissors className="w-4 h-4" />}
+              label="Cut"
+              onClick={() => {
+                cutNodesAction(
+                  selectedNodeIds.includes(target.nodeId) ? selectedNodeIds : [target.nodeId],
+                )
+                toast.success('Cut to clipboard')
+                close()
+              }}
+              shortcut="Ctrl+X"
+            />
+            {clipboardNodes.length > 0 && (
+              <MenuItem
+                icon={<ClipboardPaste className="w-4 h-4" />}
+                label="Paste"
+                onClick={() => {
+                  const node = nodes.find((n) => n.id === target.nodeId)
+                  if (node) pasteNodesAction({ x: node.position.x + 40, y: node.position.y + 40 })
+                  close()
+                }}
+                shortcut="Ctrl+V"
+              />
+            )}
             <MenuItem
               icon={<Archive className="w-4 h-4" />}
               label="Archive"
@@ -956,7 +1083,7 @@ function ContextMenuComponent(): JSX.Element | null {
             {/* Show generation prompt — from commandLog if this node was created by a command */}
             {(() => {
               const log = useWorkspaceStore.getState().commandLog
-              const entry = log.find(e => e.affectedNodeIds.includes(target.nodeId))
+              const entry = log.find((e) => e.affectedNodeIds.includes(target.nodeId))
               if (!entry) return null
               return (
                 <MenuItem
@@ -1062,9 +1189,8 @@ function ContextMenuComponent(): JSX.Element | null {
                   } else {
                     toast.error(result.error || 'Failed to dispatch')
                   }
-                } catch (err) {
+                } catch (_err) {
                   toast.error('Failed to dispatch to Claude Code')
-                  console.error('[ContextMenu] Dispatch error:', err)
                 }
                 close()
               }}
@@ -1083,9 +1209,9 @@ function ContextMenuComponent(): JSX.Element | null {
       case 'nodes': {
         // Compute edge statistics for link/unlink items
         const nodeIdSet = new Set(target.nodeIds)
-        const totalPairs = target.nodeIds.length * (target.nodeIds.length - 1) / 2
+        const totalPairs = (target.nodeIds.length * (target.nodeIds.length - 1)) / 2
         const linkedPairs = edges.filter(
-          (e) => nodeIdSet.has(e.source) && nodeIdSet.has(e.target)
+          (e) => nodeIdSet.has(e.source) && nodeIdSet.has(e.target),
         ).length
         const unlinkedPairs = totalPairs - linkedPairs
 
@@ -1105,6 +1231,26 @@ function ContextMenuComponent(): JSX.Element | null {
               label="Duplicate All"
               onClick={handleDuplicate}
               shortcut="Ctrl+D"
+            />
+            <MenuItem
+              icon={<Copy className="w-4 h-4" />}
+              label="Copy All"
+              onClick={() => {
+                copyNodesAction(target.nodeIds)
+                toast.success(`Copied ${target.nodeIds.length} nodes`)
+                close()
+              }}
+              shortcut="Ctrl+C"
+            />
+            <MenuItem
+              icon={<Scissors className="w-4 h-4" />}
+              label="Cut All"
+              onClick={() => {
+                cutNodesAction(target.nodeIds)
+                toast.success(`Cut ${target.nodeIds.length} nodes`)
+                close()
+              }}
+              shortcut="Ctrl+X"
             />
             <MenuItem
               icon={<Archive className="w-4 h-4" />}
@@ -1154,7 +1300,7 @@ function ContextMenuComponent(): JSX.Element | null {
             <div className="px-3 py-1">
               <span className="text-xs text-[var(--text-secondary)] px-0">Color</span>
               <div className="flex flex-wrap gap-1 py-1">
-                {COLOR_PRESETS.map(color => (
+                {COLOR_PRESETS.map((color) => (
                   <button
                     key={color}
                     className="w-5 h-5 rounded-full border border-white/20 hover:scale-125 transition-transform"
@@ -1190,7 +1336,9 @@ function ContextMenuComponent(): JSX.Element | null {
       case 'project-body':
         return (
           <>
-            <div className="px-3 py-2 text-xs font-medium text-[var(--text-muted)] uppercase">Add to Project</div>
+            <div className="px-3 py-2 text-xs font-medium text-[var(--text-muted)] uppercase">
+              Add to Project
+            </div>
             <MenuItem
               icon={<MessageSquare className="w-4 h-4" />}
               label="New Conversation"
@@ -1230,10 +1378,12 @@ function ContextMenuComponent(): JSX.Element | null {
         )
 
       case 'edge': {
-        const edge = edges.find(e => e.id === target.edgeId)
+        const edge = edges.find((e) => e.id === target.edgeId)
         const edgeData = edge?.data || {}
-        const hasWaypoints = (edgeData.waypoints && edgeData.waypoints.length > 0) ||
-          (edgeData.centerOffset && (Math.abs(edgeData.centerOffset.x) > 5 || Math.abs(edgeData.centerOffset.y) > 5))
+        const hasWaypoints =
+          (edgeData.waypoints && edgeData.waypoints.length > 0) ||
+          (edgeData.centerOffset &&
+            (Math.abs(edgeData.centerOffset.x) > 5 || Math.abs(edgeData.centerOffset.y) > 5))
 
         return (
           <>
@@ -1244,7 +1394,7 @@ function ContextMenuComponent(): JSX.Element | null {
                 onClick={() => {
                   const updateEdge = useWorkspaceStore.getState().updateEdge
                   const currentWaypoints = edgeData.waypoints || []
-                  const newWaypoint = { x: target.position!.x, y: target.position!.y }
+                  const newWaypoint = { x: target.position?.x, y: target.position?.y }
 
                   if (currentWaypoints.length >= 20) {
                     toast.error('Maximum waypoints (20) reached')
@@ -1254,7 +1404,7 @@ function ContextMenuComponent(): JSX.Element | null {
 
                   updateEdge(target.edgeId, {
                     waypoints: [...currentWaypoints, newWaypoint],
-                    centerOffset: undefined
+                    centerOffset: undefined,
                   })
                   close()
                 }}
@@ -1267,7 +1417,7 @@ function ContextMenuComponent(): JSX.Element | null {
                 const updateEdge = useWorkspaceStore.getState().updateEdge
                 updateEdge(target.edgeId, {
                   waypoints: undefined,
-                  centerOffset: { x: 0, y: 0 }
+                  centerOffset: { x: 0, y: 0 },
                 })
                 close()
               }}
@@ -1303,7 +1453,7 @@ function ContextMenuComponent(): JSX.Element | null {
       }
 
       case 'waypoint': {
-        const edge = edges.find(e => e.id === target.edgeId)
+        const edge = edges.find((e) => e.id === target.edgeId)
         const edgeData = edge?.data || {}
         const waypoints = edgeData.waypoints || []
         const waypoint = waypoints[target.waypointIndex]
@@ -1325,7 +1475,7 @@ function ContextMenuComponent(): JSX.Element | null {
                 newWaypoints.splice(target.waypointIndex, 1)
                 updateEdge(target.edgeId, {
                   waypoints: newWaypoints.length > 0 ? newWaypoints : undefined,
-                  centerOffset: newWaypoints.length === 0 ? { x: 0, y: 0 } : undefined
+                  centerOffset: newWaypoints.length === 0 ? { x: 0, y: 0 } : undefined,
                 })
                 close()
               }}
@@ -1339,7 +1489,7 @@ function ContextMenuComponent(): JSX.Element | null {
                 const updateEdge = useWorkspaceStore.getState().updateEdge
                 updateEdge(target.edgeId, {
                   waypoints: undefined,
-                  centerOffset: { x: 0, y: 0 }
+                  centerOffset: { x: 0, y: 0 },
                 })
                 toast('Edge straightened', { duration: 1500, icon: '📏' })
                 close()
@@ -1357,7 +1507,7 @@ function ContextMenuComponent(): JSX.Element | null {
                 const newWaypoints = [...waypoints]
                 newWaypoints[target.waypointIndex] = {
                   x: snapToGrid(waypoint.x),
-                  y: snapToGrid(waypoint.y)
+                  y: snapToGrid(waypoint.y),
                 }
                 updateEdge(target.edgeId, { waypoints: newWaypoints })
                 close()
@@ -1380,7 +1530,7 @@ function ContextMenuComponent(): JSX.Element | null {
                 // Insert duplicate 20px offset
                 newWaypoints.splice(target.waypointIndex + 1, 0, {
                   x: waypoint.x + 20,
-                  y: waypoint.y + 20
+                  y: waypoint.y + 20,
                 })
                 updateEdge(target.edgeId, { waypoints: newWaypoints })
                 close()

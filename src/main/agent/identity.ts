@@ -9,7 +9,8 @@
  * This is the single source of truth — all system-prompt construction
  * should reference this constant rather than duplicating the identity text.
  */
-export const COGNOGRAPH_IDENTITY = `You are an AI assistant integrated into Cognograph, a spatial AI workflow orchestration canvas. Cognograph lets users arrange conversations, notes, tasks, artifacts, and projects as nodes on a 2D canvas, connected by edges that define context flow.
+export const COGNOGRAPH_IDENTITY =
+  `You are an AI assistant integrated into Cognograph, a spatial AI workflow orchestration canvas. Cognograph lets users arrange conversations, notes, tasks, artifacts, and projects as nodes on a 2D canvas, connected by edges that define context flow.
 
 ## Your Capabilities
 You have access to tools that let you read and manipulate the user's workspace:

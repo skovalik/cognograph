@@ -1,64 +1,82 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useMemo, useCallback, useEffect, useState, useRef } from 'react'
-import { NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
-import { SpreadHandles } from './SpreadHandles'
+import type {
+  ArtifactContentType,
+  ArtifactFile,
+  ArtifactMediaMetadata,
+  ArtifactNodeData,
+  PreviewViewport,
+} from '@shared/types'
+import { DEFAULT_THEME_SETTINGS } from '@shared/types'
 import {
-  Code,
-  FileText,
-  Image,
-  FileJson,
-  Table,
-  Globe,
-  GitBranch,
+  type NodeProps,
+  NodeResizer,
+  type ResizeParams,
+  useUpdateNodeInternals,
+} from '@xyflow/react'
+import DOMPurify from 'dompurify'
+import {
+  Box,
   ChevronDown,
   ChevronUp,
-  Settings2,
+  Code,
   Download,
-  Info,
-  RefreshCw,
   Eye,
+  File,
   FileCode,
   FileImage,
-  File,
+  FileJson,
+  FileText,
+  GitBranch,
+  Globe,
+  Image,
+  Info,
+  RefreshCw,
+  Settings2,
+  Table,
   Video,
   Volume2,
-  Box,
-  MousePointer,
 } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import type { ArtifactNodeData, ArtifactContentType, ArtifactFile, ArtifactMediaMetadata, PreviewViewport } from '@shared/types'
-import { DEFAULT_THEME_SETTINGS } from '@shared/types'
-import { PropertyBadges } from '../properties/PropertyBadge'
-import { NodeSocketBars } from './SocketBar'
-import { useShowMembersClass } from '../../hooks/useShowMembersClass'
-import { AttachmentBadge } from './AttachmentBadge'
+import { CONIC_PALETTES } from '../../constants/conicPalettes'
 import { getPropertiesForNodeType } from '../../constants/properties'
-import { useWorkspaceStore, useIsSpawning, useNodeWarmth, useIsNodePinned, useIsNodeBookmarked, useNodeNumberedBookmark } from '../../stores/workspaceStore'
 import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
-import { EditableTitle } from '../EditableTitle'
-import { InlineIconPicker } from '../InlineIconPicker'
-import { measureTextWidth } from '../../utils/textMeasure'
 import { useNodeResize } from '../../hooks/useNodeResize'
 import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
-import { PreviewToolbar } from './PreviewToolbar'
-import { StructuredContentPreview } from './StructuredContentPreview'
-import { NodePropertyControls } from './NodePropertyControls'
-import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
+import { useShowMembersClass } from '../../hooks/useShowMembersClass'
 import {
-  isAllowedPreviewUrl,
+  useIsNodeBookmarked,
+  useIsNodePinned,
+  useIsSpawning,
+  useNodeNumberedBookmark,
+  useNodeWarmth,
+  useWorkspaceStore,
+} from '../../stores/workspaceStore'
+import { EscapePriority, escapeManager } from '../../utils/EscapeManager'
+import {
   buildPreviewUrl,
   clampPreviewScale,
   clampRefreshInterval,
+  isAllowedPreviewUrl,
   PREVIEW_VIEWPORT_WIDTHS,
 } from '../../utils/previewUrlValidation'
-import { ArtifactVideoRenderer } from './ArtifactVideoRenderer'
-import { ArtifactAudioRenderer } from './ArtifactAudioRenderer'
-import { Artifact3DRenderer } from './Artifact3DRenderer'
+import { measureTextWidth } from '../../utils/textMeasure'
+import { EditableTitle } from '../EditableTitle'
 import { FilePreviewSection } from '../FilePreviewSection'
-import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
-import { CONIC_PALETTES } from '../../constants/conicPalettes'
+import { InlineIconPicker } from '../InlineIconPicker'
+import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
+import { PropertyBadges } from '../properties/PropertyBadge'
+import { Artifact3DRenderer } from './Artifact3DRenderer'
+import { ArtifactAudioRenderer } from './ArtifactAudioRenderer'
+import { ArtifactVideoRenderer } from './ArtifactVideoRenderer'
+import { AttachmentBadge } from './AttachmentBadge'
+import { NodePropertyControls } from './NodePropertyControls'
+import { PreviewToolbar } from './PreviewToolbar'
+import { NodeSocketBars } from './SocketBar'
+import { SpreadHandles } from './SpreadHandles'
+import { StructuredContentPreview } from './StructuredContentPreview'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -82,6 +100,10 @@ const PREVIEW_MIN_HEIGHT = 300
 
 // Iframe load timeout in ms (LP-E01 + performance budget)
 const IFRAME_LOAD_TIMEOUT = 5000
+
+// Module-level cache for iframe content sizes reported via postMessage.
+// Used by Shift+F auto-fit (App.tsx) and any code that previously read contentDocument.
+export const iframeContentSizes = new Map<string, { width: number; height: number }>()
 
 /* Get icon for content type - reserved for future use
 function getContentTypeIcon(contentType: ArtifactContentType): JSX.Element {
@@ -133,7 +155,6 @@ function getSmallContentTypeIcon(contentType: ArtifactContentType): JSX.Element 
       return <Volume2 className="w-3 h-3" />
     case '3d-model':
       return <Box className="w-3 h-3" />
-    case 'text':
     default:
       return <FileText className="w-3 h-3" />
   }
@@ -154,7 +175,7 @@ function getContentTypeLabel(contentType: ArtifactContentType, customType?: stri
     audio: 'Audio',
     '3d-model': '3D Model',
     text: 'Text',
-    custom: customType || 'Custom'
+    custom: customType || 'Custom',
   }
   return labels[contentType] || 'File'
 }
@@ -165,23 +186,27 @@ function getInjectionLabel(format: ArtifactNodeData['injectionFormat']): string 
     full: 'Full',
     summary: 'Summary',
     chunked: 'Chunked',
-    'reference-only': 'Ref'
+    'reference-only': 'Ref',
   }
   return labels[format] || 'Full'
 }
 
 // Get the active file or primary content
-function getActiveContent(nodeData: ArtifactNodeData): { content: string; contentType: ArtifactContentType; language?: string } {
+function getActiveContent(nodeData: ArtifactNodeData): {
+  content: string
+  contentType: ArtifactContentType
+  language?: string
+} {
   if (nodeData.files && nodeData.files.length > 0) {
     const activeFile = nodeData.activeFileId
-      ? nodeData.files.find(f => f.id === nodeData.activeFileId)
+      ? nodeData.files.find((f) => f.id === nodeData.activeFileId)
       : nodeData.files[0]
 
     if (activeFile) {
       return {
         content: activeFile.content,
         contentType: activeFile.contentType,
-        language: activeFile.language
+        language: activeFile.language,
       }
     }
   }
@@ -189,7 +214,7 @@ function getActiveContent(nodeData: ArtifactNodeData): { content: string; conten
   return {
     content: nodeData.content,
     contentType: nodeData.contentType,
-    language: nodeData.language
+    language: nodeData.language,
   }
 }
 
@@ -242,58 +267,109 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   const htmlIframeRef = useRef<HTMLIFrameElement>(null)
   const htmlIframeAutoSizedRef = useRef(false)
 
-  // Auto-size node to match rendered HTML content after iframe loads
+  // ---- Image auto-size: scale node to image's native resolution on first load ----
+  const imageAutoSizedRef = useRef(false)
   useEffect(() => {
-    if (nodeData.contentType !== 'html' || !nodeData.content || htmlIframeAutoSizedRef.current) return
+    if (nodeData.contentType !== 'image' || !nodeData.content || imageAutoSizedRef.current) return
+    const img = new window.Image()
+    img.onload = () => {
+      const chromeH = 88 // header ~48px + footer ~36px + borders
+      const chromeW = 24
+      const natW = img.naturalWidth
+      const natH = img.naturalHeight
+      // Scale down to fit reasonable canvas bounds, preserving aspect ratio
+      const maxW = 800
+      const maxH = 600
+      const scale = Math.min(1, maxW / natW, maxH / natH)
+      const finalW = Math.max(300, Math.round(natW * scale) + chromeW)
+      const finalH = Math.max(220, Math.round(natH * scale) + chromeH)
+      const currentW = propsWidth || nodeData.width || 320
+      const currentH = propsHeight || nodeData.height || 200
+      if (Math.abs(finalW - currentW) > 20 || Math.abs(finalH - currentH) > 20) {
+        updateNodeDimensions(id, finalW, finalH)
+        imageAutoSizedRef.current = true
+      }
+    }
+    img.src = nodeData.content
+  }, [
+    id,
+    nodeData.contentType,
+    nodeData.content,
+    propsWidth,
+    propsHeight,
+    nodeData.width,
+    nodeData.height,
+    updateNodeDimensions,
+  ])
+
+  useEffect(() => {
+    imageAutoSizedRef.current = false
+  }, [nodeData.content])
+
+  // Auto-size node via postMessage from sandboxed iframe (S4).
+  // The iframe injects a ResizeObserver that posts 'artifact-resize' messages.
+  // This replaces contentDocument access which requires allow-same-origin.
+  useEffect(() => {
+    if (nodeData.contentType !== 'html' || !nodeData.content || htmlIframeAutoSizedRef.current)
+      return
     const iframe = htmlIframeRef.current
     if (!iframe) return
 
-    const measure = (): void => {
-      try {
-        const doc = iframe.contentDocument
-        const body = doc?.body
-        if (!body || body.scrollHeight < 50) return
-        const chromeH = 88 // header ~48px + footer ~36px + borders
-        const scrollH = body.scrollHeight
-        const scrollW = body.scrollWidth
-        const neededH = Math.round(scrollH * htmlScale) + chromeH
-        const currentH = propsHeight || nodeData.height || 180
-        const chromeW = 24 // padding left + right + borders
-        const neededW = Math.round(scrollW * htmlScale) + chromeW
-        const currentW = propsWidth || nodeData.width || 680
-        const finalH = Math.max(200, neededH) // floor at 200px
-        const finalW = Math.abs(neededW - currentW) > 30 ? Math.max(300, neededW) : currentW
-        // Resize to match content — both grow and shrink (within reason)
-        if (Math.abs(neededH - currentH) > 30 || Math.abs(neededW - currentW) > 30) {
-          updateNodeDimensions(id, finalW, finalH)
-          htmlIframeAutoSizedRef.current = true
-        }
-      } catch { /* sandbox restriction */ }
+    const handleMessage = (event: MessageEvent): void => {
+      // Security: verify the message came from THIS iframe's contentWindow
+      if (event.source !== iframe.contentWindow) return
+      if (event.data?.type !== 'artifact-resize') return
+
+      const { height: scrollH, width: scrollW, nodeId } = event.data
+      if (nodeId !== id) return
+      if (typeof scrollH !== 'number' || scrollH <= 0 || scrollH > 100000) return
+      if (typeof scrollW !== 'number' || scrollW <= 0 || scrollW > 100000) return
+
+      // Cache sizes for external consumers (Shift+F auto-fit in App.tsx)
+      iframeContentSizes.set(id, { width: scrollW, height: scrollH })
+
+      const chromeH = 88 // header ~48px + footer ~36px + borders
+      const chromeW = 24 // padding left + right + borders
+      const neededH = Math.round(scrollH * htmlScale) + chromeH
+      const currentH = propsHeight || nodeData.height || 180
+      const neededW = Math.round(scrollW * htmlScale) + chromeW
+      const currentW = propsWidth || nodeData.width || 680
+      const MAX_ARTIFACT_HEIGHT = 5000
+      const finalH = Math.min(Math.max(200, neededH), MAX_ARTIFACT_HEIGHT)
+      const finalW = Math.abs(neededW - currentW) > 30 ? Math.max(300, neededW) : currentW
+      if (Math.abs(neededH - currentH) > 30 || Math.abs(neededW - currentW) > 30) {
+        updateNodeDimensions(id, finalW, finalH)
+        htmlIframeAutoSizedRef.current = true
+      }
     }
 
-    // Measure after iframe loads + CSS applies
-    const timeouts: ReturnType<typeof setTimeout>[] = []
-    const handleLoad = (): void => { timeouts.push(setTimeout(measure, 100)) }
-    iframe.addEventListener('load', handleLoad, { once: true })
-    // Also try measuring now in case load already fired — and retry a few times
-    // (iframe may not have content dimensions ready immediately)
-    timeouts.push(setTimeout(measure, 200))
-    timeouts.push(setTimeout(measure, 600))
-    timeouts.push(setTimeout(measure, 1200))
-
+    window.addEventListener('message', handleMessage)
     return () => {
-      iframe.removeEventListener('load', handleLoad)
-      timeouts.forEach(clearTimeout)
+      window.removeEventListener('message', handleMessage)
     }
-  }, [id, htmlScale, propsHeight, propsWidth, nodeData.height, nodeData.width, nodeData.contentType, nodeData.content, updateNodeDimensions])
+  }, [
+    id,
+    htmlScale,
+    propsHeight,
+    propsWidth,
+    nodeData.height,
+    nodeData.width,
+    nodeData.contentType,
+    nodeData.content,
+    updateNodeDimensions,
+  ])
 
-  // Reset auto-size flag when content changes
+  // Reset auto-size flag and cached sizes when content changes
   useEffect(() => {
     htmlIframeAutoSizedRef.current = false
-  }, [nodeData.content])
+    iframeContentSizes.delete(id)
+  }, [id, nodeData.content])
 
   // Calculate dynamic node color
-  const nodeColor = nodeData.color || themeSettings.nodeColors.artifact || DEFAULT_THEME_SETTINGS.nodeColors.artifact
+  const nodeColor =
+    nodeData.color ||
+    themeSettings.nodeColors.artifact ||
+    DEFAULT_THEME_SETTINGS.nodeColors.artifact
 
   // Glass system integration
   const transparent = nodeData.transparent
@@ -305,7 +381,9 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
 
   // Node dimensions (for resizing) - prefer props from React Flow, then data, then defaults
   const defaultWidth = isPreviewMode ? Math.max(DEFAULT_WIDTH, PREVIEW_MIN_WIDTH) : DEFAULT_WIDTH
-  const defaultHeight = isPreviewMode ? Math.max(DEFAULT_HEIGHT, PREVIEW_MIN_HEIGHT) : DEFAULT_HEIGHT
+  const defaultHeight = isPreviewMode
+    ? Math.max(DEFAULT_HEIGHT, PREVIEW_MIN_HEIGHT)
+    : DEFAULT_HEIGHT
   const nodeWidth = propsWidth || nodeData.width || defaultWidth
   const nodeHeight = propsHeight || nodeData.height || defaultHeight
   const hasExplicitHeight = !!(propsHeight || nodeData.height)
@@ -334,9 +412,12 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
     startNodeResize(id)
   }, [id, startNodeResize])
 
-  const handleResize = useCallback((_event: unknown, params: ResizeParams) => {
-    updateNodeDimensions(id, params.width, params.height)
-  }, [id, updateNodeDimensions])
+  const handleResize = useCallback(
+    (_event: unknown, params: ResizeParams) => {
+      updateNodeDimensions(id, params.width, params.height)
+    },
+    [id, updateNodeDimensions],
+  )
 
   const handleResizeEnd = useCallback(() => {
     updateNodeInternals(id)
@@ -353,17 +434,29 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ctrl+double-click to auto-fit width to title
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    if (e.ctrlKey) {
-      e.stopPropagation()
-      startNodeResize(id)
-      const titleWidth = measureTextWidth(nodeData.title, '14px Inter, sans-serif')
-      const newWidth = Math.max(effectiveMinWidth, Math.ceil(titleWidth + 80))
-      updateNodeDimensions(id, newWidth, nodeHeight)
-      updateNodeInternals(id)
-      commitNodeResize(id)
-    }
-  }, [nodeData.title, id, nodeHeight, effectiveMinWidth, updateNodeDimensions, updateNodeInternals, startNodeResize, commitNodeResize])
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.ctrlKey) {
+        e.stopPropagation()
+        startNodeResize(id)
+        const titleWidth = measureTextWidth(nodeData.title, '14px Inter, sans-serif')
+        const newWidth = Math.max(effectiveMinWidth, Math.ceil(titleWidth + 80))
+        updateNodeDimensions(id, newWidth, nodeHeight)
+        updateNodeInternals(id)
+        commitNodeResize(id)
+      }
+    },
+    [
+      nodeData.title,
+      id,
+      nodeHeight,
+      effectiveMinWidth,
+      updateNodeDimensions,
+      updateNodeInternals,
+      startNodeResize,
+      commitNodeResize,
+    ],
+  )
 
   // ---- Preview: build full URL ----
   const fullPreviewUrl = useMemo(() => {
@@ -386,6 +479,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   useEffect(() => {
     if (!selected) {
       setInteractionMode(false)
+      setHtmlInteractionMode(false)
     }
   }, [selected])
 
@@ -393,9 +487,21 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   useEffect(() => {
     if (!interactionMode) return
     const exitInteraction = () => setInteractionMode(false)
-    escapeManager.register(`canvas-artifact-interaction-${id}`, EscapePriority.CANVAS, exitInteraction)
+    escapeManager.register(
+      `canvas-artifact-interaction-${id}`,
+      EscapePriority.CANVAS,
+      exitInteraction,
+    )
     return () => escapeManager.unregister(`canvas-artifact-interaction-${id}`)
   }, [interactionMode, id])
+
+  // ---- HTML inline: Escape key exits interaction mode ----
+  useEffect(() => {
+    if (!htmlInteractionMode) return
+    const exitHtml = () => setHtmlInteractionMode(false)
+    escapeManager.register(`canvas-html-interaction-${id}`, EscapePriority.CANVAS, exitHtml)
+    return () => escapeManager.unregister(`canvas-html-interaction-${id}`)
+  }, [htmlInteractionMode, id])
 
   // ---- Preview: iframe load timeout (LP-E01) ----
   useEffect(() => {
@@ -480,14 +586,14 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
     (viewport: PreviewViewport) => {
       updateNode(id, { previewViewport: viewport })
     },
-    [id, updateNode]
+    [id, updateNode],
   )
 
   const handleScaleChange = useCallback(
     (scale: number) => {
       updateNode(id, { previewScale: scale })
     },
-    [id, updateNode]
+    [id, updateNode],
   )
 
   const handleAutoRefreshToggle = useCallback(() => {
@@ -515,25 +621,91 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   const activeFileId = nodeData.activeFileId || (firstFile ? firstFile.id : undefined)
 
   // Detect HTML content by contentType or fallback to language
-  const isHtmlContent = activeContent.contentType === 'html' ||
+  const isHtmlContent =
+    activeContent.contentType === 'html' ||
     (activeContent.contentType === 'code' && activeContent.language === 'html')
 
-  // Sanitize HTML content for safe srcdoc rendering
+  // Sanitize HTML content for safe srcdoc rendering (S4: DOMPurify + postMessage sizing)
   const sanitizedHtmlContent = useMemo(() => {
     if (!isHtmlContent || !activeContent.content) return ''
-    // Strip <base> tags (prevents resource redirection/exfiltration)
+
+    // 1. Strip <base> tags before sanitization (prevents resource redirection/exfiltration)
     let safe = activeContent.content.replace(/<base\b[^>]*>/gi, '')
-    // Inject meta CSP to block outbound network (kills crypto mining, CDN script loading, exfil)
-    // Allow: inline scripts/styles, Google Fonts, data URIs. Block: connect-src (XHR/fetch/WS)
-    const cspMeta = '<meta http-equiv="Content-Security-Policy" content="default-src \'unsafe-inline\' \'unsafe-eval\' data: blob:; script-src \'unsafe-inline\' \'unsafe-eval\'; style-src \'unsafe-inline\' https://fonts.googleapis.com; font-src data: https://fonts.gstatic.com; img-src data: blob: https:; connect-src \'none\';">'
-    // Inject CSP as first element in <head>, or prepend if no <head>
+
+    // 2. Extract <style> and <script> blocks BEFORE DOMPurify — DOMPurify strips content
+    //    within these tags (CSS @property, complex selectors, JS with HTML-like strings).
+    //    Both are safe in a sandboxed iframe (no allow-same-origin + CSP connect-src:none).
+    const styleBlocks: string[] = []
+    const scriptBlocks: string[] = []
+    safe = safe.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, (match) => {
+      styleBlocks.push(match)
+      return ''
+    })
+    safe = safe.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, (match) => {
+      scriptBlocks.push(match)
+      return ''
+    })
+
+    // 3. DOMPurify: sanitize HTML structure only — styles and scripts already extracted.
+    //    Strip inline event handlers which bypass CSP and can exfiltrate via side-channels.
+    safe = DOMPurify.sanitize(safe, {
+      WHOLE_DOCUMENT: true,
+      ADD_TAGS: ['link'],
+      FORBID_TAGS: ['base'],
+      FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur'],
+    })
+
+    // 4. Re-inject preserved <style> blocks into <head>, <script> blocks before </body>
+    if (styleBlocks.length > 0) {
+      const styles = styleBlocks.join('\n')
+      if (safe.includes('<head>')) {
+        safe = safe.replace('<head>', '<head>' + styles)
+      } else if (safe.includes('<html>')) {
+        safe = safe.replace('<html>', '<html><head>' + styles + '</head>')
+      } else {
+        safe = styles + safe
+      }
+    }
+    if (scriptBlocks.length > 0) {
+      const scripts = scriptBlocks.join('\n')
+      if (safe.includes('</body>')) {
+        safe = safe.replace('</body>', scripts + '</body>')
+      } else {
+        safe = safe + scripts
+      }
+    }
+
+    // 5. Inject CSP meta AFTER DOMPurify (DOMPurify strips http-equiv meta tags).
+    //    Block outbound network (connect-src 'none') — kills crypto mining, CDN loading, exfil.
+    const cspMeta =
+      "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'unsafe-inline' 'unsafe-eval' data: blob:; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline' https:; font-src data: https:; img-src data: blob: https:; connect-src 'none';\">"
     if (safe.includes('<head>')) {
       safe = safe.replace('<head>', '<head>' + cspMeta)
     } else {
       safe = cspMeta + safe
     }
+
+    // 6. Inject resize reporter AFTER DOMPurify + CSP (trusted code, never sanitized).
+    //    Uses postMessage to report content dimensions since allow-same-origin is removed
+    //    and contentDocument is no longer accessible from the parent.
+    const resizeScript = `<script>
+new ResizeObserver(function() {
+  window.parent.postMessage({
+    type: 'artifact-resize',
+    nodeId: '${id.replace(/'/g, "\\'")}',
+    height: document.documentElement.scrollHeight,
+    width: document.documentElement.scrollWidth
+  }, '*');
+}).observe(document.documentElement);
+</script>`
+    if (safe.includes('</body>')) {
+      safe = safe.replace('</body>', resizeScript + '</body>')
+    } else {
+      safe = safe + resizeScript
+    }
+
     return safe
-  }, [isHtmlContent, activeContent.content])
+  }, [isHtmlContent, activeContent.content, id])
 
   // Get preview content (truncated)
   const getPreviewContent = (): string => {
@@ -556,59 +728,76 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   }
 
   // Handle collapse toggle
-  const toggleCollapsed = useCallback((e: React.MouseEvent): void => {
-    e.stopPropagation()
-    updateNode(id, { collapsed: !nodeData.collapsed })
-  }, [id, nodeData.collapsed, updateNode])
+  const toggleCollapsed = useCallback(
+    (e: React.MouseEvent): void => {
+      e.stopPropagation()
+      updateNode(id, { collapsed: !nodeData.collapsed })
+    },
+    [id, nodeData.collapsed, updateNode],
+  )
 
   // Handle file tab click
-  const handleFileTabClick = useCallback((e: React.MouseEvent, fileId: string): void => {
-    e.stopPropagation()
-    updateNode(id, { activeFileId: fileId })
-  }, [id, updateNode])
+  const handleFileTabClick = useCallback(
+    (e: React.MouseEvent, fileId: string): void => {
+      e.stopPropagation()
+      updateNode(id, { activeFileId: fileId })
+    },
+    [id, updateNode],
+  )
 
   // Handle open properties - respects workspace preference
-  const handleOpenProperties = useCallback((e: React.MouseEvent): void => {
-    e.stopPropagation()
-    if (workspacePreferences.artifactPropertiesDisplay === 'modal') {
-      openFloatingProperties(id)
-    } else {
-      // Open in sidebar - just select the node which shows the properties panel
-      setSelectedNodes([id])
-    }
-  }, [id, openFloatingProperties, setSelectedNodes, workspacePreferences.artifactPropertiesDisplay])
+  const handleOpenProperties = useCallback(
+    (e: React.MouseEvent): void => {
+      e.stopPropagation()
+      if (workspacePreferences.artifactPropertiesDisplay === 'modal') {
+        openFloatingProperties(id)
+      } else {
+        // Open in sidebar - just select the node which shows the properties panel
+        setSelectedNodes([id])
+      }
+    },
+    [id, openFloatingProperties, setSelectedNodes, workspacePreferences.artifactPropertiesDisplay],
+  )
 
   // Handle download artifact
-  const handleDownload = useCallback(async (e: React.MouseEvent): Promise<void> => {
-    e.stopPropagation()
-    try {
-      const isImage = activeContent.contentType === 'image'
+  const handleDownload = useCallback(
+    async (e: React.MouseEvent): Promise<void> => {
+      e.stopPropagation()
+      try {
+        const isImage = activeContent.contentType === 'image'
 
-      const result = await window.api.artifact.download({
-        title: nodeData.title,
-        content: activeContent.content,
-        contentType: activeContent.contentType,
-        language: activeContent.language,
-        files: isMultiFile ? files.map(f => ({
-          filename: f.filename,
-          content: f.content,
-          contentType: f.contentType
-        })) : undefined,
-        isBase64: isImage
-      })
+        const result = await window.api.artifact.download({
+          title: nodeData.title,
+          content: activeContent.content,
+          contentType: activeContent.contentType,
+          language: activeContent.language,
+          files: isMultiFile
+            ? files.map((f) => ({
+                filename: f.filename,
+                content: f.content,
+                contentType: f.contentType,
+              }))
+            : undefined,
+          isBase64: isImage,
+        })
 
-      if (result.success) {
-        toast.success('Artifact saved')
-        if (result.note) {
-          toast(result.note, { icon: <Info size={16} className="text-blue-400" />, duration: 4000 })
+        if (result.success) {
+          toast.success('Artifact saved')
+          if (result.note) {
+            toast(result.note, {
+              icon: <Info size={16} className="text-blue-400" />,
+              duration: 4000,
+            })
+          }
+        } else if (!result.canceled) {
+          toast.error('Failed to save: ' + (result.error || 'Unknown error'))
         }
-      } else if (!result.canceled) {
-        toast.error('Failed to save: ' + (result.error || 'Unknown error'))
+      } catch {
+        toast.error('Failed to save artifact')
       }
-    } catch {
-      toast.error('Failed to save artifact')
-    }
-  }, [nodeData.title, activeContent, isMultiFile, files])
+    },
+    [nodeData.title, activeContent, isMultiFile, files],
+  )
 
   // Count lines for display
   const lineCount = activeContent.content ? activeContent.content.split('\n').length : 0
@@ -625,13 +814,21 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   const isPinned = useIsNodePinned(id)
   const isBookmarked = useIsNodeBookmarked(id)
   const numberedBookmark = useNodeNumberedBookmark(id)
-  const isCut = useWorkspaceStore(s => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id))
+  const isCut = useWorkspaceStore(
+    (s) => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id),
+  )
 
   // LOD (Level of Detail) rendering based on zoom level
   const {
-    showContent, showTitle, showBadges, showLede,
-    showHeader, showFooter, showPlaceholders,
-    showInteractiveControls, zoomLevel
+    showContent,
+    showTitle,
+    showBadges,
+    showLede,
+    showHeader,
+    showFooter,
+    showPlaceholders,
+    showInteractiveControls,
+    zoomLevel,
   } = useNodeContentVisibility()
   const isUltraFar = zoomLevel === 'ultra-far'
   const isFar = zoomLevel === 'far'
@@ -643,19 +840,30 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   const fileTypeIcon = useMemo(() => {
     const ct = activeContent.contentType
     switch (ct) {
-      case 'code': return <FileCode size={16} style={{ color: nodeColor }} />
+      case 'code':
+        return <FileCode size={16} style={{ color: nodeColor }} />
       case 'image':
-      case 'svg': return <FileImage size={16} style={{ color: nodeColor }} />
+      case 'svg':
+        return <FileImage size={16} style={{ color: nodeColor }} />
       case 'markdown':
-      case 'text': return <FileText size={16} style={{ color: nodeColor }} />
-      case 'html': return <Globe size={16} style={{ color: nodeColor }} />
-      case 'json': return <FileJson size={16} style={{ color: nodeColor }} />
-      case 'csv': return <Table size={16} style={{ color: nodeColor }} />
-      case 'mermaid': return <GitBranch size={16} style={{ color: nodeColor }} />
-      case 'video': return <Video size={16} style={{ color: nodeColor }} />
-      case 'audio': return <Volume2 size={16} style={{ color: nodeColor }} />
-      case '3d-model': return <Box size={16} style={{ color: nodeColor }} />
-      default: return <File size={16} style={{ color: nodeColor }} />
+      case 'text':
+        return <FileText size={16} style={{ color: nodeColor }} />
+      case 'html':
+        return <Globe size={16} style={{ color: nodeColor }} />
+      case 'json':
+        return <FileJson size={16} style={{ color: nodeColor }} />
+      case 'csv':
+        return <Table size={16} style={{ color: nodeColor }} />
+      case 'mermaid':
+        return <GitBranch size={16} style={{ color: nodeColor }} />
+      case 'video':
+        return <Video size={16} style={{ color: nodeColor }} />
+      case 'audio':
+        return <Volume2 size={16} style={{ color: nodeColor }} />
+      case '3d-model':
+        return <Box size={16} style={{ color: nodeColor }} />
+      default:
+        return <File size={16} style={{ color: nodeColor }} />
     }
   }, [activeContent.contentType, nodeColor])
 
@@ -666,7 +874,10 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
     if (activeContent.contentType === 'video') return '[Video content]'
     if (activeContent.contentType === 'audio') return '[Audio content]'
     if (activeContent.contentType === '3d-model') return '[3D Model]'
-    return activeContent.content.slice(0, 120).replace(/\n/g, ' ') + (activeContent.content.length > 120 ? '...' : '')
+    return (
+      activeContent.content.slice(0, 120).replace(/\n/g, ' ') +
+      (activeContent.content.length > 120 ? '...' : '')
+    )
   }, [activeContent.content, activeContent.contentType])
 
   const nodeClassName = [
@@ -684,11 +895,20 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
     isBookmarked && 'cognograph-node--bookmarked',
     isCut && 'cognograph-node--cut',
     nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
-    `artifact-node--lod-${zoomLevel}`
-  ].filter(Boolean).join(' ')
+    `artifact-node--lod-${zoomLevel}`,
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   const nodeContent = (
-    <div ref={nodeRef} className={nodeClassName} style={nodeStyle} data-transparent={transparent} data-lod={zoomLevel} onDoubleClick={handleDoubleClick}>
+    <div
+      ref={nodeRef}
+      className={nodeClassName}
+      style={nodeStyle}
+      data-transparent={transparent}
+      data-lod={zoomLevel}
+      onDoubleClick={handleDoubleClick}
+    >
       {/* Type label: floats above node */}
       <div className="cognograph-node__type-label" style={{ color: nodeColor ?? '#8b5cf7' }}>
         ARTIFACT
@@ -697,7 +917,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
       {/* ================================================================
           Handles — hidden at L0 (ultra-far), shown L1+
           ================================================================ */}
-      <SpreadHandles hidden={isUltraFar} />
+      <SpreadHandles hidden={isUltraFar} width={nodeWidth} height={nodeHeight} />
 
       {/* Numbered bookmark badge */}
       {numberedBookmark && (
@@ -719,7 +939,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
               className="absolute inset-0 rounded-lg pointer-events-none"
               style={{
                 boxShadow: `0 0 8px 2px ${nodeColor ?? '#8b5cf7'}80`,
-                animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
               }}
             />
           )}
@@ -746,7 +966,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
               className="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0"
               style={{
                 backgroundColor: 'var(--node-bg-secondary)',
-                color: 'var(--node-text-secondary)'
+                color: 'var(--node-text-secondary)',
               }}
             >
               {getContentTypeLabel(activeContent.contentType, nodeData.customContentType)}
@@ -756,11 +976,14 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
       )}
 
       {/* L1 placeholder bars — skeleton density preview for file content */}
-      {showPlaceholders && !nodeData.collapsed && activeContent.content && activeContent.contentType !== 'image' && (
-        <div className="cognograph-node__body" style={{ pointerEvents: 'none' }}>
-          <StructuredContentPreview content={activeContent.content} zoomLevel="far" />
-        </div>
-      )}
+      {showPlaceholders &&
+        !nodeData.collapsed &&
+        activeContent.content &&
+        activeContent.contentType !== 'image' && (
+          <div className="cognograph-node__body" style={{ pointerEvents: 'none' }}>
+            <StructuredContentPreview content={activeContent.content} zoomLevel="far" />
+          </div>
+        )}
 
       {/* ================================================================
           L2 (mid): Header + content preview (lede) + format badge.
@@ -788,11 +1011,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
               />
               {showInteractiveControls && (
                 <NodeAIErrorBoundary compact>
-                  <AIPropertyAssist
-                    nodeId={id}
-                    nodeData={nodeData}
-                    compact={true}
-                  />
+                  <AIPropertyAssist nodeId={id} nodeData={nodeData} compact={true} />
                 </NodeAIErrorBoundary>
               )}
               <Eye className="w-4 h-4 mr-1" style={{ color: 'var(--node-text-muted)' }} />
@@ -816,11 +1035,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
               />
               {showInteractiveControls && (
                 <NodeAIErrorBoundary compact>
-                  <AIPropertyAssist
-                    nodeId={id}
-                    nodeData={nodeData}
-                    compact={true}
-                  />
+                  <AIPropertyAssist nodeId={id} nodeData={nodeData} compact={true} />
                 </NodeAIErrorBoundary>
               )}
               {showInteractiveControls && (
@@ -836,15 +1051,16 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    setHtmlRenderMode(m => m === 'render' ? 'source' : 'render')
+                    setHtmlRenderMode((m) => (m === 'render' ? 'source' : 'render'))
                   }}
                   className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
                   title={htmlRenderMode === 'render' ? 'View source' : 'View rendered'}
                 >
-                  {htmlRenderMode === 'render'
-                    ? <Code className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
-                    : <Eye className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
-                  }
+                  {htmlRenderMode === 'render' ? (
+                    <Code className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
+                  ) : (
+                    <Eye className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
+                  )}
                 </button>
               )}
               {/* Properties button removed — access via right-click context menu */}
@@ -854,7 +1070,10 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                 title={nodeData.collapsed ? 'Expand' : 'Collapse'}
               >
                 {nodeData.collapsed ? (
-                  <ChevronDown className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
+                  <ChevronDown
+                    className="w-4 h-4"
+                    style={{ color: 'var(--node-text-secondary)' }}
+                  />
                 ) : (
                   <ChevronUp className="w-4 h-4" style={{ color: 'var(--node-text-secondary)' }} />
                 )}
@@ -872,7 +1091,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
               className="text-[10px] px-1.5 py-0.5 rounded"
               style={{
                 backgroundColor: 'var(--node-bg-secondary)',
-                color: 'var(--node-text-secondary)'
+                color: 'var(--node-text-secondary)',
               }}
             >
               {getContentTypeLabel(activeContent.contentType, nodeData.customContentType)}
@@ -894,7 +1113,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
               style={{
                 backgroundColor: 'var(--node-bg-secondary)',
                 color: 'var(--node-text-muted)',
-                maxHeight: '2.4em'
+                maxHeight: '2.4em',
               }}
             >
               {ledePreview}
@@ -929,27 +1148,38 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
           )}
 
           {/* Preview toolbar — for inline HTML artifacts (slimmed down) */}
-          {!isPreviewMode && isHtmlContent && htmlRenderMode === 'render' && showContent && showInteractiveControls && !nodeData.collapsed && (
-            <div className="node-chrome--hover">
-              <PreviewToolbar
-                viewport={htmlViewport}
-                scale={htmlScale}
-                autoRefresh={false}
-                interactionMode={htmlInteractionMode}
-                previewUrl=""
-                onViewportChange={setHtmlViewport}
-                onScaleChange={setHtmlScale}
-                onAutoRefreshToggle={() => {}}
-                onRefresh={() => {}}
-                onInteractionModeToggle={() => setHtmlInteractionMode(m => !m)}
-                onPreviewToggle={() => setHtmlRenderMode('source')}
-                showRefresh={false}
-                showAutoRefresh={false}
-                showOpenInBrowser={false}
-                showCodeToggle={true}
-              />
-            </div>
-          )}
+          {!isPreviewMode &&
+            isHtmlContent &&
+            htmlRenderMode === 'render' &&
+            showContent &&
+            showInteractiveControls &&
+            !nodeData.collapsed && (
+              <div className="node-chrome--hover">
+                <PreviewToolbar
+                  viewport={htmlViewport}
+                  scale={htmlScale}
+                  autoRefresh={false}
+                  interactionMode={htmlInteractionMode}
+                  previewUrl=""
+                  onViewportChange={(v) => {
+                    setHtmlViewport(v)
+                    setHtmlInteractionMode(false)
+                  }}
+                  onScaleChange={(s) => {
+                    setHtmlScale(s)
+                    setHtmlInteractionMode(false)
+                  }}
+                  onAutoRefreshToggle={() => {}}
+                  onRefresh={() => {}}
+                  onInteractionModeToggle={() => setHtmlInteractionMode((m) => !m)}
+                  onPreviewToggle={() => setHtmlRenderMode('source')}
+                  showRefresh={false}
+                  showAutoRefresh={false}
+                  showOpenInBrowser={false}
+                  showCodeToggle={true}
+                />
+              </div>
+            )}
 
           {/* File Tabs (for multi-file artifacts, standard mode only) */}
           {!isPreviewMode && isMultiFile && !nodeData.collapsed && (
@@ -957,26 +1187,31 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
               className="flex gap-0.5 px-2 py-1 border-b overflow-x-auto"
               style={{
                 backgroundColor: 'var(--node-bg-secondary)',
-                borderColor: 'var(--node-border-secondary)'
+                borderColor: 'var(--node-border-secondary)',
               }}
             >
-              {files.sort((a, b) => a.order - b.order).map((file: ArtifactFile) => (
-                <button
-                  key={file.id}
-                  onClick={(e) => handleFileTabClick(e, file.id)}
-                  className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] whitespace-nowrap transition-colors ${
-                    activeFileId === file.id
-                      ? 'bg-cyan-600/30'
-                      : 'hover:bg-black/10 dark:hover:bg-white/10'
-                  }`}
-                  style={{
-                    color: activeFileId === file.id ? 'var(--node-text-primary)' : 'var(--node-text-secondary)'
-                  }}
-                >
-                  {getSmallContentTypeIcon(file.contentType)}
-                  <span className="max-w-[80px] truncate">{file.filename}</span>
-                </button>
-              ))}
+              {files
+                .sort((a, b) => a.order - b.order)
+                .map((file: ArtifactFile) => (
+                  <button
+                    key={file.id}
+                    onClick={(e) => handleFileTabClick(e, file.id)}
+                    className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] whitespace-nowrap transition-colors ${
+                      activeFileId === file.id
+                        ? 'bg-cyan-600/30'
+                        : 'hover:bg-black/10 dark:hover:bg-white/10'
+                    }`}
+                    style={{
+                      color:
+                        activeFileId === file.id
+                          ? 'var(--node-text-primary)'
+                          : 'var(--node-text-secondary)',
+                    }}
+                  >
+                    {getSmallContentTypeIcon(file.contentType)}
+                    <span className="max-w-[80px] truncate">{file.filename}</span>
+                  </button>
+                ))}
             </div>
           )}
 
@@ -1004,8 +1239,8 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                   <Globe className="w-8 h-8 opacity-50" />
                   <span className="text-xs">
                     Preview unavailable. Start your dev server at{' '}
-                    <span className="font-mono text-cyan-400">{fullPreviewUrl}</span>{' '}
-                    and click Refresh.
+                    <span className="font-mono text-cyan-400">{fullPreviewUrl}</span> and click
+                    Refresh.
                   </span>
                   <button
                     onClick={(e) => {
@@ -1101,16 +1336,23 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                       metadata={nodeData.metadata}
                     />
                   ) : activeContent.contentType === 'image' && activeContent.content ? (
-                    <div className="flex justify-center">
+                    <div className="relative flex-1" style={{ minHeight: 0 }}>
                       <img
                         src={activeContent.content}
                         alt={nodeData.title}
-                        className="max-h-32 max-w-full rounded object-contain"
+                        className="rounded"
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'contain',
+                        }}
                       />
                     </div>
                   ) : isHtmlContent && activeContent.content && htmlRenderMode === 'render' ? (
                     <div
-                      className="relative flex-1"
+                      className={`relative flex-1${htmlInteractionMode ? ' nodrag nopan' : ''}`}
                       style={{ minHeight: 0 }}
                       onKeyDown={(e) => {
                         if (e.key === 'Escape' && htmlInteractionMode) {
@@ -1135,11 +1377,10 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                             ref={htmlIframeRef}
                             key={sanitizedHtmlContent.length}
                             srcDoc={sanitizedHtmlContent}
-                            // SECURITY NOTE (S-121): allow-same-origin is required for
-                            // contentDocument.body.scrollHeight measurement (auto-sizing).
-                            // CSP meta tag (connect-src 'none') blocks outbound network.
-                            // Trade-off accepted for MVP — artifact HTML is AI-generated, not user-uploaded.
-                            sandbox="allow-scripts allow-same-origin"
+                            // SECURITY (S4): allow-same-origin REMOVED — prevents srcdoc from
+                            // accessing parent DOM, localStorage, auth tokens (session takeover).
+                            // Auto-sizing uses postMessage instead of contentDocument.
+                            sandbox="allow-scripts"
                             style={{
                               width: '100%',
                               height: htmlScale < 1 ? `${100 / htmlScale}%` : '100%',
@@ -1155,44 +1396,50 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                       </div>
 
                       {/* Interaction overlay — only at usable zoom levels */}
+                      {/* Interaction overlay — only at usable zoom levels */}
                       {!htmlInteractionMode && showInteractiveControls && (
                         <div
-                          className="absolute inset-0 z-10 cursor-pointer"
-                          role="button"
-                          tabIndex={0}
-                          onClick={(e) => { e.stopPropagation(); setHtmlInteractionMode(true) }}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setHtmlInteractionMode(true) } }}
-                          title="Click to interact with HTML preview"
+                          className="absolute inset-0 z-10"
+                          style={{ cursor: 'grab' }}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation()
+                            setHtmlInteractionMode(true)
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.stopPropagation()
+                              setHtmlInteractionMode(true)
+                            }
+                          }}
+                          title="Double-click to interact with HTML preview"
                         />
-                      )}
-                      {htmlInteractionMode && (
-                        <button
-                          className="absolute top-2 right-2 z-20 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-black/70 text-white hover:bg-black/90 transition-colors backdrop-blur-sm border border-white/10"
-                          onClick={(e) => { e.stopPropagation(); setHtmlInteractionMode(false) }}
-                          title="Exit interaction mode (Escape)"
-                        >
-                          <MousePointer className="w-3.5 h-3.5" />
-                          Exit Interact
-                        </button>
                       )}
                     </div>
                   ) : (
                     <pre
-                      className="text-xs font-mono whitespace-pre-wrap overflow-hidden p-2 rounded flex-1"
+                      className="text-xs font-mono overflow-auto p-2 rounded flex-1"
                       style={{
                         backgroundColor: 'var(--node-bg-secondary)',
-                        color: 'var(--node-text-secondary)'
+                        color: 'var(--node-text-secondary)',
+                        whiteSpace: 'pre',
+                        wordBreak: 'normal',
+                        overscrollBehavior: 'contain',
                       }}
                     >
-                      {isHtmlContent && htmlRenderMode === 'source'
-                        ? activeContent.content
-                        : (getPreviewContent() || <span className="italic" style={{ color: 'var(--node-text-muted)' }}>Empty artifact</span>)
-                      }
+                      {activeContent.content || (
+                        <span className="italic" style={{ color: 'var(--node-text-muted)' }}>
+                          Empty artifact
+                        </span>
+                      )}
                     </pre>
                   )}
 
                   {/* Inline property controls */}
-                  <NodePropertyControls nodeId={id} nodeType="artifact" data={data as Record<string, unknown>} />
+                  <NodePropertyControls
+                    nodeId={id}
+                    nodeType="artifact"
+                    data={data as Record<string, unknown>}
+                  />
                   {/* Property Badges */}
                   <PropertyBadges
                     properties={nodeData.properties || {}}
@@ -1237,12 +1484,18 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
               <>
                 <span className="text-cyan-500 text-xs">v{nodeData.version}</span>
                 {activeContent.language && (
-                  <span className="text-xs" style={{ color: 'var(--node-text-muted)' }}>{activeContent.language}</span>
+                  <span className="text-xs" style={{ color: 'var(--node-text-muted)' }}>
+                    {activeContent.language}
+                  </span>
                 )}
                 {isMultiFile ? (
-                  <span className="text-xs" style={{ color: 'var(--node-text-muted)' }}>{totalFiles} files</span>
+                  <span className="text-xs" style={{ color: 'var(--node-text-muted)' }}>
+                    {totalFiles} files
+                  </span>
                 ) : (
-                  <span className="text-xs" style={{ color: 'var(--node-text-muted)' }}>{lineCount} lines</span>
+                  <span className="text-xs" style={{ color: 'var(--node-text-muted)' }}>
+                    {lineCount} lines
+                  </span>
                 )}
                 <AttachmentBadge count={nodeData.attachments?.length} />
               </>
@@ -1254,7 +1507,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                 className="text-xs px-1.5 py-0.5 rounded"
                 style={{
                   backgroundColor: 'var(--node-bg-secondary)',
-                  color: 'var(--node-text-secondary)'
+                  color: 'var(--node-text-secondary)',
                 }}
               >
                 Preview
@@ -1265,13 +1518,15 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
                   className="text-xs px-1.5 py-0.5 rounded"
                   style={{
                     backgroundColor: 'var(--node-bg-secondary)',
-                    color: 'var(--node-text-secondary)'
+                    color: 'var(--node-text-secondary)',
                   }}
                 >
                   {getInjectionLabel(nodeData.injectionFormat)}
                 </span>
                 <span style={{ color: 'var(--node-text-muted)' }}>
-                  {isMultiFile ? 'Multi-file' : getContentTypeLabel(activeContent.contentType, nodeData.customContentType)}
+                  {isMultiFile
+                    ? 'Multi-file'
+                    : getContentTypeLabel(activeContent.contentType, nodeData.customContentType)}
                 </span>
               </>
             )}

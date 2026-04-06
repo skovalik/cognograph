@@ -11,15 +11,15 @@
  * Hysteresis: 0.02 standard, 0.03 wide (close/ultra-close boundary)
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-  computeZoomLevel,
   computeNodeContentVisibility,
-  THRESHOLDS,
+  computeZoomLevel,
   HYSTERESIS,
   HYSTERESIS_WIDE,
+  type NodeContentVisibility,
+  THRESHOLDS,
   type ZoomLevel,
-  type NodeContentVisibility
 } from '../useSemanticZoom'
 
 // --- Helper: simulate a zoom sweep ----------------------------------------
@@ -51,7 +51,7 @@ describe('computeZoomLevel -- basic ranges', () => {
 
   it('returns mid for 0.08 <= zoom < 0.12 (when starting at mid)', () => {
     expect(computeZoomLevel(0.09, 'mid')).toBe('mid')
-    expect(computeZoomLevel(0.10, 'mid')).toBe('mid')
+    expect(computeZoomLevel(0.1, 'mid')).toBe('mid')
     expect(computeZoomLevel(0.11, 'mid')).toBe('mid')
   })
 
@@ -364,7 +364,7 @@ describe('backward compatibility', () => {
 describe('effectiveLevel', () => {
   const levels: ZoomLevel[] = ['ultra-far', 'far', 'mid', 'close', 'ultra-close']
 
-  levels.forEach(level => {
+  levels.forEach((level) => {
     it(`effectiveLevel equals zoomLevel at "${level}" (DoF placeholder)`, () => {
       const vis = computeNodeContentVisibility(level)
       expect(vis.effectiveLevel).toBe(level)
@@ -377,7 +377,7 @@ describe('effectiveLevel', () => {
 describe('exhaustiveness', () => {
   const ALL_LEVELS: ZoomLevel[] = ['ultra-far', 'far', 'mid', 'close', 'ultra-close']
 
-  ALL_LEVELS.forEach(level => {
+  ALL_LEVELS.forEach((level) => {
     it(`computeNodeContentVisibility handles "${level}" without throwing`, () => {
       expect(() => computeNodeContentVisibility(level)).not.toThrow()
       const vis = computeNodeContentVisibility(level)

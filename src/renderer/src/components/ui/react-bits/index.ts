@@ -12,22 +12,26 @@
  * the shadcn/ui components in `../index.ts`.
  */
 
-// Animated borders
-export { ElectricBorder, type ElectricBorderProps } from './ElectricBorder'
-export { StarBorder, type StarBorderProps } from './StarBorder'
-
+// GPU utilities
+export { getGPUTier, resetGPUTierCache, supportsWebGL } from '../../../utils/gpuDetection'
 // Content transitions
-export { AnimatedContent, type AnimatedContentProps, type AnimationDirection } from './AnimatedContent'
-
+export {
+  AnimatedContent,
+  type AnimatedContentProps,
+  type AnimationDirection,
+} from './AnimatedContent'
 // Interaction feedback
 export { ClickSpark, type ClickSparkProps } from './ClickSpark'
-
 // Text effects
 export { CountUp, type CountUpProps } from './CountUp'
-export { DecryptedText, type DecryptedTextProps, type DecryptedTextAnimateOn, type RevealDirection } from './DecryptedText'
-
-// GPU utilities
-export { getGPUTier, supportsWebGL, resetGPUTierCache } from '../../../utils/gpuDetection'
-
+export {
+  DecryptedText,
+  type DecryptedTextAnimateOn,
+  type DecryptedTextProps,
+  type RevealDirection,
+} from './DecryptedText'
+// Animated borders
+export { ElectricBorder, type ElectricBorderProps } from './ElectricBorder'
 // Error boundary
 export { ReactBitsErrorBoundary } from './ReactBitsErrorBoundary'
+export { StarBorder, type StarBorderProps } from './StarBorder'

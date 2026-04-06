@@ -12,26 +12,26 @@
  * - Error handling (disk full, permissions, corruption)
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { promises as fs } from 'fs'
 import type { WorkspaceData } from '@shared/types'
+import { promises as fs } from 'fs'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Mock electron
 vi.mock('electron', () => ({
   ipcMain: {
     handle: vi.fn(),
-    on: vi.fn()
+    on: vi.fn(),
   },
   app: {
-    getPath: vi.fn(() => '/mock/user/data')
+    getPath: vi.fn(() => '/mock/user/data'),
   },
   dialog: {
     showSaveDialog: vi.fn(),
-    showOpenDialog: vi.fn()
+    showOpenDialog: vi.fn(),
   },
   BrowserWindow: {
-    getAllWindows: vi.fn(() => [])
-  }
+    getAllWindows: vi.fn(() => []),
+  },
 }))
 
 // Mock fs module
@@ -43,9 +43,9 @@ vi.mock('fs', () => ({
     access: vi.fn(),
     unlink: vi.fn(),
     rename: vi.fn(),
-    stat: vi.fn()
+    stat: vi.fn(),
   },
-  watch: vi.fn()
+  watch: vi.fn(),
 }))
 
 // Mock backup manager
@@ -53,8 +53,8 @@ vi.mock('../backupManager', () => ({
   backupManager: {
     createBackup: vi.fn(),
     restoreBackup: vi.fn(),
-    listBackups: vi.fn(() => [])
-  }
+    listBackups: vi.fn(() => []),
+  },
 }))
 
 // Mock workspace validation
@@ -64,7 +64,7 @@ vi.mock('../workspaceValidation', () => ({
       throw new Error('Invalid workspace data')
     }
     return true
-  })
+  }),
 }))
 
 describe('Workspace Persistence Integration', () => {
@@ -82,14 +82,14 @@ describe('Workspace Persistence Integration', () => {
           title: 'Test Note',
           content: 'Test content',
           createdAt: Date.now(),
-          updatedAt: Date.now()
-        }
-      }
+          updatedAt: Date.now(),
+        },
+      },
     ],
     edges: [],
     viewport: { x: 0, y: 0, zoom: 1 },
     createdAt: Date.now(),
-    updatedAt: Date.now()
+    updatedAt: Date.now(),
   }
 
   beforeEach(() => {
@@ -113,7 +113,7 @@ describe('Workspace Persistence Integration', () => {
 
       expect(fs.writeFile).toHaveBeenCalledWith(
         '/test/workspace.json',
-        JSON.stringify(mockWorkspaceData)
+        JSON.stringify(mockWorkspaceData),
       )
     })
 
@@ -177,10 +177,10 @@ describe('Workspace Persistence Integration', () => {
             target: 'node-2',
             data: {
               direction: 'unidirectional' as const,
-              active: true
-            }
-          }
-        ]
+              active: true,
+            },
+          },
+        ],
       }
 
       vi.mocked(fs.writeFile).mockImplementation((_path, data) => {
@@ -206,18 +206,20 @@ describe('Workspace Persistence Integration', () => {
     it('should handle large workspaces (1MB+)', async () => {
       const largeData = {
         ...mockWorkspaceData,
-        nodes: Array(1000).fill(null).map((_, i) => ({
-          id: `node-${i}`,
-          type: 'note',
-          position: { x: i * 10, y: 0 },
-          data: {
+        nodes: Array(1000)
+          .fill(null)
+          .map((_, i) => ({
+            id: `node-${i}`,
             type: 'note',
-            title: `Note ${i}`,
-            content: 'X'.repeat(1000),
-            createdAt: Date.now(),
-            updatedAt: Date.now()
-          }
-        }))
+            position: { x: i * 10, y: 0 },
+            data: {
+              type: 'note',
+              title: `Note ${i}`,
+              content: 'X'.repeat(1000),
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            },
+          })),
       }
 
       vi.mocked(fs.writeFile).mockResolvedValue(undefined)
@@ -242,23 +244,22 @@ describe('Workspace Persistence Integration', () => {
       const specialPath = '/test/workspace (copy) #1.json'
       await fs.writeFile(specialPath, JSON.stringify(mockWorkspaceData))
 
-      expect(fs.writeFile).toHaveBeenCalledWith(
-        specialPath,
-        expect.any(String)
-      )
+      expect(fs.writeFile).toHaveBeenCalledWith(specialPath, expect.any(String))
     })
 
     it('should handle Unicode in workspace data', async () => {
       const unicodeData = {
         ...mockWorkspaceData,
-        nodes: [{
-          ...mockWorkspaceData.nodes[0]!,
-          data: {
-            ...mockWorkspaceData.nodes[0]!.data,
-            title: '你好世界 🌍',
-            content: 'Emoji: 🎉🎊🎈'
-          }
-        }]
+        nodes: [
+          {
+            ...mockWorkspaceData.nodes[0]!,
+            data: {
+              ...mockWorkspaceData.nodes[0]!.data,
+              title: '你好世界 🌍',
+              content: 'Emoji: 🎉🎊🎈',
+            },
+          },
+        ],
       }
 
       vi.mocked(fs.writeFile).mockResolvedValue(undefined)
@@ -273,7 +274,7 @@ describe('Workspace Persistence Integration', () => {
       const saves = [
         fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData)),
         fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData)),
-        fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData))
+        fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData)),
       ]
 
       await Promise.all(saves)
@@ -289,7 +290,7 @@ describe('Workspace Persistence Integration', () => {
 
       const dataWithTimestamp: WorkspaceData = {
         ...mockWorkspaceData,
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
       }
 
       await fs.writeFile('/test/workspace.json', JSON.stringify(dataWithTimestamp))
@@ -304,7 +305,7 @@ describe('Workspace Persistence Integration', () => {
         edges: [],
         viewport: { x: 0, y: 0, zoom: 1 },
         createdAt: Date.now(),
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
       }
 
       vi.mocked(fs.writeFile).mockResolvedValue(undefined)
@@ -376,18 +377,20 @@ describe('Workspace Persistence Integration', () => {
     it('should handle large workspace files (1MB+)', async () => {
       const largeData = {
         ...mockWorkspaceData,
-        nodes: Array(1000).fill(null).map((_, i) => ({
-          id: `node-${i}`,
-          type: 'note',
-          position: { x: 0, y: 0 },
-          data: {
+        nodes: Array(1000)
+          .fill(null)
+          .map((_, i) => ({
+            id: `node-${i}`,
             type: 'note',
-            title: 'Note',
-            content: 'X'.repeat(1000),
-            createdAt: Date.now(),
-            updatedAt: Date.now()
-          }
-        }))
+            position: { x: 0, y: 0 },
+            data: {
+              type: 'note',
+              title: 'Note',
+              content: 'X'.repeat(1000),
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            },
+          })),
       }
 
       vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(largeData))
@@ -401,13 +404,15 @@ describe('Workspace Persistence Integration', () => {
     it('should handle Unicode content', async () => {
       const unicodeData = {
         ...mockWorkspaceData,
-        nodes: [{
-          ...mockWorkspaceData.nodes[0]!,
-          data: {
-            ...mockWorkspaceData.nodes[0]!.data,
-            content: '你好 🌍'
-          }
-        }]
+        nodes: [
+          {
+            ...mockWorkspaceData.nodes[0]!,
+            data: {
+              ...mockWorkspaceData.nodes[0]!.data,
+              content: '你好 🌍',
+            },
+          },
+        ],
       }
 
       vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(unicodeData))
@@ -433,8 +438,8 @@ describe('Workspace Persistence Integration', () => {
       const malformedData = {
         ...mockWorkspaceData,
         nodes: [
-          { id: 'bad-node' } // Missing required fields
-        ]
+          { id: 'bad-node' }, // Missing required fields
+        ],
       }
 
       vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(malformedData))
@@ -451,8 +456,8 @@ describe('Workspace Persistence Integration', () => {
       const malformedData = {
         ...mockWorkspaceData,
         edges: [
-          { id: 'bad-edge' } // Missing source/target
-        ]
+          { id: 'bad-edge' }, // Missing source/target
+        ],
       }
 
       vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(malformedData))
@@ -468,13 +473,15 @@ describe('Workspace Persistence Integration', () => {
     it('should handle null values in data', async () => {
       const dataWithNulls = {
         ...mockWorkspaceData,
-        nodes: [{
-          ...mockWorkspaceData.nodes[0]!,
-          data: {
-            ...mockWorkspaceData.nodes[0]!.data,
-            content: null
-          }
-        }]
+        nodes: [
+          {
+            ...mockWorkspaceData.nodes[0]!,
+            data: {
+              ...mockWorkspaceData.nodes[0]!.data,
+              content: null,
+            },
+          },
+        ],
       }
 
       vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(dataWithNulls))
@@ -537,10 +544,7 @@ describe('Workspace Persistence Integration', () => {
       await fs.writeFile('/test/workspace.json.backup', existing)
       await fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData))
 
-      expect(fs.writeFile).toHaveBeenCalledWith(
-        '/test/workspace.json.backup',
-        expect.any(String)
-      )
+      expect(fs.writeFile).toHaveBeenCalledWith('/test/workspace.json.backup', expect.any(String))
     })
 
     it('should rollback on write error', async () => {
@@ -566,10 +570,7 @@ describe('Workspace Persistence Integration', () => {
       await fs.writeFile('/test/workspace.json.tmp', JSON.stringify(mockWorkspaceData))
       await fs.rename('/test/workspace.json.tmp', '/test/workspace.json')
 
-      expect(fs.rename).toHaveBeenCalledWith(
-        '/test/workspace.json.tmp',
-        '/test/workspace.json'
-      )
+      expect(fs.rename).toHaveBeenCalledWith('/test/workspace.json.tmp', '/test/workspace.json')
     })
 
     it('should cleanup temp files on success', async () => {
@@ -609,7 +610,7 @@ describe('Workspace Persistence Integration', () => {
 
       const writes = [
         fs.writeFile('/test/workspace.json.tmp1', JSON.stringify(mockWorkspaceData)),
-        fs.writeFile('/test/workspace.json.tmp2', JSON.stringify(mockWorkspaceData))
+        fs.writeFile('/test/workspace.json.tmp2', JSON.stringify(mockWorkspaceData)),
       ]
 
       await Promise.all(writes)
@@ -644,7 +645,7 @@ describe('Workspace Persistence Integration', () => {
       vi.mocked(fs.writeFile).mockRejectedValue(new Error('EACCES: permission denied'))
 
       await expect(
-        fs.writeFile('/test/workspace.json.backup', JSON.stringify(mockWorkspaceData))
+        fs.writeFile('/test/workspace.json.backup', JSON.stringify(mockWorkspaceData)),
       ).rejects.toThrow('permission denied')
     })
 
@@ -692,8 +693,8 @@ describe('Workspace Persistence Integration', () => {
         ...mockWorkspaceData,
         nodes: [
           { ...mockWorkspaceData.nodes[0]!, id: 'node-1' },
-          { ...mockWorkspaceData.nodes[0]!, id: 'node-1' }
-        ]
+          { ...mockWorkspaceData.nodes[0]!, id: 'node-1' },
+        ],
       }
 
       vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(duplicateIds))
@@ -709,9 +710,7 @@ describe('Workspace Persistence Integration', () => {
     it('should validate edge references', async () => {
       const invalidEdges = {
         ...mockWorkspaceData,
-        edges: [
-          { id: 'edge-1', source: 'node-999', target: 'node-1' }
-        ]
+        edges: [{ id: 'edge-1', source: 'node-999', target: 'node-1' }],
       }
 
       vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(invalidEdges))
@@ -727,10 +726,12 @@ describe('Workspace Persistence Integration', () => {
     it('should validate node types', async () => {
       const invalidType = {
         ...mockWorkspaceData,
-        nodes: [{
-          ...mockWorkspaceData.nodes[0]!,
-          type: 'invalid-type'
-        }]
+        nodes: [
+          {
+            ...mockWorkspaceData.nodes[0]!,
+            type: 'invalid-type',
+          },
+        ],
       }
 
       vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(invalidType))
@@ -738,17 +739,29 @@ describe('Workspace Persistence Integration', () => {
       const data = await fs.readFile('/test/workspace.json', 'utf8')
       const parsed = JSON.parse(data as string)
 
-      const validTypes = ['note', 'task', 'conversation', 'project', 'workspace', 'artifact', 'text', 'action', 'orchestrator']
+      const validTypes = [
+        'note',
+        'task',
+        'conversation',
+        'project',
+        'workspace',
+        'artifact',
+        'text',
+        'action',
+        'orchestrator',
+      ]
       expect(validTypes.includes(parsed.nodes[0].type)).toBe(false)
     })
 
     it('should validate required node fields', async () => {
       const missingFields = {
         ...mockWorkspaceData,
-        nodes: [{
-          id: 'node-1'
-          // Missing type, position, data
-        }]
+        nodes: [
+          {
+            id: 'node-1',
+            // Missing type, position, data
+          },
+        ],
       }
 
       vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(missingFields))
@@ -767,10 +780,12 @@ describe('Workspace Persistence Integration', () => {
     it('should validate position coordinates', async () => {
       const invalidPosition = {
         ...mockWorkspaceData,
-        nodes: [{
-          ...mockWorkspaceData.nodes[0]!,
-          position: { x: 'invalid', y: 0 }
-        }]
+        nodes: [
+          {
+            ...mockWorkspaceData.nodes[0]!,
+            position: { x: 'invalid', y: 0 },
+          },
+        ],
       }
 
       vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(invalidPosition))
@@ -784,14 +799,16 @@ describe('Workspace Persistence Integration', () => {
     it('should validate edge properties', async () => {
       const invalidEdge = {
         ...mockWorkspaceData,
-        edges: [{
-          id: 'edge-1',
-          source: 'node-1',
-          target: 'node-1',
-          data: {
-            strength: 'invalid-strength'
-          }
-        }]
+        edges: [
+          {
+            id: 'edge-1',
+            source: 'node-1',
+            target: 'node-1',
+            data: {
+              strength: 'invalid-strength',
+            },
+          },
+        ],
       }
 
       vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(invalidEdge))
@@ -818,13 +835,15 @@ describe('Workspace Persistence Integration', () => {
     it('should validate timestamp formats', async () => {
       const invalidTimestamp = {
         ...mockWorkspaceData,
-        nodes: [{
-          ...mockWorkspaceData.nodes[0]!,
-          data: {
-            ...mockWorkspaceData.nodes[0]!.data,
-            createdAt: 'invalid-date'
-          }
-        }]
+        nodes: [
+          {
+            ...mockWorkspaceData.nodes[0]!,
+            data: {
+              ...mockWorkspaceData.nodes[0]!.data,
+              createdAt: 'invalid-date',
+            },
+          },
+        ],
       }
 
       vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(invalidTimestamp))
@@ -845,7 +864,7 @@ describe('Workspace Persistence Integration', () => {
       vi.mocked(fs.writeFile).mockRejectedValue(new Error('ENOSPC: no space left on device'))
 
       await expect(
-        fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData))
+        fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData)),
       ).rejects.toThrow('no space left on device')
     })
 
@@ -853,7 +872,7 @@ describe('Workspace Persistence Integration', () => {
       vi.mocked(fs.writeFile).mockRejectedValue(new Error('EACCES: permission denied'))
 
       await expect(
-        fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData))
+        fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData)),
       ).rejects.toThrow('permission denied')
     })
 
@@ -861,23 +880,21 @@ describe('Workspace Persistence Integration', () => {
       vi.mocked(fs.writeFile).mockRejectedValue(new Error('EBUSY: resource busy or locked'))
 
       await expect(
-        fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData))
+        fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData)),
       ).rejects.toThrow('busy or locked')
     })
 
     it('should handle corrupted file system', async () => {
       vi.mocked(fs.readFile).mockRejectedValue(new Error('EIO: i/o error'))
 
-      await expect(
-        fs.readFile('/test/workspace.json', 'utf8')
-      ).rejects.toThrow('i/o error')
+      await expect(fs.readFile('/test/workspace.json', 'utf8')).rejects.toThrow('i/o error')
     })
 
     it('should handle network drive disconnection', async () => {
       vi.mocked(fs.writeFile).mockRejectedValue(new Error('ENETUNREACH: network is unreachable'))
 
       await expect(
-        fs.writeFile('/network/workspace.json', JSON.stringify(mockWorkspaceData))
+        fs.writeFile('/network/workspace.json', JSON.stringify(mockWorkspaceData)),
       ).rejects.toThrow('network is unreachable')
     })
 
@@ -886,7 +903,7 @@ describe('Workspace Persistence Integration', () => {
       vi.mocked(fs.writeFile).mockRejectedValue(new Error('ENAMETOOLONG: file name too long'))
 
       await expect(
-        fs.writeFile(`/test/${longName}.json`, JSON.stringify(mockWorkspaceData))
+        fs.writeFile(`/test/${longName}.json`, JSON.stringify(mockWorkspaceData)),
       ).rejects.toThrow('name too long')
     })
 
@@ -894,7 +911,7 @@ describe('Workspace Persistence Integration', () => {
       vi.mocked(fs.writeFile).mockRejectedValue(new Error('EROFS: read-only file system'))
 
       await expect(
-        fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData))
+        fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData)),
       ).rejects.toThrow('read-only')
     })
 
@@ -902,7 +919,7 @@ describe('Workspace Persistence Integration', () => {
       vi.mocked(fs.writeFile).mockRejectedValue(new Error('EINTR: interrupted system call'))
 
       await expect(
-        fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData))
+        fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData)),
       ).rejects.toThrow('interrupted')
     })
 
@@ -910,7 +927,7 @@ describe('Workspace Persistence Integration', () => {
       vi.mocked(fs.writeFile).mockRejectedValue(new Error('EDQUOT: disk quota exceeded'))
 
       await expect(
-        fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData))
+        fs.writeFile('/test/workspace.json', JSON.stringify(mockWorkspaceData)),
       ).rejects.toThrow('quota exceeded')
     })
 

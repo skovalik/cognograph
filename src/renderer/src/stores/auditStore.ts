@@ -11,13 +11,9 @@
  * - Filtering, search, export, and undo support
  */
 
-import { create } from 'zustand'
+import type { AuditAction, AuditEventFilter, CanvasAuditEvent } from '@shared/types/bridge'
 import Dexie, { type Table } from 'dexie'
-import type {
-  CanvasAuditEvent,
-  AuditEventFilter,
-  AuditAction,
-} from '@shared/types/bridge'
+import { create } from 'zustand'
 
 // =============================================================================
 // IndexedDB Schema (Optimization #1: 50k+ events in IndexedDB)
@@ -47,10 +43,7 @@ function getDB(): AuditDatabase {
 // Filter Implementation
 // =============================================================================
 
-function applyFilter(
-  events: CanvasAuditEvent[],
-  filter: AuditEventFilter
-): CanvasAuditEvent[] {
+function applyFilter(events: CanvasAuditEvent[], filter: AuditEventFilter): CanvasAuditEvent[] {
   let result = events
 
   if (filter.actions?.length) {
@@ -67,9 +60,7 @@ function applyFilter(
 
   if (filter.dateRange) {
     result = result.filter(
-      (e) =>
-        e.timestamp >= filter.dateRange!.start &&
-        e.timestamp <= filter.dateRange!.end
+      (e) => e.timestamp >= filter.dateRange!.start && e.timestamp <= filter.dateRange!.end,
     )
   }
 
@@ -78,17 +69,14 @@ function applyFilter(
     result = result.filter(
       (e) =>
         e.targetTitle?.toLowerCase().includes(search) ||
-        (e.actor.type === 'agent' &&
-          e.actor.agentName.toLowerCase().includes(search)) ||
+        (e.actor.type === 'agent' && e.actor.agentName.toLowerCase().includes(search)) ||
         e.context.parentCommand?.toLowerCase().includes(search) ||
-        e.action.toLowerCase().includes(search)
+        e.action.toLowerCase().includes(search),
     )
   }
 
   if (filter.orchestrationId) {
-    result = result.filter(
-      (e) => e.context.orchestrationId === filter.orchestrationId
-    )
+    result = result.filter((e) => e.context.orchestrationId === filter.orchestrationId)
   }
 
   return result
@@ -124,10 +112,7 @@ function flushPendingEvents(): void {
   }
 
   const filteredEvents = applyFilter(newEvents, store.filter)
-  const totalCost = newEvents.reduce(
-    (sum, e) => sum + (e.context.costUSD || 0),
-    0
-  )
+  const totalCost = newEvents.reduce((sum, e) => sum + (e.context.costUSD || 0), 0)
 
   useAuditStore.setState({
     events: newEvents,
@@ -166,10 +151,7 @@ interface AuditStoreState {
   clearEvents: () => void
 
   // IndexedDB search (for older events)
-  searchAllEvents: (
-    filter: AuditEventFilter,
-    limit?: number
-  ) => Promise<CanvasAuditEvent[]>
+  searchAllEvents: (filter: AuditEventFilter, limit?: number) => Promise<CanvasAuditEvent[]>
 
   // Export
   exportEvents: (format: 'csv' | 'json') => string
@@ -209,10 +191,7 @@ export const useAuditStore = create<AuditStoreState>((set, get) => ({
         events,
         filteredEvents,
         eventCount: events.length,
-        totalCost: events.reduce(
-          (sum, e) => sum + (e.context.costUSD || 0),
-          0
-        ),
+        totalCost: events.reduce((sum, e) => sum + (e.context.costUSD || 0), 0),
       }
     })
   },
@@ -253,10 +232,7 @@ export const useAuditStore = create<AuditStoreState>((set, get) => ({
     try {
       // Delegate undo to main process via IPC
       if (window.api?.bridge?.undoAuditEvent) {
-        const result = await window.api.bridge.undoAuditEvent(
-          eventId,
-          event.undoData
-        )
+        const result = await window.api.bridge.undoAuditEvent(eventId, event.undoData)
         if (result.success) {
           // Log the undo action itself
           get().addEvent({
@@ -284,10 +260,7 @@ export const useAuditStore = create<AuditStoreState>((set, get) => ({
   },
 
   // Search across both in-memory and IndexedDB
-  searchAllEvents: async (
-    filter: AuditEventFilter,
-    limit = 100
-  ): Promise<CanvasAuditEvent[]> => {
+  searchAllEvents: async (filter: AuditEventFilter, limit = 100): Promise<CanvasAuditEvent[]> => {
     set({ isSearching: true })
 
     try {
@@ -299,10 +272,7 @@ export const useAuditStore = create<AuditStoreState>((set, get) => ({
       let query = database.events.orderBy('timestamp').reverse()
 
       if (filter.dateRange?.start) {
-        query = database.events
-          .where('timestamp')
-          .aboveOrEqual(filter.dateRange.start)
-          .reverse()
+        query = database.events.where('timestamp').aboveOrEqual(filter.dateRange.start).reverse()
       }
 
       const olderEvents = await query.limit(limit * 2).toArray()
@@ -369,9 +339,7 @@ export const useAuditStore = create<AuditStoreState>((set, get) => ({
 
     const csvContent = [
       headers.join(','),
-      ...rows.map((row) =>
-        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
-      ),
+      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
     ].join('\n')
 
     return csvContent
@@ -385,14 +353,10 @@ export const useAuditStore = create<AuditStoreState>((set, get) => ({
 export const selectAuditEvents = (state: AuditStoreState): CanvasAuditEvent[] =>
   state.filteredEvents
 
-export const selectAuditEventCount = (state: AuditStoreState): number =>
-  state.eventCount
+export const selectAuditEventCount = (state: AuditStoreState): number => state.eventCount
 
-export const selectAuditTotalCost = (state: AuditStoreState): number =>
-  state.totalCost
+export const selectAuditTotalCost = (state: AuditStoreState): number => state.totalCost
 
-export const selectAuditFilter = (state: AuditStoreState): AuditEventFilter =>
-  state.filter
+export const selectAuditFilter = (state: AuditStoreState): AuditEventFilter => state.filter
 
-export const selectIsSearching = (state: AuditStoreState): boolean =>
-  state.isSearching
+export const selectIsSearching = (state: AuditStoreState): boolean => state.isSearching

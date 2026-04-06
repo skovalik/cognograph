@@ -8,11 +8,11 @@
  * Templates are stored globally and available across all workspaces.
  */
 
-import { ipcMain, app } from 'electron'
-import { join } from 'path'
-import { promises as fs } from 'fs'
 import type { TemplateLibrary } from '@shared/types'
 import { DEFAULT_TEMPLATE_LIBRARY, SYSTEM_TEMPLATES } from '@shared/types'
+import { app, ipcMain } from 'electron'
+import { promises as fs } from 'fs'
+import { join } from 'path'
 
 const TEMPLATES_DIR = join(app.getPath('userData'), 'templates')
 const LIBRARY_FILE = join(TEMPLATES_DIR, 'library.json')
@@ -60,7 +60,7 @@ async function loadLibrary(): Promise<TemplateLibrary> {
     // Return default library with system templates if file doesn't exist or is invalid
     return {
       ...DEFAULT_TEMPLATE_LIBRARY,
-      templates: [...SYSTEM_TEMPLATES]
+      templates: [...SYSTEM_TEMPLATES],
     }
   }
 }

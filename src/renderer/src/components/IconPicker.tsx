@@ -8,42 +8,105 @@
  * Uses Lucide icons with categories for easy browsing.
  */
 
-import { memo, useState, useCallback, useMemo } from 'react'
 import {
+  AlertCircle,
+  AlertTriangle,
+  Archive,
+  Award,
+  Bell,
+  Bookmark,
+  Calendar,
+  Camera,
+  // Status
+  Check,
+  CheckCircle,
+  // Shapes
+  Circle,
+  // Time
+  Clock,
+  Cloud,
+  CloudSun,
+  // Code/Tech
+  Code,
+  Compass,
+  Cpu,
+  Crown,
+  Database,
+  Eye,
+  File,
+  Files,
+  // Documents
+  FileText,
+  Flag,
+  Flame,
+  Flower2,
+  Folder,
+  FolderOpen,
+  Gem,
+  Gift,
+  Globe,
+  Heart,
+  HelpCircle,
+  Hexagon,
+  History,
+  // Navigation
+  Home,
+  Hourglass,
+  Info,
+  Key,
+  Leaf,
+  // Objects
+  Lightbulb,
+  Lock,
+  type LucideIcon,
+  Mail,
+  Map,
+  Medal,
+  Megaphone,
+  MessageCircle,
+  // Communication
+  MessageSquare,
+  Mic,
+  Moon,
+  Music,
+  Navigation,
+  Octagon,
+  Pentagon,
+  Pin,
+  Rocket,
+  Search,
+  Server,
+  Shield,
+  // Misc
+  Sparkles,
+  Square,
+  // General
+  Star,
+  // Nature
+  Sun,
+  Tag,
+  Target,
+  Terminal,
+  Timer,
+  TreePine,
+  Triangle,
+  Trophy,
+  Unlock,
+  // People
+  User,
+  UserCheck,
+  UserPlus,
+  Users,
   // Default/Clear
   X,
-  // General
-  Star, Heart, Bookmark, Flag, Tag, Pin,
-  // Status
-  Check, CheckCircle, AlertCircle, AlertTriangle, Info, HelpCircle,
   // Actions
-  Zap, Rocket, Target, Trophy, Medal, Award,
-  // Objects
-  Lightbulb, Key, Lock, Unlock, Shield, Eye,
-  // Communication
-  MessageSquare, MessageCircle, Mail, Bell, Megaphone, Mic,
-  // Documents
-  FileText, File, Files, Folder, FolderOpen, Archive,
-  // Code/Tech
-  Code, Terminal, Cpu, Database, Server, Cloud,
-  // Navigation
-  Home, Map, Compass, Navigation, Globe, Search,
-  // Time
-  Clock, Calendar, Timer, History, Hourglass,
-  // People
-  User, Users, UserPlus, UserCheck, Crown,
-  // Nature
-  Sun, Moon, CloudSun, Leaf, Flower2, TreePine,
-  // Shapes
-  Circle, Square, Triangle, Hexagon, Octagon, Pentagon,
-  // Misc
-  Sparkles, Flame, Gem, Gift, Music, Camera,
-  type LucideIcon
+  Zap,
 } from 'lucide-react'
+import { memo, useCallback, useMemo, useState } from 'react'
 
 // Icon categories with their icons
 const ICON_CATEGORIES = {
-  'General': [
+  General: [
     { name: 'star', icon: Star },
     { name: 'heart', icon: Heart },
     { name: 'bookmark', icon: Bookmark },
@@ -51,7 +114,7 @@ const ICON_CATEGORIES = {
     { name: 'tag', icon: Tag },
     { name: 'pin', icon: Pin },
   ],
-  'Status': [
+  Status: [
     { name: 'check', icon: Check },
     { name: 'check-circle', icon: CheckCircle },
     { name: 'alert-circle', icon: AlertCircle },
@@ -59,7 +122,7 @@ const ICON_CATEGORIES = {
     { name: 'info', icon: Info },
     { name: 'help-circle', icon: HelpCircle },
   ],
-  'Actions': [
+  Actions: [
     { name: 'zap', icon: Zap },
     { name: 'rocket', icon: Rocket },
     { name: 'target', icon: Target },
@@ -67,7 +130,7 @@ const ICON_CATEGORIES = {
     { name: 'medal', icon: Medal },
     { name: 'award', icon: Award },
   ],
-  'Objects': [
+  Objects: [
     { name: 'lightbulb', icon: Lightbulb },
     { name: 'key', icon: Key },
     { name: 'lock', icon: Lock },
@@ -75,7 +138,7 @@ const ICON_CATEGORIES = {
     { name: 'shield', icon: Shield },
     { name: 'eye', icon: Eye },
   ],
-  'Communication': [
+  Communication: [
     { name: 'message-square', icon: MessageSquare },
     { name: 'message-circle', icon: MessageCircle },
     { name: 'mail', icon: Mail },
@@ -83,7 +146,7 @@ const ICON_CATEGORIES = {
     { name: 'megaphone', icon: Megaphone },
     { name: 'mic', icon: Mic },
   ],
-  'Documents': [
+  Documents: [
     { name: 'file-text', icon: FileText },
     { name: 'file', icon: File },
     { name: 'files', icon: Files },
@@ -99,7 +162,7 @@ const ICON_CATEGORIES = {
     { name: 'server', icon: Server },
     { name: 'cloud', icon: Cloud },
   ],
-  'Navigation': [
+  Navigation: [
     { name: 'home', icon: Home },
     { name: 'map', icon: Map },
     { name: 'compass', icon: Compass },
@@ -107,21 +170,21 @@ const ICON_CATEGORIES = {
     { name: 'globe', icon: Globe },
     { name: 'search', icon: Search },
   ],
-  'Time': [
+  Time: [
     { name: 'clock', icon: Clock },
     { name: 'calendar', icon: Calendar },
     { name: 'timer', icon: Timer },
     { name: 'history', icon: History },
     { name: 'hourglass', icon: Hourglass },
   ],
-  'People': [
+  People: [
     { name: 'user', icon: User },
     { name: 'users', icon: Users },
     { name: 'user-plus', icon: UserPlus },
     { name: 'user-check', icon: UserCheck },
     { name: 'crown', icon: Crown },
   ],
-  'Nature': [
+  Nature: [
     { name: 'sun', icon: Sun },
     { name: 'moon', icon: Moon },
     { name: 'cloud-sun', icon: CloudSun },
@@ -129,7 +192,7 @@ const ICON_CATEGORIES = {
     { name: 'flower', icon: Flower2 },
     { name: 'tree', icon: TreePine },
   ],
-  'Shapes': [
+  Shapes: [
     { name: 'circle', icon: Circle },
     { name: 'square', icon: Square },
     { name: 'triangle', icon: Triangle },
@@ -137,7 +200,7 @@ const ICON_CATEGORIES = {
     { name: 'octagon', icon: Octagon },
     { name: 'pentagon', icon: Pentagon },
   ],
-  'Misc': [
+  Misc: [
     { name: 'sparkles', icon: Sparkles },
     { name: 'flame', icon: Flame },
     { name: 'gem', icon: Gem },
@@ -149,7 +212,7 @@ const ICON_CATEGORIES = {
 
 // Map icon names to components for rendering
 const ICON_MAP: Record<string, LucideIcon> = {}
-Object.values(ICON_CATEGORIES).forEach(icons => {
+Object.values(ICON_CATEGORIES).forEach((icons) => {
   icons.forEach(({ name, icon }) => {
     ICON_MAP[name] = icon
   })
@@ -164,11 +227,7 @@ interface IconPickerProps {
   color?: string // Icon color
 }
 
-function IconPickerComponent({
-  value,
-  onChange,
-  color = '#6b7280'
-}: IconPickerProps): JSX.Element {
+function IconPickerComponent({ value, onChange, color = '#6b7280' }: IconPickerProps): JSX.Element {
   const [isExpanded, setIsExpanded] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -185,25 +244,27 @@ function IconPickerComponent({
     }
 
     const term = searchTerm.toLowerCase()
-    const filtered: Record<string, typeof ICON_CATEGORIES[keyof typeof ICON_CATEGORIES]> = {}
+    const filtered: Record<string, (typeof ICON_CATEGORIES)[keyof typeof ICON_CATEGORIES]> = {}
 
     Object.entries(ICON_CATEGORIES).forEach(([category, icons]) => {
-      const matchedIcons = icons.filter(({ name }) =>
-        name.toLowerCase().includes(term)
-      )
+      const matchedIcons = icons.filter(({ name }) => name.toLowerCase().includes(term))
       if (matchedIcons.length > 0) {
-        filtered[category] = matchedIcons as unknown as typeof ICON_CATEGORIES[keyof typeof ICON_CATEGORIES]
+        filtered[category] =
+          matchedIcons as unknown as (typeof ICON_CATEGORIES)[keyof typeof ICON_CATEGORIES]
       }
     })
 
     return filtered
   }, [searchTerm, selectedCategory])
 
-  const handleSelect = useCallback((iconName: string) => {
-    onChange(iconName)
-    setIsExpanded(false)
-    setSearchTerm('')
-  }, [onChange])
+  const handleSelect = useCallback(
+    (iconName: string) => {
+      onChange(iconName)
+      setIsExpanded(false)
+      setSearchTerm('')
+    },
+    [onChange],
+  )
 
   const handleClear = useCallback(() => {
     onChange(undefined)
@@ -243,9 +304,7 @@ function IconPickerComponent({
 
       {/* Dropdown picker */}
       {isExpanded && (
-        <div
-          className="absolute z-50 top-full left-0 mt-1 gui-panel glass-fluid gui-border rounded-lg shadow-lg p-2 w-64"
-        >
+        <div className="absolute z-50 top-full left-0 mt-1 gui-panel glass-fluid gui-border rounded-lg shadow-lg p-2 w-64">
           {/* Search */}
           <input
             type="text"
@@ -296,13 +355,14 @@ function IconPickerComponent({
                       key={name}
                       onClick={() => handleSelect(name)}
                       className={`w-7 h-7 rounded flex items-center justify-center transition-all ${
-                        value === name
-                          ? 'gui-ring-active'
-                          : 'gui-button'
+                        value === name ? 'gui-ring-active' : 'gui-button'
                       }`}
                       title={name}
                     >
-                      <Icon className="w-4 h-4" style={{ color: value === name ? color : undefined }} />
+                      <Icon
+                        className="w-4 h-4"
+                        style={{ color: value === name ? color : undefined }}
+                      />
                     </button>
                   ))}
                 </div>
@@ -310,9 +370,7 @@ function IconPickerComponent({
             ))}
 
             {Object.keys(filteredIcons).length === 0 && (
-              <div className="text-center py-4 gui-text-secondary text-xs">
-                No icons found
-              </div>
+              <div className="text-center py-4 gui-text-secondary text-xs">No icons found</div>
             )}
           </div>
 

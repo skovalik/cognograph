@@ -9,16 +9,16 @@
  * Provides batch approve/deny controls when multiple requests are pending.
  */
 
+import { Layers, ShieldCheck, ShieldX } from 'lucide-react'
 import { memo, useCallback } from 'react'
-import { ShieldCheck, ShieldX, Layers } from 'lucide-react'
-import { PermissionCard } from './PermissionCard'
 import {
-  usePermissionStore,
-  usePendingRequests,
-  useTotalQueuedCount,
+  type PermissionDuration,
   type PermissionRequest,
-  type PermissionDuration
+  usePendingRequests,
+  usePermissionStore,
+  useTotalQueuedCount,
 } from '../../stores/permissionStore'
+import { PermissionCard } from './PermissionCard'
 
 // ---------------------------------------------------------------------------
 // Component
@@ -39,14 +39,14 @@ export const PermissionQueue = memo(function PermissionQueue() {
     (request: PermissionRequest, duration: PermissionDuration) => {
       grantPermission(request, duration)
     },
-    [grantPermission]
+    [grantPermission],
   )
 
   const handleDeny = useCallback(
     (requestId: string) => {
       denyPermission(requestId)
     },
-    [denyPermission]
+    [denyPermission],
   )
 
   const handleApproveAll = useCallback(() => {

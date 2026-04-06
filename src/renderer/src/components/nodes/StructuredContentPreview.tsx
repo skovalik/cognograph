@@ -35,10 +35,17 @@ function extractPreview(html: string): PreviewData {
   const headingMatch = html.match(/<(h[1-3])[^>]*>(.*?)<\/\1>/i)
   if (headingMatch) {
     headingLevel = parseInt(headingMatch[1][1]) as 1 | 2 | 3
-    heading = headingMatch[2].replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()
+    heading = headingMatch[2]
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .trim()
   }
 
-  const body = html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
+  const body = html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
   const wordCount = body ? body.split(/\s+/).length : 0
 
   return { heading, headingLevel, wordCount, body }
@@ -47,10 +54,10 @@ function extractPreview(html: string): PreviewData {
 /** Heading font sizes by level and zoom */
 const HEADING_SIZE: Record<ZoomLevel, [number, number, number]> = {
   'ultra-far': [10, 9, 8],
-  'far':       [12, 11, 10],
-  'mid':       [16, 14, 13],
-  'close':     [20, 18, 16],
-  'ultra-close': [20, 18, 16]
+  far: [12, 11, 10],
+  mid: [16, 14, 13],
+  close: [20, 18, 16],
+  'ultra-close': [20, 18, 16],
 }
 
 /**
@@ -61,7 +68,12 @@ const HEADING_SIZE: Record<ZoomLevel, [number, number, number]> = {
  * Line height in canvas-space: 5px bar + 6px gap = 11px per line (4+5=9px at ultra-far).
  * At 25% zoom this renders as ~2.75px per line on screen — visible as texture.
  */
-function SkeletonLines({ wordCount, heading, headingLevel, zoomLevel }: {
+function SkeletonLines({
+  wordCount,
+  heading,
+  headingLevel,
+  zoomLevel,
+}: {
   wordCount: number
   heading: string | null
   headingLevel: 1 | 2 | 3
@@ -85,7 +97,7 @@ function SkeletonLines({ wordCount, heading, headingLevel, zoomLevel }: {
             color: 'var(--node-text-primary)',
             lineHeight: 1.15,
             marginBottom: '3px',
-            wordBreak: 'break-word'
+            wordBreak: 'break-word',
           }}
         >
           {heading}
@@ -104,7 +116,7 @@ function SkeletonLines({ wordCount, heading, headingLevel, zoomLevel }: {
           opacity: 0.12,
           borderRadius: '1px',
           maskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)'
+          WebkitMaskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)',
         }}
       />
     </div>
@@ -114,7 +126,12 @@ function SkeletonLines({ wordCount, heading, headingLevel, zoomLevel }: {
 /**
  * Mid-zoom readable preview: actual text with heading hierarchy.
  */
-function ReadablePreview({ heading, headingLevel, body, zoomLevel }: {
+function ReadablePreview({
+  heading,
+  headingLevel,
+  body,
+  zoomLevel,
+}: {
   heading: string | null
   headingLevel: 1 | 2 | 3
   body: string
@@ -132,7 +149,7 @@ function ReadablePreview({ heading, headingLevel, body, zoomLevel }: {
             color: 'var(--node-text-primary)',
             lineHeight: 1.2,
             marginBottom: '2px',
-            wordBreak: 'break-word'
+            wordBreak: 'break-word',
           }}
         >
           {heading}
@@ -144,7 +161,7 @@ function ReadablePreview({ heading, headingLevel, body, zoomLevel }: {
           lineHeight: 1.3,
           color: 'var(--node-text-primary)',
           opacity: 0.8,
-          wordBreak: 'break-word'
+          wordBreak: 'break-word',
         }}
       >
         {body}
@@ -153,12 +170,25 @@ function ReadablePreview({ heading, headingLevel, body, zoomLevel }: {
   )
 }
 
-function StructuredContentPreviewComponent({ content, zoomLevel }: StructuredContentPreviewProps): JSX.Element | null {
-  const { heading, headingLevel, wordCount, body } = useMemo(() => extractPreview(content), [content])
+function StructuredContentPreviewComponent({
+  content,
+  zoomLevel,
+}: StructuredContentPreviewProps): JSX.Element | null {
+  const { heading, headingLevel, wordCount, body } = useMemo(
+    () => extractPreview(content),
+    [content],
+  )
 
   if (!body) {
     return (
-      <div style={{ padding: '2px 4px', fontSize: '8px', color: 'var(--node-text-muted)', fontStyle: 'italic' }}>
+      <div
+        style={{
+          padding: '2px 4px',
+          fontSize: '8px',
+          color: 'var(--node-text-muted)',
+          fontStyle: 'italic',
+        }}
+      >
         Empty
       </div>
     )
@@ -166,11 +196,25 @@ function StructuredContentPreviewComponent({ content, zoomLevel }: StructuredCon
 
   // Far/ultra-far: skeleton lines (abstract density representation)
   if (zoomLevel === 'far' || zoomLevel === 'ultra-far') {
-    return <SkeletonLines wordCount={wordCount} heading={heading} headingLevel={headingLevel} zoomLevel={zoomLevel} />
+    return (
+      <SkeletonLines
+        wordCount={wordCount}
+        heading={heading}
+        headingLevel={headingLevel}
+        zoomLevel={zoomLevel}
+      />
+    )
   }
 
   // Mid: readable text preview
-  return <ReadablePreview heading={heading} headingLevel={headingLevel} body={body} zoomLevel={zoomLevel} />
+  return (
+    <ReadablePreview
+      heading={heading}
+      headingLevel={headingLevel}
+      body={body}
+      zoomLevel={zoomLevel}
+    />
+  )
 }
 
 export const StructuredContentPreview = memo(StructuredContentPreviewComponent)

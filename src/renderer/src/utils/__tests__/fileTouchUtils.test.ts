@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
-import {
-  generateFileTouchEdges,
-  detectFileConflicts,
-  getFileTouchEdgeStyle,
-  isFileTouchEdge
-} from '../fileTouchUtils'
+import { describe, expect, it } from 'vitest'
 import type { FileTouchRecord } from '../fileTouchTypes'
+import {
+  detectFileConflicts,
+  generateFileTouchEdges,
+  getFileTouchEdgeStyle,
+  isFileTouchEdge,
+} from '../fileTouchUtils'
 
 describe('generateFileTouchEdges', () => {
   it('creates edge for each touch record with matching artifact node', () => {
@@ -18,8 +18,8 @@ describe('generateFileTouchEdges', () => {
         sessionId: 's1',
         nodeId: 'conv-1',
         accentColor: '#FF6B35',
-        lastTouchedAt: 1000
-      }
+        lastTouchedAt: 1000,
+      },
     ]
     const artifactMap = new Map([['/src/app.ts', 'art-1']])
     const edges = generateFileTouchEdges(records, artifactMap)
@@ -37,8 +37,8 @@ describe('generateFileTouchEdges', () => {
         sessionId: 's1',
         nodeId: 'conv-1',
         accentColor: '#FF6B35',
-        lastTouchedAt: 1000
-      }
+        lastTouchedAt: 1000,
+      },
     ]
     const artifactMap = new Map<string, string>()
     const edges = generateFileTouchEdges(records, artifactMap)
@@ -52,19 +52,19 @@ describe('generateFileTouchEdges', () => {
         sessionId: 's1',
         nodeId: 'conv-1',
         accentColor: '#FF6B35',
-        lastTouchedAt: 1000
+        lastTouchedAt: 1000,
       },
       {
         filePath: '/src/b.ts',
         sessionId: 's2',
         nodeId: 'conv-2',
         accentColor: '#4ECDC4',
-        lastTouchedAt: 2000
-      }
+        lastTouchedAt: 2000,
+      },
     ]
     const artifactMap = new Map([
       ['/src/a.ts', 'art-a'],
-      ['/src/b.ts', 'art-b']
+      ['/src/b.ts', 'art-b'],
     ])
     const edges = generateFileTouchEdges(records, artifactMap)
     expect(edges).toHaveLength(2)
@@ -82,8 +82,8 @@ describe('generateFileTouchEdges', () => {
         sessionId: 's1',
         nodeId: 'conv-1',
         accentColor: '#FF6B35',
-        lastTouchedAt: 1000
-      }
+        lastTouchedAt: 1000,
+      },
     ]
     const artifactMap = new Map([['/src/app.ts', 'art-1']])
     const edges = generateFileTouchEdges(records, artifactMap)
@@ -97,8 +97,8 @@ describe('generateFileTouchEdges', () => {
         sessionId: 's1',
         nodeId: 'conv-1',
         accentColor: '#FF6B35',
-        lastTouchedAt: 1000
-      }
+        lastTouchedAt: 1000,
+      },
     ]
     const artifactMap = new Map([['/src/app.ts', 'art-1']])
     const edges = generateFileTouchEdges(records, artifactMap)
@@ -115,15 +115,15 @@ describe('detectFileConflicts', () => {
         sessionId: 's1',
         nodeId: 'conv-1',
         accentColor: '#FF6B35',
-        lastTouchedAt: 1000
+        lastTouchedAt: 1000,
       },
       {
         filePath: '/src/shared.ts',
         sessionId: 's2',
         nodeId: 'conv-2',
         accentColor: '#4ECDC4',
-        lastTouchedAt: 2000
-      }
+        lastTouchedAt: 2000,
+      },
     ]
     const conflicts = detectFileConflicts(records)
     expect(conflicts).toHaveLength(1)
@@ -138,15 +138,15 @@ describe('detectFileConflicts', () => {
         sessionId: 's1',
         nodeId: 'conv-1',
         accentColor: '#FF6B35',
-        lastTouchedAt: 1000
+        lastTouchedAt: 1000,
       },
       {
         filePath: '/src/b.ts',
         sessionId: 's2',
         nodeId: 'conv-2',
         accentColor: '#4ECDC4',
-        lastTouchedAt: 2000
-      }
+        lastTouchedAt: 2000,
+      },
     ]
     const conflicts = detectFileConflicts(records)
     expect(conflicts).toHaveLength(0)
@@ -159,15 +159,15 @@ describe('detectFileConflicts', () => {
         sessionId: 's1',
         nodeId: 'conv-1',
         accentColor: '#FF6B35',
-        lastTouchedAt: 1000
+        lastTouchedAt: 1000,
       },
       {
         filePath: '/src/app.ts',
         sessionId: 's1',
         nodeId: 'conv-1',
         accentColor: '#FF6B35',
-        lastTouchedAt: 2000
-      }
+        lastTouchedAt: 2000,
+      },
     ]
     const conflicts = detectFileConflicts(records)
     expect(conflicts).toHaveLength(0) // Only 1 unique session
@@ -180,22 +180,22 @@ describe('detectFileConflicts', () => {
         sessionId: 's1',
         nodeId: 'conv-1',
         accentColor: '#FF6B35',
-        lastTouchedAt: 1000
+        lastTouchedAt: 1000,
       },
       {
         filePath: '/src/shared.ts',
         sessionId: 's2',
         nodeId: 'conv-2',
         accentColor: '#4ECDC4',
-        lastTouchedAt: 2000
+        lastTouchedAt: 2000,
       },
       {
         filePath: '/src/shared.ts',
         sessionId: 's3',
         nodeId: 'conv-3',
         accentColor: '#95E1D3',
-        lastTouchedAt: 3000
-      }
+        lastTouchedAt: 3000,
+      },
     ]
     const conflicts = detectFileConflicts(records)
     expect(conflicts).toHaveLength(1)
@@ -213,29 +213,29 @@ describe('detectFileConflicts', () => {
         sessionId: 's1',
         nodeId: 'conv-1',
         accentColor: '#FF6B35',
-        lastTouchedAt: 1000
+        lastTouchedAt: 1000,
       },
       {
         filePath: '/src/a.ts',
         sessionId: 's2',
         nodeId: 'conv-2',
         accentColor: '#4ECDC4',
-        lastTouchedAt: 2000
+        lastTouchedAt: 2000,
       },
       {
         filePath: '/src/b.ts',
         sessionId: 's1',
         nodeId: 'conv-1',
         accentColor: '#FF6B35',
-        lastTouchedAt: 3000
+        lastTouchedAt: 3000,
       },
       {
         filePath: '/src/b.ts',
         sessionId: 's3',
         nodeId: 'conv-3',
         accentColor: '#95E1D3',
-        lastTouchedAt: 4000
-      }
+        lastTouchedAt: 4000,
+      },
     ]
     const conflicts = detectFileConflicts(records)
     expect(conflicts).toHaveLength(2)
@@ -266,8 +266,8 @@ describe('isFileTouchEdge', () => {
         sessionAccentColor: '#FF6B35',
         visible: true,
         filePath: '/a.ts',
-        sessionId: 's1'
-      })
+        sessionId: 's1',
+      }),
     ).toBe(true)
   })
 
@@ -298,8 +298,8 @@ describe('isFileTouchEdge', () => {
         sessionAccentColor: '#FF6B35',
         visible: true,
         filePath: '/a.ts',
-        sessionId: 's1'
-      })
+        sessionId: 's1',
+      }),
     ).toBe(false)
   })
 })

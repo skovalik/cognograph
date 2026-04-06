@@ -8,9 +8,9 @@
 // Agent types, workspace node defaults, type guard functions
 // =============================================================================
 
+import type { ActionNodeData } from '../actionTypes'
 import type { ContextMetadata } from './common'
 import type { ExtractionSettings } from './extraction'
-import type { ActionNodeData } from '../actionTypes'
 
 // Re-export for convenience (these are used by NodeData union consumers)
 export type { ActionNodeData } from '../actionTypes'
@@ -50,26 +50,26 @@ export interface ConversationNodeData extends ContextMetadata {
 
   // Terminal fields (only meaningful when mode === 'terminal')
   terminal?: {
-    sessionId: string               // CLAUDE_SESSION_ID
+    sessionId: string // CLAUDE_SESSION_ID
     origin: 'embedded' | 'external'
     workingDirectory: string
     model?: string
-    shell?: TerminalShell           // Which shell to spawn (default: 'claude-code')
+    shell?: TerminalShell // Which shell to spawn (default: 'claude-code')
     terminalState: 'running' | 'idle' | 'exited'
     exitCode?: number
-    startedAt: number               // Unix ms
+    startedAt: number // Unix ms
     lastActivityAt: number
-    accentColor: string             // From SESSION_ACCENT_COLORS palette
-    source: 'local' | 'cloud'      // local agent vs Fly Machine
+    accentColor: string // From SESSION_ACCENT_COLORS palette
+    source: 'local' | 'cloud' // local agent vs Fly Machine
   }
 
   // Agent-specific fields (only meaningful when mode === 'agent')
-  agentPreset?: string               // Preset template ID (e.g., 'canvas', 'code', 'research', 'custom')
-  agentMemory?: AgentMemory          // Persistent memory across runs
-  agentStatus?: AgentStatus          // Current lifecycle state
-  lastRunAt?: string                 // ISO timestamp of last agent run
-  totalTokensUsed?: number           // Cumulative tokens across all runs
-  totalCostUSD?: number              // Cumulative estimated cost (USD)
+  agentPreset?: string // Preset template ID (e.g., 'canvas', 'code', 'research', 'custom')
+  agentMemory?: AgentMemory // Persistent memory across runs
+  agentStatus?: AgentStatus // Current lifecycle state
+  lastRunAt?: string // ISO timestamp of last agent run
+  totalTokensUsed?: number // Cumulative tokens across all runs
+  totalCostUSD?: number // Cumulative estimated cost (USD)
   agentRunHistory?: AgentRunSummary[] // Last N run summaries (capped at 20)
 
   [key: string]: unknown
@@ -82,9 +82,9 @@ export interface ProjectNodeData extends ContextMetadata {
   collapsed: boolean
   childNodeIds: string[]
   color: string
-  folderPath?: string          // Platform-native absolute path to project directory
-  fileListVisible?: boolean    // File listing toggle (undefined = auto: <=20 visible, >20 collapsed)
-  fileFilter?: string          // Comma-separated extensions: ".tsx,.ts,.js"
+  folderPath?: string // Platform-native absolute path to project directory
+  fileListVisible?: boolean // File listing toggle (undefined = auto: <=20 visible, >20 collapsed)
+  fileFilter?: string // Comma-separated extensions: ".tsx,.ts,.js"
   width?: number
   height?: number
   createdAt: number
@@ -93,7 +93,17 @@ export interface ProjectNodeData extends ContextMetadata {
   [key: string]: unknown
 }
 
-export type NoteMode = 'general' | 'persona' | 'reference' | 'examples' | 'background' | 'design-tokens' | 'page' | 'component' | 'content-model' | 'wp-config'
+export type NoteMode =
+  | 'general'
+  | 'persona'
+  | 'reference'
+  | 'examples'
+  | 'background'
+  | 'design-tokens'
+  | 'page'
+  | 'component'
+  | 'content-model'
+  | 'wp-config'
 
 // -----------------------------------------------------------------------------
 // Site Architecture Types (Page & Component note modes)
@@ -164,10 +174,24 @@ export interface ComponentNoteFields {
 // -----------------------------------------------------------------------------
 
 export type ACFFieldType =
-  | 'text' | 'textarea' | 'wysiwyg' | 'number' | 'url' | 'email'
-  | 'image' | 'gallery' | 'select' | 'checkbox' | 'radio'
-  | 'repeater' | 'flexible_content' | 'relationship'
-  | 'date_picker' | 'color_picker' | 'true_false' | 'file'
+  | 'text'
+  | 'textarea'
+  | 'wysiwyg'
+  | 'number'
+  | 'url'
+  | 'email'
+  | 'image'
+  | 'gallery'
+  | 'select'
+  | 'checkbox'
+  | 'radio'
+  | 'repeater'
+  | 'flexible_content'
+  | 'relationship'
+  | 'date_picker'
+  | 'color_picker'
+  | 'true_false'
+  | 'file'
 
 export interface ACFField {
   name: string
@@ -348,13 +372,13 @@ export interface ArtifactNodeData extends ContextMetadata {
   color?: string // Custom node color
 
   // Preview fields (optional — only used when previewEnabled is true)
-  previewEnabled?: boolean          // When true, renders iframe instead of code editor
-  previewUrl?: string               // e.g., "http://localhost:3000"
-  previewPath?: string              // e.g., "/about" — appended to URL
-  previewScale?: number             // 0.5 to 1.0, default 1.0
+  previewEnabled?: boolean // When true, renders iframe instead of code editor
+  previewUrl?: string // e.g., "http://localhost:3000"
+  previewPath?: string // e.g., "/about" — appended to URL
+  previewScale?: number // 0.5 to 1.0, default 1.0
   previewViewport?: PreviewViewport // viewport preset: 'desktop' | 'tablet' | 'mobile'
-  previewAutoRefresh?: boolean      // auto-refresh on content change
-  previewRefreshInterval?: number   // ms, default 2000 (minimum 1000, 0 = disabled)
+  previewAutoRefresh?: boolean // auto-refresh on content change
+  previewRefreshInterval?: number // ms, default 2000 (minimum 1000, 0 = disabled)
 
   // Standard fields
   parentId?: string
@@ -365,9 +389,9 @@ export interface ArtifactNodeData extends ContextMetadata {
   metadata?: ArtifactMediaMetadata
 
   // Folder reference (coexists with content — shows sibling files)
-  folderPath?: string          // Platform-native absolute path to referenced directory
-  fileListVisible?: boolean    // File listing toggle
-  fileFilter?: string          // Comma-separated extensions
+  folderPath?: string // Platform-native absolute path to referenced directory
+  fileListVisible?: boolean // File listing toggle
+  fileFilter?: string // Comma-separated extensions
 
   [key: string]: unknown
 }
@@ -419,7 +443,7 @@ export interface AgentSettings {
   canReadFiles: boolean
   canWriteFiles: boolean
   canExecuteCommands: boolean
-  allowedPaths: string[]    // filesystem sandbox — empty = no access
+  allowedPaths: string[] // filesystem sandbox — empty = no access
   allowedCommands: string[] // command whitelist — empty = all allowed (with canExecuteCommands)
 
   // MCP client (Path C) — server config IDs to expose to this agent
@@ -481,34 +505,34 @@ export type AgentStatus = 'idle' | 'running' | 'paused' | 'error' | 'completed'
 export const DEFAULT_AGENT_STATUS: AgentStatus = 'idle'
 
 export interface MemoryEntry {
-  key: string           // Lookup key (e.g., 'project_root', 'coding_style')
-  value: string         // Content (free-form text)
-  createdAt: string     // ISO timestamp
-  updatedAt?: string    // ISO timestamp of last update
-  source: 'agent' | 'user'  // Who created/modified this entry
+  key: string // Lookup key (e.g., 'project_root', 'coding_style')
+  value: string // Content (free-form text)
+  createdAt: string // ISO timestamp
+  updatedAt?: string // ISO timestamp of last update
+  source: 'agent' | 'user' // Who created/modified this entry
 }
 
 export interface AgentMemory {
   entries: MemoryEntry[]
-  maxEntries: number       // Max number of entries (default: 50)
-  maxKeyLength: number     // Max characters per key (default: 100)
-  maxValueLength: number   // Max characters per value (default: 10000)
+  maxEntries: number // Max number of entries (default: 50)
+  maxKeyLength: number // Max characters per key (default: 100)
+  maxValueLength: number // Max characters per value (default: 10000)
 }
 
 export const DEFAULT_AGENT_MEMORY: AgentMemory = {
   entries: [],
   maxEntries: 50,
   maxKeyLength: 100,
-  maxValueLength: 10000
+  maxValueLength: 10000,
 }
 
 export interface AgentRunSummary {
   runId: string
-  startedAt: string       // ISO timestamp
-  completedAt?: string    // ISO timestamp
+  startedAt: string // ISO timestamp
+  completedAt?: string // ISO timestamp
   status: 'completed' | 'error' | 'cancelled' | 'paused'
   toolCallCount: number
-  tokensUsed: number      // Backwards compat: inputTokens + outputTokens
+  tokensUsed: number // Backwards compat: inputTokens + outputTokens
   costUSD: number
   // New token tracking fields (Phase 2 P0)
   inputTokens: number
@@ -516,7 +540,7 @@ export interface AgentRunSummary {
   cacheCreationTokens?: number
   cacheReadTokens?: number
   errorMessage?: string
-  summary?: string        // Agent-generated summary of what it did
+  summary?: string // Agent-generated summary of what it did
 }
 
 export const DEFAULT_AGENT_NODE_EXTENSIONS = {
@@ -526,7 +550,7 @@ export const DEFAULT_AGENT_NODE_EXTENSIONS = {
   lastRunAt: undefined,
   totalTokensUsed: 0,
   totalCostUSD: 0,
-  agentRunHistory: [] as AgentRunSummary[]
+  agentRunHistory: [] as AgentRunSummary[],
 }
 
 // -----------------------------------------------------------------------------
@@ -537,11 +561,11 @@ export interface AgentPreset {
   id: string
   name: string
   description: string
-  icon: string                         // Lucide icon name
-  systemPromptPrefix?: string          // Prepended BEFORE the default agent system prompt
+  icon: string // Lucide icon name
+  systemPromptPrefix?: string // Prepended BEFORE the default agent system prompt
   agentSettings: Partial<AgentSettings> // Overrides — merged as { ...DEFAULT_AGENT_SETTINGS, ...preset.agentSettings }
-  memorySeeds?: MemoryEntry[]          // Pre-populated memory entries
-  suggestedConnections?: string[]      // Node types to suggest connecting (e.g., ['artifact', 'note'])
+  memorySeeds?: MemoryEntry[] // Pre-populated memory entries
+  suggestedConnections?: string[] // Node types to suggest connecting (e.g., ['artifact', 'note'])
 }
 
 export interface WorkspaceContextRules {
@@ -595,14 +619,14 @@ export interface WorkspaceNodeData extends ContextMetadata {
 export const DEFAULT_WORKSPACE_LLM_SETTINGS: WorkspaceLLMSettings = {
   provider: 'anthropic',
   temperature: 0.7,
-  maxTokens: 4096
+  maxTokens: 4096,
 }
 
 export const DEFAULT_WORKSPACE_CONTEXT_RULES: WorkspaceContextRules = {
   maxTokens: 8000,
   maxDepth: 2,
   traversalMode: 'all',
-  includeDisabledNodes: false
+  includeDisabledNodes: false,
 }
 
 export interface TextNodeData extends ContextMetadata {

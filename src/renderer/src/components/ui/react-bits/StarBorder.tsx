@@ -11,7 +11,7 @@
  * When the user prefers reduced motion, renders a static bordered container.
  */
 
-import { type ReactNode, type CSSProperties, type ElementType } from 'react'
+import type { CSSProperties, ElementType, ReactNode } from 'react'
 import { useReducedMotion } from '../../../hooks/useReducedMotion'
 import { cn } from '../../../lib/utils'
 
@@ -68,8 +68,7 @@ export function StarBorder({
 
   ensureKeyframes()
 
-  const resolvedBorderRadius =
-    typeof borderRadius === 'number' ? `${borderRadius}px` : borderRadius
+  const resolvedBorderRadius = typeof borderRadius === 'number' ? `${borderRadius}px` : borderRadius
 
   // Render static border if animation disabled or user prefers reduced motion
   if (!animate || prefersReducedMotion) {

@@ -4,24 +4,44 @@
 // ContentModelBody -- Renders inside NoteNode when noteMode === 'content-model'
 // Displays WordPress CPT definition: post type, fields, taxonomies, and GraphQL names
 
-import { memo, useCallback, useState } from 'react'
-import { FileJson, Plus, X, ChevronDown, ChevronRight } from 'lucide-react'
 import type {
-  ContentModelFields,
-  ACFFieldGroup,
   ACFField,
+  ACFFieldGroup,
   ACFFieldType,
-  TaxonomyRef,
+  ContentModelFields,
   ContentModelSupport,
+  TaxonomyRef,
 } from '@shared/types'
+import { ChevronDown, ChevronRight, FileJson, Plus, X } from 'lucide-react'
+import { memo, useCallback, useState } from 'react'
 
-const SUPPORT_OPTIONS: ContentModelSupport[] = ['title', 'editor', 'thumbnail', 'excerpt', 'custom-fields']
+const SUPPORT_OPTIONS: ContentModelSupport[] = [
+  'title',
+  'editor',
+  'thumbnail',
+  'excerpt',
+  'custom-fields',
+]
 
 const ACF_FIELD_TYPES: ACFFieldType[] = [
-  'text', 'textarea', 'wysiwyg', 'number', 'url', 'email',
-  'image', 'gallery', 'select', 'checkbox', 'radio',
-  'repeater', 'flexible_content', 'relationship',
-  'date_picker', 'color_picker', 'true_false', 'file',
+  'text',
+  'textarea',
+  'wysiwyg',
+  'number',
+  'url',
+  'email',
+  'image',
+  'gallery',
+  'select',
+  'checkbox',
+  'radio',
+  'repeater',
+  'flexible_content',
+  'relationship',
+  'date_picker',
+  'color_picker',
+  'true_false',
+  'file',
 ]
 
 interface ContentModelBodyProps {
@@ -42,7 +62,11 @@ function getDefaultContentModel(): ContentModelFields {
   }
 }
 
-function ContentModelBodyComponent({ contentModel, onChange, selected }: ContentModelBodyProps): JSX.Element {
+function ContentModelBodyComponent({
+  contentModel,
+  onChange,
+  selected,
+}: ContentModelBodyProps): JSX.Element {
   const data = contentModel || getDefaultContentModel()
   const [fieldsExpanded, setFieldsExpanded] = useState(false)
   const [showAddField, setShowAddField] = useState(false)
@@ -70,11 +94,10 @@ function ContentModelBodyComponent({ contentModel, onChange, selected }: Content
       required: false,
     }
     // Add to first group, or create a default group
-    const groups = data.fieldGroups.length > 0
-      ? data.fieldGroups.map((g, i) =>
-        i === 0 ? { ...g, fields: [...g.fields, field] } : g
-      )
-      : [{ name: 'default', label: 'Fields', fields: [field] }]
+    const groups =
+      data.fieldGroups.length > 0
+        ? data.fieldGroups.map((g, i) => (i === 0 ? { ...g, fields: [...g.fields, field] } : g))
+        : [{ name: 'default', label: 'Fields', fields: [field] }]
     updateField('fieldGroups', groups)
     setNewFieldName('')
     setNewFieldType('text')
@@ -83,11 +106,11 @@ function ContentModelBodyComponent({ contentModel, onChange, selected }: Content
 
   const handleRemoveField = useCallback(
     (groupIndex: number, fieldIndex: number) => {
-      const groups = data.fieldGroups.map((g, gi) =>
-        gi === groupIndex
-          ? { ...g, fields: g.fields.filter((_, fi) => fi !== fieldIndex) }
-          : g
-      ).filter((g) => g.fields.length > 0)
+      const groups = data.fieldGroups
+        .map((g, gi) =>
+          gi === groupIndex ? { ...g, fields: g.fields.filter((_, fi) => fi !== fieldIndex) } : g,
+        )
+        .filter((g) => g.fields.length > 0)
       updateField('fieldGroups', groups)
     },
     [data.fieldGroups, updateField],
@@ -107,7 +130,10 @@ function ContentModelBodyComponent({ contentModel, onChange, selected }: Content
 
   const handleRemoveTaxonomy = useCallback(
     (index: number) => {
-      updateField('taxonomies', data.taxonomies.filter((_, i) => i !== index))
+      updateField(
+        'taxonomies',
+        data.taxonomies.filter((_, i) => i !== index),
+      )
     },
     [data.taxonomies, updateField],
   )
@@ -155,20 +181,29 @@ function ContentModelBodyComponent({ contentModel, onChange, selected }: Content
 
       {/* Slug display */}
       <div className="flex items-center gap-1 px-1">
-        <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>/{data.slug}</span>
+        <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>
+          /{data.slug}
+        </span>
       </div>
 
       {/* Supports (when selected) */}
       {selected && (
         <div className="flex items-center gap-1 px-1 flex-wrap">
-          <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>Supports:</span>
+          <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>
+            Supports:
+          </span>
           {SUPPORT_OPTIONS.map((s) => (
             <button
               key={s}
-              onClick={(e) => { e.stopPropagation(); handleToggleSupport(s) }}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleToggleSupport(s)
+              }}
               className="px-1 py-0 rounded text-[9px] font-mono cursor-pointer transition-opacity"
               style={{
-                backgroundColor: data.supports.includes(s) ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                backgroundColor: data.supports.includes(s)
+                  ? 'rgba(249, 115, 22, 0.2)'
+                  : 'rgba(255, 255, 255, 0.05)',
                 color: data.supports.includes(s) ? '#f97316' : 'var(--node-text-muted)',
                 opacity: data.supports.includes(s) ? 1 : 0.5,
               }}
@@ -182,12 +217,18 @@ function ContentModelBodyComponent({ contentModel, onChange, selected }: Content
       {/* Fields section */}
       <div className="px-1">
         {totalFields === 0 && !selected ? (
-          <div className="text-[10px] italic opacity-50 py-0.5" style={{ color: 'var(--node-text-muted)' }}>
+          <div
+            className="text-[10px] italic opacity-50 py-0.5"
+            style={{ color: 'var(--node-text-muted)' }}
+          >
             No fields defined
           </div>
         ) : !fieldsExpanded && totalFields > 0 ? (
           <button
-            onClick={(e) => { e.stopPropagation(); setFieldsExpanded(true) }}
+            onClick={(e) => {
+              e.stopPropagation()
+              setFieldsExpanded(true)
+            }}
             className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium hover:opacity-80 transition-opacity"
             style={{
               backgroundColor: 'rgba(249, 115, 22, 0.12)',
@@ -201,7 +242,10 @@ function ContentModelBodyComponent({ contentModel, onChange, selected }: Content
           <div className="flex flex-col gap-0.5">
             {totalFields > 0 && (
               <button
-                onClick={(e) => { e.stopPropagation(); setFieldsExpanded(false) }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setFieldsExpanded(false)
+                }}
                 className="flex items-center gap-1 text-[10px] opacity-60 hover:opacity-80 transition-opacity mb-0.5"
                 style={{ color: 'var(--node-text-muted)' }}
               >
@@ -218,13 +262,14 @@ function ContentModelBodyComponent({ contentModel, onChange, selected }: Content
                 >
                   <span className="font-mono truncate flex-1" title={field.name}>
                     {field.name}: <span className="opacity-60">{field.type}</span>
-                    {field.required && (
-                      <span style={{ color: '#ef4444' }}> *</span>
-                    )}
+                    {field.required && <span style={{ color: '#ef4444' }}> *</span>}
                   </span>
                   {selected && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleRemoveField(gi, fi) }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleRemoveField(gi, fi)
+                      }}
                       className="opacity-0 group-hover:opacity-60 hover:opacity-100 transition-opacity"
                       title="Remove field"
                     >
@@ -232,7 +277,7 @@ function ContentModelBodyComponent({ contentModel, onChange, selected }: Content
                     </button>
                   )}
                 </div>
-              ))
+              )),
             )}
           </div>
         )}
@@ -268,11 +313,16 @@ function ContentModelBodyComponent({ contentModel, onChange, selected }: Content
                 onClick={(e) => e.stopPropagation()}
               >
                 {ACF_FIELD_TYPES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
                 ))}
               </select>
               <button
-                onClick={(e) => { e.stopPropagation(); handleAddField() }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleAddField()
+                }}
                 className="text-[10px] px-1 py-0.5 rounded"
                 style={{ backgroundColor: 'rgba(249, 115, 22, 0.2)', color: '#f97316' }}
               >
@@ -281,7 +331,10 @@ function ContentModelBodyComponent({ contentModel, onChange, selected }: Content
             </div>
           ) : (
             <button
-              onClick={(e) => { e.stopPropagation(); setShowAddField(true) }}
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowAddField(true)
+              }}
               className="flex items-center gap-0.5 text-[10px] opacity-50 hover:opacity-80 transition-opacity"
               style={{ color: 'var(--node-text-muted)' }}
             >
@@ -297,7 +350,9 @@ function ContentModelBodyComponent({ contentModel, onChange, selected }: Content
         <div className="flex flex-col gap-0.5 px-1">
           {data.taxonomies.length > 0 && (
             <div className="flex items-center gap-1 flex-wrap">
-              <span className="text-[9px]" style={{ color: 'var(--node-text-muted)' }}>Tax:</span>
+              <span className="text-[9px]" style={{ color: 'var(--node-text-muted)' }}>
+                Tax:
+              </span>
               {data.taxonomies.map((tax, index) => (
                 <span
                   key={tax.name}
@@ -310,7 +365,10 @@ function ContentModelBodyComponent({ contentModel, onChange, selected }: Content
                   {tax.label}
                   {selected && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleRemoveTaxonomy(index) }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleRemoveTaxonomy(index)
+                      }}
                       className="opacity-0 group-hover:opacity-60 hover:opacity-100 transition-opacity"
                     >
                       <X className="w-2 h-2" />
@@ -322,7 +380,10 @@ function ContentModelBodyComponent({ contentModel, onChange, selected }: Content
           )}
           {selected && !showAddTaxonomy && (
             <button
-              onClick={(e) => { e.stopPropagation(); setShowAddTaxonomy(true) }}
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowAddTaxonomy(true)
+              }}
               className="flex items-center gap-0.5 text-[10px] opacity-50 hover:opacity-80 transition-opacity"
               style={{ color: 'var(--node-text-muted)' }}
             >
@@ -350,7 +411,10 @@ function ContentModelBodyComponent({ contentModel, onChange, selected }: Content
                 onClick={(e) => e.stopPropagation()}
               />
               <button
-                onClick={(e) => { e.stopPropagation(); handleAddTaxonomy() }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleAddTaxonomy()
+                }}
                 className="text-[10px] px-1 py-0.5 rounded"
                 style={{ backgroundColor: 'rgba(249, 115, 22, 0.2)', color: '#f97316' }}
               >

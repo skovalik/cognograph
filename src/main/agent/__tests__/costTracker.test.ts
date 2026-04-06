@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  recordUsage,
-  getSessionTotal,
-  getConversationTotal,
-  resetSession,
-  _getModelPricing,
   _calculateCost,
+  _getModelPricing,
+  getConversationTotal,
+  getSessionTotal,
+  recordUsage,
+  resetSession,
 } from '../costTracker'
 
 // ---------------------------------------------------------------------------
@@ -183,11 +183,7 @@ describe('costTracker', () => {
         'claude-sonnet-4',
         'anthropic',
       )
-      recordUsage(
-        { uncachedInput: 1000, cachedInput: 0, output: 500 },
-        'gpt-4.1',
-        'openai',
-      )
+      recordUsage({ uncachedInput: 1000, cachedInput: 0, output: 500 }, 'gpt-4.1', 'openai')
 
       const total = getSessionTotal()
       expect(total.uncachedInput).toBe(2000)

@@ -14,13 +14,13 @@
  * change (pan/zoom).
  */
 
-import { useRef, useCallback, useEffect, useMemo } from 'react'
-import { FolderOpen, XCircle } from 'lucide-react'
-import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
-import { Popover, PopoverContent } from '@/components/ui/popover'
 import * as PopoverPrimitive from '@radix-ui/react-popover'
+import { FolderOpen, XCircle } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { Popover, PopoverContent } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { EscapePriority, escapeManager } from '../../utils/EscapeManager'
 import { PropertyField } from './fields'
 
 // ---------------------------------------------------------------------------
@@ -202,12 +202,7 @@ export function NodeInspector({
         }}
       >
         {/* ---- Header: editable title ---- */}
-        <div
-          className={cn(
-            'px-4 pt-3 pb-2',
-            'border-b border-[var(--border-subtle)]',
-          )}
-        >
+        <div className={cn('px-4 pt-3 pb-2', 'border-b border-[var(--border-subtle)]')}>
           <input
             data-testid="inspector-title"
             type="text"
@@ -307,7 +302,12 @@ export function NodeInspector({
             }
 
             return (
-              <PropertyField key={fieldId} nodeId={nodeId} fieldId={fieldId} extraDefs={INSPECTOR_PROPERTY_DEFS} />
+              <PropertyField
+                key={fieldId}
+                nodeId={nodeId}
+                fieldId={fieldId}
+                extraDefs={INSPECTOR_PROPERTY_DEFS}
+              />
             )
           })}
 

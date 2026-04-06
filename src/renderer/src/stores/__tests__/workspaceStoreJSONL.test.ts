@@ -11,15 +11,11 @@
  *    streaming) so no data leaks between workspaces.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useWorkspaceStore } from '../workspaceStore'
-import {
-  resetWorkspaceStore,
-  getWorkspaceState,
-  seedNode
-} from '../../../../test/storeUtils'
-import { createConversationNode, resetTestCounters } from '../../../../test/utils'
 import type { ConversationNodeData, Message } from '@shared/types'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { getWorkspaceState, resetWorkspaceStore, seedNode } from '../../../../test/storeUtils'
+import { createConversationNode, resetTestCounters } from '../../../../test/utils'
+import { useWorkspaceStore } from '../workspaceStore'
 
 describe('workspaceStore — JSONL persistence wiring', () => {
   beforeEach(() => {
@@ -33,7 +29,7 @@ describe('workspaceStore — JSONL persistence wiring', () => {
       appendMessage: vi.fn().mockResolvedValue({ success: true }),
       loadMessages: vi.fn().mockResolvedValue({ success: true, data: [] }),
       loadAllMessages: vi.fn().mockResolvedValue({ success: true, data: [] }),
-      migrate: vi.fn().mockResolvedValue({ success: true })
+      migrate: vi.fn().mockResolvedValue({ success: true }),
     }
   })
 
@@ -49,7 +45,9 @@ describe('workspaceStore — JSONL persistence wiring', () => {
       addMessage('conv-test-1', 'user', 'hello world')
 
       // Verify the IPC was called
-      const appendMock = (window.api as { conversation: { appendMessage: ReturnType<typeof vi.fn> } }).conversation.appendMessage
+      const appendMock = (
+        window.api as { conversation: { appendMessage: ReturnType<typeof vi.fn> } }
+      ).conversation.appendMessage
       expect(appendMock).toHaveBeenCalledTimes(1)
 
       // Verify the arguments: (workspaceId, nodeId, message)
@@ -71,7 +69,9 @@ describe('workspaceStore — JSONL persistence wiring', () => {
       const { addMessage } = useWorkspaceStore.getState()
       addMessage('conv-test-2', 'user', 'hello')
 
-      const appendMock = (window.api as { conversation: { appendMessage: ReturnType<typeof vi.fn> } }).conversation.appendMessage
+      const appendMock = (
+        window.api as { conversation: { appendMessage: ReturnType<typeof vi.fn> } }
+      ).conversation.appendMessage
       expect(appendMock).not.toHaveBeenCalled()
     })
 
@@ -84,7 +84,7 @@ describe('workspaceStore — JSONL persistence wiring', () => {
       addMessage('conv-test-3', 'user', 'test message')
 
       const state = getWorkspaceState()
-      const node = state.nodes.find(n => n.id === 'conv-test-3')
+      const node = state.nodes.find((n) => n.id === 'conv-test-3')
       expect(node).toBeDefined()
       const convData = node!.data as ConversationNodeData
       expect(convData.messages).toHaveLength(1)
@@ -100,7 +100,9 @@ describe('workspaceStore — JSONL persistence wiring', () => {
       const { addMessage } = useWorkspaceStore.getState()
       addMessage('conv-test-4', 'assistant', 'I can help with that')
 
-      const appendMock = (window.api as { conversation: { appendMessage: ReturnType<typeof vi.fn> } }).conversation.appendMessage
+      const appendMock = (
+        window.api as { conversation: { appendMessage: ReturnType<typeof vi.fn> } }
+      ).conversation.appendMessage
       expect(appendMock).toHaveBeenCalledTimes(1)
 
       const [, , message] = appendMock.mock.calls[0] as [string, string, Message]
@@ -115,16 +117,16 @@ describe('workspaceStore — JSONL persistence wiring', () => {
       const convNode = createConversationNode(
         [
           { role: 'user', content: 'hello' },
-          { role: 'assistant', content: 'hi there' }
+          { role: 'assistant', content: 'hi there' },
         ],
-        { id: 'conv-old' }
+        { id: 'conv-old' },
       )
       seedNode(convNode)
       useWorkspaceStore.setState({ workspaceId: 'ws-old' })
 
       // Verify messages exist
       let state = getWorkspaceState()
-      let node = state.nodes.find(n => n.id === 'conv-old')
+      const node = state.nodes.find((n) => n.id === 'conv-old')
       expect(node).toBeDefined()
       expect((node!.data as ConversationNodeData).messages).toHaveLength(2)
 
@@ -142,8 +144,8 @@ describe('workspaceStore — JSONL persistence wiring', () => {
       useWorkspaceStore.setState({
         workspaceId: 'ws-old-2',
         commandLog: [
-          { id: 'cmd-1', command: 'test', timestamp: Date.now(), status: 'completed' as const }
-        ]
+          { id: 'cmd-1', command: 'test', timestamp: Date.now(), status: 'completed' as const },
+        ],
       })
 
       // Verify commandLog is non-empty

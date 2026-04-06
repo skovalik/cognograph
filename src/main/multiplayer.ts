@@ -8,14 +8,14 @@
  * Token storage uses Electron's safeStorage for encryption at rest.
  */
 
-import { ipcMain, app, BrowserWindow, safeStorage } from 'electron'
+import { app, BrowserWindow, ipcMain, safeStorage } from 'electron'
 import Store from 'electron-store'
 
 // Encrypted token storage
 const tokenStore = new Store<{ tokens: Record<string, string> }>({
   name: 'multiplayer-tokens',
   encryptionKey: 'cognograph-multiplayer-v1', // Additional layer (safeStorage is primary)
-  defaults: { tokens: {} }
+  defaults: { tokens: {} },
 })
 
 // Default server URL (can be overridden in settings)
@@ -77,7 +77,7 @@ function removeToken(workspaceId: string): void {
  */
 function createHeaders(authToken?: string): Record<string, string> {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
   }
   if (authToken) {
     headers['Authorization'] = `Bearer ${authToken}`
@@ -144,13 +144,17 @@ export function registerMultiplayerHandlers(): void {
       const serverUrl = getServerUrl()
       const response = await fetch(`${serverUrl}/api/auth/refresh`, {
         method: 'POST',
-        headers: createHeaders(currentToken)
+        headers: createHeaders(currentToken),
       })
 
       if (response.status === 401) {
         // Token is invalid or expired
         removeToken(workspaceId)
-        return { success: false, error: 'Token expired. Please rejoin the workspace.', code: 'TOKEN_EXPIRED' }
+        return {
+          success: false,
+          error: 'Token expired. Please rejoin the workspace.',
+          code: 'TOKEN_EXPIRED',
+        }
       }
 
       if (!response.ok) {
@@ -169,7 +173,7 @@ export function registerMultiplayerHandlers(): void {
         success: true,
         token: data.token,
         expiresAt: data.expiresAt,
-        expiresIn: data.expiresAt ? new Date(data.expiresAt).getTime() - Date.now() : null
+        expiresIn: data.expiresAt ? new Date(data.expiresAt).getTime() - Date.now() : null,
       }
     } catch (err) {
       return { success: false, error: `Failed to refresh token: ${(err as Error).message}` }
@@ -186,7 +190,7 @@ export function registerMultiplayerHandlers(): void {
 
       const serverUrl = getServerUrl()
       const response = await fetch(`${serverUrl}/api/auth/validate`, {
-        headers: createHeaders(token)
+        headers: createHeaders(token),
       })
 
       if (!response.ok) {
@@ -201,7 +205,7 @@ export function registerMultiplayerHandlers(): void {
         workspaceId: data.workspaceId,
         permissions: data.permissions,
         expiresAt: data.expiresAt,
-        expiresIn: data.expiresIn
+        expiresIn: data.expiresIn,
       }
     } catch (err) {
       return { success: false, error: `Failed to validate token: ${(err as Error).message}` }
@@ -211,143 +215,169 @@ export function registerMultiplayerHandlers(): void {
   // --- Workspace Handlers ---
 
   // Create a shared workspace on the server and get admin token
-  ipcMain.handle('multiplayer:shareWorkspace', async (_event, workspaceId: string, workspaceName: string) => {
-    try {
-      const serverUrl = getServerUrl()
-      const response = await fetch(`${serverUrl}/api/workspaces`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: workspaceId, name: workspaceName })
-      })
+  ipcMain.handle(
+    'multiplayer:shareWorkspace',
+    async (_event, workspaceId: string, workspaceName: string) => {
+      try {
+        const serverUrl = getServerUrl()
+        const response = await fetch(`${serverUrl}/api/workspaces`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: workspaceId, name: workspaceName }),
+        })
 
-      if (!response.ok) {
-        const error = await response.text()
-        return { success: false, error: `Server error: ${error}` }
+        if (!response.ok) {
+          const error = await response.text()
+          return { success: false, error: `Server error: ${error}` }
+        }
+
+        const data = await response.json()
+
+        // Automatically store the admin token for this workspace
+        if (data.token) {
+          storeToken(workspaceId, data.token)
+        }
+
+        return {
+          success: true,
+          token: data.token,
+          workspaceId: data.workspaceId,
+          serverUrl: getWsUrl(serverUrl),
+        }
+      } catch (err) {
+        return { success: false, error: `Failed to connect to server: ${(err as Error).message}` }
       }
-
-      const data = await response.json()
-
-      // Automatically store the admin token for this workspace
-      if (data.token) {
-        storeToken(workspaceId, data.token)
-      }
-
-      return {
-        success: true,
-        token: data.token,
-        workspaceId: data.workspaceId,
-        serverUrl: getWsUrl(serverUrl)
-      }
-    } catch (err) {
-      return { success: false, error: `Failed to connect to server: ${(err as Error).message}` }
-    }
-  })
+    },
+  )
 
   // Generate an invite token for a workspace (requires admin auth)
-  ipcMain.handle('multiplayer:createInvite', async (_event, workspaceId: string, permissions: string, authToken?: string, expiresAt?: string) => {
-    try {
-      // Use provided token or try to get stored token
-      const token = authToken || getStoredToken(workspaceId)
-      if (!token) {
-        return { success: false, error: 'No auth token available. Please rejoin the workspace.' }
-      }
+  ipcMain.handle(
+    'multiplayer:createInvite',
+    async (
+      _event,
+      workspaceId: string,
+      permissions: string,
+      authToken?: string,
+      expiresAt?: string,
+    ) => {
+      try {
+        // Use provided token or try to get stored token
+        const token = authToken || getStoredToken(workspaceId)
+        if (!token) {
+          return { success: false, error: 'No auth token available. Please rejoin the workspace.' }
+        }
 
-      const serverUrl = getServerUrl()
-      const response = await fetch(`${serverUrl}/api/workspaces/${workspaceId}/tokens`, {
-        method: 'POST',
-        headers: createHeaders(token),
-        body: JSON.stringify({ permissions, expiresAt })
-      })
+        const serverUrl = getServerUrl()
+        const response = await fetch(`${serverUrl}/api/workspaces/${workspaceId}/tokens`, {
+          method: 'POST',
+          headers: createHeaders(token),
+          body: JSON.stringify({ permissions, expiresAt }),
+        })
 
-      if (response.status === 401) {
-        return { success: false, error: 'Session expired. Please rejoin the workspace.', code: 'TOKEN_EXPIRED' }
-      }
-      if (response.status === 403) {
-        return { success: false, error: 'Admin permission required to create invites.', code: 'FORBIDDEN' }
-      }
-      if (!response.ok) {
-        const error = await response.text()
-        return { success: false, error: `Server error: ${error}` }
-      }
+        if (response.status === 401) {
+          return {
+            success: false,
+            error: 'Session expired. Please rejoin the workspace.',
+            code: 'TOKEN_EXPIRED',
+          }
+        }
+        if (response.status === 403) {
+          return {
+            success: false,
+            error: 'Admin permission required to create invites.',
+            code: 'FORBIDDEN',
+          }
+        }
+        if (!response.ok) {
+          const error = await response.text()
+          return { success: false, error: `Server error: ${error}` }
+        }
 
-      const data = await response.json()
-      // Build invite link
-      const inviteUrl = `cognograph://join/${workspaceId}?token=${data.token}`
+        const data = await response.json()
+        // Build invite link
+        const inviteUrl = `cognograph://join/${workspaceId}?token=${data.token}`
 
-      return {
-        success: true,
-        token: data.token,
-        inviteUrl,
-        permissions: data.permissions,
-        expiresAt: data.expiresAt
+        return {
+          success: true,
+          token: data.token,
+          inviteUrl,
+          permissions: data.permissions,
+          expiresAt: data.expiresAt,
+        }
+      } catch (err) {
+        return { success: false, error: `Failed to create invite: ${(err as Error).message}` }
       }
-    } catch (err) {
-      return { success: false, error: `Failed to create invite: ${(err as Error).message}` }
-    }
-  })
+    },
+  )
 
   // List tokens for a workspace (requires admin auth)
-  ipcMain.handle('multiplayer:listTokens', async (_event, workspaceId: string, authToken?: string) => {
-    try {
-      const token = authToken || getStoredToken(workspaceId)
-      if (!token) {
-        return { success: false, error: 'No auth token available.', code: 'NO_TOKEN' }
-      }
+  ipcMain.handle(
+    'multiplayer:listTokens',
+    async (_event, workspaceId: string, authToken?: string) => {
+      try {
+        const token = authToken || getStoredToken(workspaceId)
+        if (!token) {
+          return { success: false, error: 'No auth token available.', code: 'NO_TOKEN' }
+        }
 
-      const serverUrl = getServerUrl()
-      const response = await fetch(`${serverUrl}/api/workspaces/${workspaceId}/tokens`, {
-        headers: createHeaders(token)
-      })
+        const serverUrl = getServerUrl()
+        const response = await fetch(`${serverUrl}/api/workspaces/${workspaceId}/tokens`, {
+          headers: createHeaders(token),
+        })
 
-      if (response.status === 401) {
-        return { success: false, error: 'Session expired.', code: 'TOKEN_EXPIRED' }
-      }
-      if (response.status === 403) {
-        return { success: false, error: 'Admin permission required.', code: 'FORBIDDEN' }
-      }
-      if (!response.ok) {
-        return { success: false, error: 'Failed to list tokens' }
-      }
+        if (response.status === 401) {
+          return { success: false, error: 'Session expired.', code: 'TOKEN_EXPIRED' }
+        }
+        if (response.status === 403) {
+          return { success: false, error: 'Admin permission required.', code: 'FORBIDDEN' }
+        }
+        if (!response.ok) {
+          return { success: false, error: 'Failed to list tokens' }
+        }
 
-      const tokens = await response.json()
-      return { success: true, tokens }
-    } catch (err) {
-      return { success: false, error: `Failed to list tokens: ${(err as Error).message}` }
-    }
-  })
+        const tokens = await response.json()
+        return { success: true, tokens }
+      } catch (err) {
+        return { success: false, error: `Failed to list tokens: ${(err as Error).message}` }
+      }
+    },
+  )
 
   // Revoke a token (requires admin auth on the token's workspace)
-  ipcMain.handle('multiplayer:revokeToken', async (_event, tokenId: string, workspaceId: string, authToken?: string) => {
-    try {
-      const token = authToken || getStoredToken(workspaceId)
-      if (!token) {
-        return { success: false, error: 'No auth token available.', code: 'NO_TOKEN' }
-      }
+  ipcMain.handle(
+    'multiplayer:revokeToken',
+    async (_event, tokenId: string, workspaceId: string, authToken?: string) => {
+      try {
+        const token = authToken || getStoredToken(workspaceId)
+        if (!token) {
+          return { success: false, error: 'No auth token available.', code: 'NO_TOKEN' }
+        }
 
-      const serverUrl = getServerUrl()
-      const response = await fetch(`${serverUrl}/api/tokens/${tokenId}`, {
-        method: 'DELETE',
-        headers: createHeaders(token)
-      })
+        const serverUrl = getServerUrl()
+        const response = await fetch(`${serverUrl}/api/tokens/${tokenId}`, {
+          method: 'DELETE',
+          headers: createHeaders(token),
+        })
 
-      if (response.status === 401) {
-        return { success: false, error: 'Session expired.', code: 'TOKEN_EXPIRED' }
-      }
-      if (response.status === 403) {
-        return { success: false, error: 'Admin permission required.', code: 'FORBIDDEN' }
-      }
-      if (response.status === 404) {
-        return { success: false, error: 'Token not found.', code: 'NOT_FOUND' }
-      }
-      if (!response.ok) {
-        return { success: false, error: 'Failed to revoke token' }
-      }
+        if (response.status === 401) {
+          return { success: false, error: 'Session expired.', code: 'TOKEN_EXPIRED' }
+        }
+        if (response.status === 403) {
+          return { success: false, error: 'Admin permission required.', code: 'FORBIDDEN' }
+        }
+        if (response.status === 404) {
+          return { success: false, error: 'Token not found.', code: 'NOT_FOUND' }
+        }
+        if (!response.ok) {
+          return { success: false, error: 'Failed to revoke token' }
+        }
 
-      return { success: true }
-    } catch (err) {
-      return { success: false, error: `Failed to revoke token: ${(err as Error).message}` }
-    }
-  })
+        return { success: true }
+      } catch (err) {
+        return { success: false, error: `Failed to revoke token: ${(err as Error).message}` }
+      }
+    },
+  )
 
   // Parse a join link
   ipcMain.handle('multiplayer:parseInviteLink', async (_event, link: string) => {
@@ -375,7 +405,7 @@ export function registerMultiplayerHandlers(): void {
         success: true,
         workspaceId,
         token,
-        serverUrl: getWsUrl(serverUrl)
+        serverUrl: getWsUrl(serverUrl),
       }
     } catch (err) {
       return { success: false, error: `Failed to parse invite link: ${(err as Error).message}` }
@@ -409,104 +439,113 @@ export function registerMultiplayerHandlers(): void {
   // --- Branch Operations ---
 
   // Create a branch from a workspace (requires write auth)
-  ipcMain.handle('multiplayer:createBranch', async (_event, workspaceId: string, branchName: string, authToken?: string) => {
-    try {
-      const token = authToken || getStoredToken(workspaceId)
-      if (!token) {
-        return { success: false, error: 'No auth token available.', code: 'NO_TOKEN' }
-      }
+  ipcMain.handle(
+    'multiplayer:createBranch',
+    async (_event, workspaceId: string, branchName: string, authToken?: string) => {
+      try {
+        const token = authToken || getStoredToken(workspaceId)
+        if (!token) {
+          return { success: false, error: 'No auth token available.', code: 'NO_TOKEN' }
+        }
 
-      const serverUrl = getServerUrl()
-      const response = await fetch(`${serverUrl}/api/workspaces/${workspaceId}/branches`, {
-        method: 'POST',
-        headers: createHeaders(token),
-        body: JSON.stringify({ name: branchName })
-      })
+        const serverUrl = getServerUrl()
+        const response = await fetch(`${serverUrl}/api/workspaces/${workspaceId}/branches`, {
+          method: 'POST',
+          headers: createHeaders(token),
+          body: JSON.stringify({ name: branchName }),
+        })
 
-      if (response.status === 401) {
-        return { success: false, error: 'Session expired.', code: 'TOKEN_EXPIRED' }
-      }
-      if (response.status === 403) {
-        return { success: false, error: 'Write permission required.', code: 'FORBIDDEN' }
-      }
-      if (!response.ok) {
-        const error = await response.text()
-        return { success: false, error }
-      }
+        if (response.status === 401) {
+          return { success: false, error: 'Session expired.', code: 'TOKEN_EXPIRED' }
+        }
+        if (response.status === 403) {
+          return { success: false, error: 'Write permission required.', code: 'FORBIDDEN' }
+        }
+        if (!response.ok) {
+          const error = await response.text()
+          return { success: false, error }
+        }
 
-      const data = await response.json()
-      // Store token for the new branch workspace
-      if (data.token && data.branchWorkspaceId) {
-        storeToken(data.branchWorkspaceId, data.token)
+        const data = await response.json()
+        // Store token for the new branch workspace
+        if (data.token && data.branchWorkspaceId) {
+          storeToken(data.branchWorkspaceId, data.token)
+        }
+        return { success: true, ...data }
+      } catch (err) {
+        return { success: false, error: `Failed to create branch: ${(err as Error).message}` }
       }
-      return { success: true, ...data }
-    } catch (err) {
-      return { success: false, error: `Failed to create branch: ${(err as Error).message}` }
-    }
-  })
+    },
+  )
 
   // List branches for a workspace (requires read auth)
-  ipcMain.handle('multiplayer:listBranches', async (_event, workspaceId: string, authToken?: string) => {
-    try {
-      const token = authToken || getStoredToken(workspaceId)
-      if (!token) {
-        return { success: false, error: 'No auth token available.', code: 'NO_TOKEN' }
-      }
+  ipcMain.handle(
+    'multiplayer:listBranches',
+    async (_event, workspaceId: string, authToken?: string) => {
+      try {
+        const token = authToken || getStoredToken(workspaceId)
+        if (!token) {
+          return { success: false, error: 'No auth token available.', code: 'NO_TOKEN' }
+        }
 
-      const serverUrl = getServerUrl()
-      const response = await fetch(`${serverUrl}/api/workspaces/${workspaceId}/branches`, {
-        headers: createHeaders(token)
-      })
+        const serverUrl = getServerUrl()
+        const response = await fetch(`${serverUrl}/api/workspaces/${workspaceId}/branches`, {
+          headers: createHeaders(token),
+        })
 
-      if (response.status === 401) {
-        return { success: false, error: 'Session expired.', code: 'TOKEN_EXPIRED' }
-      }
-      if (response.status === 403) {
-        return { success: false, error: 'Permission denied.', code: 'FORBIDDEN' }
-      }
-      if (!response.ok) {
-        return { success: false, error: 'Failed to list branches' }
-      }
+        if (response.status === 401) {
+          return { success: false, error: 'Session expired.', code: 'TOKEN_EXPIRED' }
+        }
+        if (response.status === 403) {
+          return { success: false, error: 'Permission denied.', code: 'FORBIDDEN' }
+        }
+        if (!response.ok) {
+          return { success: false, error: 'Failed to list branches' }
+        }
 
-      const branches = await response.json()
-      return { success: true, branches }
-    } catch (err) {
-      return { success: false, error: `Failed to list branches: ${(err as Error).message}` }
-    }
-  })
+        const branches = await response.json()
+        return { success: true, branches }
+      } catch (err) {
+        return { success: false, error: `Failed to list branches: ${(err as Error).message}` }
+      }
+    },
+  )
 
   // Merge a branch back into a workspace (requires write auth on target)
-  ipcMain.handle('multiplayer:mergeBranch', async (_event, targetWorkspaceId: string, sourceWorkspaceId: string, authToken?: string) => {
-    try {
-      const token = authToken || getStoredToken(targetWorkspaceId)
-      if (!token) {
-        return { success: false, error: 'No auth token available.', code: 'NO_TOKEN' }
-      }
+  ipcMain.handle(
+    'multiplayer:mergeBranch',
+    async (_event, targetWorkspaceId: string, sourceWorkspaceId: string, authToken?: string) => {
+      try {
+        const token = authToken || getStoredToken(targetWorkspaceId)
+        if (!token) {
+          return { success: false, error: 'No auth token available.', code: 'NO_TOKEN' }
+        }
 
-      const serverUrl = getServerUrl()
-      const response = await fetch(`${serverUrl}/api/workspaces/${targetWorkspaceId}/merge`, {
-        method: 'POST',
-        headers: createHeaders(token),
-        body: JSON.stringify({ sourceWorkspaceId })
-      })
+        const serverUrl = getServerUrl()
+        const response = await fetch(`${serverUrl}/api/workspaces/${targetWorkspaceId}/merge`, {
+          method: 'POST',
+          headers: createHeaders(token),
+          body: JSON.stringify({ sourceWorkspaceId }),
+        })
 
-      if (response.status === 401) {
-        return { success: false, error: 'Session expired.', code: 'TOKEN_EXPIRED' }
-      }
-      if (response.status === 403) {
-        return { success: false, error: 'Write permission required.', code: 'FORBIDDEN' }
-      }
-      if (!response.ok) {
-        const error = await response.text()
-        return { success: false, error }
-      }
+        if (response.status === 401) {
+          return { success: false, error: 'Session expired.', code: 'TOKEN_EXPIRED' }
+        }
+        if (response.status === 403) {
+          return { success: false, error: 'Write permission required.', code: 'FORBIDDEN' }
+        }
+        if (!response.ok) {
+          const error = await response.text()
+          return { success: false, error }
+        }
 
-      const data = await response.json()
-      return { success: true, ...data }
-    } catch (err) {
-      return { success: false, error: `Failed to merge branch: ${(err as Error).message}` }
-    }
-  })
+        const data = await response.json()
+        return { success: true, ...data }
+      } catch (err) {
+        return { success: false, error: `Failed to merge branch: ${(err as Error).message}` }
+      }
+    },
+  )
 }
 
 /**
@@ -541,7 +580,7 @@ export function handleDeepLink(url: string): void {
 
     // Send to the focused/main window
     const windows = BrowserWindow.getAllWindows()
-    const target = windows.find(w => w.isFocused()) || windows[0]
+    const target = windows.find((w) => w.isFocused()) || windows[0]
     if (target) {
       target.webContents.send('multiplayer:deepLink', { workspaceId, token })
       // Bring window to front
@@ -565,14 +604,14 @@ export function setupDeepLinkListeners(): void {
 
   // Windows/Linux: second-instance event (protocol handler reopens the app)
   app.on('second-instance', (_event, argv) => {
-    const url = argv.find(arg => arg.startsWith('cognograph://'))
+    const url = argv.find((arg) => arg.startsWith('cognograph://'))
     if (url) {
       handleDeepLink(url)
     }
   })
 
   // Check if app was launched with a deep link URL (Windows/Linux cold start)
-  const deepLinkArg = process.argv.find(arg => arg.startsWith('cognograph://'))
+  const deepLinkArg = process.argv.find((arg) => arg.startsWith('cognograph://'))
   if (deepLinkArg) {
     // Delay to allow window to be created
     setTimeout(() => handleDeepLink(deepLinkArg), 1000)

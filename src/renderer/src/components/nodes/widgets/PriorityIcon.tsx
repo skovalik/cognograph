@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import { ArrowRight, ArrowUp, Minus } from 'lucide-react'
 import { memo, useCallback } from 'react'
-import { ArrowUp, ArrowRight, Minus } from 'lucide-react'
 
 const PRIORITY_CYCLE = ['none', 'low', 'medium', 'high'] as const
 const PRIORITY_COLORS: Record<string, string> = {
-  'none': '#6b7280',
-  'low': '#6b7280',
-  'medium': '#f59e0b',
-  'high': '#ef4444',
+  none: '#6b7280',
+  low: '#6b7280',
+  medium: '#f59e0b',
+  high: '#ef4444',
 }
 
 interface PriorityIconProps {
@@ -20,18 +20,19 @@ interface PriorityIconProps {
 export const PriorityIcon = memo(function PriorityIcon({ value, onChange }: PriorityIconProps) {
   const color = PRIORITY_COLORS[value] || PRIORITY_COLORS.none
 
-  const cycle = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    const idx = PRIORITY_CYCLE.indexOf(value as typeof PRIORITY_CYCLE[number])
-    const next = PRIORITY_CYCLE[(idx + 1) % PRIORITY_CYCLE.length]
-    onChange(next)
-  }, [value, onChange])
+  const cycle = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      e.preventDefault()
+      const idx = PRIORITY_CYCLE.indexOf(value as (typeof PRIORITY_CYCLE)[number])
+      const next = PRIORITY_CYCLE[(idx + 1) % PRIORITY_CYCLE.length]
+      onChange(next)
+    },
+    [value, onChange],
+  )
 
-  const Icon = value === 'high' ? ArrowUp
-    : value === 'medium' ? ArrowRight
-    : value === 'low' ? Minus
-    : null
+  const Icon =
+    value === 'high' ? ArrowUp : value === 'medium' ? ArrowRight : value === 'low' ? Minus : null
 
   if (!Icon) {
     // 'none' — render an empty placeholder button

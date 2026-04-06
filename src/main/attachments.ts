@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { ipcMain, dialog, shell, nativeImage, app } from 'electron'
-import { join, basename, extname, resolve } from 'path'
-import { promises as fs } from 'fs'
-import { randomUUID } from 'crypto'
 import type { Attachment } from '@shared/types'
+import { randomUUID } from 'crypto'
+import { app, dialog, ipcMain, nativeImage, shell } from 'electron'
+import { promises as fs } from 'fs'
+import { basename, extname, join, resolve } from 'path'
 
 // Simple MIME type lookup by extension (no external dependency needed)
 const MIME_MAP: Record<string, string> = {
@@ -54,7 +54,7 @@ const MIME_MAP: Record<string, string> = {
   '.doc': 'application/msword',
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   '.xls': 'application/vnd.ms-excel',
-  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 }
 
 function getMimeType(filename: string): string {
@@ -73,7 +73,11 @@ const THUMBNAIL_SIZE = 128
 function validateStoredPath(storedPath: string): string {
   const fullPath = resolve(join(WORKSPACES_DIR, storedPath))
   const attachmentsDir = resolve(join(WORKSPACES_DIR, ATTACHMENTS_SUBDIR))
-  if (!fullPath.startsWith(attachmentsDir + '\\') && !fullPath.startsWith(attachmentsDir + '/') && fullPath !== attachmentsDir) {
+  if (
+    !fullPath.startsWith(attachmentsDir + '\\') &&
+    !fullPath.startsWith(attachmentsDir + '/') &&
+    fullPath !== attachmentsDir
+  ) {
     throw new Error('Invalid attachment path')
   }
   return fullPath
@@ -103,7 +107,7 @@ function isTextMime(mimeType: string): boolean {
     'application/x-sh',
     'application/sql',
     'application/x-python',
-    'application/x-ruby'
+    'application/x-ruby',
   ]
   return textTypes.includes(mimeType)
 }
@@ -119,7 +123,7 @@ async function generateThumbnail(filePath: string): Promise<string | undefined> 
     const resized = image.resize({
       width: Math.round(size.width * scale),
       height: Math.round(size.height * scale),
-      quality: 'good'
+      quality: 'good',
     })
 
     const jpeg = resized.toJPEG(70)
@@ -147,8 +151,29 @@ export function registerAttachmentHandlers(): void {
           { name: 'All Files', extensions: ['*'] },
           { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'] },
           { name: 'Documents', extensions: ['pdf', 'txt', 'md', 'doc', 'docx'] },
-          { name: 'Code', extensions: ['ts', 'js', 'py', 'rs', 'go', 'java', 'c', 'cpp', 'h', 'json', 'yaml', 'yml', 'toml', 'xml', 'html', 'css', 'scss'] }
-        ]
+          {
+            name: 'Code',
+            extensions: [
+              'ts',
+              'js',
+              'py',
+              'rs',
+              'go',
+              'java',
+              'c',
+              'cpp',
+              'h',
+              'json',
+              'yaml',
+              'yml',
+              'toml',
+              'xml',
+              'html',
+              'css',
+              'scss',
+            ],
+          },
+        ],
       })
 
       if (result.canceled || result.filePaths.length === 0) {
@@ -164,7 +189,10 @@ export function registerAttachmentHandlers(): void {
       // Get file stats BEFORE copying to validate size
       const stats = await fs.stat(originalPath)
       if (stats.size > MAX_ATTACHMENT_SIZE) {
-        return { success: false, error: `File too large (${formatFileSize(stats.size)}, max ${formatFileSize(MAX_ATTACHMENT_SIZE)})` }
+        return {
+          success: false,
+          error: `File too large (${formatFileSize(stats.size)}, max ${formatFileSize(MAX_ATTACHMENT_SIZE)})`,
+        }
       }
 
       // Ensure attachments directory exists
@@ -191,7 +219,7 @@ export function registerAttachmentHandlers(): void {
         mimeType,
         size: stats.size,
         addedAt: new Date().toISOString(),
-        thumbnail
+        thumbnail,
       }
 
       return { success: true, data: attachment }
@@ -236,7 +264,11 @@ export function registerAttachmentHandlers(): void {
 
       // Skip files that are too large
       if (stats.size > MAX_TEXT_READ_SIZE) {
-        return { success: true, data: null, reason: `File too large (${formatFileSize(stats.size)}, max ${formatFileSize(MAX_TEXT_READ_SIZE)})` }
+        return {
+          success: true,
+          data: null,
+          reason: `File too large (${formatFileSize(stats.size)}, max ${formatFileSize(MAX_TEXT_READ_SIZE)})`,
+        }
       }
 
       // Determine MIME type from stored path

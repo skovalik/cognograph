@@ -4,9 +4,9 @@
 // PageNoteBody — Renders inside NoteNode when noteMode === 'page'
 // Displays route, component list, status badge, and SEO summary
 
+import type { ComponentRef, PageNoteFields, PageStatus } from '@shared/types'
+import { FileText, GripVertical, Plus, X } from 'lucide-react'
 import { memo, useCallback, useState } from 'react'
-import { FileText, Plus, X, GripVertical } from 'lucide-react'
-import type { PageNoteFields, ComponentRef, PageStatus } from '@shared/types'
 
 const PAGE_STATUS_COLORS: Record<PageStatus, string> = {
   planned: '#6b7280',
@@ -57,7 +57,7 @@ function PageNoteBodyComponent({ page, onChange, selected }: PageNoteBodyProps):
     <K extends keyof PageNoteFields>(field: K, value: PageNoteFields[K]) => {
       onChange({ ...data, [field]: value })
     },
-    [data, onChange]
+    [data, onChange],
   )
 
   const handleRouteBlur = useCallback(
@@ -65,7 +65,7 @@ function PageNoteBodyComponent({ page, onChange, selected }: PageNoteBodyProps):
       const normalized = normalizeRoute(e.target.value || '/')
       updateField('route', normalized)
     },
-    [updateField]
+    [updateField],
   )
 
   const handleAddComponent = useCallback(() => {
@@ -86,7 +86,7 @@ function PageNoteBodyComponent({ page, onChange, selected }: PageNoteBodyProps):
         .map((c, i) => ({ ...c, order: i + 1 }))
       updateField('components', updated)
     },
-    [data.components, updateField]
+    [data.components, updateField],
   )
 
   const statusColor = PAGE_STATUS_COLORS[data.status]
@@ -95,7 +95,10 @@ function PageNoteBodyComponent({ page, onChange, selected }: PageNoteBodyProps):
     <div className="flex flex-col gap-1.5 w-full nodrag nowheel" data-focusable="true">
       {/* Route display */}
       <div className="flex items-center gap-1 px-1">
-        <FileText className="w-3 h-3 flex-shrink-0" style={{ color: 'var(--node-text-secondary)' }} />
+        <FileText
+          className="w-3 h-3 flex-shrink-0"
+          style={{ color: 'var(--node-text-secondary)' }}
+        />
         {selected ? (
           <input
             type="text"
@@ -121,7 +124,9 @@ function PageNoteBodyComponent({ page, onChange, selected }: PageNoteBodyProps):
       {/* Template selector (when selected) */}
       {selected && (
         <div className="flex items-center gap-1 px-1">
-          <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>Layout:</span>
+          <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>
+            Layout:
+          </span>
           <select
             value={data.template || 'default'}
             onChange={(e) => updateField('template', e.target.value)}
@@ -130,7 +135,9 @@ function PageNoteBodyComponent({ page, onChange, selected }: PageNoteBodyProps):
             onClick={(e) => e.stopPropagation()}
           >
             {TEMPLATE_OPTIONS.map((t) => (
-              <option key={t} value={t}>{t}</option>
+              <option key={t} value={t}>
+                {t}
+              </option>
             ))}
           </select>
         </div>
@@ -139,7 +146,10 @@ function PageNoteBodyComponent({ page, onChange, selected }: PageNoteBodyProps):
       {/* Component list */}
       <div className="flex flex-col gap-0.5 px-1">
         {data.components.length === 0 ? (
-          <div className="text-[10px] italic opacity-50 py-0.5" style={{ color: 'var(--node-text-muted)' }}>
+          <div
+            className="text-[10px] italic opacity-50 py-0.5"
+            style={{ color: 'var(--node-text-muted)' }}
+          >
             No components added
           </div>
         ) : (
@@ -150,10 +160,15 @@ function PageNoteBodyComponent({ page, onChange, selected }: PageNoteBodyProps):
               style={{ color: 'var(--node-text-secondary)' }}
             >
               <GripVertical className="w-2.5 h-2.5 opacity-30 flex-shrink-0" />
-              <span className="font-mono flex-1 truncate">{comp.order}. {comp.name}</span>
+              <span className="font-mono flex-1 truncate">
+                {comp.order}. {comp.name}
+              </span>
               {selected && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleRemoveComponent(index) }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleRemoveComponent(index)
+                  }}
                   className="opacity-0 group-hover:opacity-60 hover:opacity-100 transition-opacity"
                   title="Remove component"
                 >
@@ -188,7 +203,10 @@ function PageNoteBodyComponent({ page, onChange, selected }: PageNoteBodyProps):
                 onClick={(e) => e.stopPropagation()}
               />
               <button
-                onClick={(e) => { e.stopPropagation(); handleAddComponent() }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleAddComponent()
+                }}
                 className="text-[10px] px-1 py-0.5 rounded"
                 style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6' }}
               >
@@ -197,7 +215,10 @@ function PageNoteBodyComponent({ page, onChange, selected }: PageNoteBodyProps):
             </div>
           ) : (
             <button
-              onClick={(e) => { e.stopPropagation(); setShowAddComponent(true) }}
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowAddComponent(true)
+              }}
               className="flex items-center gap-0.5 text-[10px] opacity-50 hover:opacity-80 transition-opacity"
               style={{ color: 'var(--node-text-muted)' }}
             >
@@ -228,7 +249,9 @@ function PageNoteBodyComponent({ page, onChange, selected }: PageNoteBodyProps):
             onClick={(e) => e.stopPropagation()}
           >
             {Object.keys(PAGE_STATUS_COLORS).map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
           </select>
         )}

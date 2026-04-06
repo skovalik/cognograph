@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
-import { isMediaArtifact, serializeMediaForContext, serializeArtifactForContext } from '../mediaPiping'
+import { describe, expect, it } from 'vitest'
+import {
+  isMediaArtifact,
+  serializeArtifactForContext,
+  serializeMediaForContext,
+} from '../mediaPiping'
 
 describe('mediaPiping', () => {
   it('identifies media content types', () => {

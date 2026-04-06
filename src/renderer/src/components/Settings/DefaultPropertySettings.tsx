@@ -1,35 +1,38 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useCallback } from 'react'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { BUILTIN_PROPERTIES, NODE_DEFAULT_PROPERTIES } from '../../constants/properties'
 import type { NodeData, PropertyDefinition } from '@shared/types'
+import { memo, useCallback } from 'react'
+import { BUILTIN_PROPERTIES, NODE_DEFAULT_PROPERTIES } from '../../constants/properties'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 
 const NODE_TYPES: Array<{ type: NodeData['type']; label: string }> = [
   { type: 'task', label: 'Task' },
   { type: 'note', label: 'Note' },
   { type: 'conversation', label: 'Conversation' },
   { type: 'project', label: 'Project' },
-  { type: 'artifact', label: 'Artifact' }
+  { type: 'artifact', label: 'Artifact' },
 ]
 
 export const DefaultPropertySettings = memo(function DefaultPropertySettings() {
   const propertySchema = useWorkspaceStore((state) => state.propertySchema)
   const updatePropertyDefaults = useWorkspaceStore((state) => state.updatePropertyDefaults)
 
-  const handleDefaultChange = useCallback((nodeType: string, propertyId: string, value: unknown) => {
-    const currentDefaults = propertySchema?.defaults?.[nodeType] || {}
-    const typeDefaults = { ...currentDefaults }
+  const handleDefaultChange = useCallback(
+    (nodeType: string, propertyId: string, value: unknown) => {
+      const currentDefaults = propertySchema?.defaults?.[nodeType] || {}
+      const typeDefaults = { ...currentDefaults }
 
-    if (value === '' || value === undefined || value === null) {
-      delete typeDefaults[propertyId]
-    } else {
-      typeDefaults[propertyId] = value
-    }
+      if (value === '' || value === undefined || value === null) {
+        delete typeDefaults[propertyId]
+      } else {
+        typeDefaults[propertyId] = value
+      }
 
-    updatePropertyDefaults(nodeType, typeDefaults)
-  }, [propertySchema, updatePropertyDefaults])
+      updatePropertyDefaults(nodeType, typeDefaults)
+    },
+    [propertySchema, updatePropertyDefaults],
+  )
 
   const getDefaultValue = (nodeType: string, propertyId: string): unknown => {
     return propertySchema?.defaults?.[nodeType]?.[propertyId] ?? ''
@@ -48,17 +51,16 @@ export const DefaultPropertySettings = memo(function DefaultPropertySettings() {
         const propertyIds = NODE_DEFAULT_PROPERTIES[type] || []
         const editableProperties = propertyIds
           .map((id) => BUILTIN_PROPERTIES[id])
-          .filter((def): def is PropertyDefinition =>
-            def !== undefined && (def.type === 'select' || def.type === 'status' || def.type === 'priority')
+          .filter(
+            (def): def is PropertyDefinition =>
+              def !== undefined &&
+              (def.type === 'select' || def.type === 'status' || def.type === 'priority'),
           )
 
         if (editableProperties.length === 0) return null
 
         return (
-          <div
-            key={type}
-            className="gui-card p-3 rounded-lg"
-          >
+          <div key={type} className="gui-card p-3 rounded-lg">
             <h4 className="text-sm font-medium mb-2 gui-text-secondary">{label}</h4>
             <div className="space-y-2">
               {editableProperties.map((def) => (

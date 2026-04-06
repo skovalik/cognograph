@@ -76,8 +76,8 @@ test.describe('Landing Page', () => {
   test('Start Free CTA goes directly to canvas, bypassing auth', async ({ page }) => {
     await goto(page, '/')
     const href = await page.locator('.hero-nav__btn', { hasText: 'Start Free' }).getAttribute('href')
-    // This documents the bug: CTA goes to canvas.cognograph.app, not /login
-    expect(href).toBe('https://canvas.cognograph.app')
+    // This documents the bug: CTA goes to /workspace, not /login
+    expect(href).toBe('/workspace')
   })
 })
 
@@ -229,7 +229,7 @@ test.describe('Foyer (requires auth mock)', () => {
 
 test.describe('Canvas Boot', () => {
   test('canvas route loads without crash', async ({ page }) => {
-    // On non-canvas-host, use /app path
+    // On non-canvas-host, use /workspace path
     await page.goto(`${BASE}/?mode=workspace-demo`, { waitUntil: 'domcontentloaded' })
     // Wait for React to mount — look for the app container
     await expect(page.locator('#root')).toBeVisible()

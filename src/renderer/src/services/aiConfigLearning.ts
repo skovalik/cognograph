@@ -6,14 +6,14 @@
 // =============================================================================
 // Learns from user interactions to improve suggestions over time
 
-import { nanoid } from 'nanoid'
 import type {
-  AIConfigPattern,
-  AIConfigFeedback,
-  AIGeneratedConfig,
+  ActionStepType,
   ActionTriggerType,
-  ActionStepType
+  AIConfigFeedback,
+  AIConfigPattern,
+  AIGeneratedConfig,
 } from '@shared/actionTypes'
+import { nanoid } from 'nanoid'
 
 const STORAGE_KEY = 'ai_config_learning'
 const FEEDBACK_STORAGE_KEY = 'ai_config_feedback'
@@ -25,24 +25,93 @@ const DECAY_HALF_LIFE_DAYS = 30
 
 // Prompt history entry type
 export interface PromptHistoryEntry {
-  id: string                  // nanoid for unique ID
-  prompt: string              // Full original description
-  triggerType?: string        // e.g., 'property-change', 'schedule'
-  appliedCount: number        // Times user applied this prompt
-  lastUsed: number            // timestamp
-  wasSuccessful: boolean      // Based on feedback
+  id: string // nanoid for unique ID
+  prompt: string // Full original description
+  triggerType?: string // e.g., 'property-change', 'schedule'
+  appliedCount: number // Times user applied this prompt
+  lastUsed: number // timestamp
+  wasSuccessful: boolean // Based on feedback
 }
 
 // Stop words to filter out from keyword extraction
 const STOP_WORDS = new Set([
-  'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-  'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
-  'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-  'should', 'may', 'might', 'must', 'shall', 'can', 'this', 'that', 'these',
-  'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'what', 'which',
-  'who', 'when', 'where', 'why', 'how', 'all', 'each', 'every', 'both',
-  'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not',
-  'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'also'
+  'the',
+  'a',
+  'an',
+  'and',
+  'or',
+  'but',
+  'in',
+  'on',
+  'at',
+  'to',
+  'for',
+  'of',
+  'with',
+  'by',
+  'from',
+  'as',
+  'is',
+  'was',
+  'are',
+  'were',
+  'been',
+  'be',
+  'have',
+  'has',
+  'had',
+  'do',
+  'does',
+  'did',
+  'will',
+  'would',
+  'could',
+  'should',
+  'may',
+  'might',
+  'must',
+  'shall',
+  'can',
+  'this',
+  'that',
+  'these',
+  'those',
+  'i',
+  'you',
+  'he',
+  'she',
+  'it',
+  'we',
+  'they',
+  'what',
+  'which',
+  'who',
+  'when',
+  'where',
+  'why',
+  'how',
+  'all',
+  'each',
+  'every',
+  'both',
+  'few',
+  'more',
+  'most',
+  'other',
+  'some',
+  'such',
+  'no',
+  'nor',
+  'not',
+  'only',
+  'own',
+  'same',
+  'so',
+  'than',
+  'too',
+  'very',
+  'just',
+  'also',
 ])
 
 class AIConfigLearning {
@@ -124,7 +193,7 @@ class AIConfigLearning {
 
     // Check for duplicate (similar prompt)
     const existing = this.promptHistory.find(
-      h => h.prompt.toLowerCase() === trimmed.toLowerCase()
+      (h) => h.prompt.toLowerCase() === trimmed.toLowerCase(),
     )
 
     if (existing) {
@@ -138,7 +207,7 @@ class AIConfigLearning {
         triggerType,
         appliedCount: 1,
         lastUsed: Date.now(),
-        wasSuccessful: true
+        wasSuccessful: true,
       })
       // Limit size
       if (this.promptHistory.length > MAX_PROMPT_HISTORY) {
@@ -154,12 +223,12 @@ class AIConfigLearning {
   }
 
   deletePromptEntry(id: string): void {
-    this.promptHistory = this.promptHistory.filter(h => h.id !== id)
+    this.promptHistory = this.promptHistory.filter((h) => h.id !== id)
     this.savePromptHistory()
   }
 
   markPromptFailed(prompt: string): void {
-    const entry = this.promptHistory.find(h => h.prompt === prompt)
+    const entry = this.promptHistory.find((h) => h.prompt === prompt)
     if (entry) {
       entry.wasSuccessful = false
       this.savePromptHistory()
@@ -175,13 +244,13 @@ class AIConfigLearning {
       .toLowerCase()
       .replace(/[^\w\s]/g, ' ')
       .split(/\s+/)
-      .filter(word => word.length > 2 && !STOP_WORDS.has(word))
+      .filter((word) => word.length > 2 && !STOP_WORDS.has(word))
       .slice(0, 10) // Limit keywords
   }
 
   private keywordOverlap(a: string[], b: string[]): number {
     if (a.length === 0 || b.length === 0) return 0
-    const intersection = a.filter(x => b.includes(x))
+    const intersection = a.filter((x) => b.includes(x))
     return intersection.length / Math.max(a.length, b.length)
   }
 
@@ -189,15 +258,19 @@ class AIConfigLearning {
   // Pattern Matching
   // -------------------------------------------------------------------------
 
-  private findPattern(keywords: string[], triggerType: ActionTriggerType): AIConfigPattern | undefined {
+  private findPattern(
+    keywords: string[],
+    triggerType: ActionTriggerType,
+  ): AIConfigPattern | undefined {
     return this.patterns.find(
-      p => p.triggerType === triggerType && this.keywordOverlap(keywords, p.descriptionKeywords) > 0.8
+      (p) =>
+        p.triggerType === triggerType && this.keywordOverlap(keywords, p.descriptionKeywords) > 0.8,
     )
   }
 
   private getEffectiveScore(pattern: AIConfigPattern): number {
     const daysSinceUse = (Date.now() - pattern.lastUsed) / (1000 * 60 * 60 * 24)
-    const decayFactor = Math.pow(0.5, daysSinceUse / DECAY_HALF_LIFE_DAYS)
+    const decayFactor = 0.5 ** (daysSinceUse / DECAY_HALF_LIFE_DAYS)
     return pattern.successRate * pattern.usageCount * decayFactor
   }
 
@@ -209,11 +282,11 @@ class AIConfigLearning {
     description: string,
     config: AIGeneratedConfig,
     accepted: boolean,
-    modified: boolean
+    modified: boolean,
   ): void {
     const keywords = this.extractKeywords(description)
     const triggerType = config.trigger.type
-    const stepTypes = config.actions.map(a => a.type)
+    const stepTypes = config.actions.map((a) => a.type)
 
     const existing = this.findPattern(keywords, triggerType)
 
@@ -243,7 +316,7 @@ class AIConfigLearning {
         stepTypes,
         successRate: accepted && !modified ? 1 : modified ? 0.5 : 0,
         usageCount: 1,
-        lastUsed: Date.now()
+        lastUsed: Date.now(),
       })
 
       // Limit number of patterns
@@ -272,7 +345,7 @@ class AIConfigLearning {
         '', // No description available from feedback
         feedback.config,
         feedback.rating === 'positive',
-        feedback.hadModifications
+        feedback.hadModifications,
       )
     }
   }
@@ -286,7 +359,7 @@ class AIConfigLearning {
     if (keywords.length === 0) return null
 
     const matches = this.patterns
-      .filter(p => this.keywordOverlap(keywords, p.descriptionKeywords) > 0.3)
+      .filter((p) => this.keywordOverlap(keywords, p.descriptionKeywords) > 0.3)
       .sort((a, b) => this.getEffectiveScore(b) - this.getEffectiveScore(a))
 
     return matches[0] || null
@@ -310,19 +383,19 @@ class AIConfigLearning {
     topTriggerTypes: Array<{ type: ActionTriggerType; count: number }>
     topStepTypes: Array<{ type: ActionStepType; count: number }>
   } {
-    const positiveCount = this.feedbackRecords.filter(r => r.rating === 'positive').length
+    const positiveCount = this.feedbackRecords.filter((r) => r.rating === 'positive').length
     const totalRounds = this.feedbackRecords.reduce((sum, r) => sum + r.questionRounds, 0)
 
     // Count trigger types
     const triggerCounts = new Map<ActionTriggerType, number>()
-    this.patterns.forEach(p => {
+    this.patterns.forEach((p) => {
       triggerCounts.set(p.triggerType, (triggerCounts.get(p.triggerType) || 0) + p.usageCount)
     })
 
     // Count step types
     const stepCounts = new Map<ActionStepType, number>()
-    this.patterns.forEach(p => {
-      p.stepTypes.forEach(st => {
+    this.patterns.forEach((p) => {
+      p.stepTypes.forEach((st) => {
         stepCounts.set(st, (stepCounts.get(st) || 0) + p.usageCount)
       })
     })
@@ -330,8 +403,10 @@ class AIConfigLearning {
     return {
       patternCount: this.patterns.length,
       feedbackCount: this.feedbackRecords.length,
-      positiveRate: this.feedbackRecords.length > 0 ? positiveCount / this.feedbackRecords.length : 0,
-      avgQuestionRounds: this.feedbackRecords.length > 0 ? totalRounds / this.feedbackRecords.length : 0,
+      positiveRate:
+        this.feedbackRecords.length > 0 ? positiveCount / this.feedbackRecords.length : 0,
+      avgQuestionRounds:
+        this.feedbackRecords.length > 0 ? totalRounds / this.feedbackRecords.length : 0,
       topTriggerTypes: [...triggerCounts.entries()]
         .map(([type, count]) => ({ type, count }))
         .sort((a, b) => b.count - a.count)
@@ -339,7 +414,7 @@ class AIConfigLearning {
       topStepTypes: [...stepCounts.entries()]
         .map(([type, count]) => ({ type, count }))
         .sort((a, b) => b.count - a.count)
-        .slice(0, 5)
+        .slice(0, 5),
     }
   }
 
@@ -355,8 +430,8 @@ class AIConfigLearning {
     const cutoffDays = 90
     const cutoff = Date.now() - cutoffDays * 24 * 60 * 60 * 1000
 
-    this.patterns = this.patterns.filter(p => p.lastUsed > cutoff)
-    this.feedbackRecords = this.feedbackRecords.filter(r => r.timestamp > cutoff)
+    this.patterns = this.patterns.filter((p) => p.lastUsed > cutoff)
+    this.feedbackRecords = this.feedbackRecords.filter((r) => r.timestamp > cutoff)
 
     this.savePatterns()
     this.saveFeedback()

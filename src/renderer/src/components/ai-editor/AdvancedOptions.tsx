@@ -9,9 +9,9 @@
  * Following progressive disclosure pattern - hidden by default.
  */
 
-import { memo, useState } from 'react'
-import { ChevronDown, ChevronRight, Pencil, Layout, Sparkles, Zap, HelpCircle } from 'lucide-react'
 import type { AIEditorMode, AIEditorScope } from '@shared/types'
+import { ChevronDown, ChevronRight, HelpCircle, Layout, Pencil, Sparkles, Zap } from 'lucide-react'
+import { memo, useState } from 'react'
 
 interface AdvancedOptionsProps {
   mode: AIEditorMode
@@ -44,38 +44,38 @@ const MODE_OPTIONS: ModeOption[] = [
     id: 'generate',
     label: 'Generate',
     description: 'Create new nodes, content, or structures',
-    icon: <Sparkles className="w-4 h-4" />
+    icon: <Sparkles className="w-4 h-4" />,
   },
   {
     id: 'edit',
     label: 'Edit',
     description: 'Improve, expand, or correct existing content',
-    icon: <Pencil className="w-4 h-4" />
+    icon: <Pencil className="w-4 h-4" />,
   },
   {
     id: 'organize',
     label: 'Organize',
     description: 'Arrange, connect, or group nodes spatially',
-    icon: <Layout className="w-4 h-4" />
+    icon: <Layout className="w-4 h-4" />,
   },
   {
     id: 'automate',
     label: 'Automate',
     description: 'Create automation workflows and triggers',
-    icon: <Zap className="w-4 h-4" />
+    icon: <Zap className="w-4 h-4" />,
   },
   {
     id: 'ask',
     label: 'Ask',
     description: 'Query the workspace with questions',
-    icon: <HelpCircle className="w-4 h-4" />
-  }
+    icon: <HelpCircle className="w-4 h-4" />,
+  },
 ]
 
 const SCOPE_OPTIONS: ScopeOption[] = [
   { id: 'selection', label: 'Selection', description: 'Selected nodes only' },
   { id: 'canvas', label: 'Canvas', description: 'All visible nodes' },
-  { id: 'workspace', label: 'Workspace', description: 'Entire workspace' }
+  { id: 'workspace', label: 'Workspace', description: 'Entire workspace' },
 ]
 
 function AdvancedOptionsComponent({
@@ -88,7 +88,7 @@ function AdvancedOptionsComponent({
   onAgentModeChange,
   onPreviewModeChange,
   inferredMode,
-  inferredConfidence = 0
+  inferredConfidence = 0,
 }: AdvancedOptionsProps): JSX.Element {
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -107,16 +107,10 @@ function AdvancedOptionsComponent({
         aria-expanded={isExpanded}
         aria-controls="advanced-options-panel"
       >
-        {isExpanded ? (
-          <ChevronDown className="w-4 h-4" />
-        ) : (
-          <ChevronRight className="w-4 h-4" />
-        )}
+        {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         <span>Advanced options</span>
         {inferredMode && inferredConfidence > 0.5 && !isExpanded && (
-          <span className="ml-2 text-xs text-blue-400">
-            (detected: {inferredMode})
-          </span>
+          <span className="ml-2 text-xs text-blue-400">(detected: {inferredMode})</span>
         )}
       </button>
 
@@ -160,7 +154,9 @@ function AdvancedOptionsComponent({
                   aria-pressed={mode === option.id}
                   title={option.description}
                 >
-                  <span className={mode === option.id ? 'text-blue-400' : 'text-[var(--text-muted)]'}>
+                  <span
+                    className={mode === option.id ? 'text-blue-400' : 'text-[var(--text-muted)]'}
+                  >
                     {option.icon}
                   </span>
                   <span>{option.label}</span>

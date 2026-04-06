@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { AgentMessage } from '@shared/transport/types'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // =============================================================================
 // Mocks — vi.hoisted() ensures these are available inside vi.mock() factories
@@ -10,12 +10,14 @@ import type { AgentMessage } from '@shared/transport/types'
 
 const { ipcOnListeners, mockRemoveListener } = vi.hoisted(() => {
   const ipcOnListeners = new Map<string, Array<(event: unknown, payload: unknown) => void>>()
-  const mockRemoveListener = vi.fn((channel: string, listener: (event: unknown, payload: unknown) => void) => {
-    const existing = ipcOnListeners.get(channel) || []
-    const idx = existing.indexOf(listener)
-    if (idx >= 0) existing.splice(idx, 1)
-    ipcOnListeners.set(channel, existing)
-  })
+  const mockRemoveListener = vi.fn(
+    (channel: string, listener: (event: unknown, payload: unknown) => void) => {
+      const existing = ipcOnListeners.get(channel) || []
+      const idx = existing.indexOf(listener)
+      if (idx >= 0) existing.splice(idx, 1)
+      ipcOnListeners.set(channel, existing)
+    },
+  )
   return { ipcOnListeners, mockRemoveListener }
 })
 
@@ -120,9 +122,17 @@ describe('ElectronTransport', () => {
       }
 
       expect(win.webContents.send).toHaveBeenCalledTimes(3)
-      expect(win.webContents.send).toHaveBeenNthCalledWith(1, 'agent:complete', messages[0]!.payload)
+      expect(win.webContents.send).toHaveBeenNthCalledWith(
+        1,
+        'agent:complete',
+        messages[0]!.payload,
+      )
       expect(win.webContents.send).toHaveBeenNthCalledWith(2, 'notification', messages[1]!.payload)
-      expect(win.webContents.send).toHaveBeenNthCalledWith(3, 'permission:request', messages[2]!.payload)
+      expect(win.webContents.send).toHaveBeenNthCalledWith(
+        3,
+        'permission:request',
+        messages[2]!.payload,
+      )
     })
 
     it('silently drops messages when window is destroyed', () => {

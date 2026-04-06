@@ -13,10 +13,10 @@
  * </div>
  */
 
-import { memo } from 'react'
 import { HelpCircle } from 'lucide-react'
-import { Tooltip, TooltipTrigger, TooltipContent } from './ui'
+import { memo } from 'react'
 import { cn } from '../lib/utils'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui'
 
 interface HelpTooltipProps {
   /** Tooltip content - can be string or JSX */
@@ -33,13 +33,13 @@ function HelpTooltipComponent({
   content,
   side = 'top',
   className,
-  maxWidth = 'sm'
+  maxWidth = 'sm',
 }: HelpTooltipProps): JSX.Element {
   const maxWidthClass = {
     xs: 'max-w-xs',
     sm: 'max-w-sm',
     md: 'max-w-md',
-    lg: 'max-w-lg'
+    lg: 'max-w-lg',
   }[maxWidth]
 
   return (
@@ -48,11 +48,11 @@ function HelpTooltipComponent({
         <button
           type="button"
           className={cn(
-            "inline-flex items-center justify-center w-4 h-4 rounded-full",
-            "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
-            "transition-colors cursor-help",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gui-accent-primary)]",
-            className
+            'inline-flex items-center justify-center w-4 h-4 rounded-full',
+            'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
+            'transition-colors cursor-help',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gui-accent-primary)]',
+            className,
           )}
           aria-label="Help"
           onClick={(e) => e.stopPropagation()} // Prevent parent click handlers

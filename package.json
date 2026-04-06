@@ -39,8 +39,7 @@
     "build:mcp": "node -e \"require('esbuild').buildSync({entryPoints:['src/main/mcp/cli.ts'],bundle:true,platform:'node',target:'node18',outfile:'dist/cognograph-mcp.cjs',external:['fsevents','electron','electron-updater'],alias:{'@shared':'./src/shared','@plugins':'./src/plugins'}})\"",
     "preview": "electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
-    "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "typecheck": "npm run typecheck:node",
     "mcp": "electron . --mcp-server",
     "mcp:standalone": "electron . --mcp-standalone",
     "test": "vitest run",
@@ -60,16 +59,7 @@
     "build:all": "npm run build && electron-builder --win --mac --linux",
     "build:dir": "npm run build && electron-builder --dir",
     "dogfood": "node scripts/dogfood-v2.mjs",
-    "dogfood:legacy": "node scripts/dogfood.mjs",
-    "dev:web": "vite --config vite.config.web.ts",
-    "build:web": "vite build --config vite.config.web.ts && tsx --tsconfig tsconfig.web.json scripts/prerender-web.ts",
-    "prerender:web": "tsx --tsconfig tsconfig.web.json scripts/prerender-web.ts",
-    "preview:web": "vite preview --config vite.config.web.ts --port 5174",
-    "test:web": "vitest run --config vitest.config.web.ts",
-    "deploy:staging:web": "npm run build:web && npx wrangler pages deploy dist-web --project-name=cognograph --branch=staging",
-    "deploy:staging:orchestrator": "cd orchestrator && fly deploy -c fly.staging.toml",
-    "deploy:prod:web": "npm run build:web && npx wrangler pages deploy dist-web --project-name=cognograph --branch=main --commit-dirty=true",
-    "deploy:prod:orchestrator": "cd orchestrator && fly deploy"
+    "dogfood:legacy": "node scripts/dogfood.mjs"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.84",
@@ -109,7 +99,6 @@
     "@react-three/postprocessing": "^2.19.1",
     "@sentry/electron": "^7.7.1",
     "@sentry/react": "^10.43.0",
-    "@supabase/supabase-js": "^2.98.0",
     "@tiptap/core": "^3.16.0",
     "@tiptap/extension-bullet-list": "^3.16.0",
     "@tiptap/extension-collaboration": "^3.17.0",
@@ -135,6 +124,7 @@
     "cmdk": "^1.1.1",
     "dagre": "^0.8.5",
     "dexie": "^4.3.0",
+    "dompurify": "^3.3.3",
     "electron-store": "^8.2.0",
     "electron-updater": "^6.8.3",
     "express": "^5.2.1",
@@ -178,6 +168,7 @@
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@types/dompurify": "^3.0.5",
     "@types/node": "^22.7.5",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
@@ -207,7 +198,8 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "biome check --write --no-errors-on-unmatched"
+      "biome format --write --no-errors-on-unmatched",
+      "biome check --write --no-errors-on-unmatched --only=assist/source/organizeImports"
     ]
   }
 }

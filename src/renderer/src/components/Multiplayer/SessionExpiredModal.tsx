@@ -10,8 +10,8 @@
  * - Disconnect (go back to local mode)
  */
 
-import { memo, useState, useCallback } from 'react'
-import { AlertTriangle, RefreshCw, WifiOff, LogOut, X } from 'lucide-react'
+import { AlertTriangle, LogOut, RefreshCw, WifiOff, X } from 'lucide-react'
+import { memo, useCallback, useState } from 'react'
 import { useMultiplayer } from '../../hooks/useMultiplayer'
 import { useConnectionStatus } from '../../sync'
 
@@ -19,7 +19,9 @@ interface SessionExpiredModalProps {
   onClose: () => void
 }
 
-export const SessionExpiredModal = memo(function SessionExpiredModal({ onClose }: SessionExpiredModalProps) {
+export const SessionExpiredModal = memo(function SessionExpiredModal({
+  onClose,
+}: SessionExpiredModalProps) {
   const { joinWorkspace, disconnect, goOnline } = useMultiplayer()
   const connectionStatus = useConnectionStatus()
 
@@ -99,15 +101,17 @@ export const SessionExpiredModal = memo(function SessionExpiredModal({ onClose }
           </div>
           <div>
             <h2 className="font-medium text-[var(--text-primary)]">Session Expired</h2>
-            <p className="text-sm text-[var(--text-secondary)]">Your multiplayer session has ended</p>
+            <p className="text-sm text-[var(--text-secondary)]">
+              Your multiplayer session has ended
+            </p>
           </div>
         </div>
 
         {/* Content */}
         <div className="p-4 space-y-4">
           <p className="text-sm text-[var(--text-secondary)]">
-            Your authentication token has expired. Your local changes are safe.
-            Choose how to continue:
+            Your authentication token has expired. Your local changes are safe. Choose how to
+            continue:
           </p>
 
           {/* Error message */}
@@ -158,10 +162,15 @@ export const SessionExpiredModal = memo(function SessionExpiredModal({ onClose }
                 disabled={isRejoining}
                 className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left hover:bg-[var(--bg-hover)] rounded border border-[var(--border-default)]"
               >
-                <RefreshCw size={16} className={`text-blue-400 ${isRejoining ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  size={16}
+                  className={`text-blue-400 ${isRejoining ? 'animate-spin' : ''}`}
+                />
                 <div>
                   <div className="font-medium text-[var(--text-primary)]">Retry Connection</div>
-                  <div className="text-xs text-[var(--text-secondary)]">Attempt to reconnect with current session</div>
+                  <div className="text-xs text-[var(--text-secondary)]">
+                    Attempt to reconnect with current session
+                  </div>
                 </div>
               </button>
 
@@ -172,8 +181,12 @@ export const SessionExpiredModal = memo(function SessionExpiredModal({ onClose }
               >
                 <RefreshCw size={16} className="text-green-400" />
                 <div>
-                  <div className="font-medium text-[var(--text-primary)]">Rejoin with Invite Link</div>
-                  <div className="text-xs text-[var(--text-secondary)]">Enter a new invite link to rejoin</div>
+                  <div className="font-medium text-[var(--text-primary)]">
+                    Rejoin with Invite Link
+                  </div>
+                  <div className="text-xs text-[var(--text-secondary)]">
+                    Enter a new invite link to rejoin
+                  </div>
                 </div>
               </button>
 
@@ -185,7 +198,9 @@ export const SessionExpiredModal = memo(function SessionExpiredModal({ onClose }
                 <WifiOff size={16} className="text-yellow-400" />
                 <div>
                   <div className="font-medium text-[var(--text-primary)]">Continue Offline</div>
-                  <div className="text-xs text-[var(--text-secondary)]">Keep working, changes saved locally</div>
+                  <div className="text-xs text-[var(--text-secondary)]">
+                    Keep working, changes saved locally
+                  </div>
                 </div>
               </button>
 
@@ -197,7 +212,9 @@ export const SessionExpiredModal = memo(function SessionExpiredModal({ onClose }
                 <LogOut size={16} className="text-[var(--text-secondary)]" />
                 <div>
                   <div className="font-medium text-[var(--text-primary)]">Disconnect</div>
-                  <div className="text-xs text-[var(--text-secondary)]">Leave multiplayer and work locally</div>
+                  <div className="text-xs text-[var(--text-secondary)]">
+                    Leave multiplayer and work locally
+                  </div>
                 </div>
               </button>
             </div>

@@ -10,9 +10,5 @@ interface BadgeProps {
 }
 
 export function Badge({ variant = 'default', className = '', children }: BadgeProps) {
-  return (
-    <span className={`gui-badge gui-badge-${variant} ${className}`}>
-      {children}
-    </span>
-  )
+  return <span className={`gui-badge gui-badge-${variant} ${className}`}>{children}</span>
 }

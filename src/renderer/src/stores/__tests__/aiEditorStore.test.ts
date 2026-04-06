@@ -7,9 +7,9 @@
  * Tests for AI editor modal state management.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { getAIEditorState, resetAIEditorStore } from '../../../../test/storeUtils'
 import { useAIEditorStore } from '../aiEditorStore'
-import { resetAIEditorStore, getAIEditorState } from '../../../../test/storeUtils'
 
 describe('aiEditorStore', () => {
   beforeEach(() => {
@@ -85,8 +85,8 @@ describe('aiEditorStore', () => {
           prompt: 'test',
           scope: 'selection',
           operations: [],
-          warnings: []
-        }
+          warnings: [],
+        },
       })
 
       const { closeModal } = useAIEditorStore.getState()
@@ -99,7 +99,7 @@ describe('aiEditorStore', () => {
       useAIEditorStore.setState({
         isOpen: true,
         generationError: 'Some error',
-        executionError: 'Another error'
+        executionError: 'Another error',
       })
 
       const { closeModal } = useAIEditorStore.getState()
@@ -237,7 +237,7 @@ describe('aiEditorStore', () => {
         deletionOverlays: [],
         movementPaths: [],
         edgePreviews: [],
-        nodeUpdates: []
+        nodeUpdates: [],
       }
 
       const { setPreviewState } = useAIEditorStore.getState()
@@ -254,8 +254,8 @@ describe('aiEditorStore', () => {
           deletionOverlays: [],
           movementPaths: [],
           edgePreviews: [],
-          nodeUpdates: []
-        }
+          nodeUpdates: [],
+        },
       })
 
       const { setPreviewState } = useAIEditorStore.getState()
@@ -274,8 +274,8 @@ describe('aiEditorStore', () => {
           prompt: 'test',
           scope: 'selection',
           operations: [],
-          warnings: []
-        }
+          warnings: [],
+        },
       })
 
       const { clearPlan } = useAIEditorStore.getState()
@@ -292,7 +292,7 @@ describe('aiEditorStore', () => {
           prompt: 'test',
           scope: 'selection',
           operations: [],
-          warnings: []
+          warnings: [],
         },
         previewState: {
           planId: 'test-plan',
@@ -300,8 +300,8 @@ describe('aiEditorStore', () => {
           deletionOverlays: [],
           movementPaths: [],
           edgePreviews: [],
-          nodeUpdates: []
-        }
+          nodeUpdates: [],
+        },
       })
 
       const { clearPlan } = useAIEditorStore.getState()
@@ -313,7 +313,7 @@ describe('aiEditorStore', () => {
     it('should clear generation error (not execution error)', () => {
       useAIEditorStore.setState({
         generationError: 'Some error',
-        executionError: 'Another error'
+        executionError: 'Another error',
       })
 
       const { clearPlan } = useAIEditorStore.getState()
@@ -354,8 +354,8 @@ describe('aiEditorStore', () => {
           prompt: 'test',
           scope: 'selection',
           operations: [],
-          warnings: []
-        }
+          warnings: [],
+        },
       })
 
       const { completeExecution } = useAIEditorStore.getState()
@@ -420,11 +420,11 @@ describe('aiEditorStore', () => {
           prompt: 'test',
           scope: 'selection',
           operations: [],
-          warnings: []
+          warnings: [],
         },
         generationError: 'Error',
         executionError: 'Error',
-        tempIdToRealId: mapping
+        tempIdToRealId: mapping,
       })
 
       const { resetState } = useAIEditorStore.getState()

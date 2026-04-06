@@ -67,8 +67,8 @@ export const DEFAULT_GLASS_SETTINGS: GlassSettings = {
     modals: true, // Glass on modals by default
     panels: true, // Glass on panels by default
     overlays: false, // Disabled (too busy)
-    toolbar: false // Disabled (prefer solid toolbar)
-  }
+    toolbar: false, // Disabled (prefer solid toolbar)
+  },
 }
 
 /**
@@ -80,5 +80,5 @@ export const GLASS_DATA_ATTRS = {
   MODALS: 'data-glass-modals',
   PANELS: 'data-glass-panels',
   OVERLAYS: 'data-glass-overlays',
-  TOOLBAR: 'data-glass-toolbar'
+  TOOLBAR: 'data-glass-toolbar',
 } as const

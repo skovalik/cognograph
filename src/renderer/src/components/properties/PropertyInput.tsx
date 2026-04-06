@@ -1,19 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useState, useCallback, memo } from 'react'
-import {
-  Check,
-  ChevronDown,
-  Calendar,
-  ExternalLink
-} from 'lucide-react'
 import type { PropertyDefinition, PropertyOption } from '@shared/types'
+import { Calendar, Check, ChevronDown, ExternalLink } from 'lucide-react'
+import { memo, useCallback, useState } from 'react'
 import { getMergedPropertyOptions } from '../../constants/properties'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { UnifiedPropertyDropdown } from './UnifiedPropertyDropdown'
-import { TagsDropdown } from './TagsDropdown'
 import { RichTextEditor } from '../RichTextEditor'
+import { TagsDropdown } from './TagsDropdown'
+import { UnifiedPropertyDropdown } from './UnifiedPropertyDropdown'
 
 // -----------------------------------------------------------------------------
 // PropertyInput Main Component
@@ -34,7 +29,7 @@ const PropertyInput = memo(function PropertyInput({
   value,
   onChange,
   disabled = false,
-  showEditButton = false
+  showEditButton = false,
 }: PropertyInputProps) {
   // Get merged options (built-in + user-added) from workspace schema
   const propertySchema = useWorkspaceStore((state) => state.propertySchema)
@@ -82,14 +77,16 @@ const PropertyInput = memo(function PropertyInput({
       return (
         <UnifiedPropertyDropdown
           value={(value as string) || ''}
-          options={mergedOptions.length > 0 ? mergedOptions : (definition.options || [])}
+          options={mergedOptions.length > 0 ? mergedOptions : definition.options || []}
           onSelect={(v) => onChange(v)}
           onCreateOption={(opt) => {
             const newValue = addPropertyOption(definition.id, opt)
             // Optionally select the newly created option
             onChange(newValue)
           }}
-          onUpdateOption={(optValue, updates) => updatePropertyOption(definition.id, optValue, updates)}
+          onUpdateOption={(optValue, updates) =>
+            updatePropertyOption(definition.id, optValue, updates)
+          }
           onDeleteOption={(optValue) => deletePropertyOption(definition.id, optValue)}
           disabled={disabled}
           allowCreate={true}
@@ -101,10 +98,12 @@ const PropertyInput = memo(function PropertyInput({
       return (
         <TagsDropdown
           value={(value as string[]) || []}
-          options={mergedOptions.length > 0 ? mergedOptions : (definition.options || [])}
+          options={mergedOptions.length > 0 ? mergedOptions : definition.options || []}
           onChange={onChange}
           onCreateOption={(opt) => addPropertyOption(definition.id, opt)}
-          onUpdateOption={(optValue, updates) => updatePropertyOption(definition.id, optValue, updates)}
+          onUpdateOption={(optValue, updates) =>
+            updatePropertyOption(definition.id, optValue, updates)
+          }
           onDeleteOption={(optValue) => deletePropertyOption(definition.id, optValue)}
           disabled={disabled}
           allowCreate={true}
@@ -124,11 +123,7 @@ const PropertyInput = memo(function PropertyInput({
 
     case 'date':
       return (
-        <DateInput
-          value={value as number | undefined}
-          onChange={onChange}
-          disabled={disabled}
-        />
+        <DateInput value={value as number | undefined} onChange={onChange} disabled={disabled} />
       )
 
     case 'datetime':
@@ -141,22 +136,10 @@ const PropertyInput = memo(function PropertyInput({
       )
 
     case 'url':
-      return (
-        <UrlInput
-          value={(value as string) || ''}
-          onChange={onChange}
-          disabled={disabled}
-        />
-      )
+      return <UrlInput value={(value as string) || ''} onChange={onChange} disabled={disabled} />
 
     case 'email':
-      return (
-        <EmailInput
-          value={(value as string) || ''}
-          onChange={onChange}
-          disabled={disabled}
-        />
-      )
+      return <EmailInput value={(value as string) || ''} onChange={onChange} disabled={disabled} />
 
     case 'relation':
       return (
@@ -187,7 +170,7 @@ const TextInput = memo(function TextInput({
   value,
   onChange,
   disabled,
-  placeholder
+  placeholder,
 }: TextInputProps) {
   return (
     <input
@@ -223,7 +206,7 @@ const TextareaInput = memo(function TextareaInput({
   disabled,
   placeholder,
   rows = 4,
-  enableRichText = false
+  enableRichText = false,
 }: TextareaInputProps) {
   if (enableRichText) {
     return (
@@ -278,7 +261,7 @@ const NumberInput = memo(function NumberInput({
   disabled,
   min,
   max,
-  step = 1
+  step = 1,
 }: NumberInputProps) {
   return (
     <input
@@ -314,7 +297,7 @@ const CheckboxInput = memo(function CheckboxInput({
   value,
   onChange,
   disabled,
-  label
+  label,
 }: CheckboxInputProps) {
   return (
     <label className="flex items-center gap-2 cursor-pointer">
@@ -327,7 +310,7 @@ const CheckboxInput = memo(function CheckboxInput({
         style={{
           accentColor: 'var(--gui-accent-primary)',
           backgroundColor: 'var(--gui-panel-bg-secondary)',
-          borderColor: 'var(--gui-border-strong)'
+          borderColor: 'var(--gui-border-strong)',
         }}
       />
       {label && <span className="text-sm gui-text">{label}</span>}
@@ -357,7 +340,7 @@ const DateInput = memo(function DateInput({ value, onChange, disabled }: DateInp
         onChange(undefined)
       }
     },
-    [onChange]
+    [onChange],
   )
 
   return (
@@ -392,7 +375,7 @@ interface DateTimeInputProps {
 const DateTimeInput = memo(function DateTimeInput({
   value,
   onChange,
-  disabled
+  disabled,
 }: DateTimeInputProps) {
   const dateTimeString = value ? new Date(value).toISOString().slice(0, 16) : ''
 
@@ -405,7 +388,7 @@ const DateTimeInput = memo(function DateTimeInput({
         onChange(undefined)
       }
     },
-    [onChange]
+    [onChange],
   )
 
   return (
@@ -502,7 +485,7 @@ interface RelationInputProps {
 const RelationInput = memo(function RelationInput({
   value,
   onChange,
-  disabled
+  disabled,
 }: RelationInputProps) {
   const [isOpen, setIsOpen] = useState(false)
   const nodes = useWorkspaceStore((state) => state.nodes)
@@ -552,12 +535,19 @@ const RelationInput = memo(function RelationInput({
                 }}
                 className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left hover:brightness-110"
                 style={{
-                  backgroundColor: value === node.id ? 'var(--gui-panel-bg)' : 'var(--gui-panel-bg-secondary)'
+                  backgroundColor:
+                    value === node.id ? 'var(--gui-panel-bg)' : 'var(--gui-panel-bg-secondary)',
                 }}
               >
                 <span className="text-xs gui-text-secondary">[{node.data.type}]</span>
                 <span className="gui-text">{node.data.title as string}</span>
-                {value === node.id && <Check size={14} className="ml-auto" style={{ color: 'var(--gui-accent-primary)' }} />}
+                {value === node.id && (
+                  <Check
+                    size={14}
+                    className="ml-auto"
+                    style={{ color: 'var(--gui-accent-primary)' }}
+                  />
+                )}
               </button>
             ))}
           </div>

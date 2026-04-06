@@ -8,8 +8,8 @@
  * Keyboard navigable with ARIA listbox pattern.
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react'
 import { Clock, Sparkles, TrendingUp } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 
 interface Suggestion {
   id: string
@@ -35,7 +35,7 @@ function SuggestionListComponent({
   onSelect,
   isVisible,
   highlightedIndex = -1,
-  onHighlightChange
+  onHighlightChange,
 }: SuggestionListProps): JSX.Element | null {
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -45,10 +45,10 @@ function SuggestionListComponent({
     ...recentPrompts.slice(0, 3).map((text, i) => ({
       id: `recent-${i}`,
       text,
-      type: 'recent' as const
+      type: 'recent' as const,
     })),
     // Then suggestions
-    ...suggestions.slice(0, MAX_SUGGESTIONS - Math.min(recentPrompts.length, 3))
+    ...suggestions.slice(0, MAX_SUGGESTIONS - Math.min(recentPrompts.length, 3)),
   ]
 
   // Keyboard navigation

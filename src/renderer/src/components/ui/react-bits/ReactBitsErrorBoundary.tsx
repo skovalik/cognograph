@@ -10,7 +10,7 @@
  * effect failure never crashes the entire node or panel.
  */
 
-import { Component, type ReactNode, type ErrorInfo } from 'react'
+import { Component, type ErrorInfo, type ReactNode } from 'react'
 
 interface Props {
   children: ReactNode

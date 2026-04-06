@@ -8,11 +8,14 @@
  * detached from the canvas. Follows the same pattern as FloatingPropertiesModal.
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react'
-import { X, GripHorizontal, Minimize2, Maximize2, Pin } from 'lucide-react'
-import type { Node } from '@xyflow/react'
 import type { NodeData } from '@shared/types'
-import { useWorkspaceStore, type PinnedWindow as PinnedWindowState } from '../../stores/workspaceStore'
+import type { Node } from '@xyflow/react'
+import { GripHorizontal, Maximize2, Minimize2, Pin, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import {
+  type PinnedWindow as PinnedWindowState,
+  useWorkspaceStore,
+} from '../../stores/workspaceStore'
 import { EditableTitle } from '../EditableTitle'
 import { PinnedNodeContent } from './PinnedNodeContent'
 
@@ -41,41 +44,56 @@ function PinnedWindowComponent({ window: win, node }: PinnedWindowProps): JSX.El
   }, [win.position.x, win.position.y, win.size.width, win.size.height])
 
   // Commit position to store when drag ends
-  const commitPosition = useCallback((pos: { x: number; y: number }) => {
-    updatePinnedWindow(node.id, { position: pos })
-  }, [node.id, updatePinnedWindow])
+  const commitPosition = useCallback(
+    (pos: { x: number; y: number }) => {
+      updatePinnedWindow(node.id, { position: pos })
+    },
+    [node.id, updatePinnedWindow],
+  )
 
   // Commit size to store when resize ends
-  const commitSize = useCallback((newSize: { width: number; height: number }, pos?: { x: number; y: number }) => {
-    const updates: Partial<PinnedWindowState> = { size: newSize }
-    if (pos) updates.position = pos
-    updatePinnedWindow(node.id, updates)
-  }, [node.id, updatePinnedWindow])
+  const commitSize = useCallback(
+    (newSize: { width: number; height: number }, pos?: { x: number; y: number }) => {
+      const updates: Partial<PinnedWindowState> = { size: newSize }
+      if (pos) updates.position = pos
+      updatePinnedWindow(node.id, updates)
+    },
+    [node.id, updatePinnedWindow],
+  )
 
   // Handle drag start
-  const handleDragStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    bringPinnedToFront(node.id)
-    setIsDragging(true)
-    dragStartPos.current = {
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
-    }
-  }, [position, node.id, bringPinnedToFront])
+  const handleDragStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      bringPinnedToFront(node.id)
+      setIsDragging(true)
+      dragStartPos.current = {
+        x: e.clientX - position.x,
+        y: e.clientY - position.y,
+      }
+    },
+    [position, node.id, bringPinnedToFront],
+  )
 
   // Handle drag move
   useEffect(() => {
     if (!isDragging) return
 
     const handleMouseMove = (e: MouseEvent): void => {
-      const newX = Math.max(0, Math.min(window.innerWidth - 100, e.clientX - dragStartPos.current.x))
-      const newY = Math.max(0, Math.min(window.innerHeight - 50, e.clientY - dragStartPos.current.y))
+      const newX = Math.max(
+        0,
+        Math.min(window.innerWidth - 100, e.clientX - dragStartPos.current.x),
+      )
+      const newY = Math.max(
+        0,
+        Math.min(window.innerHeight - 50, e.clientY - dragStartPos.current.y),
+      )
       setPosition({ x: newX, y: newY })
     }
 
     const handleMouseUp = (): void => {
       setIsDragging(false)
-      setPosition(prev => {
+      setPosition((prev) => {
         commitPosition(prev)
         return prev
       })
@@ -106,64 +124,66 @@ function PinnedWindowComponent({ window: win, node }: PinnedWindowProps): JSX.El
   }, [node.id, bringPinnedToFront])
 
   // Resize handler factory
-  const createResizeHandler = useCallback((
-    direction: 'right' | 'bottom' | 'left' | 'top' | 'br' | 'bl' | 'tr' | 'tl'
-  ) => (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsResizing(true)
-    bringPinnedToFront(node.id)
-    const startX = e.clientX
-    const startY = e.clientY
-    const startWidth = size.width
-    const startHeight = size.height
-    const startPosX = position.x
-    const startPosY = position.y
+  const createResizeHandler = useCallback(
+    (direction: 'right' | 'bottom' | 'left' | 'top' | 'br' | 'bl' | 'tr' | 'tl') =>
+      (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsResizing(true)
+        bringPinnedToFront(node.id)
+        const startX = e.clientX
+        const startY = e.clientY
+        const startWidth = size.width
+        const startHeight = size.height
+        const startPosX = position.x
+        const startPosY = position.y
 
-    const handleResize = (moveE: MouseEvent): void => {
-      const deltaX = moveE.clientX - startX
-      const deltaY = moveE.clientY - startY
-      let newWidth = startWidth
-      let newHeight = startHeight
-      let newX = startPosX
-      let newY = startPosY
+        const handleResize = (moveE: MouseEvent): void => {
+          const deltaX = moveE.clientX - startX
+          const deltaY = moveE.clientY - startY
+          let newWidth = startWidth
+          let newHeight = startHeight
+          let newX = startPosX
+          let newY = startPosY
 
-      if (direction.includes('right') || direction === 'br' || direction === 'tr') {
-        newWidth = Math.max(300, startWidth + deltaX)
-      }
-      if (direction.includes('left') || direction === 'bl' || direction === 'tl') {
-        newWidth = Math.max(300, startWidth - deltaX)
-        newX = startPosX + (startWidth - newWidth)
-      }
-      if (direction.includes('bottom') || direction === 'br' || direction === 'bl') {
-        newHeight = Math.max(150, startHeight + deltaY)
-      }
-      if (direction.includes('top') || direction === 'tr' || direction === 'tl') {
-        newHeight = Math.max(150, startHeight - deltaY)
-        newY = startPosY + (startHeight - newHeight)
-      }
+          if (direction.includes('right') || direction === 'br' || direction === 'tr') {
+            newWidth = Math.max(300, startWidth + deltaX)
+          }
+          if (direction.includes('left') || direction === 'bl' || direction === 'tl') {
+            newWidth = Math.max(300, startWidth - deltaX)
+            newX = startPosX + (startWidth - newWidth)
+          }
+          if (direction.includes('bottom') || direction === 'br' || direction === 'bl') {
+            newHeight = Math.max(150, startHeight + deltaY)
+          }
+          if (direction.includes('top') || direction === 'tr' || direction === 'tl') {
+            newHeight = Math.max(150, startHeight - deltaY)
+            newY = startPosY + (startHeight - newHeight)
+          }
 
-      setSize({ width: newWidth, height: newHeight })
-      setPosition({ x: Math.max(0, newX), y: Math.max(0, newY) })
-    }
+          setSize({ width: newWidth, height: newHeight })
+          setPosition({ x: Math.max(0, newX), y: Math.max(0, newY) })
+        }
 
-    const handleResizeEnd = (): void => {
-      setIsResizing(false)
-      // Read current size/position from state at end
-      setSize(prev => {
-        setPosition(posPrev => {
-          commitSize(prev, posPrev)
-          return posPrev
-        })
-        return prev
-      })
-      document.removeEventListener('mousemove', handleResize)
-      document.removeEventListener('mouseup', handleResizeEnd)
-    }
+        const handleResizeEnd = (): void => {
+          setIsResizing(false)
+          // Read current size/position from state at end
+          setSize((prev) => {
+            setPosition((posPrev) => {
+              commitSize(prev, posPrev)
+              return posPrev
+            })
+            return prev
+          })
+          document.removeEventListener('mousemove', handleResize)
+          document.removeEventListener('mouseup', handleResizeEnd)
+        }
 
-    document.addEventListener('mousemove', handleResize)
-    document.addEventListener('mouseup', handleResizeEnd)
-  }, [size, position, node.id, bringPinnedToFront, commitSize])
+        document.addEventListener('mousemove', handleResize)
+        document.addEventListener('mouseup', handleResizeEnd)
+      },
+    [size, position, node.id, bringPinnedToFront, commitSize],
+  )
 
   // Get node color for theming
   const nodeColor = node.data.color || '#6b7280'
@@ -178,7 +198,7 @@ function PinnedWindowComponent({ window: win, node }: PinnedWindowProps): JSX.El
         height: win.minimized ? 44 : size.height,
         zIndex: win.zIndex + 1000,
         transition: isDragging || isResizing ? 'none' : 'height 0.2s ease-out',
-        borderTopColor: nodeColor
+        borderTopColor: nodeColor,
       }}
       onMouseDown={handleMouseDown}
     >

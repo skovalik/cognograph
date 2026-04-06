@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, vi } from 'vitest'
-import { adaptMCPTool, adaptMCPTools } from '../mcpToolAdapter'
+import { describe, expect, it, vi } from 'vitest'
 import type { MCPToolDefinition, MCPToolExecutor } from '../mcpToolAdapter'
+import { adaptMCPTool, adaptMCPTools } from '../mcpToolAdapter'
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -55,10 +55,7 @@ describe('adaptMCPTool', () => {
   })
 
   it('does not double-prefix names that already contain __', () => {
-    const tool = adaptMCPTool(
-      makeMCPTool({ name: 'docs-server__search_docs' }),
-      mockExecutor(),
-    )
+    const tool = adaptMCPTool(makeMCPTool({ name: 'docs-server__search_docs' }), mockExecutor())
 
     expect(tool.name).toBe('docs-server__search_docs')
   })
@@ -115,11 +112,7 @@ describe('adaptMCPTool — call()', () => {
 
     await tool.call({ query: 'hello' })
 
-    expect(executor).toHaveBeenCalledWith(
-      'docs-server',
-      'search_docs',
-      { query: 'hello' },
-    )
+    expect(executor).toHaveBeenCalledWith('docs-server', 'search_docs', { query: 'hello' })
   })
 
   it('returns ToolResult with serialized result on success', async () => {
@@ -182,11 +175,11 @@ describe('adaptMCPTool — call()', () => {
     // Should not throw — MCP tools accept arbitrary objects
     await tool.call({ arbitrary: 'data', nested: { deep: true }, num: 42 })
 
-    expect(executor).toHaveBeenCalledWith(
-      'docs-server',
-      'search_docs',
-      { arbitrary: 'data', nested: { deep: true }, num: 42 },
-    )
+    expect(executor).toHaveBeenCalledWith('docs-server', 'search_docs', {
+      arbitrary: 'data',
+      nested: { deep: true },
+      num: 42,
+    })
   })
 })
 
@@ -197,10 +190,7 @@ describe('adaptMCPTool — call()', () => {
 describe('adaptMCPTools', () => {
   it('adapts multiple tools', () => {
     const tools = adaptMCPTools(
-      [
-        makeMCPTool({ name: 'search_docs' }),
-        makeMCPTool({ name: 'get_doc' }),
-      ],
+      [makeMCPTool({ name: 'search_docs' }), makeMCPTool({ name: 'get_doc' })],
       mockExecutor(),
     )
 
@@ -218,10 +208,7 @@ describe('adaptMCPTools', () => {
   it('each adapted tool delegates to the same executor', async () => {
     const executor = mockExecutor()
     const tools = adaptMCPTools(
-      [
-        makeMCPTool({ name: 'tool_a' }),
-        makeMCPTool({ name: 'tool_b' }),
-      ],
+      [makeMCPTool({ name: 'tool_a' }), makeMCPTool({ name: 'tool_b' })],
       executor,
     )
 

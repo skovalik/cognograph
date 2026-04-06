@@ -10,10 +10,10 @@
  * 3. Returns the context string for MCP tool consumption
  */
 
-import { join } from 'path'
+import { sanitizeForContext } from '@shared/utils/sanitizeContext'
 import { promises as fs } from 'fs'
 import { homedir } from 'os'
-import { sanitizeForContext } from '@shared/utils/sanitizeContext'
+import { join } from 'path'
 
 // Safe Electron app import — falls back to homedir when running outside Electron (MCP CLI)
 let electronApp: { getPath: (name: string) => string } | null = null
@@ -271,7 +271,10 @@ export class BFSCache {
   /** Compute a topology hash from edges (sorted by id for determinism). */
   static computeTopologyHash(edges: WorkspaceEdge[]): number {
     const sorted = edges
-      .map(e => `${e.id}:${e.source}->${e.target}:${e.data?.active !== false ? '1' : '0'}:${e.data?.bidirectional === true || e.data?.direction === 'bidirectional' ? 'b' : 'u'}`)
+      .map(
+        (e) =>
+          `${e.id}:${e.source}->${e.target}:${e.data?.active !== false ? '1' : '0'}:${e.data?.bidirectional === true || e.data?.direction === 'bidirectional' ? 'b' : 'u'}`,
+      )
       .sort()
     return fnv1aHash(sorted.join('|'))
   }
@@ -282,7 +285,7 @@ export class BFSCache {
     topologyHash: number,
     contentHash: number,
     maxDepth: number,
-    maxTokens: number | undefined
+    maxTokens: number | undefined,
   ): string {
     return `${startNodeId}:${topologyHash}:${contentHash}:${maxDepth}:${maxTokens ?? 'none'}`
   }
@@ -312,7 +315,7 @@ export class BFSCache {
     this._cache.set(key, {
       cacheKey: key,
       result,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     })
   }
 
@@ -396,7 +399,7 @@ async function loadCurrentWorkspaceSnapshot(): Promise<WorkspaceSnapshot | null>
 
     return {
       nodes: workspace.nodes ?? [],
-      edges: workspace.edges ?? []
+      edges: workspace.edges ?? [],
     }
   } catch {
     return null
@@ -423,7 +426,7 @@ function extractContentSummary(node: WorkspaceNode): string {
       if (messages && messages.length > 0) {
         // Take last few messages as context summary
         const recent = messages.slice(-3)
-        raw = recent.map(m => `[${m.role ?? 'unknown'}]: ${m.content ?? ''}`).join('\n')
+        raw = recent.map((m) => `[${m.role ?? 'unknown'}]: ${m.content ?? ''}`).join('\n')
       }
       break
     }
@@ -494,7 +497,7 @@ export function bfsTraverse(
   edges: WorkspaceEdge[],
   maxDepth: number = MAX_BFS_DEPTH,
   maxTokens?: number,
-  adjacencyIdx?: AdjacencyIndex
+  adjacencyIdx?: AdjacencyIndex,
 ): ContextEntry[] {
   const nodeMap = new Map<string, WorkspaceNode>()
   for (const n of nodes) {
@@ -504,20 +507,18 @@ export function bfsTraverse(
   // Helper: get inbound edges for a node
   const getInbound = adjacencyIdx?.isValid
     ? (nid: string) => adjacencyIdx.getInbound(nid)
-    : (nid: string) => edges.filter(e => e.target === nid)
+    : (nid: string) => edges.filter((e) => e.target === nid)
 
   // Helper: get outbound edges for a node
   const getOutbound = adjacencyIdx?.isValid
     ? (nid: string) => adjacencyIdx.getOutbound(nid)
-    : (nid: string) => edges.filter(e => e.source === nid)
+    : (nid: string) => edges.filter((e) => e.source === nid)
 
   const visited = new Set<string>([startNodeId])
   const result: ContextEntry[] = []
   let accumulatedTokens = 0
 
-  let frontier: Array<{ nodeId: string; depth: number }> = [
-    { nodeId: startNodeId, depth: 0 }
-  ]
+  let frontier: Array<{ nodeId: string; depth: number }> = [{ nodeId: startNodeId, depth: 0 }]
 
   while (frontier.length > 0) {
     const nextFrontier: Array<{ nodeId: string; depth: number }> = []
@@ -556,7 +557,7 @@ export function bfsTraverse(
           content,
           edgeRole,
           depth: depth + 1,
-          tokenEstimate: entryTokens
+          tokenEstimate: entryTokens,
         })
 
         accumulatedTokens += entryTokens
@@ -575,9 +576,7 @@ export function bfsTraverse(
         if (edge.data?.active === false) continue
 
         // Only follow if bidirectional
-        const isBidi =
-          edge.data?.bidirectional === true ||
-          edge.data?.direction === 'bidirectional'
+        const isBidi = edge.data?.bidirectional === true || edge.data?.direction === 'bidirectional'
         if (!isBidi) continue
 
         visited.add(edge.target)
@@ -602,7 +601,7 @@ export function bfsTraverse(
           content,
           edgeRole,
           depth: depth + 1,
-          tokenEstimate: entryTokens
+          tokenEstimate: entryTokens,
         })
 
         accumulatedTokens += entryTokens
@@ -635,7 +634,9 @@ export function generateMarkdown(rootTitle: string, entries: ContextEntry[]): st
   lines.push('')
 
   for (const entry of entries) {
-    lines.push(`### [${entry.nodeType}] ${entry.title} (depth: ${entry.depth}, role: ${entry.edgeRole})`)
+    lines.push(
+      `### [${entry.nodeType}] ${entry.title} (depth: ${entry.depth}, role: ${entry.edgeRole})`,
+    )
     if (entry.content) {
       lines.push(sanitizeForContext(entry.content))
     }
@@ -669,7 +670,7 @@ export function generateMarkdown(rootTitle: string, entries: ContextEntry[]): st
 export async function buildContextForNode(
   nodeId: string,
   workspaceOverride?: WorkspaceSnapshot | null,
-  options?: { maxTokens?: number; useCache?: boolean }
+  options?: { maxTokens?: number; useCache?: boolean },
 ): Promise<GeneratedContext> {
   const workspace = workspaceOverride ?? (await loadCurrentWorkspaceSnapshot())
   const useCache = options?.useCache !== false
@@ -678,7 +679,7 @@ export async function buildContextForNode(
     entries: [],
     markdown: '',
     filePath: getContextFilePath(nodeId),
-    totalTokens: 0
+    totalTokens: 0,
   }
 
   if (!workspace) {
@@ -686,7 +687,7 @@ export async function buildContextForNode(
     return emptyResult
   }
 
-  const rootNode = workspace.nodes.find(n => n.id === nodeId)
+  const rootNode = workspace.nodes.find((n) => n.id === nodeId)
   const rootTitle = rootNode ? extractTitle(rootNode) : 'Unknown Node'
 
   // --- Build adjacency index if stale ---
@@ -697,10 +698,10 @@ export async function buildContextForNode(
   // --- Build/update XOR hash for content ---
   if (_xorHash.value === 0 && workspace.nodes.length > 0) {
     _xorHash.buildFromNodes(
-      workspace.nodes.map(n => ({
+      workspace.nodes.map((n) => ({
         id: n.id,
-        content: extractContentSummary(n)
-      }))
+        content: extractContentSummary(n),
+      })),
     )
   }
 
@@ -712,7 +713,7 @@ export async function buildContextForNode(
       topologyHash,
       _xorHash.value,
       MAX_BFS_DEPTH,
-      options?.maxTokens
+      options?.maxTokens,
     )
 
     const cached = _bfsCache.get(cacheKey)
@@ -723,7 +724,7 @@ export async function buildContextForNode(
         entries: cached,
         markdown,
         filePath: getContextFilePath(nodeId),
-        totalTokens
+        totalTokens,
       }
     }
 
@@ -734,7 +735,7 @@ export async function buildContextForNode(
       workspace.edges,
       MAX_BFS_DEPTH,
       options?.maxTokens,
-      _adjacencyIndex
+      _adjacencyIndex,
     )
 
     _bfsCache.set(cacheKey, entries)
@@ -746,7 +747,7 @@ export async function buildContextForNode(
       entries,
       markdown,
       filePath: getContextFilePath(nodeId),
-      totalTokens
+      totalTokens,
     }
   }
 
@@ -757,7 +758,7 @@ export async function buildContextForNode(
     workspace.edges,
     MAX_BFS_DEPTH,
     options?.maxTokens,
-    _adjacencyIndex
+    _adjacencyIndex,
   )
   const markdown = generateMarkdown(rootTitle, entries)
   const totalTokens = entries.reduce((sum, e) => sum + e.tokenEstimate, 0)
@@ -766,7 +767,7 @@ export async function buildContextForNode(
     entries,
     markdown,
     filePath: getContextFilePath(nodeId),
-    totalTokens
+    totalTokens,
   }
 }
 

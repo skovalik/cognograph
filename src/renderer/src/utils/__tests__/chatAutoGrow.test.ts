@@ -10,7 +10,7 @@
  * - Shrinks back when content is deleted
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
  * Simulates the auto-grow algorithm extracted from ChatPanel's onInput handler.
@@ -18,7 +18,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
  */
 function simulateAutoGrow(
   scrollHeight: number,
-  viewportHeight: number
+  viewportHeight: number,
 ): { autoHeight: string; finalHeight: string } {
   // Step 1: reset height to auto (collapses to content size)
   const autoHeight = 'auto'

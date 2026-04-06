@@ -14,8 +14,8 @@
  */
 
 import type { ConnectedAgent } from '@shared/types'
-import type { ToolPool, Tool } from './types'
 import { assembleToolPool } from './assembleToolPool'
+import type { Tool, ToolPool } from './types'
 
 // ---------------------------------------------------------------------------
 // Agent tool filtering config (subset of ConnectedAgent relevant to tools)

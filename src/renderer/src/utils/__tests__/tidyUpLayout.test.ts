@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+import type { LayoutEdge, LayoutNode } from '../tidyUpLayout'
 import { tidyUpLayout } from '../tidyUpLayout'
-import type { LayoutNode, LayoutEdge } from '../tidyUpLayout'
 
 // Helper: create a layout node
 function makeNode(
@@ -12,7 +12,7 @@ function makeNode(
   y: number,
   width = 280,
   height = 140,
-  pinned = false
+  pinned = false,
 ): LayoutNode {
   return { id, x, y, width, height, pinned }
 }
@@ -25,7 +25,7 @@ function dist(a: { x: number; y: number }, b: { x: number; y: number }): number 
 // Helper: get result position by id
 function getPos(
   results: Array<{ id: string; x: number; y: number }>,
-  id: string
+  id: string,
 ): { x: number; y: number } {
   const found = results.find((r) => r.id === id)
   if (!found) throw new Error(`Node ${id} not found in results`)
@@ -67,7 +67,7 @@ describe('tidyUpLayout', () => {
   it('should not move a pinned node', () => {
     const nodes = [
       makeNode('pinned', 500, 500, 280, 140, true),
-      makeNode('free', 510, 510, 280, 140, false)
+      makeNode('free', 510, 510, 280, 140, false),
     ]
     const result = tidyUpLayout(nodes, [])
 
@@ -90,7 +90,7 @@ describe('tidyUpLayout', () => {
     const result = tidyUpLayout(nodes, edges, {
       horizontalGap: 80,
       iterations: 50,
-      strength: 0.1
+      strength: 0.1,
     })
 
     const p1 = getPos(result, 'n1')
@@ -106,13 +106,13 @@ describe('tidyUpLayout', () => {
     const groupA = [
       makeNode('a1', 0, 0, 100, 50),
       makeNode('a2', 50, 50, 100, 50),
-      makeNode('a3', 100, 0, 100, 50)
+      makeNode('a3', 100, 0, 100, 50),
     ]
     // Group B centered around (5000, 5000)
     const groupB = [
       makeNode('b1', 5000, 5000, 100, 50),
       makeNode('b2', 5050, 5050, 100, 50),
-      makeNode('b3', 5100, 5000, 100, 50)
+      makeNode('b3', 5100, 5000, 100, 50),
     ]
 
     const nodes = [...groupA, ...groupB]
@@ -120,7 +120,7 @@ describe('tidyUpLayout', () => {
       { source: 'a1', target: 'a2' },
       { source: 'a2', target: 'a3' },
       { source: 'b1', target: 'b2' },
-      { source: 'b2', target: 'b3' }
+      { source: 'b2', target: 'b3' },
     ]
 
     const result = tidyUpLayout(nodes, edges, { iterations: 50 })
@@ -128,11 +128,11 @@ describe('tidyUpLayout', () => {
     // Compute centroids of each group after tidy
     const aCentroid = {
       x: (getPos(result, 'a1').x + getPos(result, 'a2').x + getPos(result, 'a3').x) / 3,
-      y: (getPos(result, 'a1').y + getPos(result, 'a2').y + getPos(result, 'a3').y) / 3
+      y: (getPos(result, 'a1').y + getPos(result, 'a2').y + getPos(result, 'a3').y) / 3,
     }
     const bCentroid = {
       x: (getPos(result, 'b1').x + getPos(result, 'b2').x + getPos(result, 'b3').x) / 3,
-      y: (getPos(result, 'b1').y + getPos(result, 'b2').y + getPos(result, 'b3').y) / 3
+      y: (getPos(result, 'b1').y + getPos(result, 'b2').y + getPos(result, 'b3').y) / 3,
     }
 
     // Groups should still be far apart (not merged)
@@ -155,7 +155,7 @@ describe('tidyUpLayout', () => {
     const nodes = [
       makeNode('n1', 100, 100, 280, 140),
       makeNode('n2', 200, 200, 280, 140),
-      makeNode('n3', 300, 100, 280, 140)
+      makeNode('n3', 300, 100, 280, 140),
     ]
     const edges: LayoutEdge[] = [{ source: 'n1', target: 'n2' }]
 
@@ -176,7 +176,7 @@ describe('tidyUpLayout', () => {
       makeNode('n1', 100, 100, 100, 50),
       makeNode('n2', 110, 110, 100, 50),
       makeNode('n3', 105, 105, 100, 50),
-      makeNode('n4', 115, 100, 100, 50)
+      makeNode('n4', 115, 100, 100, 50),
     ]
     const hGap = 80
     const vGap = 60
@@ -184,7 +184,7 @@ describe('tidyUpLayout', () => {
       horizontalGap: hGap,
       verticalGap: vGap,
       iterations: 100,
-      strength: 0.1
+      strength: 0.1,
     })
 
     const minGap = Math.min(hGap, vGap)
@@ -192,10 +192,7 @@ describe('tidyUpLayout', () => {
     // Check pairwise distances
     for (let i = 0; i < result.length; i++) {
       for (let j = i + 1; j < result.length; j++) {
-        const d = dist(
-          { x: result[i].x, y: result[i].y },
-          { x: result[j].x, y: result[j].y }
-        )
+        const d = dist({ x: result[i].x, y: result[i].y }, { x: result[j].x, y: result[j].y })
         // After tidy, node centers should be at least minGap apart
         expect(d).toBeGreaterThanOrEqual(minGap * 0.8) // Allow 20% tolerance for force-based
       }
@@ -206,7 +203,7 @@ describe('tidyUpLayout', () => {
   it('should handle all pinned nodes by returning their original positions', () => {
     const nodes = [
       makeNode('n1', 100, 100, 280, 140, true),
-      makeNode('n2', 200, 200, 280, 140, true)
+      makeNode('n2', 200, 200, 280, 140, true),
     ]
     const result = tidyUpLayout(nodes, [])
     expect(getPos(result, 'n1')).toEqual({ x: 100, y: 100 })
@@ -214,15 +211,12 @@ describe('tidyUpLayout', () => {
   })
 
   it('should handle custom options', () => {
-    const nodes = [
-      makeNode('n1', 0, 0, 100, 50),
-      makeNode('n2', 10, 10, 100, 50)
-    ]
+    const nodes = [makeNode('n1', 0, 0, 100, 50), makeNode('n2', 10, 10, 100, 50)]
     const result = tidyUpLayout(nodes, [], {
       horizontalGap: 200,
       verticalGap: 200,
       iterations: 100,
-      strength: 0.2
+      strength: 0.2,
     })
 
     const d = dist(getPos(result, 'n1'), getPos(result, 'n2'))
@@ -236,7 +230,7 @@ describe('tidyUpLayout', () => {
       makeNode('n2', 100, 100),
       makeNode('n3', 200, 200),
       makeNode('n4', 300, 300),
-      makeNode('n5', 400, 400)
+      makeNode('n5', 400, 400),
     ]
     const result = tidyUpLayout(nodes, [])
     expect(result).toHaveLength(5)

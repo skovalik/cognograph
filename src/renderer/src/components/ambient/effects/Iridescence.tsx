@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { Renderer, Program, Mesh, Color, Triangle } from 'ogl';
-import React, { useEffect, useRef } from 'react';
-import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
+import { Color, Mesh, Program, Renderer, Triangle } from 'ogl'
+import type React from 'react'
+import { useEffect, useRef } from 'react'
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality'
 
 const vertexShader = `
 attribute vec2 uv;
@@ -15,7 +16,7 @@ void main() {
   vUv = uv;
   gl_Position = vec4(position, 0, 1);
 }
-`;
+`
 
 const fragmentShader = `
 precision highp float;
@@ -54,18 +55,18 @@ void main() {
     gl_FragColor = vec4(col, outAlpha);
   }
 }
-`;
+`
 
 interface IridescenceProps {
-  color?: [number, number, number];
-  speed?: number;
-  amplitude?: number;
-  mouseReact?: boolean;
-  isDark?: boolean;
-  opacity?: number;
-  style?: React.CSSProperties;
-  qualityRef?: React.RefObject<AdaptiveQualityState>;
-  reportFrame?: () => void;
+  color?: [number, number, number]
+  speed?: number
+  amplitude?: number
+  mouseReact?: boolean
+  isDark?: boolean
+  opacity?: number
+  style?: React.CSSProperties
+  qualityRef?: React.RefObject<AdaptiveQualityState>
+  reportFrame?: () => void
 }
 
 export default function Iridescence({
@@ -79,35 +80,35 @@ export default function Iridescence({
   qualityRef,
   reportFrame: reportFrameFn,
 }: IridescenceProps) {
-  const ctnDom = useRef<HTMLDivElement>(null);
-  const mousePos = useRef({ x: 0.5, y: 0.5 });
+  const ctnDom = useRef<HTMLDivElement>(null)
+  const mousePos = useRef({ x: 0.5, y: 0.5 })
 
   useEffect(() => {
-    if (!ctnDom.current) return;
-    const ctn = ctnDom.current;
-    const renderer = new Renderer({ dpr: 1.0 });
-    const gl = renderer.gl;
-    gl.clearColor(0, 0, 0, 0);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    if (!ctnDom.current) return
+    const ctn = ctnDom.current
+    const renderer = new Renderer({ dpr: 1.0 })
+    const gl = renderer.gl
+    gl.clearColor(0, 0, 0, 0)
+    gl.enable(gl.BLEND)
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
-    let program: Program;
+    let program: Program
 
     function resize() {
-      const scale = 1;
-      renderer.setSize(ctn.offsetWidth * scale, ctn.offsetHeight * scale);
+      const scale = 1
+      renderer.setSize(ctn.offsetWidth * scale, ctn.offsetHeight * scale)
       if (program) {
         program.uniforms.uResolution.value = new Color(
           gl.canvas.width,
           gl.canvas.height,
-          gl.canvas.width / gl.canvas.height
-        );
+          gl.canvas.width / gl.canvas.height,
+        )
       }
     }
-    window.addEventListener('resize', resize, false);
-    resize();
+    window.addEventListener('resize', resize, false)
+    resize()
 
-    const geometry = new Triangle(gl);
+    const geometry = new Triangle(gl)
     program = new Program(gl, {
       vertex: vertexShader,
       fragment: fragmentShader,
@@ -115,68 +116,70 @@ export default function Iridescence({
         uTime: { value: 0 },
         uColor: { value: new Color(...color) },
         uResolution: {
-          value: new Color(gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height)
+          value: new Color(gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height),
         },
         uMouse: { value: new Float32Array([mousePos.current.x, mousePos.current.y]) },
         uAmplitude: { value: amplitude },
         uSpeed: { value: speed },
-        uIsDark: { value: isDark ? 1 : 0 }
-      }
-    });
+        uIsDark: { value: isDark ? 1 : 0 },
+      },
+    })
 
-    const mesh = new Mesh(gl, { geometry, program });
-    let animateId: number;
+    const mesh = new Mesh(gl, { geometry, program })
+    let animateId: number
 
-    let frameCount = 0;
-    let currentScale = -1;
+    let frameCount = 0
+    let currentScale = -1
     function update(t: number) {
-      animateId = requestAnimationFrame(update);
-      if (qualityRef?.current && !qualityRef.current.shouldRender) return;
-      if (reportFrameFn) reportFrameFn();
-      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
+      animateId = requestAnimationFrame(update)
+      if (qualityRef?.current && !qualityRef.current.shouldRender) return
+      if (reportFrameFn) reportFrameFn()
+      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return
       if (qualityRef?.current) {
-        const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap;
+        const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap
         if (scale !== currentScale) {
-          currentScale = scale;
-          renderer.setSize(ctn.offsetWidth * scale, ctn.offsetHeight * scale);
+          currentScale = scale
+          renderer.setSize(ctn.offsetWidth * scale, ctn.offsetHeight * scale)
           // OGL setSize also sets canvas CSS dimensions — force back to 100% so
           // low-res content stretches to fill container (CSS upscaling, not shrinking)
-          const c = renderer.gl.canvas as HTMLCanvasElement;
-          c.style.width = '100%';
-          c.style.height = '100%';
+          const c = renderer.gl.canvas as HTMLCanvasElement
+          c.style.width = '100%'
+          c.style.height = '100%'
           program.uniforms.uResolution.value = new Color(
-            gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height
-          );
+            gl.canvas.width,
+            gl.canvas.height,
+            gl.canvas.width / gl.canvas.height,
+          )
         }
       }
-      program.uniforms.uTime.value = t * 0.001;
-      renderer.render({ scene: mesh });
+      program.uniforms.uTime.value = t * 0.001
+      renderer.render({ scene: mesh })
     }
-    animateId = requestAnimationFrame(update);
-    ctn.appendChild(gl.canvas);
+    animateId = requestAnimationFrame(update)
+    ctn.appendChild(gl.canvas)
 
     function handleMouseMove(e: MouseEvent) {
-      const rect = ctn.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = 1.0 - (e.clientY - rect.top) / rect.height;
-      mousePos.current = { x, y };
-      program.uniforms.uMouse.value[0] = x;
-      program.uniforms.uMouse.value[1] = y;
+      const rect = ctn.getBoundingClientRect()
+      const x = (e.clientX - rect.left) / rect.width
+      const y = 1.0 - (e.clientY - rect.top) / rect.height
+      mousePos.current = { x, y }
+      program.uniforms.uMouse.value[0] = x
+      program.uniforms.uMouse.value[1] = y
     }
     if (mouseReact) {
-      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mousemove', handleMouseMove)
     }
 
     return () => {
-      cancelAnimationFrame(animateId);
-      window.removeEventListener('resize', resize);
+      cancelAnimationFrame(animateId)
+      window.removeEventListener('resize', resize)
       if (mouseReact) {
-        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mousemove', handleMouseMove)
       }
-      ctn.removeChild(gl.canvas);
-      gl.getExtension('WEBGL_lose_context')?.loseContext();
-    };
-  }, [color, speed, amplitude, mouseReact, isDark]);
+      ctn.removeChild(gl.canvas)
+      gl.getExtension('WEBGL_lose_context')?.loseContext()
+    }
+  }, [color, speed, amplitude, mouseReact, isDark])
 
-  return <div ref={ctnDom} className="w-full h-full" style={{ ...style, opacity }} />;
+  return <div ref={ctnDom} className="w-full h-full" style={{ ...style, opacity }} />
 }

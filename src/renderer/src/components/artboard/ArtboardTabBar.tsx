@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import React, { memo, useCallback } from 'react'
+import type React from 'react'
+import { memo, useCallback } from 'react'
 
 interface ArtboardTab {
   id: string
@@ -27,13 +28,13 @@ export const ArtboardTabBar = memo(function ArtboardTabBar({
   tabs,
   activeTabId,
   onTabChange,
-  nodeColor
+  nodeColor,
 }: ArtboardTabBarProps): React.JSX.Element {
   const handleTabClick = useCallback(
     (tabId: string) => {
       onTabChange(tabId)
     },
-    [onTabChange]
+    [onTabChange],
   )
 
   const handleKeyDown = useCallback(
@@ -62,7 +63,7 @@ export const ArtboardTabBar = memo(function ArtboardTabBar({
         buttons?.[targetIndex]?.focus()
       }
     },
-    [onTabChange, tabs]
+    [onTabChange, tabs],
   )
 
   return (

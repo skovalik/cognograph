@@ -8,9 +8,9 @@
  * Used in SaveTemplateModal and TemplateBrowser.
  */
 
+import type { NodeData, NodeTemplate } from '@shared/types'
+import { CheckSquare, File, FileText, FolderKanban, MessageSquare } from 'lucide-react'
 import { memo, useMemo } from 'react'
-import { MessageSquare, FolderKanban, FileText, CheckSquare, File } from 'lucide-react'
-import type { NodeTemplate, NodeData } from '@shared/types'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -70,12 +70,18 @@ function TemplatePreviewComponent({
   template,
   className = '',
   maxWidth = 200,
-  maxHeight = 150
+  maxHeight = 150,
 }: TemplatePreviewProps): JSX.Element {
   // Calculate scaling to fit preview area
   const { scale, offsetX, offsetY, viewportWidth, viewportHeight } = useMemo(() => {
     if (template.nodes.length === 0) {
-      return { scale: 1, offsetX: 0, offsetY: 0, viewportWidth: maxWidth, viewportHeight: maxHeight }
+      return {
+        scale: 1,
+        offsetX: 0,
+        offsetY: 0,
+        viewportWidth: maxWidth,
+        viewportHeight: maxHeight,
+      }
     }
 
     // Find bounds of all nodes
@@ -115,49 +121,51 @@ function TemplatePreviewComponent({
       offsetX: finalOffsetX,
       offsetY: finalOffsetY,
       viewportWidth: maxWidth,
-      viewportHeight: maxHeight
+      viewportHeight: maxHeight,
     }
   }, [template.nodes, maxWidth, maxHeight])
 
   // Transform node position to preview coordinates
   const transformPosition = (x: number, y: number): { x: number; y: number } => ({
     x: x * scale + offsetX,
-    y: y * scale + offsetY
+    y: y * scale + offsetY,
   })
 
   // Render edges as SVG paths
   const renderEdges = (): JSX.Element[] => {
     const nodeMap = new Map(template.nodes.map((n) => [n.templateNodeId, n]))
 
-    return template.edges.map((edge, index) => {
-      const sourceNode = nodeMap.get(edge.source)
-      const targetNode = nodeMap.get(edge.target)
+    return template.edges
+      .map((edge, index) => {
+        const sourceNode = nodeMap.get(edge.source)
+        const targetNode = nodeMap.get(edge.target)
 
-      if (!sourceNode || !targetNode) return null
+        if (!sourceNode || !targetNode) return null
 
-      // Calculate edge endpoints (center of nodes)
-      const sourceCenter = transformPosition(
-        sourceNode.relativePosition.x + sourceNode.dimensions.width / 2,
-        sourceNode.relativePosition.y + sourceNode.dimensions.height / 2
-      )
-      const targetCenter = transformPosition(
-        targetNode.relativePosition.x + targetNode.dimensions.width / 2,
-        targetNode.relativePosition.y + targetNode.dimensions.height / 2
-      )
+        // Calculate edge endpoints (center of nodes)
+        const sourceCenter = transformPosition(
+          sourceNode.relativePosition.x + sourceNode.dimensions.width / 2,
+          sourceNode.relativePosition.y + sourceNode.dimensions.height / 2,
+        )
+        const targetCenter = transformPosition(
+          targetNode.relativePosition.x + targetNode.dimensions.width / 2,
+          targetNode.relativePosition.y + targetNode.dimensions.height / 2,
+        )
 
-      return (
-        <line
-          key={`edge-${index}`}
-          x1={sourceCenter.x}
-          y1={sourceCenter.y}
-          x2={targetCenter.x}
-          y2={targetCenter.y}
-          stroke="#4b5563"
-          strokeWidth={1}
-          strokeDasharray="2,2"
-        />
-      )
-    }).filter(Boolean) as JSX.Element[]
+        return (
+          <line
+            key={`edge-${index}`}
+            x1={sourceCenter.x}
+            y1={sourceCenter.y}
+            x2={targetCenter.x}
+            y2={targetCenter.y}
+            stroke="#4b5563"
+            strokeWidth={1}
+            strokeDasharray="2,2"
+          />
+        )
+      })
+      .filter(Boolean) as JSX.Element[]
   }
 
   // Render nodes as small rectangles
@@ -193,10 +201,7 @@ function TemplatePreviewComponent({
             width={12}
             height={12}
           >
-            <div
-              style={{ color }}
-              className="flex items-center justify-center w-full h-full"
-            >
+            <div style={{ color }} className="flex items-center justify-center w-full h-full">
               {getNodeIcon(node.type)}
             </div>
           </foreignObject>
@@ -224,12 +229,7 @@ function TemplatePreviewComponent({
       <svg width={viewportWidth} height={viewportHeight} className="absolute inset-0">
         {/* Grid pattern */}
         <defs>
-          <pattern
-            id="preview-grid"
-            width={20}
-            height={20}
-            patternUnits="userSpaceOnUse"
-          >
+          <pattern id="preview-grid" width={20} height={20} patternUnits="userSpaceOnUse">
             <circle cx={10} cy={10} r={0.5} fill="#374151" />
           </pattern>
         </defs>

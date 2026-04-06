@@ -50,7 +50,7 @@ export default defineConfig({
     },
     {
       name: 'web',
-      testMatch: /web.*\.spec\.ts/,
+      testMatch: /(?:web|v3-foyer).*\.spec\.ts/,
       use: {
         baseURL: 'http://localhost:5174',
       },

@@ -8,26 +8,42 @@
  * and whether to include edges. Uses the native save dialog for file path.
  */
 
-import { memo, useState, useCallback, useEffect } from 'react'
-import { X, Download, FileText, Code, Globe } from 'lucide-react'
+import { Code, Download, FileText, Globe, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import {
-  exportWorkspace,
-  type ExportFormat,
-  type ExportScope
-} from '../utils/exportWorkspace'
-import { escapeManager, EscapePriority } from '../utils/EscapeManager'
+import { EscapePriority, escapeManager } from '../utils/EscapeManager'
+import { type ExportFormat, type ExportScope, exportWorkspace } from '../utils/exportWorkspace'
 
 interface ExportDialogProps {
   isOpen: boolean
   onClose: () => void
 }
 
-const FORMAT_OPTIONS: { value: ExportFormat; label: string; icon: typeof FileText; description: string }[] = [
-  { value: 'markdown', label: 'Markdown', icon: FileText, description: 'Readable document with headers, checklists, and quotes' },
-  { value: 'html', label: 'HTML', icon: Globe, description: 'Self-contained web page with styling' },
-  { value: 'json', label: 'JSON', icon: Code, description: 'Machine-readable format for import/integration' }
+const FORMAT_OPTIONS: {
+  value: ExportFormat
+  label: string
+  icon: typeof FileText
+  description: string
+}[] = [
+  {
+    value: 'markdown',
+    label: 'Markdown',
+    icon: FileText,
+    description: 'Readable document with headers, checklists, and quotes',
+  },
+  {
+    value: 'html',
+    label: 'HTML',
+    icon: Globe,
+    description: 'Self-contained web page with styling',
+  },
+  {
+    value: 'json',
+    label: 'JSON',
+    icon: Code,
+    description: 'Machine-readable format for import/integration',
+  },
 ]
 
 function ExportDialogComponent({ isOpen, onClose }: ExportDialogProps): JSX.Element | null {
@@ -55,21 +71,22 @@ function ExportDialogComponent({ isOpen, onClose }: ExportDialogProps): JSX.Elem
     setExporting(true)
     try {
       // Get nodes based on scope
-      const exportNodes = scope === 'selected' && hasSelection
-        ? nodes.filter(n => selectedNodeIds.includes(n.id))
-        : nodes.filter(n => !n.data.isArchived)
+      const exportNodes =
+        scope === 'selected' && hasSelection
+          ? nodes.filter((n) => selectedNodeIds.includes(n.id))
+          : nodes.filter((n) => !n.data.isArchived)
 
       // Get relevant edges
-      const nodeIdSet = new Set(exportNodes.map(n => n.id))
+      const nodeIdSet = new Set(exportNodes.map((n) => n.id))
       const exportEdges = includeEdges
-        ? edges.filter(e => nodeIdSet.has(e.source) && nodeIdSet.has(e.target))
+        ? edges.filter((e) => nodeIdSet.has(e.source) && nodeIdSet.has(e.target))
         : []
 
       const content = exportWorkspace(exportNodes, exportEdges, {
         format,
         scope,
         includeEdges,
-        workspaceName: workspaceName || 'Untitled Workspace'
+        workspaceName: workspaceName || 'Untitled Workspace',
       })
 
       const sanitizedName = (workspaceName || 'workspace').replace(/[^a-zA-Z0-9_-]/g, '_')
@@ -78,7 +95,8 @@ function ExportDialogComponent({ isOpen, onClose }: ExportDialogProps): JSX.Elem
 
       if (isWeb) {
         // Web build: use Blob + temporary download link
-        const mimeType = format === 'html' ? 'text/html' : format === 'json' ? 'application/json' : 'text/markdown'
+        const mimeType =
+          format === 'html' ? 'text/html' : format === 'json' ? 'application/json' : 'text/markdown'
         const blob = new Blob([content], { type: `${mimeType};charset=utf-8` })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -94,7 +112,7 @@ function ExportDialogComponent({ isOpen, onClose }: ExportDialogProps): JSX.Elem
         const result = await window.api.artifact.download({
           title: sanitizedName,
           content,
-          contentType
+          contentType,
         })
 
         if (result.canceled) {
@@ -119,7 +137,17 @@ function ExportDialogComponent({ isOpen, onClose }: ExportDialogProps): JSX.Elem
     } finally {
       setExporting(false)
     }
-  }, [format, scope, includeEdges, nodes, edges, selectedNodeIds, hasSelection, workspaceName, onClose])
+  }, [
+    format,
+    scope,
+    includeEdges,
+    nodes,
+    edges,
+    selectedNodeIds,
+    hasSelection,
+    workspaceName,
+    onClose,
+  ])
 
   if (!isOpen) return null
 
@@ -129,9 +157,7 @@ function ExportDialogComponent({ isOpen, onClose }: ExportDialogProps): JSX.Elem
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
       {/* Dialog */}
-      <div
-        className="relative w-[420px] max-w-[90vw] rounded-xl overflow-hidden gui-panel glass-fluid border gui-border shadow-2xl"
-      >
+      <div className="relative w-[420px] max-w-[90vw] rounded-xl overflow-hidden gui-panel glass-fluid border gui-border shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b gui-border">
           <div className="flex items-center gap-2">
@@ -164,15 +190,20 @@ function ExportDialogComponent({ isOpen, onClose }: ExportDialogProps): JSX.Elem
                       : 'gui-border hover:gui-surface-secondary'
                   }`}
                 >
-                  <Icon className="w-5 h-5" style={{ color: format === value ? 'var(--gui-accent-secondary)' : undefined }} />
-                  <span className={`text-xs font-medium ${format === value ? 'gui-text' : 'gui-text-secondary'}`}>
+                  <Icon
+                    className="w-5 h-5"
+                    style={{ color: format === value ? 'var(--gui-accent-secondary)' : undefined }}
+                  />
+                  <span
+                    className={`text-xs font-medium ${format === value ? 'gui-text' : 'gui-text-secondary'}`}
+                  >
                     {label}
                   </span>
                 </button>
               ))}
             </div>
             <p className="text-[11px] gui-text-muted mt-1.5">
-              {FORMAT_OPTIONS.find(o => o.value === format)?.description}
+              {FORMAT_OPTIONS.find((o) => o.value === format)?.description}
             </p>
           </div>
 
@@ -190,7 +221,7 @@ function ExportDialogComponent({ isOpen, onClose }: ExportDialogProps): JSX.Elem
                     : 'gui-border gui-text-secondary hover:gui-surface-secondary'
                 }`}
               >
-                All Nodes ({nodes.filter(n => !n.data.isArchived).length})
+                All Nodes ({nodes.filter((n) => !n.data.isArchived).length})
               </button>
               <button
                 onClick={() => setScope('selected')}

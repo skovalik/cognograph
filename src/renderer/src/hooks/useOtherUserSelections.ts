@@ -8,7 +8,7 @@
  * used by nodes to render selection indicators.
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useCollaborativeProvider } from '../sync'
 
 interface UserSelection {
@@ -42,7 +42,7 @@ export function useOtherUserSelections(): Map<string, UserSelection[]> {
         const user: UserSelection = {
           userId: state.user.id || String(clientId),
           userName: state.user.name || 'Anonymous',
-          color: state.user.color || '#888888'
+          color: state.user.color || '#888888',
         }
 
         for (const nodeId of state.selectedNodeIds as string[]) {

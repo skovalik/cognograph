@@ -7,13 +7,13 @@
  * Tests the calm mode store actions and pure selector functions.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  useCalmModeStore,
+  type CalmLevel,
   getCalmOffset,
-  shouldSuppressAnimations,
   isTextOnlyMode,
-  type CalmLevel
+  shouldSuppressAnimations,
+  useCalmModeStore,
 } from '../calmModeStore'
 
 // --- Helpers ---------------------------------------------------------------

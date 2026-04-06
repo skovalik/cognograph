@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import type { ActionEvent, ActionNodeData, ExecutionContext } from '@shared/actionTypes'
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import type { ActionNodeData, ActionEvent, ExecutionContext } from '@shared/actionTypes'
 import { executeActionSteps } from '../services/actionExecutor'
-import { useWorkspaceStore } from './workspaceStore'
 import { useSpatialRegionStore } from './spatialRegionStore'
+import { useWorkspaceStore } from './workspaceStore'
 
 // Debounce tracking per (actionNodeId, triggerNodeId) pair
 const debounceTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
@@ -104,13 +104,16 @@ export const useActionStore = create<ActionStoreState>()(
             clearTimeout(existingTimer)
           }
 
-          debounceTimers.set(debounceKey, setTimeout(() => {
-            debounceTimers.delete(debounceKey)
-            // Verify action still exists before executing
-            if (get().activeActions.has(actionNodeId)) {
-              get().executeAction(actionNodeId, event)
-            }
-          }, DEBOUNCE_MS))
+          debounceTimers.set(
+            debounceKey,
+            setTimeout(() => {
+              debounceTimers.delete(debounceKey)
+              // Verify action still exists before executing
+              if (get().activeActions.has(actionNodeId)) {
+                get().executeAction(actionNodeId, event)
+              }
+            }, DEBOUNCE_MS),
+          )
         }
       }
     },
@@ -131,7 +134,7 @@ export const useActionStore = create<ActionStoreState>()(
 
       // Get fresh action data from workspace store
       const workspaceState = useWorkspaceStore.getState()
-      const actionNode = workspaceState.nodes.find(n => n.id === actionNodeId)
+      const actionNode = workspaceState.nodes.find((n) => n.id === actionNodeId)
       if (!actionNode || actionNode.data.type !== 'action') return
 
       const actionData = actionNode.data as ActionNodeData
@@ -154,7 +157,7 @@ export const useActionStore = create<ActionStoreState>()(
           actionNodeId,
           event,
           variables: {},
-          startedAt: Date.now()
+          startedAt: Date.now(),
         }
 
         const result = await executeActionSteps(actionData.actions, context, workspaceState)
@@ -165,20 +168,20 @@ export const useActionStore = create<ActionStoreState>()(
           updateNode(actionNodeId, {
             runCount: actionData.runCount + 1,
             lastRun: Date.now(),
-            lastError: undefined
+            lastError: undefined,
           })
         } else {
           updateNode(actionNodeId, {
             runCount: actionData.runCount + 1,
             errorCount: actionData.errorCount + 1,
             lastRun: Date.now(),
-            lastError: result.error
+            lastError: result.error,
           })
         }
       } finally {
         // Pop from execution stack
         set((s) => {
-          s.executionStack = s.executionStack.filter(id => id !== actionNodeId)
+          s.executionStack = s.executionStack.filter((id) => id !== actionNodeId)
           s.executingActions.delete(actionNodeId)
         })
       }
@@ -188,18 +191,22 @@ export const useActionStore = create<ActionStoreState>()(
       const event: ActionEvent = {
         type: 'manual',
         nodeId: actionNodeId,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       }
       get().executeAction(actionNodeId, event)
-    }
-  }))
+    },
+  })),
 )
 
 // -----------------------------------------------------------------------------
 // Trigger Matching
 // -----------------------------------------------------------------------------
 
-function matchesTrigger(actionData: ActionNodeData, event: ActionEvent, actionNodeId: string): boolean {
+function matchesTrigger(
+  actionData: ActionNodeData,
+  event: ActionEvent,
+  actionNodeId: string,
+): boolean {
   const trigger = actionData.trigger
 
   switch (trigger.type) {
@@ -212,7 +219,8 @@ function matchesTrigger(actionData: ActionNodeData, event: ActionEvent, actionNo
       // Check property matches
       if (trigger.property && event.data?.property !== trigger.property) return false
       // Check from/to values if specified
-      if (trigger.fromValue !== undefined && event.data?.oldValue !== trigger.fromValue) return false
+      if (trigger.fromValue !== undefined && event.data?.oldValue !== trigger.fromValue)
+        return false
       if (trigger.toValue !== undefined && event.data?.newValue !== trigger.toValue) return false
       // Check node type filter
       if (trigger.nodeFilter && event.data?.nodeType !== trigger.nodeFilter) return false
@@ -229,7 +237,8 @@ function matchesTrigger(actionData: ActionNodeData, event: ActionEvent, actionNo
         if (trigger.direction === 'incoming' && event.data?.direction !== 'incoming') return false
         if (trigger.direction === 'outgoing' && event.data?.direction !== 'outgoing') return false
       }
-      if (trigger.nodeTypeFilter && event.data?.connectedNodeType !== trigger.nodeTypeFilter) return false
+      if (trigger.nodeTypeFilter && event.data?.connectedNodeType !== trigger.nodeTypeFilter)
+        return false
       return true
 
     case 'connection-count': {
@@ -238,29 +247,37 @@ function matchesTrigger(actionData: ActionNodeData, event: ActionEvent, actionNo
       const edges = useWorkspaceStore.getState().edges
       let count: number
       if (trigger.direction === 'incoming') {
-        count = edges.filter(e => e.target === event.nodeId).length
+        count = edges.filter((e) => e.target === event.nodeId).length
       } else if (trigger.direction === 'outgoing') {
-        count = edges.filter(e => e.source === event.nodeId).length
+        count = edges.filter((e) => e.source === event.nodeId).length
       } else {
         // 'any' or undefined: all edges involving the node
-        count = edges.filter(e => e.source === event.nodeId || e.target === event.nodeId).length
+        count = edges.filter((e) => e.source === event.nodeId || e.target === event.nodeId).length
       }
       switch (trigger.comparison) {
-        case 'gte': return count >= trigger.threshold
-        case 'lte': return count <= trigger.threshold
-        case 'eq': return count === trigger.threshold
+        case 'gte':
+          return count >= trigger.threshold
+        case 'lte':
+          return count <= trigger.threshold
+        case 'eq':
+          return count === trigger.threshold
       }
       return false
     }
 
     case 'isolation':
-      return (event.type === 'connection-removed' && event.data?.connectionCount === 0)
+      return event.type === 'connection-removed' && event.data?.connectionCount === 0
 
     case 'children-complete': {
       if (event.type !== 'property-change') return false
       if (trigger.property && event.data?.property !== trigger.property) return false
       // Check if all children of the action node have the target value
-      return checkChildrenComplete(actionNodeId, trigger.property, trigger.targetValue, trigger.requireAll)
+      return checkChildrenComplete(
+        actionNodeId,
+        trigger.property,
+        trigger.targetValue,
+        trigger.requireAll,
+      )
     }
 
     case 'ancestor-change':
@@ -283,9 +300,12 @@ function matchesTrigger(actionData: ActionNodeData, event: ActionEvent, actionNo
       if (relevantRegion !== trigger.regionId) return false
       const memberCount = getRegionNodeCount(trigger.regionId)
       switch (trigger.comparison) {
-        case 'gte': return memberCount >= trigger.threshold
-        case 'lte': return memberCount <= trigger.threshold
-        case 'eq': return memberCount === trigger.threshold
+        case 'gte':
+          return memberCount >= trigger.threshold
+        case 'lte':
+          return memberCount <= trigger.threshold
+        case 'eq':
+          return memberCount === trigger.threshold
       }
       return false
     }
@@ -330,7 +350,7 @@ function evaluateConditions(
   actionData: ActionNodeData,
   event: ActionEvent,
   workspaceState: ReturnType<typeof useWorkspaceStore.getState>,
-  actionNodeId?: string
+  actionNodeId?: string,
 ): boolean {
   if (actionData.conditions.length === 0) return true
 
@@ -338,13 +358,13 @@ function evaluateConditions(
     let targetNode
     switch (condition.target) {
       case 'trigger-node':
-        targetNode = workspaceState.nodes.find(n => n.id === event.nodeId)
+        targetNode = workspaceState.nodes.find((n) => n.id === event.nodeId)
         break
       case 'action-node':
-        targetNode = workspaceState.nodes.find(n => n.id === actionNodeId)
+        targetNode = workspaceState.nodes.find((n) => n.id === actionNodeId)
         break
       case 'specific-node':
-        targetNode = workspaceState.nodes.find(n => n.id === condition.targetNodeId)
+        targetNode = workspaceState.nodes.find((n) => n.id === condition.targetNodeId)
         break
     }
 
@@ -386,9 +406,19 @@ function evaluateOperator(fieldValue: unknown, operator: string, conditionValue:
     case 'less-than':
       return Number(fieldValue) < Number(conditionValue)
     case 'is-empty':
-      return fieldValue === undefined || fieldValue === null || fieldValue === '' || (Array.isArray(fieldValue) && fieldValue.length === 0)
+      return (
+        fieldValue === undefined ||
+        fieldValue === null ||
+        fieldValue === '' ||
+        (Array.isArray(fieldValue) && fieldValue.length === 0)
+      )
     case 'is-not-empty':
-      return fieldValue !== undefined && fieldValue !== null && fieldValue !== '' && !(Array.isArray(fieldValue) && fieldValue.length === 0)
+      return (
+        fieldValue !== undefined &&
+        fieldValue !== null &&
+        fieldValue !== '' &&
+        !(Array.isArray(fieldValue) && fieldValue.length === 0)
+      )
     case 'matches-regex':
       try {
         return new RegExp(String(conditionValue)).test(String(fieldValue))
@@ -412,28 +442,24 @@ function checkChildrenComplete(
   actionNodeId: string,
   property: string,
   targetValue: unknown,
-  requireAll: boolean
+  requireAll: boolean,
 ): boolean {
   const { nodes, edges } = useWorkspaceStore.getState()
 
   // Find children: nodes where the action node is the source of an edge
-  const childIds = edges
-    .filter(e => e.source === actionNodeId)
-    .map(e => e.target)
+  const childIds = edges.filter((e) => e.source === actionNodeId).map((e) => e.target)
 
   if (childIds.length === 0) return false
 
-  const childNodes = nodes.filter(n => childIds.includes(n.id))
+  const childNodes = nodes.filter((n) => childIds.includes(n.id))
   if (childNodes.length === 0) return false
 
-  const matches = childNodes.filter(n => {
+  const matches = childNodes.filter((n) => {
     const value = getNestedValue(n.data, property)
     return String(value) === String(targetValue)
   })
 
-  return requireAll
-    ? matches.length === childNodes.length
-    : matches.length > 0
+  return requireAll ? matches.length === childNodes.length : matches.length > 0
 }
 
 /**
@@ -452,7 +478,7 @@ function isAncestorOfActionTarget(nodeId: string): boolean {
     visited.add(currentId)
 
     // Find edges where current node is the source (downstream children)
-    const childEdges = edges.filter(e => e.source === currentId)
+    const childEdges = edges.filter((e) => e.source === currentId)
     for (const edge of childEdges) {
       if (!visited.has(edge.target)) {
         queue.push(edge.target)
@@ -482,8 +508,8 @@ function getRegionNodeCount(regionId: string): number {
  */
 function getNodeDistance(nodeIdA: string, nodeIdB: string): number | null {
   const { nodes } = useWorkspaceStore.getState()
-  const nodeA = nodes.find(n => n.id === nodeIdA)
-  const nodeB = nodes.find(n => n.id === nodeIdB)
+  const nodeA = nodes.find((n) => n.id === nodeIdA)
+  const nodeB = nodes.find((n) => n.id === nodeIdB)
   if (!nodeA || !nodeB) return null
 
   const widthA = (nodeA.width as number) || nodeA.measured?.width || 280

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import type { SpatialRegion } from '@shared/actionTypes'
+import { v4 as uuid } from 'uuid'
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import { v4 as uuid } from 'uuid'
-import type { SpatialRegion } from '@shared/actionTypes'
 
 interface SpatialRegionState {
   // All defined regions
@@ -13,26 +13,43 @@ interface SpatialRegionState {
   // Node membership tracking: nodeId -> array of regionIds the node is inside
   nodeRegionMembership: Record<string, string[]>
 
+  // Currently selected region (for move/resize)
+  selectedRegionId: string | null
+
   // Actions
+  selectRegion: (regionId: string | null) => void
   addRegion: (region: Omit<SpatialRegion, 'id'>) => string
   updateRegion: (regionId: string, updates: Partial<SpatialRegion>) => void
   deleteRegion: (regionId: string) => void
 
   // PFD Phase 3B: District management
-  addDistrict: (name: string, bounds: SpatialRegion['bounds'], style?: 'tint' | 'hatching') => string
+  addDistrict: (
+    name: string,
+    bounds: SpatialRegion['bounds'],
+    style?: 'tint' | 'hatching',
+  ) => string
   getDistricts: () => SpatialRegion[]
 
   // PFD Phase 5C: Presentation mode
   getRegionsForPresentation: () => SpatialRegion[]
 
   // Membership checks
-  checkNodePosition: (nodeId: string, x: number, y: number, width: number, height: number) => {
+  checkNodePosition: (
+    nodeId: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ) => {
     entered: string[]
     exited: string[]
   }
 
   // PFD Phase 5B: Auto-grow region when node extends beyond bounds
-  autoGrowRegion: (regionId: string, nodeBounds: { x: number; y: number; width: number; height: number }) => void
+  autoGrowRegion: (
+    regionId: string,
+    nodeBounds: { x: number; y: number; width: number; height: number },
+  ) => void
 
   // Get regions for an action
   getRegionsForAction: (actionId: string) => SpatialRegion[]
@@ -45,6 +62,13 @@ export const useSpatialRegionStore = create<SpatialRegionState>()(
   immer((set, get) => ({
     regions: [],
     nodeRegionMembership: {},
+    selectedRegionId: null,
+
+    selectRegion: (regionId) => {
+      set((state) => {
+        state.selectedRegionId = regionId
+      })
+    },
 
     addRegion: (regionData) => {
       const id = uuid()
@@ -57,7 +81,7 @@ export const useSpatialRegionStore = create<SpatialRegionState>()(
 
     updateRegion: (regionId, updates) => {
       set((state) => {
-        const region = state.regions.find(r => r.id === regionId)
+        const region = state.regions.find((r) => r.id === regionId)
         if (region) {
           Object.assign(region, updates)
         }
@@ -66,10 +90,12 @@ export const useSpatialRegionStore = create<SpatialRegionState>()(
 
     deleteRegion: (regionId) => {
       set((state) => {
-        state.regions = state.regions.filter(r => r.id !== regionId)
+        state.regions = state.regions.filter((r) => r.id !== regionId)
         // Clean up membership tracking
         for (const nodeId of Object.keys(state.nodeRegionMembership)) {
-          state.nodeRegionMembership[nodeId] = state.nodeRegionMembership[nodeId]!.filter(id => id !== regionId)
+          state.nodeRegionMembership[nodeId] = state.nodeRegionMembership[nodeId]?.filter(
+            (id) => id !== regionId,
+          )
         }
       })
     },
@@ -85,10 +111,7 @@ export const useSpatialRegionStore = create<SpatialRegionState>()(
 
       // Check each region for intersection
       for (const region of state.regions) {
-        const isInside = rectsOverlap(
-          { x, y, width, height },
-          region.bounds
-        )
+        const isInside = rectsOverlap({ x, y, width, height }, region.bounds)
 
         if (isInside) {
           newMembership.push(region.id)
@@ -117,7 +140,7 @@ export const useSpatialRegionStore = create<SpatialRegionState>()(
       const PADDING = 20
 
       set((state) => {
-        const region = state.regions.find(r => r.id === regionId)
+        const region = state.regions.find((r) => r.id === regionId)
         if (!region) return
 
         const rb = region.bounds
@@ -157,7 +180,7 @@ export const useSpatialRegionStore = create<SpatialRegionState>()(
     },
 
     getRegionsForAction: (actionId) => {
-      return get().regions.filter(r => r.linkedActionIds?.includes(actionId) ?? false)
+      return get().regions.filter((r) => r.linkedActionIds?.includes(actionId) ?? false)
     },
 
     loadRegions: (regions) => {
@@ -176,7 +199,7 @@ export const useSpatialRegionStore = create<SpatialRegionState>()(
         bounds,
         isDistrict: true,
         districtStyle: style,
-        districtOpacity: 0.04
+        districtOpacity: 0.04,
       }
       set((state) => {
         state.regions.push(district)
@@ -185,7 +208,7 @@ export const useSpatialRegionStore = create<SpatialRegionState>()(
     },
 
     getDistricts: () => {
-      return get().regions.filter(r => r.isDistrict)
+      return get().regions.filter((r) => r.isDistrict)
     },
 
     // PFD Phase 5C: Presentation mode — returns regions sorted for slide order
@@ -194,10 +217,10 @@ export const useSpatialRegionStore = create<SpatialRegionState>()(
     getRegionsForPresentation: () => {
       const regions = get().regions
       // Include all non-district regions as slides (districts are visual groupings, not content slides)
-      const presentable = regions.filter(r => !r.isDistrict)
+      const presentable = regions.filter((r) => !r.isDistrict)
 
       // Check if any region has an explicit presentationOrder
-      const hasExplicitOrder = presentable.some(r => r.presentationOrder != null)
+      const hasExplicitOrder = presentable.some((r) => r.presentationOrder != null)
 
       if (hasExplicitOrder) {
         return [...presentable].sort((a, b) => {
@@ -212,23 +235,18 @@ export const useSpatialRegionStore = create<SpatialRegionState>()(
 
       // Default: sort by x-position (left to right)
       return [...presentable].sort((a, b) => a.bounds.x - b.bounds.x)
-    }
-  }))
+    },
+  })),
 )
 
 // Phase 1C: Selector for district regions (minimap overlay)
 export const selectDistricts = (state: SpatialRegionState): SpatialRegion[] =>
-  state.regions.filter(r => r.isDistrict)
+  state.regions.filter((r) => r.isDistrict)
 
 // Check if two rectangles overlap
 function rectsOverlap(
   a: { x: number; y: number; width: number; height: number },
-  b: { x: number; y: number; width: number; height: number }
+  b: { x: number; y: number; width: number; height: number },
 ): boolean {
-  return (
-    a.x < b.x + b.width &&
-    a.x + a.width > b.x &&
-    a.y < b.y + b.height &&
-    a.y + a.height > b.y
-  )
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 }

@@ -8,8 +8,8 @@
  * One-click operations that pre-fill the prompt with common commands.
  */
 
-import { memo } from 'react'
 import { Lightbulb } from 'lucide-react'
+import { memo } from 'react'
 import type { QuickAction } from '../../hooks/useSmartDefaults'
 
 interface QuickActionsBarProps {
@@ -23,7 +23,7 @@ function QuickActionsBarComponent({
   actions,
   contextMessage,
   onSelectAction,
-  selectedActionId
+  selectedActionId,
 }: QuickActionsBarProps): JSX.Element {
   return (
     <div className="quick-actions-container rounded-lg bg-white/5 border border-white/10 p-3 mb-3">

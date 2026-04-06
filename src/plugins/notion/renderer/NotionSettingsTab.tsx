@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useState, useEffect, useCallback } from 'react'
-import { Database, CheckCircle, Loader2, Play, X, Link } from 'lucide-react'
+import { CheckCircle, Database, Link, Loader2, Play, X } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import type { TypedPluginBridge } from '../../types'
 import type { NotionMethods } from '../contract'
@@ -64,7 +64,6 @@ export function NotionSettingsTab({ plugin }: { plugin: TypedPluginBridge<Notion
       } else {
         throw new Error(result.error || 'Connection test failed')
       }
-
     } catch (err) {
       setConnectionStatus('error')
       setErrorMessage(err instanceof Error ? err.message : 'Connection test failed')
@@ -78,7 +77,7 @@ export function NotionSettingsTab({ plugin }: { plugin: TypedPluginBridge<Notion
       await plugin.call('setConfig', {
         workflowsDbId,
         execLogDbId,
-        syncEnabled
+        syncEnabled,
       })
     } catch (err) {
       console.error('[NotionSettingsTab] Failed to save config:', err)
@@ -99,7 +98,12 @@ export function NotionSettingsTab({ plugin }: { plugin: TypedPluginBridge<Notion
         <div className="flex items-center gap-2">
           <Database className="w-4 h-4" style={{ color: 'var(--gui-accent-tertiary)' }} />
           <span className="text-sm font-medium gui-text">Notion</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded gui-text-secondary" style={{ backgroundColor: 'var(--surface-secondary)' }}>Plugin</span>
+          <span
+            className="text-[10px] px-1.5 py-0.5 rounded gui-text-secondary"
+            style={{ backgroundColor: 'var(--surface-secondary)' }}
+          >
+            Plugin
+          </span>
         </div>
         {connectionStatus === 'connected' && (
           <div className="flex items-center gap-2">
@@ -112,9 +116,7 @@ export function NotionSettingsTab({ plugin }: { plugin: TypedPluginBridge<Notion
       <div className="gui-card rounded-lg p-4 space-y-4">
         {/* Token Input */}
         <div>
-          <label className="block text-xs font-medium gui-text mb-1.5">
-            Integration Token
-          </label>
+          <label className="block text-xs font-medium gui-text mb-1.5">Integration Token</label>
           <div className="flex gap-2">
             <input
               type="password"
@@ -141,27 +143,18 @@ export function NotionSettingsTab({ plugin }: { plugin: TypedPluginBridge<Notion
               )}
             </button>
             {connectionStatus === 'connected' && (
-              <button
-                onClick={handleDisconnect}
-                className="gui-btn gui-btn-ghost gui-btn-sm"
-              >
+              <button onClick={handleDisconnect} className="gui-btn gui-btn-ghost gui-btn-sm">
                 <X className="w-3 h-3" />
               </button>
             )}
           </div>
           <p className="text-xs gui-text-secondary mt-1">
             <Link className="w-3 h-3 inline mr-1" />
-            See{' '}
-            <span className="font-mono">docs/NOTION-SETUP-GUIDE.md</span>
-            {' '}for setup instructions
+            See <span className="font-mono">docs/NOTION-SETUP-GUIDE.md</span> for setup instructions
           </p>
-          {errorMessage && (
-            <p className="text-xs text-red-500 mt-1">{errorMessage}</p>
-          )}
+          {errorMessage && <p className="text-xs text-red-500 mt-1">{errorMessage}</p>}
           {connectionStatus === 'connected' && !errorMessage && (
-            <p className="text-xs text-green-500 mt-1">
-              Connected to {workspaceName}
-            </p>
+            <p className="text-xs text-green-500 mt-1">Connected to {workspaceName}</p>
           )}
         </div>
 
@@ -222,7 +215,7 @@ export function NotionSettingsTab({ plugin }: { plugin: TypedPluginBridge<Notion
                       await plugin.call('setConfig', {
                         workflowsDbId,
                         execLogDbId,
-                        syncEnabled: newValue
+                        syncEnabled: newValue,
                       })
                     } catch (err) {
                       console.error('[NotionSettingsTab] Failed to save sync toggle:', err)

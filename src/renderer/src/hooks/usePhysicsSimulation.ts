@@ -9,19 +9,19 @@
  * Nodes repel each other to prevent overlap.
  */
 
-import { useEffect, useRef, useCallback } from 'react'
-import type { Node, Edge } from '@xyflow/react'
 import type { NodeData } from '@shared/types'
+import type { Edge, Node } from '@xyflow/react'
+import { useCallback, useEffect, useRef } from 'react'
 
 export interface PhysicsConfig {
   enabled: boolean
-  idealEdgeLength: number      // Edge gap between node borders (default 80)
-  repulsionStrength: number    // Coulomb repulsion constant (default 12000)
-  attractionStrength: number   // Spring attraction constant (default 0.08)
-  damping: number              // Velocity damping (default 0.9)
-  alphaDecay: number           // Energy decay rate (default 0.995)
-  alphaMin: number             // Minimum alpha before stopping (default 0.001)
-  velocityThreshold: number    // Min velocity to consider "moving" (default 0.1)
+  idealEdgeLength: number // Edge gap between node borders (default 80)
+  repulsionStrength: number // Coulomb repulsion constant (default 12000)
+  attractionStrength: number // Spring attraction constant (default 0.08)
+  damping: number // Velocity damping (default 0.9)
+  alphaDecay: number // Energy decay rate (default 0.995)
+  alphaMin: number // Minimum alpha before stopping (default 0.001)
+  velocityThreshold: number // Min velocity to consider "moving" (default 0.1)
 }
 
 export const DEFAULT_PHYSICS_CONFIG: PhysicsConfig = {
@@ -32,7 +32,7 @@ export const DEFAULT_PHYSICS_CONFIG: PhysicsConfig = {
   damping: 0.9,
   alphaDecay: 0.995,
   alphaMin: 0.001,
-  velocityThreshold: 0.1
+  velocityThreshold: 0.1,
 }
 
 /**
@@ -46,20 +46,20 @@ export const PHYSICS_STRENGTH_PRESETS = {
     repulsionStrength: 6000,
     attractionStrength: 0.05,
     damping: 0.95,
-    alphaDecay: 0.998
+    alphaDecay: 0.998,
   },
   medium: {
     repulsionStrength: 12000,
     attractionStrength: 0.08,
     damping: 0.9,
-    alphaDecay: 0.995
+    alphaDecay: 0.995,
   },
   strong: {
     repulsionStrength: 18000,
     attractionStrength: 0.15,
     damping: 0.85,
-    alphaDecay: 0.99
-  }
+    alphaDecay: 0.99,
+  },
 } as const
 
 export type PhysicsStrengthPreset = keyof typeof PHYSICS_STRENGTH_PRESETS
@@ -68,7 +68,7 @@ export type PhysicsStrengthPreset = keyof typeof PHYSICS_STRENGTH_PRESETS
  * Helper to create physics config with a strength preset
  */
 export function getPhysicsConfigForStrength(
-  strength: PhysicsStrengthPreset = 'medium'
+  strength: PhysicsStrengthPreset = 'medium',
 ): Partial<PhysicsConfig> {
   return PHYSICS_STRENGTH_PRESETS[strength]
 }
@@ -94,7 +94,7 @@ export function usePhysicsSimulation(
   edges: Edge[],
   config: PhysicsConfig,
   onPositionsChange: (positions: Map<string, { x: number; y: number }>) => void,
-  isDragging: boolean = false
+  isDragging: boolean = false,
 ): {
   reheat: () => void
   isSettled: boolean
@@ -103,7 +103,7 @@ export function usePhysicsSimulation(
     velocities: new Map(),
     positions: new Map(),
     alpha: 1,
-    isRunning: false
+    isRunning: false,
   })
 
   const rafIdRef = useRef<number | null>(null)
@@ -125,7 +125,7 @@ export function usePhysicsSimulation(
     const state = stateRef.current
 
     // Add new nodes, preserve existing velocities
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       if (!state.positions.has(node.id)) {
         state.positions.set(node.id, { ...node.position })
         state.velocities.set(node.id, { x: 0, y: 0 })
@@ -143,7 +143,7 @@ export function usePhysicsSimulation(
     })
 
     // Remove nodes that no longer exist
-    const nodeIds = new Set(nodes.map(n => n.id))
+    const nodeIds = new Set(nodes.map((n) => n.id))
     for (const id of state.positions.keys()) {
       if (!nodeIds.has(id)) {
         state.positions.delete(id)
@@ -158,9 +158,9 @@ export function usePhysicsSimulation(
     const currentNodes = nodesRef.current
     const currentEdges = edgesRef.current
 
-    currentNodes.forEach(n => adjacency.set(n.id, new Set()))
+    currentNodes.forEach((n) => adjacency.set(n.id, new Set()))
 
-    currentEdges.forEach(e => {
+    currentEdges.forEach((e) => {
       const sourceExists = adjacency.has(e.source)
       const targetExists = adjacency.has(e.target)
       if (sourceExists && targetExists) {
@@ -179,13 +179,8 @@ export function usePhysicsSimulation(
     const nodes = nodesRef.current
     const adjacency = getAdjacency()
 
-    const {
-      repulsionStrength,
-      attractionStrength,
-      idealEdgeLength,
-      damping,
-      velocityThreshold
-    } = config
+    const { repulsionStrength, attractionStrength, idealEdgeLength, damping, velocityThreshold } =
+      config
 
     const minDistance = 10
     const COLLISION_PADDING = 20
@@ -194,15 +189,15 @@ export function usePhysicsSimulation(
 
     // Read node dimensions live from nodesRef (avoids stale cached values)
     function getNodeDims(nodeId: string): { width: number; height: number } {
-      const n = nodes.find(nd => nd.id === nodeId)
+      const n = nodes.find((nd) => nd.id === nodeId)
       return {
         width: n?.measured?.width ?? 280,
-        height: n?.measured?.height ?? 140
+        height: n?.measured?.height ?? 140,
       }
     }
 
     // Calculate forces for each node
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       const pos = state.positions.get(node.id)
       if (!pos) return
 
@@ -210,7 +205,7 @@ export function usePhysicsSimulation(
       let fy = 0
 
       // Combined repulsion + collision (single O(n^2) pass)
-      nodes.forEach(other => {
+      nodes.forEach((other) => {
         if (other.id === node.id) return
         const otherPos = state.positions.get(other.id)
         if (!otherPos) return
@@ -253,7 +248,7 @@ export function usePhysicsSimulation(
       // Attraction along edges (Hooke's law with direction-aware rest length)
       const neighbors = adjacency.get(node.id)
       if (neighbors) {
-        neighbors.forEach(neighborId => {
+        neighbors.forEach((neighborId) => {
           const neighborPos = state.positions.get(neighborId)
           if (!neighborPos) return
 
@@ -279,8 +274,7 @@ export function usePhysicsSimulation(
           const vRatio = absDy / total
 
           const nodeExtent =
-            hRatio * (dimA.width + dimB.width) / 2 +
-            vRatio * (dimA.height + dimB.height) / 2
+            (hRatio * (dimA.width + dimB.width)) / 2 + (vRatio * (dimA.height + dimB.height)) / 2
 
           const restLength = idealEdgeLength + nodeExtent
           const displacement = dist - restLength
@@ -307,7 +301,7 @@ export function usePhysicsSimulation(
     })
 
     // Update positions
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       const pos = state.positions.get(node.id)
       const vel = state.velocities.get(node.id)
       if (!pos || !vel) return
@@ -403,7 +397,7 @@ export function usePhysicsSimulation(
 
   return {
     reheat,
-    isSettled: stateRef.current.alpha <= config.alphaMin
+    isSettled: stateRef.current.alpha <= config.alphaMin,
   }
 }
 

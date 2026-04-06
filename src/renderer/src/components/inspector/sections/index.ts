@@ -10,14 +10,11 @@
  *   - AdvancedSettingsModal (tabbed dialog)
  */
 
-export { AttachmentsSection } from './AttachmentsSection'
-export type { AttachmentsSectionProps } from './AttachmentsSection'
-
-export { AgentSection } from './AgentSection'
 export type { AgentSectionProps } from './AgentSection'
-
-export { ContextSection } from './ContextSection'
+export { AgentSection } from './AgentSection'
+export type { AttachmentsSectionProps } from './AttachmentsSection'
+export { AttachmentsSection } from './AttachmentsSection'
 export type { ContextSectionProps } from './ContextSection'
-
-export { ExtractionsSection } from './ExtractionsSection'
+export { ContextSection } from './ContextSection'
 export type { ExtractionsSectionProps } from './ExtractionsSection'
+export { ExtractionsSection } from './ExtractionsSection'

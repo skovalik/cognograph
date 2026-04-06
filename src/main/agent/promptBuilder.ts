@@ -112,7 +112,7 @@ function serializeTools(tools: ToolDefinition[]): string {
 export function buildSystemPrompt(
   identity: string,
   tools: ToolDefinition[],
-  bfsContext: string
+  bfsContext: string,
 ): BuiltSystemPrompt {
   // Static prefix: identity + sorted tool definitions
   // This portion is identical across turns and benefits from caching
@@ -128,12 +128,12 @@ export function buildSystemPrompt(
     staticPrefix: {
       type: 'text',
       text: staticText,
-      cache_control: { type: 'ephemeral' }
+      cache_control: { type: 'ephemeral' },
     },
     dynamicSuffix: {
       type: 'text',
-      text: dynamicText
-    }
+      text: dynamicText,
+    },
   }
 }
 

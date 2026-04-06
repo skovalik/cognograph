@@ -9,18 +9,18 @@
  */
 
 import type {
-  NodeData,
-  ConversationNodeData,
-  NoteNodeData,
-  TaskNodeData,
-  ProjectNodeData,
-  ArtifactNodeData,
-  TextNodeData,
   ActionNodeData,
+  ArtifactNodeData,
+  ConversationNodeData,
+  NodeData,
+  NoteNodeData,
   OrchestratorNodeData,
-  WorkspaceNodeData,
+  ProjectNodeData,
   PropertyDefinition,
-  PropertySchema
+  PropertySchema,
+  TaskNodeData,
+  TextNodeData,
+  WorkspaceNodeData,
 } from '@shared/types'
 
 // =============================================================================
@@ -48,21 +48,21 @@ export interface ConnectedNodeContext {
   }
 
   // Edge info - CRITICAL for inference
-  edgeLabel?: string           // "provides context", "depends on", etc.
-  edgeWeight: number           // @deprecated - legacy 1-10 scale
+  edgeLabel?: string // "provides context", "depends on", etc.
+  edgeWeight: number // @deprecated - legacy 1-10 scale
   edgeStrength?: 'light' | 'normal' | 'strong' // Simplified strength
-  edgeDirection: 'incoming' | 'outgoing'  // Relative to target node
-  edgeActive: boolean          // Whether edge is enabled
+  edgeDirection: 'incoming' | 'outgoing' // Relative to target node
+  edgeActive: boolean // Whether edge is enabled
 }
 
 /**
  * Pre-computed graph statistics for efficient prompt construction
  */
 export interface GraphStats {
-  incomingCount: number      // Nodes pointing TO this node
-  outgoingCount: number      // Nodes this points TO
-  highPriorityConnections: number  // Connected high-priority tasks
-  sharedTags: string[]       // Tags appearing in 2+ connected nodes
+  incomingCount: number // Nodes pointing TO this node
+  outgoingCount: number // Nodes this points TO
+  highPriorityConnections: number // Connected high-priority tasks
+  sharedTags: string[] // Tags appearing in 2+ connected nodes
 }
 
 export interface PropertyAIContext {
@@ -109,7 +109,7 @@ export interface AIPropertyResponse {
 // =============================================================================
 
 const MAX_CONTENT_LENGTH = 2000
-const MAX_CONNECTED_NODES = 8  // Increased for better graph context
+const MAX_CONNECTED_NODES = 8 // Increased for better graph context
 
 // =============================================================================
 // Content Extraction
@@ -128,9 +128,7 @@ export function extractNodeContent(nodeData: NodeData): {
       const messages = convData.messages || []
       // Get last 5 messages, format as readable text
       const recentMessages = messages.slice(-5)
-      const content = recentMessages
-        .map((m) => `${m.role}: ${m.content.slice(0, 500)}`)
-        .join('\n')
+      const content = recentMessages.map((m) => `${m.role}: ${m.content.slice(0, 500)}`).join('\n')
       return { content, contentType: 'messages' }
     }
 
@@ -150,7 +148,7 @@ export function extractNodeContent(nodeData: NodeData): {
           component: '[UI component specification]',
           'content-model': '[Content type definition]',
           'wp-config': '[WordPress configuration]',
-          general: ''
+          general: '',
         }
         contextHint = modeDescriptions[noteData.noteMode] || ''
         if (contextHint) contextHint += '\n'
@@ -158,7 +156,7 @@ export function extractNodeContent(nodeData: NodeData): {
 
       return {
         content: contextHint + (noteData.content || ''),
-        contentType: 'description'
+        contentType: 'description',
       }
     }
 
@@ -179,14 +177,17 @@ export function extractNodeContent(nodeData: NodeData): {
       const firstFile = files[0]
       return {
         content: firstFile?.content || '',
-        contentType: 'code'
+        contentType: 'code',
       }
     }
 
     case 'text': {
       const textData = nodeData as TextNodeData
       // Strip HTML tags for analysis
-      const stripped = (textData.content || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+      const stripped = (textData.content || '')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
       return { content: stripped, contentType: 'html' }
     }
 
@@ -198,16 +199,19 @@ export function extractNodeContent(nodeData: NodeData): {
     case 'orchestrator': {
       const orchData = nodeData as OrchestratorNodeData
       // Note: Agent name lookup happens in buildPropertyPrompt where we have access to workspace store
-      const agentInfo = orchData.connectedAgents
-        ?.map(a => `Agent: ${a.nodeId} (${a.role || 'unnamed'})`)
-        .join('\n') || ''
+      const agentInfo =
+        orchData.connectedAgents
+          ?.map((a) => `Agent: ${a.nodeId} (${a.role || 'unnamed'})`)
+          .join('\n') || ''
 
       const content = [
         orchData.description || '',
         orchData.strategy ? `Strategy: ${orchData.strategy}` : '',
         agentInfo ? `Connected agents:\n${agentInfo}` : '',
-        orchData.budget ? `Budget: ${orchData.budget.maxCost} credits` : ''
-      ].filter(Boolean).join('\n')
+        orchData.budget ? `Budget: ${orchData.budget.maxCost} credits` : '',
+      ]
+        .filter(Boolean)
+        .join('\n')
 
       return { content, contentType: 'description' }
     }
@@ -220,8 +224,10 @@ export function extractNodeContent(nodeData: NodeData): {
       const content = [
         workspaceData.description || '',
         `Members: ${memberCount} nodes`,
-        `LLM: ${llmModel}`
-      ].filter(Boolean).join('\n')
+        `LLM: ${llmModel}`,
+      ]
+        .filter(Boolean)
+        .join('\n')
 
       return { content, contentType: 'description' }
     }
@@ -414,10 +420,10 @@ function formatConnectedNodes(nodes: ConnectedNodeContext[]): string {
   const sections: string[] = []
 
   for (const [label, group] of byLabel) {
-    const items = group.map(n => {
+    const items = group.map((n) => {
       const parts = [
         `  - ${n.type}: "${n.title}"`,
-        `[${n.edgeDirection}, strength: ${n.edgeStrength ?? 'normal'}]`
+        `[${n.edgeDirection}, strength: ${n.edgeStrength ?? 'normal'}]`,
       ]
 
       // Include relevant properties
@@ -475,8 +481,10 @@ export function buildPropertyPrompt(context: PropertyAIContext): {
       : null,
     context.graphStats.sharedTags.length > 0
       ? `shared tags: [${context.graphStats.sharedTags.join(', ')}]`
-      : null
-  ].filter(Boolean).join(', ')
+      : null,
+  ]
+    .filter(Boolean)
+    .join(', ')
 
   const userPrompt = `## Target Node
 Type: ${context.nodeType}
@@ -528,7 +536,7 @@ export function parsePropertyResponse(text: string): AIPropertyResponse {
     if (!parsed.suggestions || !Array.isArray(parsed.suggestions)) {
       return {
         suggestions: [],
-        summary: 'Invalid response format'
+        summary: 'Invalid response format',
       }
     }
 
@@ -543,26 +551,28 @@ export function parsePropertyResponse(text: string): AIPropertyResponse {
           ['set', 'append', 'add-property'].includes(suggestion.action as string)
         )
       })
-      .map((s: Record<string, unknown>): PropertySuggestion => ({
-        action: (s.action as 'set' | 'append' | 'add-property') || 'set',
-        propertyId: s.propertyId as string,
-        propertyName: s.propertyName as string | undefined,
-        propertyType: s.propertyType as PropertyDefinition['type'] | undefined,
-        currentValue: s.currentValue,
-        value: s.value,
-        confidence: validateConfidence(s.confidence as string),
-        reasoning: (s.reasoning as string) || ''
-      }))
+      .map(
+        (s: Record<string, unknown>): PropertySuggestion => ({
+          action: (s.action as 'set' | 'append' | 'add-property') || 'set',
+          propertyId: s.propertyId as string,
+          propertyName: s.propertyName as string | undefined,
+          propertyType: s.propertyType as PropertyDefinition['type'] | undefined,
+          currentValue: s.currentValue,
+          value: s.value,
+          confidence: validateConfidence(s.confidence as string),
+          reasoning: (s.reasoning as string) || '',
+        }),
+      )
 
     return {
       suggestions: validSuggestions,
-      summary: (parsed.summary as string) || `${validSuggestions.length} suggestions`
+      summary: (parsed.summary as string) || `${validSuggestions.length} suggestions`,
     }
   } catch {
     console.error('Failed to parse AI response:', text)
     return {
       suggestions: [],
-      summary: 'Failed to parse response'
+      summary: 'Failed to parse response',
     }
   }
 }
@@ -584,7 +594,7 @@ function validateConfidence(value: unknown): ConfidenceLevel {
 export function validateSuggestion(
   suggestion: PropertySuggestion,
   schema: PropertySchema,
-  availableProperties: PropertyDefinition[]
+  availableProperties: PropertyDefinition[],
 ): { valid: boolean; error?: string; needsOptionCreation?: boolean } {
   // For add-property action, we need name and type
   if (suggestion.action === 'add-property') {
@@ -665,7 +675,7 @@ export function validateSuggestion(
       }
       // Normalize tags: lowercase, no spaces
       suggestion.value = (suggestion.value as string[]).map((t) =>
-        String(t).toLowerCase().replace(/\s+/g, '-')
+        String(t).toLowerCase().replace(/\s+/g, '-'),
       )
       break
   }
@@ -679,7 +689,7 @@ export function validateSuggestion(
 export function validateAndFilterSuggestions(
   suggestions: PropertySuggestion[],
   schema: PropertySchema,
-  availableProperties: PropertyDefinition[]
+  availableProperties: PropertyDefinition[],
 ): PropertySuggestion[] {
   return suggestions.filter((s) => {
     const result = validateSuggestion(s, schema, availableProperties)
@@ -718,8 +728,10 @@ export function computeContextHash(context: PropertyAIContext): string {
     context.content.slice(0, 500),
     JSON.stringify(context.currentProperties),
     JSON.stringify(context.graphStats),
-    context.connectedNodes.map(n => `${n.id}:${n.edgeLabel}:${n.edgeStrength ?? 'normal'}`).join(','),
-    context.userPrompt
+    context.connectedNodes
+      .map((n) => `${n.id}:${n.edgeLabel}:${n.edgeStrength ?? 'normal'}`)
+      .join(','),
+    context.userPrompt,
   ].join('|')
 
   // Simple hash
@@ -771,38 +783,42 @@ export const QUICK_ACTIONS = [
     id: 'analyze',
     label: 'Analyze',
     prompt: 'Analyze this node and suggest all relevant properties based on its content',
-    icon: 'Sparkles'
+    icon: 'Sparkles',
   },
   {
     id: 'tags',
     label: 'Tags',
     prompt: 'Suggest relevant tags based on the content and context',
-    icon: 'Tag'
+    icon: 'Tag',
   },
   {
     id: 'priority',
     label: 'Priority',
-    prompt: 'Suggest an appropriate priority level based on content urgency and connected task priorities',
-    icon: 'Flag'
+    prompt:
+      'Suggest an appropriate priority level based on content urgency and connected task priorities',
+    icon: 'Flag',
   },
   {
     id: 'from-graph',
     label: 'From Graph',
-    prompt: 'Inherit properties from connected nodes based on edge relationships. Focus on: 1) Tags from parent/related nodes, 2) Priority from dependencies, 3) Status from workflow position',
-    icon: 'Network'
+    prompt:
+      'Inherit properties from connected nodes based on edge relationships. Focus on: 1) Tags from parent/related nodes, 2) Priority from dependencies, 3) Status from workflow position',
+    icon: 'Network',
   },
   {
     id: 'sync-tags',
     label: 'Sync Tags',
-    prompt: 'Synchronize tags with connected nodes. Add shared tags from strong connections and parent projects.',
-    icon: 'Tags'
+    prompt:
+      'Synchronize tags with connected nodes. Add shared tags from strong connections and parent projects.',
+    icon: 'Tags',
   },
   {
     id: 'check-status',
     label: 'Check Status',
-    prompt: 'Evaluate if this task status should change based on dependency completion and workflow position',
-    icon: 'CheckCircle'
-  }
+    prompt:
+      'Evaluate if this task status should change based on dependency completion and workflow position',
+    icon: 'CheckCircle',
+  },
 ] as const
 
 export type QuickActionId = (typeof QUICK_ACTIONS)[number]['id']

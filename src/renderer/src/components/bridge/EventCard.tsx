@@ -12,13 +12,13 @@
  * - Undo button for reversible actions
  */
 
-import { memo, useState, useCallback } from 'react'
-import { Undo2, ChevronRight } from 'lucide-react'
-import { Card } from '../ui/card'
+import type { CanvasAuditEvent } from '@shared/types/bridge'
+import { ChevronRight, Undo2 } from 'lucide-react'
+import { memo, useCallback, useState } from 'react'
 import { Button } from '../ui/Button'
+import { Card } from '../ui/card'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { ActorBadge } from './ActorBadge'
-import type { CanvasAuditEvent } from '@shared/types/bridge'
 
 // =============================================================================
 // Helpers
@@ -94,10 +94,7 @@ function DetailRow({
 }): JSX.Element {
   return (
     <div className="flex gap-2">
-      <span
-        className="text-[10px] shrink-0"
-        style={{ color: 'var(--text-muted)' }}
-      >
+      <span className="text-[10px] shrink-0" style={{ color: 'var(--text-muted)' }}>
         {label}:
       </span>
       <span
@@ -120,11 +117,7 @@ interface EventCardProps {
   isCompact: boolean
 }
 
-function EventCardComponent({
-  event,
-  onUndo,
-  isCompact,
-}: EventCardProps): JSX.Element {
+function EventCardComponent({ event, onUndo, isCompact }: EventCardProps): JSX.Element {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const handleUndo = useCallback(() => {
@@ -136,50 +129,39 @@ function EventCardComponent({
   }, [])
 
   return (
-    <Card className="p-2 mb-1 transition-colors" style={{
-      backgroundColor: 'var(--surface-panel)',
-      borderColor: 'var(--border-default)',
-    }}>
+    <Card
+      className="p-2 mb-1 transition-colors"
+      style={{
+        backgroundColor: 'var(--surface-panel)',
+        borderColor: 'var(--border-default)',
+      }}
+    >
       {/* Row 1: Timestamp + Actor Badge */}
       <div className="flex items-center justify-between">
-        <span
-          className="text-[11px] font-mono"
-          style={{ color: 'var(--text-muted)' }}
-        >
+        <span className="text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>
           {formatTime(event.timestamp)}
         </span>
         <ActorBadge actor={event.actor} />
       </div>
 
       {/* Row 2: Action description */}
-      <p
-        className="text-xs mt-0.5 line-clamp-2"
-        style={{ color: 'var(--text-primary)' }}
-      >
+      <p className="text-xs mt-0.5 line-clamp-2" style={{ color: 'var(--text-primary)' }}>
         {formatActionDescription(event)}
       </p>
 
       {/* Row 3: Cost + tokens (if applicable) */}
-      {(event.context.costUSD !== undefined ||
-        event.context.tokensUsed !== undefined) && (
+      {(event.context.costUSD !== undefined || event.context.tokensUsed !== undefined) && (
         <div className="flex gap-2 mt-0.5">
           {event.context.costUSD !== undefined && event.context.costUSD > 0 && (
-            <span
-              className="text-[10px]"
-              style={{ color: 'var(--text-muted)' }}
-            >
+            <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
               ${event.context.costUSD.toFixed(4)}
             </span>
           )}
-          {event.context.tokensUsed !== undefined &&
-            event.context.tokensUsed > 0 && (
-              <span
-                className="text-[10px]"
-                style={{ color: 'var(--text-muted)' }}
-              >
-                {event.context.tokensUsed.toLocaleString()} tokens
-              </span>
-            )}
+          {event.context.tokensUsed !== undefined && event.context.tokensUsed > 0 && (
+            <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+              {event.context.tokensUsed.toLocaleString()} tokens
+            </span>
+          )}
         </div>
       )}
 
@@ -209,9 +191,7 @@ function EventCardComponent({
         >
           {!isCompact && 'Details'}
           <ChevronRight
-            className={`w-3 h-3 ml-0.5 transition-transform ${
-              isExpanded ? 'rotate-90' : ''
-            }`}
+            className={`w-3 h-3 ml-0.5 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
           />
         </Button>
       </div>
@@ -228,42 +208,28 @@ function EventCardComponent({
           />
           <DetailRow label="Target ID" value={event.targetId} mono />
           {event.context.orchestrationId && (
-            <DetailRow
-              label="Orchestration"
-              value={event.context.orchestrationId}
-              mono
-            />
+            <DetailRow label="Orchestration" value={event.context.orchestrationId} mono />
           )}
-          {event.context.runId && (
-            <DetailRow label="Run ID" value={event.context.runId} mono />
-          )}
+          {event.context.runId && <DetailRow label="Run ID" value={event.context.runId} mono />}
           {event.context.parentCommand && (
             <DetailRow label="Command" value={event.context.parentCommand} />
           )}
           {event.changes && (
             <div className="mt-1">
-              <span
-                className="text-[10px]"
-                style={{ color: 'var(--text-muted)' }}
-              >
+              <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                 Changes:
               </span>
-              {Object.entries(event.changes).map(
-                ([key, { before, after }]) => (
-                  <div key={key} className="ml-2 text-[10px]">
-                    <span style={{ color: 'var(--text-muted)' }}>{key}: </span>
-                    <span
-                      className="line-through"
-                      style={{ color: 'var(--color-error, #dc2626)' }}
-                    >
-                      {String(before).slice(0, 50)}
-                    </span>{' '}
-                    <span style={{ color: 'var(--color-success, #22c55e)' }}>
-                      {String(after).slice(0, 50)}
-                    </span>
-                  </div>
-                )
-              )}
+              {Object.entries(event.changes).map(([key, { before, after }]) => (
+                <div key={key} className="ml-2 text-[10px]">
+                  <span style={{ color: 'var(--text-muted)' }}>{key}: </span>
+                  <span className="line-through" style={{ color: 'var(--color-error, #dc2626)' }}>
+                    {String(before).slice(0, 50)}
+                  </span>{' '}
+                  <span style={{ color: 'var(--color-success, #22c55e)' }}>
+                    {String(after).slice(0, 50)}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </div>

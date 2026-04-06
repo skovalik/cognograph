@@ -12,13 +12,13 @@
  * @returns true if glass should be applied, false for solid backgrounds
  */
 
+import { DEFAULT_GLASS_SETTINGS } from '@shared/types'
 import { useMemo } from 'react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import { DEFAULT_GLASS_SETTINGS } from '@shared/types'
 
 export function useIsGlassEnabled(
   surface: 'nodes' | 'modals' | 'panels' | 'overlays' | 'toolbar',
-  perNodeOverride?: boolean | undefined
+  perNodeOverride?: boolean | undefined,
 ): boolean {
   // Select only glassSettings to minimize re-renders
   const glassSettings = useWorkspaceStore((state) => state.themeSettings.glassSettings)

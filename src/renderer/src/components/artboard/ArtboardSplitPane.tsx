@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import React, { memo, useState, useCallback, useRef, useEffect } from 'react'
+import type React from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 
 interface ArtboardSplitPaneProps {
   left: React.ReactNode
@@ -27,7 +28,7 @@ export const ArtboardSplitPane = memo(function ArtboardSplitPane({
   onRatioChange,
   minRatio = 0.2,
   maxRatio = 0.8,
-  className
+  className,
 }: ArtboardSplitPaneProps): React.JSX.Element {
   const [ratio, setRatio] = useState(initialRatio)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -38,7 +39,7 @@ export const ArtboardSplitPane = memo(function ArtboardSplitPane({
     (value: number): number => {
       return Math.min(maxRatio, Math.max(minRatio, value))
     },
-    [minRatio, maxRatio]
+    [minRatio, maxRatio],
   )
 
   const updateRatio = useCallback(
@@ -47,7 +48,7 @@ export const ArtboardSplitPane = memo(function ArtboardSplitPane({
       setRatio(clamped)
       onRatioChange?.(clamped)
     },
-    [clampRatio, onRatioChange]
+    [clampRatio, onRatioChange],
   )
 
   const handleMouseDown = useCallback(
@@ -86,7 +87,7 @@ export const ArtboardSplitPane = memo(function ArtboardSplitPane({
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseup', handleMouseUp)
     },
-    [updateRatio]
+    [updateRatio],
   )
 
   // Keyboard accessibility: arrow keys adjust ratio by 5%
@@ -101,7 +102,7 @@ export const ArtboardSplitPane = memo(function ArtboardSplitPane({
         updateRatio(ratio + step)
       }
     },
-    [ratio, updateRatio]
+    [ratio, updateRatio],
   )
 
   // Cleanup RAF on unmount
@@ -117,10 +118,7 @@ export const ArtboardSplitPane = memo(function ArtboardSplitPane({
   const rightPercent = `${(1 - ratio) * 100}%`
 
   return (
-    <div
-      ref={containerRef}
-      className={`artboard-split-pane ${className ?? ''}`}
-    >
+    <div ref={containerRef} className={`artboard-split-pane ${className ?? ''}`}>
       <div
         className="artboard-split-pane__left"
         style={{ flexBasis: leftPercent, flexGrow: 0, flexShrink: 0 }}

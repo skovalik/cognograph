@@ -8,12 +8,20 @@
  * Reuses existing content components (RichTextEditor, EditableText).
  */
 
-import { memo } from 'react'
+import type {
+  ArtifactNodeData,
+  ConversationNodeData,
+  NodeData,
+  NoteNodeData,
+  ProjectNodeData,
+  TaskNodeData,
+  TextNodeData,
+} from '@shared/types'
 import type { Node } from '@xyflow/react'
-import type { NodeData, NoteNodeData, TaskNodeData, TextNodeData, ConversationNodeData, ProjectNodeData, ArtifactNodeData } from '@shared/types'
+import { memo } from 'react'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { RichTextEditor } from '../RichTextEditor'
 import { EditableText } from '../EditableText'
+import { RichTextEditor } from '../RichTextEditor'
 
 interface PinnedNodeContentProps {
   node: Node<NodeData>
@@ -46,9 +54,13 @@ function PinnedNodeContentComponent({ node }: PinnedNodeContentProps): JSX.Eleme
       return (
         <div className="flex flex-col gap-2 h-full">
           <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-            <span className="px-1.5 py-0.5 rounded bg-[var(--surface-panel)]/50 capitalize">{taskData.status || 'todo'}</span>
+            <span className="px-1.5 py-0.5 rounded bg-[var(--surface-panel)]/50 capitalize">
+              {taskData.status || 'todo'}
+            </span>
             {taskData.priority && taskData.priority !== 'none' && (
-              <span className="px-1.5 py-0.5 rounded bg-[var(--surface-panel)]/50 capitalize">{taskData.priority}</span>
+              <span className="px-1.5 py-0.5 rounded bg-[var(--surface-panel)]/50 capitalize">
+                {taskData.priority}
+              </span>
             )}
           </div>
           <RichTextEditor
@@ -75,7 +87,10 @@ function PinnedNodeContentComponent({ node }: PinnedNodeContentProps): JSX.Eleme
             <p className="italic text-[var(--text-muted)]">No messages yet</p>
           ) : (
             lastFew.map((msg, i) => (
-              <div key={i} className={`px-2 py-1.5 rounded ${msg.role === 'user' ? 'bg-blue-500/10 ml-4' : 'bg-[var(--surface-panel)]/30 mr-4'}`}>
+              <div
+                key={i}
+                className={`px-2 py-1.5 rounded ${msg.role === 'user' ? 'bg-blue-500/10 ml-4' : 'bg-[var(--surface-panel)]/30 mr-4'}`}
+              >
                 <span className="text-[10px] text-[var(--text-muted)] uppercase">{msg.role}</span>
                 <p className="text-xs text-[var(--text-secondary)] line-clamp-4 whitespace-pre-wrap">
                   {typeof msg.content === 'string' ? msg.content.slice(0, 500) : ''}
@@ -99,7 +114,8 @@ function PinnedNodeContentComponent({ node }: PinnedNodeContentProps): JSX.Eleme
           />
           {projectData.childNodeIds && projectData.childNodeIds.length > 0 && (
             <div className="text-xs text-[var(--text-muted)] mt-1">
-              {projectData.childNodeIds.length} child node{projectData.childNodeIds.length !== 1 ? 's' : ''}
+              {projectData.childNodeIds.length} child node
+              {projectData.childNodeIds.length !== 1 ? 's' : ''}
             </div>
           )}
         </div>
@@ -146,7 +162,12 @@ function PinnedNodeContentComponent({ node }: PinnedNodeContentProps): JSX.Eleme
     }
 
     case 'orchestrator': {
-      const orchData = node.data as { title: string; strategy: string; connectedAgents: unknown[]; description?: string }
+      const orchData = node.data as {
+        title: string
+        strategy: string
+        connectedAgents: unknown[]
+        description?: string
+      }
       return (
         <div className="flex flex-col gap-2 h-full">
           <div className="text-xs text-[var(--text-secondary)]">

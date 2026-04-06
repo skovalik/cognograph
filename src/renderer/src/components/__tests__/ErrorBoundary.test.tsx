@@ -11,8 +11,8 @@
  * - Error recovery behavior (state management)
  */
 
-import { describe, it, expect, vi } from 'vitest'
 import React from 'react'
+import { describe, expect, it, vi } from 'vitest'
 
 // =============================================================================
 // Mock Sentry before importing ErrorBoundary
@@ -20,7 +20,7 @@ import React from 'react'
 
 vi.mock('../../services/sentry', () => ({
   captureException: vi.fn(),
-  addBreadcrumb: vi.fn()
+  addBreadcrumb: vi.fn(),
 }))
 
 // =============================================================================

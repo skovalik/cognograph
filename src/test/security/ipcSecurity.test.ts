@@ -11,7 +11,10 @@
  * 5. Zod rejects malformed input for at least 3 of the 10 handlers
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import * as os from 'os'
+import * as path from 'path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { validatePath } from '../../main/agent/filesystemTools'
 import {
   CredentialsGetRealSchema,
   CredentialsSetSchema,
@@ -19,12 +22,9 @@ import {
   FsExecuteCommandSchema,
   FsWriteFileSchema,
   LlmSendSchema,
-  WorkspaceSaveSchema,
   WorkspaceDeleteSchema,
+  WorkspaceSaveSchema,
 } from '../../main/ipc/schemas'
-import { validatePath } from '../../main/agent/filesystemTools'
-import * as path from 'path'
-import * as os from 'os'
 
 // ---------------------------------------------------------------------------
 // Test 1 & 2: Bridge ephemeral token authentication (SEC-0.1e)
@@ -122,7 +122,7 @@ describe('Folder Listing Sandbox (SEC-0.1f)', () => {
 
     // path.resolve normalizes the traversal — if it escapes, it's blocked
     const resolved = path.resolve(traversalPath)
-    const isInAllowed = allowedRoots.some(root => {
+    const isInAllowed = allowedRoots.some((root) => {
       const resolvedRoot = path.resolve(root)
       return resolved === resolvedRoot || resolved.startsWith(resolvedRoot + path.sep)
     })

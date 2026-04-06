@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 const MOBILE_BREAKPOINT = 768
 

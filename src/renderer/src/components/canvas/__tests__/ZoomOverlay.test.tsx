@@ -7,23 +7,23 @@
  * PFD Phase 5B: Canvas Interaction Patterns
  */
 
-import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import React from 'react'
+import { describe, expect, it, vi } from 'vitest'
 import { ZoomOverlay } from '../ZoomOverlay'
 
 // Mock React Flow hooks
 vi.mock('@xyflow/react', () => ({
   useReactFlow: () => ({
     setViewport: vi.fn(),
-    getViewport: () => ({ x: 0, y: 0, zoom: 1 })
-  })
+    getViewport: () => ({ x: 0, y: 0, zoom: 1 }),
+  }),
 }))
 
 // Mock workspace store
 vi.mock('../../../stores/workspaceStore', () => ({
   useWorkspaceStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({ nodes: [] })
+    selector({ nodes: [] }),
 }))
 
 describe('ZoomOverlay', () => {

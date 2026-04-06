@@ -9,13 +9,10 @@
  * The paste event listener itself is in App.tsx and is tested manually (Task 3).
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { useWorkspaceStore } from '../workspaceStore'
-import {
-  resetWorkspaceStore,
-  getWorkspaceState
-} from '../../../../test/storeUtils'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { getWorkspaceState, resetWorkspaceStore } from '../../../../test/storeUtils'
 import { resetTestCounters } from '../../../../test/utils'
+import { useWorkspaceStore } from '../workspaceStore'
 
 describe('Paste Image → Artifact Node', () => {
   beforeEach(() => {
@@ -31,7 +28,7 @@ describe('Paste Image → Artifact Node', () => {
       const fakeBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=='
       const nodeId = createArtifactFromFile(
         { name: 'pasted-image-1234.png', content: fakeBase64, isBase64: true },
-        { x: 100, y: 200 }
+        { x: 100, y: 200 },
       )
 
       const state = getWorkspaceState()
@@ -54,11 +51,11 @@ describe('Paste Image → Artifact Node', () => {
 
       const nodeId1 = createArtifactFromFile(
         { name: 'image1.jpg', content: fakeBase64, isBase64: true },
-        { x: 0, y: 0 }
+        { x: 0, y: 0 },
       )
       const nodeId2 = createArtifactFromFile(
         { name: 'image2.jpg', content: fakeBase64, isBase64: true },
-        { x: 340, y: 20 }
+        { x: 340, y: 20 },
       )
 
       const state = getWorkspaceState()
@@ -73,11 +70,11 @@ describe('Paste Image → Artifact Node', () => {
 
       const nodeId = createArtifactFromFile(
         { name: 'screenshot.webp', content: 'data:image/webp;base64,UklGR', isBase64: true },
-        { x: 50, y: 50 }
+        { x: 50, y: 50 },
       )
 
       const state = getWorkspaceState()
-      const node = state.nodes.find(n => n.id === nodeId)!
+      const node = state.nodes.find((n) => n.id === nodeId)!
       expect(node.data.contentType).toBe('image')
       expect(node.data.title).toBe('screenshot.webp')
     })
@@ -87,7 +84,7 @@ describe('Paste Image → Artifact Node', () => {
 
       createArtifactFromFile(
         { name: 'test.png', content: 'data:image/png;base64,abc', isBase64: true },
-        { x: 0, y: 0 }
+        { x: 0, y: 0 },
       )
 
       const state = getWorkspaceState()

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { useExecutionStatusStore } from '../executionStatusStore'
+import { beforeEach, describe, expect, it } from 'vitest'
 import type { NodeExecutionState } from '../executionStatusStore'
+import { useExecutionStatusStore } from '../executionStatusStore'
 
 // =============================================================================
 // TEST SETUP
@@ -18,9 +18,7 @@ beforeEach(() => {
 // HELPERS
 // =============================================================================
 
-function makeExecution(
-  overrides: Partial<NodeExecutionState> = {}
-): NodeExecutionState {
+function makeExecution(overrides: Partial<NodeExecutionState> = {}): NodeExecutionState {
   return {
     status: 'active',
     orchestratorId: 'orch-1',
@@ -43,8 +41,12 @@ describe('executionStatusStore', () => {
     })
 
     it('overwrites a previous execution entry for the same node', () => {
-      useExecutionStatusStore.getState().setNodeExecution('node-1', makeExecution({ status: 'active' }))
-      useExecutionStatusStore.getState().setNodeExecution('node-1', makeExecution({ status: 'complete' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-1', makeExecution({ status: 'active' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-1', makeExecution({ status: 'complete' }))
 
       const state = useExecutionStatusStore.getState()
       expect(state.nodeExecutions['node-1'].status).toBe('complete')
@@ -52,7 +54,9 @@ describe('executionStatusStore', () => {
 
     it('preserves entries for other nodes when adding', () => {
       useExecutionStatusStore.getState().setNodeExecution('node-1', makeExecution())
-      useExecutionStatusStore.getState().setNodeExecution('node-2', makeExecution({ orchestratorId: 'orch-2' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-2', makeExecution({ orchestratorId: 'orch-2' }))
 
       const state = useExecutionStatusStore.getState()
       expect(Object.keys(state.nodeExecutions)).toHaveLength(2)
@@ -85,9 +89,15 @@ describe('executionStatusStore', () => {
 
   describe('clearOrchestratorExecutions', () => {
     it('removes all entries for a given orchestrator', () => {
-      useExecutionStatusStore.getState().setNodeExecution('node-1', makeExecution({ orchestratorId: 'orch-A' }))
-      useExecutionStatusStore.getState().setNodeExecution('node-2', makeExecution({ orchestratorId: 'orch-A' }))
-      useExecutionStatusStore.getState().setNodeExecution('node-3', makeExecution({ orchestratorId: 'orch-B' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-1', makeExecution({ orchestratorId: 'orch-A' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-2', makeExecution({ orchestratorId: 'orch-A' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-3', makeExecution({ orchestratorId: 'orch-B' }))
 
       useExecutionStatusStore.getState().clearOrchestratorExecutions('orch-A')
 
@@ -99,7 +109,9 @@ describe('executionStatusStore', () => {
     })
 
     it('is a no-op if orchestratorId has no entries', () => {
-      useExecutionStatusStore.getState().setNodeExecution('node-1', makeExecution({ orchestratorId: 'orch-A' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-1', makeExecution({ orchestratorId: 'orch-A' }))
 
       useExecutionStatusStore.getState().clearOrchestratorExecutions('orch-NONE')
 
@@ -136,9 +148,15 @@ describe('executionStatusStore', () => {
 
   describe('getActiveOrchestrators', () => {
     it('returns unique orchestrator IDs across all executions', () => {
-      useExecutionStatusStore.getState().setNodeExecution('node-1', makeExecution({ orchestratorId: 'orch-A' }))
-      useExecutionStatusStore.getState().setNodeExecution('node-2', makeExecution({ orchestratorId: 'orch-A' }))
-      useExecutionStatusStore.getState().setNodeExecution('node-3', makeExecution({ orchestratorId: 'orch-B' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-1', makeExecution({ orchestratorId: 'orch-A' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-2', makeExecution({ orchestratorId: 'orch-A' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-3', makeExecution({ orchestratorId: 'orch-B' }))
 
       const orchestrators = useExecutionStatusStore.getState().getActiveOrchestrators()
       expect(orchestrators).toHaveLength(2)
@@ -153,26 +171,36 @@ describe('executionStatusStore', () => {
 
   describe('isAnyExecutionActive', () => {
     it('returns true when any execution has status active', () => {
-      useExecutionStatusStore.getState().setNodeExecution('node-1', makeExecution({ status: 'active' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-1', makeExecution({ status: 'active' }))
 
       expect(useExecutionStatusStore.getState().isAnyExecutionActive()).toBe(true)
     })
 
     it('returns true when any execution has status queued', () => {
-      useExecutionStatusStore.getState().setNodeExecution('node-1', makeExecution({ status: 'queued' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-1', makeExecution({ status: 'queued' }))
 
       expect(useExecutionStatusStore.getState().isAnyExecutionActive()).toBe(true)
     })
 
     it('returns false when all executions are complete', () => {
-      useExecutionStatusStore.getState().setNodeExecution('node-1', makeExecution({ status: 'complete' }))
-      useExecutionStatusStore.getState().setNodeExecution('node-2', makeExecution({ status: 'complete' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-1', makeExecution({ status: 'complete' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-2', makeExecution({ status: 'complete' }))
 
       expect(useExecutionStatusStore.getState().isAnyExecutionActive()).toBe(false)
     })
 
     it('returns false when all executions are error', () => {
-      useExecutionStatusStore.getState().setNodeExecution('node-1', makeExecution({ status: 'error', error: 'fail' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-1', makeExecution({ status: 'error', error: 'fail' }))
 
       expect(useExecutionStatusStore.getState().isAnyExecutionActive()).toBe(false)
     })
@@ -182,9 +210,15 @@ describe('executionStatusStore', () => {
     })
 
     it('returns true when mix of statuses includes active or queued', () => {
-      useExecutionStatusStore.getState().setNodeExecution('node-1', makeExecution({ status: 'complete' }))
-      useExecutionStatusStore.getState().setNodeExecution('node-2', makeExecution({ status: 'error' }))
-      useExecutionStatusStore.getState().setNodeExecution('node-3', makeExecution({ status: 'queued' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-1', makeExecution({ status: 'complete' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-2', makeExecution({ status: 'error' }))
+      useExecutionStatusStore
+        .getState()
+        .setNodeExecution('node-3', makeExecution({ status: 'queued' }))
 
       expect(useExecutionStatusStore.getState().isAnyExecutionActive()).toBe(true)
     })
@@ -192,21 +226,30 @@ describe('executionStatusStore', () => {
 
   describe('multiple orchestrators running simultaneously', () => {
     it('supports concurrent executions from different orchestrators', () => {
-      useExecutionStatusStore.getState().setNodeExecution('node-A1', makeExecution({
-        orchestratorId: 'orch-A',
-        status: 'active',
-        stepIndex: 0,
-      }))
-      useExecutionStatusStore.getState().setNodeExecution('node-A2', makeExecution({
-        orchestratorId: 'orch-A',
-        status: 'queued',
-        stepIndex: 1,
-      }))
-      useExecutionStatusStore.getState().setNodeExecution('node-B1', makeExecution({
-        orchestratorId: 'orch-B',
-        status: 'active',
-        stepIndex: 0,
-      }))
+      useExecutionStatusStore.getState().setNodeExecution(
+        'node-A1',
+        makeExecution({
+          orchestratorId: 'orch-A',
+          status: 'active',
+          stepIndex: 0,
+        }),
+      )
+      useExecutionStatusStore.getState().setNodeExecution(
+        'node-A2',
+        makeExecution({
+          orchestratorId: 'orch-A',
+          status: 'queued',
+          stepIndex: 1,
+        }),
+      )
+      useExecutionStatusStore.getState().setNodeExecution(
+        'node-B1',
+        makeExecution({
+          orchestratorId: 'orch-B',
+          status: 'active',
+          stepIndex: 0,
+        }),
+      )
 
       const state = useExecutionStatusStore.getState()
       expect(Object.keys(state.nodeExecutions)).toHaveLength(3)
@@ -231,11 +274,17 @@ describe('executionStatusStore', () => {
       expect(getNodeExecution('node-1')?.status).toBe('queued')
 
       // Active
-      setNodeExecution('node-1', makeExecution({ status: 'active', stepIndex: 2, startedAt: Date.now() }))
+      setNodeExecution(
+        'node-1',
+        makeExecution({ status: 'active', stepIndex: 2, startedAt: Date.now() }),
+      )
       expect(getNodeExecution('node-1')?.status).toBe('active')
 
       // Complete
-      setNodeExecution('node-1', makeExecution({ status: 'complete', stepIndex: 2, completedAt: Date.now() }))
+      setNodeExecution(
+        'node-1',
+        makeExecution({ status: 'complete', stepIndex: 2, completedAt: Date.now() }),
+      )
       expect(getNodeExecution('node-1')?.status).toBe('complete')
     })
 
@@ -244,7 +293,10 @@ describe('executionStatusStore', () => {
 
       setNodeExecution('node-1', makeExecution({ status: 'queued' }))
       setNodeExecution('node-1', makeExecution({ status: 'active', startedAt: Date.now() }))
-      setNodeExecution('node-1', makeExecution({ status: 'error', error: 'API rate limit exceeded' }))
+      setNodeExecution(
+        'node-1',
+        makeExecution({ status: 'error', error: 'API rate limit exceeded' }),
+      )
 
       const result = getNodeExecution('node-1')
       expect(result?.status).toBe('error')

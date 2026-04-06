@@ -11,12 +11,12 @@
  * displays extracted item counts.
  */
 
-import { useState } from 'react'
-import { ChevronDown, ChevronRight, CheckSquare, FileText, Sparkles } from 'lucide-react'
-import { Slider } from '../../ui/slider'
-import { useWorkspaceStore } from '../../../stores/workspaceStore'
-import { DEFAULT_EXTRACTION_SETTINGS } from '@shared/types'
 import type { ConversationNodeData, ExtractionSettings } from '@shared/types'
+import { DEFAULT_EXTRACTION_SETTINGS } from '@shared/types'
+import { CheckSquare, ChevronDown, ChevronRight, FileText, Sparkles } from 'lucide-react'
+import { useState } from 'react'
+import { useWorkspaceStore } from '../../../stores/workspaceStore'
+import { Slider } from '../../ui/slider'
 
 // ---------------------------------------------------------------------------
 // Props
@@ -38,12 +38,8 @@ export function ExtractionsSection({
 }: ExtractionsSectionProps): JSX.Element | null {
   const [isExtractionExpanded, setIsExtractionExpanded] = useState(defaultExpanded)
 
-  const nodeData = useWorkspaceStore(
-    (state) => state.nodes.find((n) => n.id === nodeId)?.data,
-  )
-  const updateExtractionSettings = useWorkspaceStore(
-    (state) => state.updateExtractionSettings,
-  )
+  const nodeData = useWorkspaceStore((state) => state.nodes.find((n) => n.id === nodeId)?.data)
+  const updateExtractionSettings = useWorkspaceStore((state) => state.updateExtractionSettings)
 
   if (!nodeData || nodeData.type !== 'conversation') return null
 
@@ -56,9 +52,7 @@ export function ExtractionsSection({
 
   const handleToggleExtractionType = (type: 'notes' | 'tasks'): void => {
     const current = extractionSettings.extractionTypes
-    const newTypes = current.includes(type)
-      ? current.filter((t) => t !== type)
-      : [...current, type]
+    const newTypes = current.includes(type) ? current.filter((t) => t !== type) : [...current, type]
     handleExtractionSettingsChange({
       extractionTypes: newTypes as ('notes' | 'tasks')[],
     })
@@ -75,17 +69,13 @@ export function ExtractionsSection({
         ) : (
           <ChevronRight className="w-3 h-3" />
         )}
-        <Sparkles
-          className="w-3.5 h-3.5"
-          style={{ color: 'var(--gui-accent-primary)' }}
-        />
+        <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--gui-accent-primary)' }} />
         Auto-Extraction
         {extractionSettings.autoExtractEnabled && (
           <span
             className="ml-auto px-1.5 py-0.5 rounded text-[10px]"
             style={{
-              backgroundColor:
-                'color-mix(in srgb, var(--gui-accent-primary) 30%, transparent)',
+              backgroundColor: 'color-mix(in srgb, var(--gui-accent-primary) 30%, transparent)',
               color: 'var(--gui-accent-primary)',
             }}
           >
@@ -110,19 +100,14 @@ export function ExtractionsSection({
               className="rounded gui-input"
               style={{ accentColor: 'var(--gui-accent-primary)' }}
             />
-            <label
-              htmlFor={`extraction-enabled-${nodeId}`}
-              className="text-xs gui-text-secondary"
-            >
+            <label htmlFor={`extraction-enabled-${nodeId}`} className="text-xs gui-text-secondary">
               Enable auto-extraction
             </label>
           </div>
 
           {/* Extraction types */}
           <div>
-            <label className="block text-xs gui-text-secondary mb-1">
-              Extract Types
-            </label>
+            <label className="block text-xs gui-text-secondary mb-1">Extract Types</label>
             <div className="flex gap-3">
               <label className="flex items-center gap-1.5 text-xs gui-text">
                 <input
@@ -149,23 +134,18 @@ export function ExtractionsSection({
 
           {/* Trigger mode */}
           <div>
-            <label className="block text-xs gui-text-secondary mb-1">
-              Trigger Mode
-            </label>
+            <label className="block text-xs gui-text-secondary mb-1">Trigger Mode</label>
             <select
               value={extractionSettings.extractionTrigger}
               onChange={(e) =>
                 handleExtractionSettingsChange({
-                  extractionTrigger: e.target
-                    .value as ExtractionSettings['extractionTrigger'],
+                  extractionTrigger: e.target.value as ExtractionSettings['extractionTrigger'],
                 })
               }
               className="w-full gui-input border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500"
             >
               <option value="on-demand">On-demand only</option>
-              <option value="per-message">
-                After each message (30s debounce)
-              </option>
+              <option value="per-message">After each message (30s debounce)</option>
               <option value="on-close">When chat closes</option>
             </select>
           </div>
@@ -174,10 +154,7 @@ export function ExtractionsSection({
           <div>
             <label className="block text-xs gui-text-secondary mb-1">
               Confidence Threshold:{' '}
-              {Math.round(
-                extractionSettings.extractionConfidenceThreshold * 100,
-              )}
-              %
+              {Math.round(extractionSettings.extractionConfidenceThreshold * 100)}%
             </label>
             <Slider
               min={50}
@@ -200,8 +177,7 @@ export function ExtractionsSection({
           {/* Extracted count */}
           {(data.extractedTitles?.length || 0) > 0 && (
             <div className="text-xs gui-text-secondary">
-              {data.extractedTitles?.length} items extracted from this
-              conversation
+              {data.extractedTitles?.length} items extracted from this conversation
             </div>
           )}
         </div>

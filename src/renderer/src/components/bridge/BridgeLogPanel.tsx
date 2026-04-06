@@ -14,37 +14,25 @@
  * - Undo support for reversible actions
  */
 
-import { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import type { AuditActor, CanvasAuditEvent } from '@shared/types/bridge'
+import { Bot, ChevronRight, Cpu, Download, Search, Trash2, User } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FixedSizeList as List } from 'react-window'
-import { ScrollArea } from '../ui/scroll-area'
-import { Input } from '../ui/Input'
-import { Button } from '../ui/Button'
+import { useAuditStore } from '../../stores/auditStore'
 import { Badge } from '../ui/Badge'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '../ui/collapsible'
+import { Button } from '../ui/Button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
-import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group'
-import {
-  Download,
-  Search,
-  User,
-  Bot,
-  Cpu,
-  ChevronRight,
-  Trash2,
-} from 'lucide-react'
-import { useAuditStore } from '../../stores/auditStore'
-import { EventCard } from './EventCard'
+import { Input } from '../ui/Input'
 import { sciFiToast } from '../ui/SciFiToast'
-import type { CanvasAuditEvent, AuditActor } from '@shared/types/bridge'
+import { ScrollArea } from '../ui/scroll-area'
+import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group'
+import { EventCard } from './EventCard'
 
 // =============================================================================
 // Types
@@ -98,10 +86,7 @@ function groupEventsByTime(events: CanvasAuditEvent[]): TimeGroup[] {
   return Array.from(groups.entries()).map(([label, events]) => ({
     label,
     events: events.sort((a, b) => b.timestamp - a.timestamp),
-    totalCost: events.reduce(
-      (sum, e) => sum + (e.context.costUSD || 0),
-      0
-    ),
+    totalCost: events.reduce((sum, e) => sum + (e.context.costUSD || 0), 0),
   }))
 }
 
@@ -109,9 +94,7 @@ function groupEventsByTime(events: CanvasAuditEvent[]): TimeGroup[] {
 // Component
 // =============================================================================
 
-function BridgeLogPanelComponent({
-  sidebarWidth,
-}: BridgeLogPanelProps): JSX.Element {
+function BridgeLogPanelComponent({ sidebarWidth }: BridgeLogPanelProps): JSX.Element {
   const events = useAuditStore((s) => s.filteredEvents)
   const eventCount = useAuditStore((s) => s.eventCount)
   const totalCost = useAuditStore((s) => s.totalCost)
@@ -122,12 +105,8 @@ function BridgeLogPanelComponent({
   const clearEvents = useAuditStore((s) => s.clearEvents)
 
   const [searchText, setSearchText] = useState('')
-  const [activeActorFilters, setActiveActorFilters] = useState<string[]>([
-    'all',
-  ])
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    new Set(['Today'])
-  )
+  const [activeActorFilters, setActiveActorFilters] = useState<string[]>(['all'])
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['Today']))
   const searchTimer = useRef<ReturnType<typeof setTimeout>>()
 
   const isCompact = sidebarWidth < 250
@@ -158,7 +137,7 @@ function BridgeLogPanelComponent({
         })
       }
     },
-    [setFilter]
+    [setFilter],
   )
 
   // Time-grouped events
@@ -187,7 +166,7 @@ function BridgeLogPanelComponent({
         sciFiToast('Failed to undo action', 'warning', 2000)
       }
     },
-    [undoEvent]
+    [undoEvent],
   )
 
   // Export handler
@@ -203,13 +182,9 @@ function BridgeLogPanelComponent({
       a.download = `bridge-log-${new Date().toISOString().slice(0, 10)}.${format}`
       a.click()
       URL.revokeObjectURL(url)
-      sciFiToast(
-        `Exported ${events.length} events as ${format.toUpperCase()}`,
-        'success',
-        2000
-      )
+      sciFiToast(`Exported ${events.length} events as ${format.toUpperCase()}`, 'success', 2000)
     },
-    [exportEvents, events.length]
+    [exportEvents, events.length],
   )
 
   return (
@@ -262,10 +237,7 @@ function BridgeLogPanelComponent({
       <ScrollArea className="flex-1">
         <div className="px-2 py-1">
           {timeGroups.length === 0 ? (
-            <div
-              className="text-xs text-center py-8"
-              style={{ color: 'var(--text-muted)' }}
-            >
+            <div className="text-xs text-center py-8" style={{ color: 'var(--text-muted)' }}>
               No events yet.
               <br />
               Actions will appear here as you work.
@@ -285,24 +257,15 @@ function BridgeLogPanelComponent({
                       }`}
                       style={{ color: 'var(--text-muted)' }}
                     />
-                    <span
-                      className="text-xs font-medium"
-                      style={{ color: 'var(--text-primary)' }}
-                    >
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>
                       {group.label}
                     </span>
-                    <Badge
-                      variant="outline"
-                      className="text-[9px] px-1 h-4"
-                    >
+                    <Badge variant="outline" className="text-[9px] px-1 h-4">
                       {group.events.length}
                     </Badge>
                   </div>
                   {group.totalCost > 0 && (
-                    <span
-                      className="text-[10px] font-mono"
-                      style={{ color: 'var(--text-muted)' }}
-                    >
+                    <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>
                       ${group.totalCost.toFixed(4)}
                     </span>
                   )}
@@ -343,21 +306,14 @@ function BridgeLogPanelComponent({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
-                Export as CSV
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('csv')}>Export as CSV</DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleExport('json')}>
                 Export as JSON
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           {eventCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 text-[10px]"
-              onClick={clearEvents}
-            >
+            <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={clearEvents}>
               <Trash2 className="w-3 h-3" />
             </Button>
           )}

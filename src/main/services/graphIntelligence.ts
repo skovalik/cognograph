@@ -17,7 +17,7 @@
  * - Skip glow/animations when node count > 500
  */
 
-import { ipcMain, BrowserWindow } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 import { parseCommand } from './bridgeCommandParser'
 
 // =============================================================================
@@ -102,9 +102,7 @@ const changedNodeIds = new Set<string>()
  * Detect orphaned clusters: groups of connected nodes disconnected from
  * the main graph component.
  */
-function detectOrphanedClusters(
-  snapshot: GraphSnapshot
-): AnalysisInsight[] {
+function detectOrphanedClusters(snapshot: GraphSnapshot): AnalysisInsight[] {
   const insights: AnalysisInsight[] = []
   if (snapshot.nodes.length < 3) return insights
 
@@ -147,19 +145,14 @@ function detectOrphanedClusters(
   }
 
   // Also collect isolated nodes (degree 0)
-  const isolatedNodes = snapshot.nodes.filter(
-    (n) => (adjacency.get(n.id)?.size ?? 0) === 0
-  )
+  const isolatedNodes = snapshot.nodes.filter((n) => (adjacency.get(n.id)?.size ?? 0) === 0)
 
   // Flag small components (less than 40% of total or smaller than main) as orphaned
   if (components.length > 1) {
     const mainComponentSize = Math.max(...components.map((c) => c.length))
 
     for (const component of components) {
-      if (
-        component.length < mainComponentSize &&
-        component.length >= 2
-      ) {
+      if (component.length < mainComponentSize && component.length >= 2) {
         const nodeNames = component
           .map((id) => {
             const node = snapshot.nodes.find((n) => n.id === id)
@@ -183,9 +176,7 @@ function detectOrphanedClusters(
 
   // Flag isolated nodes (no connections at all)
   if (isolatedNodes.length > 0) {
-    const names = isolatedNodes
-      .map((n) => n.title || n.id.slice(0, 8))
-      .slice(0, 3)
+    const names = isolatedNodes.map((n) => n.title || n.id.slice(0, 8)).slice(0, 3)
 
     insights.push({
       id: crypto.randomUUID(),
@@ -222,8 +213,7 @@ function detectHubNodes(snapshot: GraphSnapshot): AnalysisInsight[] {
 
   // Calculate average and threshold
   const degreeValues = Array.from(degrees.values())
-  const avgDegree =
-    degreeValues.reduce((a, b) => a + b, 0) / degreeValues.length
+  const avgDegree = degreeValues.reduce((a, b) => a + b, 0) / degreeValues.length
   const threshold = Math.max(avgDegree * 3, 6) // At least 3x average or 6
 
   for (const [nodeId, degree] of degrees) {
@@ -259,23 +249,18 @@ function detectStaleContent(snapshot: GraphSnapshot): AnalysisInsight[] {
   const STALE_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
   // Calculate average update time
-  const updateTimes = snapshot.nodes
-    .map((n) => n.updatedAt || n.createdAt)
-    .filter((t) => t > 0)
+  const updateTimes = snapshot.nodes.map((n) => n.updatedAt || n.createdAt).filter((t) => t > 0)
 
   if (updateTimes.length === 0) return insights
 
-  const avgUpdateTime =
-    updateTimes.reduce((a, b) => a + b, 0) / updateTimes.length
+  const avgUpdateTime = updateTimes.reduce((a, b) => a + b, 0) / updateTimes.length
   const recentThreshold = Math.max(
     avgUpdateTime - STALE_THRESHOLD_MS,
-    now - 30 * 24 * 60 * 60 * 1000 // Never older than 30 days
+    now - 30 * 24 * 60 * 60 * 1000, // Never older than 30 days
   )
 
   const staleNodes = snapshot.nodes.filter(
-    (n) =>
-      (n.updatedAt || n.createdAt) < recentThreshold &&
-      (n.updatedAt || n.createdAt) > 0
+    (n) => (n.updatedAt || n.createdAt) < recentThreshold && (n.updatedAt || n.createdAt) > 0,
   )
 
   if (staleNodes.length > 0 && staleNodes.length < snapshot.nodes.length * 0.5) {
@@ -303,9 +288,7 @@ function detectStaleContent(snapshot: GraphSnapshot): AnalysisInsight[] {
  * Detect missing connections: nodes that are semantically related
  * (by type or naming patterns) but not connected.
  */
-function detectMissingConnections(
-  snapshot: GraphSnapshot
-): AnalysisInsight[] {
+function detectMissingConnections(snapshot: GraphSnapshot): AnalysisInsight[] {
   const insights: AnalysisInsight[] = []
   if (snapshot.nodes.length < 4) return insights
 
@@ -325,17 +308,12 @@ function detectMissingConnections(
       return !projectNodes.some(
         (project) =>
           connectedPairs.has(`${task.id}:${project.id}`) ||
-          connectedPairs.has(`${project.id}:${task.id}`)
+          connectedPairs.has(`${project.id}:${task.id}`),
       )
     })
 
-    if (
-      unlinkedTasks.length > 0 &&
-      unlinkedTasks.length < taskNodes.length * 0.8
-    ) {
-      const names = unlinkedTasks
-        .map((n) => n.title || n.id.slice(0, 8))
-        .slice(0, 3)
+    if (unlinkedTasks.length > 0 && unlinkedTasks.length < taskNodes.length * 0.8) {
+      const names = unlinkedTasks.map((n) => n.title || n.id.slice(0, 8)).slice(0, 3)
 
       insights.push({
         id: crypto.randomUUID(),
@@ -362,9 +340,7 @@ function detectMissingConnections(
   })
 
   if (unlinkedAgents.length > 0 && agentNodes.length > 1) {
-    const names = unlinkedAgents
-      .map((n) => n.title || n.id.slice(0, 8))
-      .slice(0, 3)
+    const names = unlinkedAgents.map((n) => n.title || n.id.slice(0, 8)).slice(0, 3)
 
     insights.push({
       id: crypto.randomUUID(),
@@ -418,15 +394,13 @@ export function analyzeTopology(snapshot: GraphSnapshot): AnalysisInsight[] {
  */
 export async function analyzeSemantic(
   _snapshot: GraphSnapshot,
-  _changedNodeIds: string[]
+  _changedNodeIds: string[],
 ): Promise<AnalysisInsight[]> {
   // Check budget
   checkDailyReset()
   const estimatedCost = 0.001 // ~1000 tokens on Haiku
   if (budget.usedTodayUSD + estimatedCost > budget.dailyLimitUSD) {
-    console.log(
-      '[GraphIntelligence] Daily budget exceeded, skipping semantic analysis'
-    )
+    console.log('[GraphIntelligence] Daily budget exceeded, skipping semantic analysis')
     return []
   }
 
@@ -559,12 +533,15 @@ function requestSnapshotViaIPC(win: BrowserWindow): Promise<GraphSnapshot | null
 
 /** Register the IPC listener for snapshot responses from the renderer. Call once at startup. */
 export function registerSnapshotResponseHandler(): void {
-  ipcMain.on('bridge:snapshot-response', (_event, requestId: string, snapshot: GraphSnapshot | null) => {
-    const resolve = pendingSnapshotRequests.get(requestId)
-    if (resolve) {
-      resolve(snapshot)
-    }
-  })
+  ipcMain.on(
+    'bridge:snapshot-response',
+    (_event, requestId: string, snapshot: GraphSnapshot | null) => {
+      const resolve = pendingSnapshotRequests.get(requestId)
+      if (resolve) {
+        resolve(snapshot)
+      }
+    },
+  )
 }
 
 // =============================================================================
@@ -582,9 +559,7 @@ export function registerSnapshotResponseHandler(): void {
 export function startGraphAnalysis(intervalMs = 30000): void {
   if (analysisInterval) return
 
-  console.log(
-    `[GraphIntelligence] Starting analysis (interval: ${intervalMs}ms)`
-  )
+  console.log(`[GraphIntelligence] Starting analysis (interval: ${intervalMs}ms)`)
 
   analysisInterval = setInterval(async () => {
     // Skip if no changes since last analysis
@@ -631,17 +606,14 @@ export function markNodesChanged(nodeIds: string[]): void {
 
 export function registerGraphIntelligenceHandlers(): void {
   // Manual analysis trigger
-  ipcMain.handle(
-    'bridge:analyze-graph',
-    async (_event, snapshot: GraphSnapshot) => {
-      try {
-        const insights = analyzeTopology(snapshot)
-        return { success: true, insights }
-      } catch (err) {
-        return { success: false, error: (err as Error).message }
-      }
+  ipcMain.handle('bridge:analyze-graph', async (_event, snapshot: GraphSnapshot) => {
+    try {
+      const insights = analyzeTopology(snapshot)
+      return { success: true, insights }
+    } catch (err) {
+      return { success: false, error: (err as Error).message }
     }
-  )
+  })
 
   // Get budget status
   ipcMain.handle('bridge:get-budget', () => {
@@ -649,13 +621,10 @@ export function registerGraphIntelligenceHandlers(): void {
   })
 
   // Set daily budget limit
-  ipcMain.handle(
-    'bridge:set-budget-limit',
-    (_event, limitUSD: number) => {
-      budget.dailyLimitUSD = limitUSD
-      return { success: true }
-    }
-  )
+  ipcMain.handle('bridge:set-budget-limit', (_event, limitUSD: number) => {
+    budget.dailyLimitUSD = limitUSD
+    return { success: true }
+  })
 
   // Reset daily budget
   ipcMain.handle('bridge:reset-budget', () => {
@@ -664,13 +633,10 @@ export function registerGraphIntelligenceHandlers(): void {
   })
 
   // Start/stop analysis
-  ipcMain.handle(
-    'bridge:start-analysis',
-    (_event, intervalMs?: number) => {
-      startGraphAnalysis(intervalMs)
-      return { success: true }
-    }
-  )
+  ipcMain.handle('bridge:start-analysis', (_event, intervalMs?: number) => {
+    startGraphAnalysis(intervalMs)
+    return { success: true }
+  })
 
   ipcMain.handle('bridge:stop-analysis', () => {
     stopGraphAnalysis()
@@ -678,13 +644,10 @@ export function registerGraphIntelligenceHandlers(): void {
   })
 
   // Mark nodes as changed
-  ipcMain.handle(
-    'bridge:mark-nodes-changed',
-    (_event, nodeIds: string[]) => {
-      markNodesChanged(nodeIds)
-      return { success: true }
-    }
-  )
+  ipcMain.handle('bridge:mark-nodes-changed', (_event, nodeIds: string[]) => {
+    markNodesChanged(nodeIds)
+    return { success: true }
+  })
 
   // Dismiss/apply insight (renderer notifies main)
   ipcMain.handle(
@@ -692,33 +655,45 @@ export function registerGraphIntelligenceHandlers(): void {
     (_event, insightId: string, action: 'apply' | 'dismiss') => {
       // Audit logging happens on renderer side via auditHooks
       return { success: true, insightId, action }
-    }
+    },
   )
 
   // Natural language command submission (Spatial Command Bridge)
   // Wired to bridgeCommandParser.parseCommand() for intent classification + proposal generation.
   ipcMain.handle(
     'bridge:submitCommand',
-    async (_event, text: string, workspaceContext?: { nodeCount: number; nodeTypes: Record<string, number>; viewportCenter: { x: number; y: number }; recentNodes: Array<{ id: string; title: string; type: string }> }) => {
+    async (
+      _event,
+      text: string,
+      workspaceContext?: {
+        nodeCount: number
+        nodeTypes: Record<string, number>
+        viewportCenter: { x: number; y: number }
+        recentNodes: Array<{ id: string; title: string; type: string }>
+      },
+    ) => {
       try {
-        const result = await parseCommand(text, workspaceContext ?? {
-          nodeCount: 0,
-          nodeTypes: {},
-          viewportCenter: { x: 0, y: 0 },
-          recentNodes: []
-        })
+        const result = await parseCommand(
+          text,
+          workspaceContext ?? {
+            nodeCount: 0,
+            nodeTypes: {},
+            viewportCenter: { x: 0, y: 0 },
+            recentNodes: [],
+          },
+        )
         return {
           success: true,
           data: {
             parsed: result.parsed,
             proposalId: result.proposalId,
             changes: result.changes,
-            proposal: result.proposal
-          }
+            proposal: result.proposal,
+          },
         }
       } catch (err) {
         return { success: false, error: 'Could not parse command' }
       }
-    }
+    },
   )
 }

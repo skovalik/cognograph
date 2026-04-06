@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useEffect, useRef } from 'react'
 import { useUpdateNodeInternals } from '@xyflow/react'
+import { useEffect, useRef } from 'react'
 
 // Module-level singleton — one ResizeObserver for ALL nodes
 let sharedObserver: ResizeObserver | null = null

@@ -8,7 +8,7 @@
  * Debounces updates to 300ms to avoid excessive store writes.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface TextFieldProps {
@@ -48,9 +48,7 @@ export function TextField({ label, value, onChange }: TextFieldProps): JSX.Eleme
 
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-[11px] text-[var(--text-secondary)] shrink-0">
-        {label}
-      </span>
+      <span className="text-[11px] text-[var(--text-secondary)] shrink-0">{label}</span>
       <input
         type="text"
         value={local}

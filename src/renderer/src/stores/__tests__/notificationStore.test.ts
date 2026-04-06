@@ -8,14 +8,14 @@
  * priority ordering, max visible cap.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  useNotificationStore,
-  _resetIdCounter,
   _clearAllTimers,
+  _resetIdCounter,
+  FOLD_WINDOW_MS,
   MAX_VISIBLE,
   TIMEOUT_MS,
-  FOLD_WINDOW_MS
+  useNotificationStore,
 } from '../notificationStore'
 
 // =============================================================================

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { useProposalStore } from '../proposalStore'
 import type { Proposal, ProposedChange } from '@shared/types/bridge'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { useProposalStore } from '../proposalStore'
 
 // =============================================================================
 // TEST HELPERS
@@ -154,7 +154,9 @@ describe('proposalStore', () => {
     it('sets status to applied when all changes approved', () => {
       useProposalStore.getState().addProposal(createTestProposal())
 
-      useProposalStore.getState().approveSelected('proposal-1', ['change-1', 'change-2', 'change-3'])
+      useProposalStore
+        .getState()
+        .approveSelected('proposal-1', ['change-1', 'change-2', 'change-3'])
 
       const state = useProposalStore.getState()
       expect(state.proposals['proposal-1'].status).toBe('applied')
@@ -218,19 +220,26 @@ describe('proposalStore', () => {
 
       const state = useProposalStore.getState()
       // Ghost node position updated
-      const ghostNode = state.ghostNodes.find(n => n.data.changeId === 'change-1')
+      const ghostNode = state.ghostNodes.find((n) => n.data.changeId === 'change-1')
       expect(ghostNode?.position).toEqual({ x: 500, y: 600 })
       // Modification recorded in proposal
-      expect(state.proposals['proposal-1'].userModifications?.['change-1']?.position).toEqual({ x: 500, y: 600 })
+      expect(state.proposals['proposal-1'].userModifications?.['change-1']?.position).toEqual({
+        x: 500,
+        y: 600,
+      })
     })
 
     it('does nothing for unknown proposal', () => {
       useProposalStore.getState().addProposal(createTestProposal())
       const originalState = useProposalStore.getState()
 
-      useProposalStore.getState().modifyChangePosition('nonexistent', 'change-1', { x: 500, y: 600 })
+      useProposalStore
+        .getState()
+        .modifyChangePosition('nonexistent', 'change-1', { x: 500, y: 600 })
 
-      expect(useProposalStore.getState().ghostNodes[0].position).toEqual(originalState.ghostNodes[0].position)
+      expect(useProposalStore.getState().ghostNodes[0].position).toEqual(
+        originalState.ghostNodes[0].position,
+      )
     })
   })
 

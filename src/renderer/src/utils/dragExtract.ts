@@ -77,7 +77,7 @@ export interface ExtractionResult {
 export function createExtractionWithProvenance(
   sourceNodeId: string,
   content: string,
-  position: { x: number; y: number }
+  position: { x: number; y: number },
 ): ExtractionResult {
   const now = Date.now()
   const nodeId = uuid()
@@ -100,9 +100,9 @@ export function createExtractionWithProvenance(
       contextMetadata: {
         contextRole: 'reference',
         contextPriority: 'medium',
-        contextLabel: `Excerpt from ${sourceNodeId}`
-      }
-    }
+        contextLabel: `Excerpt from ${sourceNodeId}`,
+      },
+    },
   }
 
   const edge: ExtractionEdgeData = {
@@ -114,10 +114,10 @@ export function createExtractionWithProvenance(
       contextRole: 'excerpt',
       sourceRef: {
         nodeId: sourceNodeId,
-        timestamp: now
+        timestamp: now,
       },
-      label: 'excerpt'
-    }
+      label: 'excerpt',
+    },
   }
 
   return { node, edge }

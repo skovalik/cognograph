@@ -13,26 +13,33 @@
  * - Terminal pulse animation on streaming conversation nodes
  */
 
-import { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import { MiniMap, useStore as useRFStore, useReactFlow, useViewport } from '@xyflow/react'
-import { ChevronDown, ChevronUp, GripHorizontal, Map } from 'lucide-react'
-import { useUIStore, selectThemeSettings, useCanvasStore } from '../stores'
-import { useSpatialRegionStore, selectDistricts } from '../stores/spatialRegionStore'
-import type { NoteMode } from '@shared/types'
 import type { SpatialRegion } from '@shared/actionTypes'
+import type { NoteMode } from '@shared/types'
+import { MiniMap, useReactFlow, useStore as useRFStore, useViewport } from '@xyflow/react'
+import { ChevronDown, ChevronUp, GripHorizontal, Map as MapIcon } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCanvasStore } from '../stores'
+import { selectDistricts, useSpatialRegionStore } from '../stores/spatialRegionStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 // PFD Phase 6A: NoteMode badge colors for minimap node coloring
-const NOTE_MODE_MINIMAP_COLORS: Record<NoteMode, string> = {
+// Uses CSS custom properties via getComputedStyle at render time
+const NOTE_MODE_CSS_VARS: Record<NoteMode, string> = {
   general: '',
-  persona: '#8b5cf6',
-  reference: '#3b82f6',
-  examples: '#f59e0b',
-  background: '#6b7280',
-  'design-tokens': '#ec4899',
-  page: '#3b82f6',
-  component: '#8b5cf6',
-  'content-model': '#f97316',
-  'wp-config': '#21759b'
+  persona: '--node-orchestrator', // purple family
+  reference: '--node-conversation', // blue family
+  examples: '--node-note', // amber family
+  background: '--text-muted', // neutral
+  'design-tokens': '--accent-glow', // accent
+  page: '--node-conversation', // blue family
+  component: '--node-orchestrator', // purple family
+  'content-model': '--node-action', // copper/orange family
+  'wp-config': '--node-conversation', // blue family
+}
+
+/** Resolve a CSS custom property to its computed value */
+function getCSSVar(varName: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim()
 }
 
 interface Position {
@@ -89,7 +96,7 @@ const CustomMiniMapNodeComponent = ({
   borderRadius = 5,
   shapeRendering,
   selected,
-  onClick
+  onClick,
 }: CustomMiniMapNodeProps): JSX.Element => {
   const { background, backgroundColor } = style || {}
   const fill = color || (background as string) || (backgroundColor as string)
@@ -100,7 +107,8 @@ const CustomMiniMapNodeComponent = ({
   const isStreaming = className?.includes('minimap-streaming') ?? false
 
   const handleClick = onClick
-    ? (event: React.MouseEvent<SVGElement>): void => onClick(event as unknown as React.MouseEvent, id)
+    ? (event: React.MouseEvent<SVGElement>): void =>
+        onClick(event as unknown as React.MouseEvent, id)
     : undefined
 
   if (isLandmark) {
@@ -110,13 +118,16 @@ const CustomMiniMapNodeComponent = ({
     const radius = Math.max(width, height) * 0.6
 
     return (
+      // biome-ignore lint/a11y/noStaticElementInteractions: SVG minimap node with click handler
       <g
         className={[
           'react-flow__minimap-node',
           selected ? 'selected' : '',
           className,
-          isStreaming ? 'minimap-node-streaming' : ''
-        ].filter(Boolean).join(' ')}
+          isStreaming ? 'minimap-node-streaming' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         onClick={handleClick}
       >
         {/* Glow ring */}
@@ -125,7 +136,7 @@ const CustomMiniMapNodeComponent = ({
           cy={cy}
           r={radius + 2}
           fill="none"
-          stroke={fill || '#6b7280'}
+          stroke={fill || 'var(--text-muted, #6b7280)'}
           strokeWidth={1.5}
           opacity={0.4}
           shapeRendering={shapeRendering}
@@ -135,7 +146,7 @@ const CustomMiniMapNodeComponent = ({
           cx={cx}
           cy={cy}
           r={radius}
-          fill={fill || '#6b7280'}
+          fill={fill || 'var(--text-muted, #6b7280)'}
           stroke={strokeColor}
           strokeWidth={strokeWidth}
           shapeRendering={shapeRendering}
@@ -146,13 +157,16 @@ const CustomMiniMapNodeComponent = ({
 
   // Standard node: render as a rect (same as default MiniMapNode)
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: SVG minimap node with click handler
     <rect
       className={[
         'react-flow__minimap-node',
         selected ? 'selected' : '',
         className,
-        isStreaming ? 'minimap-node-streaming' : ''
-      ].filter(Boolean).join(' ')}
+        isStreaming ? 'minimap-node-streaming' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       x={x}
       y={y}
       rx={borderRadius}
@@ -162,7 +176,7 @@ const CustomMiniMapNodeComponent = ({
       style={{
         fill: fill || undefined,
         stroke: strokeColor,
-        strokeWidth
+        strokeWidth,
       }}
       shapeRendering={shapeRendering}
       onClick={handleClick}
@@ -195,9 +209,9 @@ const DistrictOverlayComponent = ({ districts }: DistrictOverlayProps): JSX.Elem
           height={district.bounds.height}
           rx={4}
           ry={4}
-          fill={district.color || '#6b7280'}
+          fill={district.color || 'var(--text-muted, #6b7280)'}
           fillOpacity={0.2}
-          stroke={district.color || '#6b7280'}
+          stroke={district.color || 'var(--text-muted, #6b7280)'}
           strokeOpacity={0.35}
           strokeWidth={1}
           pointerEvents="none"
@@ -220,11 +234,26 @@ const DistrictOverlay = memo(DistrictOverlayComponent)
 const OFFSET_SCALE = 5
 
 const selectMinimapViewBox = (s: {
-  nodes: Array<{ hidden?: boolean; measured?: { width?: number; height?: number }; internals?: { positionAbsolute: { x: number; y: number } } }>
-  nodeLookup: Map<string, { internals: { positionAbsolute: { x: number; y: number }; userNode: { hidden?: boolean; measured?: { width?: number; height?: number } } } }>
+  nodes: Array<{
+    hidden?: boolean
+    measured?: { width?: number; height?: number }
+    internals?: { positionAbsolute: { x: number; y: number } }
+  }>
+  nodeLookup: Map<
+    string,
+    {
+      internals: {
+        positionAbsolute: { x: number; y: number }
+        userNode: { hidden?: boolean; measured?: { width?: number; height?: number } }
+      }
+    }
+  >
 }): { x: number; y: number; width: number; height: number } | null => {
   // Build bounding rect of all visible nodes
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity
   let hasNodes = false
 
   s.nodeLookup.forEach((entry) => {
@@ -261,7 +290,7 @@ const selectMinimapViewBox = (s: {
     x: minX - (viewWidth - bw) / 2 - offset,
     y: minY - (viewHeight - bh) / 2 - offset,
     width: viewWidth + offset * 2,
-    height: viewHeight + offset * 2
+    height: viewHeight + offset * 2,
   }
 }
 
@@ -273,12 +302,14 @@ interface CollapsibleMinimapProps {
   defaultCorner?: Corner
 }
 
-function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: CollapsibleMinimapProps): JSX.Element {
+function CollapsibleMinimapComponent({
+  defaultCorner = 'bottom-right',
+}: CollapsibleMinimapProps): JSX.Element {
   const { fitView } = useReactFlow()
   const { zoom } = useViewport()
   const zoomPercent = Math.round(zoom * 100)
 
-  const themeSettings = useUIStore(selectThemeSettings)
+  const themeSettings = useWorkspaceStore((s) => s.themeSettings)
   const districts = useSpatialRegionStore(selectDistricts)
   const streamingConversations = useCanvasStore((s) => s.streamingConversations)
 
@@ -297,14 +328,26 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
   // Fix 2.5: Save position/corner before collapse so we can restore on expand
   const savedPositionRef = useRef<{ corner: Corner; customPosition: Position | null }>({
     corner: defaultCorner,
-    customPosition: null
+    customPosition: null,
   })
 
   // Memoize streaming set for className callback stability
-  const streamingSet = useMemo(
-    () => new Set(streamingConversations),
-    [streamingConversations]
-  )
+  const streamingSet = useMemo(() => new Set(streamingConversations), [streamingConversations])
+
+  // Resolve NoteMode colors from CSS variables (re-resolves on theme change)
+  const noteModeColors = useMemo(() => {
+    const resolved: Record<string, string> = {}
+    for (const [mode, cssVar] of Object.entries(NOTE_MODE_CSS_VARS)) {
+      if (cssVar) {
+        resolved[mode] = getCSSVar(cssVar)
+      }
+    }
+    return resolved
+    // themeSettings triggers re-resolution when theme/mode changes
+  }, [themeSettings])
+
+  // Resolved fallback color from theme tokens
+  const fallbackNodeColor = useMemo(() => getCSSVar('--text-muted') || '#6b7280', [themeSettings])
 
   // Calculate position based on corner or custom position
   const getPositionStyle = useCallback((): React.CSSProperties => {
@@ -313,7 +356,7 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
         left: customPosition.x,
         top: customPosition.y,
         right: 'auto',
-        bottom: 'auto'
+        bottom: 'auto',
       }
     }
 
@@ -325,9 +368,8 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
         return { right: offset, top: offset + 60 }
       case 'bottom-left':
         return { left: offset, bottom: offset }
-      case 'bottom-right':
       default:
-        return { right: offset, bottom: 56 } // 56px clears badge row (36px badges + 12px gap + 8px padding)
+        return { right: offset, bottom: offset }
     }
   }, [corner, customPosition])
 
@@ -345,7 +387,7 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
     // Store position relative to the ReactFlow container, not the window
     dragStartCorner.current = {
       x: rect.left - containerBounds.left,
-      y: rect.top - containerBounds.top
+      y: rect.top - containerBounds.top,
     }
     setIsDragging(true)
   }, [])
@@ -360,8 +402,14 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
       const deltaY = e.clientY - dragStartPos.current.y
 
       // Calculate new position relative to container
-      const newX = Math.max(0, Math.min(containerBounds.width - 200, dragStartCorner.current.x + deltaX))
-      const newY = Math.max(0, Math.min(containerBounds.height - 150, dragStartCorner.current.y + deltaY))
+      const newX = Math.max(
+        0,
+        Math.min(containerBounds.width - 200, dragStartCorner.current.x + deltaX),
+      )
+      const newY = Math.max(
+        0,
+        Math.min(containerBounds.height - 150, dragStartCorner.current.y + deltaY),
+      )
 
       setCustomPosition({ x: newX, y: newY })
     }
@@ -405,20 +453,23 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
   }, [isDragging, customPosition])
 
   // Toggle collapsed state — save position before collapse, restore on expand (Fix 2.5)
-  const toggleCollapsed = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    setIsCollapsed((prev) => {
-      if (!prev) {
-        // About to collapse — save current position
-        savedPositionRef.current = { corner, customPosition }
-      } else {
-        // About to expand — restore saved position
-        setCorner(savedPositionRef.current.corner)
-        setCustomPosition(savedPositionRef.current.customPosition)
-      }
-      return !prev
-    })
-  }, [corner, customPosition])
+  const toggleCollapsed = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      setIsCollapsed((prev) => {
+        if (!prev) {
+          // About to collapse — save current position
+          savedPositionRef.current = { corner, customPosition }
+        } else {
+          // About to expand — restore saved position
+          setCorner(savedPositionRef.current.corner)
+          setCustomPosition(savedPositionRef.current.customPosition)
+        }
+        return !prev
+      })
+    },
+    [corner, customPosition],
+  )
 
   // Theme-aware styling using GUI theme CSS variables
   const isLightMode = themeSettings.mode === 'light'
@@ -436,7 +487,7 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
       }
       return classes.join(' ')
     },
-    [streamingSet]
+    [streamingSet],
   )
 
   return (
@@ -445,32 +496,34 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
       className="absolute z-10 transition-all duration-200"
       style={{
         ...getPositionStyle(),
-        transition: isDragging ? 'none' : 'all 0.2s ease-out'
+        transition: isDragging ? 'none' : 'all 0.2s ease-out',
       }}
     >
       <div
         className="rounded-lg overflow-hidden shadow-lg gui-border"
         style={{
           backgroundColor: 'var(--gui-panel-bg)',
-          borderWidth: '1px'
+          borderWidth: '1px',
         }}
       >
         {/* Header */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: drag handle */}
         <div
           className="flex items-center justify-between px-2 py-1.5 cursor-move select-none gui-border"
           style={{
             backgroundColor: 'var(--gui-panel-bg-secondary)',
-            borderBottomWidth: '1px'
+            borderBottomWidth: '1px',
           }}
           onMouseDown={handleDragStart}
         >
           <div className="flex items-center gap-1.5">
             <GripHorizontal className="w-3 h-3 gui-text-secondary" />
-            <Map className="w-3.5 h-3.5 gui-text-secondary" />
+            <MapIcon className="w-3.5 h-3.5 gui-text-secondary" />
             <span className="text-xs gui-text-secondary">Map</span>
           </div>
           <div className="flex items-center gap-1">
             <button
+              type="button"
               onClick={() => fitView({ duration: 300, padding: 0.1 })}
               onMouseDown={(e) => e.stopPropagation()}
               className="text-xs gui-text-secondary hover:text-[var(--gui-text-primary)] transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--gui-bg-hover)]"
@@ -479,6 +532,7 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
               {zoomPercent}%
             </button>
             <button
+              type="button"
               onClick={toggleCollapsed}
               onMouseDown={(e) => e.stopPropagation()}
               className="p-0.5 gui-button rounded transition-colors"
@@ -499,6 +553,8 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
             {/* Phase 1C: District boundary overlay SVG */}
             {districts.length > 0 && viewBox && (
               <svg
+                role="img"
+                aria-label="District boundaries"
                 width={180}
                 height={120}
                 viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
@@ -512,15 +568,15 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
             <MiniMap
               key={JSON.stringify(themeSettings.nodeColors)} // Force re-render on theme change
               nodeColor={(node) => {
-                // PFD Phase 6A: Note nodes colored by NoteMode (badge color), others by type
+                // PFD Phase 6A: Note nodes colored by NoteMode (resolved from theme tokens), others by type
                 if (node.type === 'note') {
                   const noteMode = (node.data as { noteMode?: NoteMode })?.noteMode
-                  if (noteMode && NOTE_MODE_MINIMAP_COLORS[noteMode]) {
-                    return NOTE_MODE_MINIMAP_COLORS[noteMode]
+                  if (noteMode && noteModeColors[noteMode]) {
+                    return noteModeColors[noteMode]
                   }
                 }
                 const nodeType = node.type as keyof typeof themeSettings.nodeColors
-                return themeSettings.nodeColors[nodeType] || '#6b7280'
+                return themeSettings.nodeColors[nodeType] || fallbackNodeColor
               }}
               nodeStrokeWidth={(node) => {
                 // PFD Phase 6B: Landmark nodes get thicker stroke in minimap
@@ -528,11 +584,15 @@ function CollapsibleMinimapComponent({ defaultCorner = 'bottom-right' }: Collaps
               }}
               nodeClassName={nodeClassNameFn}
               nodeComponent={CustomMiniMapNode}
-              maskColor={isLightMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)'}
+              maskColor={
+                isLightMode
+                  ? 'var(--overlay-light, rgba(255, 255, 255, 0.6))'
+                  : 'var(--overlay-dark, rgba(0, 0, 0, 0.6))'
+              }
               style={{
                 width: 180,
                 height: 120,
-                backgroundColor: 'transparent'
+                backgroundColor: 'transparent',
               }}
               className="!static !bg-transparent !border-0 !rounded-none !shadow-none"
             />

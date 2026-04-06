@@ -5,8 +5,8 @@
 // Shows "Resume where you left off?" prompt on workspace load.
 // Zooms to last-active node on click. Auto-dismisses after 8 seconds.
 
-import { memo, useState, useEffect, useCallback } from 'react'
 import { useReactFlow } from '@xyflow/react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 
 const DISMISS_DELAY_MS = 8000
@@ -40,15 +40,14 @@ function SessionReEntryPromptComponent(): JSX.Element | null {
   const handleResume = useCallback(() => {
     if (!lastSessionNodeId) return
 
-    const node = nodes.find(n => n.id === lastSessionNodeId)
+    const node = nodes.find((n) => n.id === lastSessionNodeId)
     if (node?.position) {
       const width = (node.data as { width?: number }).width || 280
       const height = (node.data as { height?: number }).height || 140
-      setCenter(
-        node.position.x + width / 2,
-        node.position.y + height / 2,
-        { zoom: 1, duration: 400 }
-      )
+      setCenter(node.position.x + width / 2, node.position.y + height / 2, {
+        zoom: 1,
+        duration: 400,
+      })
     }
     setVisible(false)
     setDismissed(true)
@@ -61,20 +60,15 @@ function SessionReEntryPromptComponent(): JSX.Element | null {
 
   if (!visible || !lastSessionNodeId) return null
 
-  const lastNode = nodes.find(n => n.id === lastSessionNodeId)
+  const lastNode = nodes.find((n) => n.id === lastSessionNodeId)
   if (!lastNode) return null
 
   const title = (lastNode.data as { title?: string }).title || 'Untitled'
 
   return (
     <div className="session-reentry-prompt">
-      <span className="session-reentry-prompt__text">
-        Resume where you left off?
-      </span>
-      <button
-        className="session-reentry-prompt__action"
-        onClick={handleResume}
-      >
+      <span className="session-reentry-prompt__text">Resume where you left off?</span>
+      <button className="session-reentry-prompt__action" onClick={handleResume}>
         Go to "{title.length > 30 ? title.slice(0, 30) + '...' : title}"
       </button>
       <button

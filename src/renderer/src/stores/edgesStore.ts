@@ -8,13 +8,13 @@
  * Extracted from workspaceStore as part of Week 2 Stream B Track 2 Phase 2.2a.
  */
 
-import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
-import { subscribeWithSelector } from 'zustand/middleware'
-import { v4 as uuid } from 'uuid'
-import type { Edge, Connection } from '@xyflow/react'
-import type { EdgeData, EdgeWaypoint, ContextMetadata } from '@shared/types'
+import type { ContextMetadata, EdgeData, EdgeWaypoint } from '@shared/types'
 import { DEFAULT_EDGE_DATA } from '@shared/types'
+import type { Connection, Edge } from '@xyflow/react'
+import { v4 as uuid } from 'uuid'
+import { create } from 'zustand'
+import { subscribeWithSelector } from 'zustand/middleware'
+import { immer } from 'zustand/middleware/immer'
 
 // =============================================================================
 // Store State
@@ -40,7 +40,7 @@ interface EdgesActions {
   commitEdgeWaypointDrag: (
     edgeId: string,
     beforeWaypoints: EdgeWaypoint[] | undefined,
-    afterWaypoints: EdgeWaypoint[] | undefined
+    afterWaypoints: EdgeWaypoint[] | undefined,
   ) => void
 
   // Bulk edge operations
@@ -69,7 +69,7 @@ type EdgesStore = EdgesState & EdgesActions
 // =============================================================================
 
 const initialState: EdgesState = {
-  edges: []
+  edges: [],
 }
 
 // =============================================================================
@@ -93,7 +93,7 @@ export const useEdgesStore = create<EdgesStore>()(
         set((state) => {
           // Prevent duplicate edges
           const exists = state.edges.some(
-            (e) => e.source === connection.source && e.target === connection.target
+            (e) => e.source === connection.source && e.target === connection.target,
           )
           if (!exists) {
             const edge: Edge<EdgeData> = {
@@ -104,7 +104,7 @@ export const useEdgesStore = create<EdgesStore>()(
               sourceHandle: connection.sourceHandle,
               targetHandle: connection.targetHandle,
               className: 'edge-new', // Animation class
-              data: { ...DEFAULT_EDGE_DATA }
+              data: { ...DEFAULT_EDGE_DATA },
             }
             state.edges.push(edge)
           }
@@ -132,7 +132,7 @@ export const useEdgesStore = create<EdgesStore>()(
             // Create new edge object to ensure React Flow detects the change
             const updatedEdge = {
               ...edge,
-              data: { ...(edge.data || DEFAULT_EDGE_DATA), ...data }
+              data: { ...(edge.data || DEFAULT_EDGE_DATA), ...data },
             }
             state.edges[edgeIndex] = updatedEdge
           }
@@ -163,13 +163,13 @@ export const useEdgesStore = create<EdgesStore>()(
             target: edge.source,
             sourceHandle: newSourceHandle,
             targetHandle: newTargetHandle,
-            data: edge.data ? { ...edge.data } : undefined
+            data: edge.data ? { ...edge.data } : undefined,
           }
 
           state.edges = [
             ...state.edges.slice(0, edgeIndex),
             reversedEdge,
-            ...state.edges.slice(edgeIndex + 1)
+            ...state.edges.slice(edgeIndex + 1),
           ]
         })
       },
@@ -197,7 +197,7 @@ export const useEdgesStore = create<EdgesStore>()(
             source: newConnection.source!,
             target: newConnection.target!,
             sourceHandle: newConnection.sourceHandle,
-            targetHandle: newConnection.targetHandle
+            targetHandle: newConnection.targetHandle,
           }
 
           state.edges[edgeIndex] = reconnectedEdge
@@ -242,14 +242,14 @@ export const useEdgesStore = create<EdgesStore>()(
 
           // Check if edge already exists
           const exists = get().edges.some(
-            (e) => e.id === edgeId || (e.source === source && e.target === target)
+            (e) => e.id === edgeId || (e.source === source && e.target === target),
           )
           if (!exists) {
             get().addEdge({
               source,
               target,
               sourceHandle: null,
-              targetHandle: null
+              targetHandle: null,
             })
           }
         }
@@ -275,7 +275,7 @@ export const useEdgesStore = create<EdgesStore>()(
                 e.id === edgeId ||
                 e.id === reverseId ||
                 (e.source === sourceId && e.target === targetId) ||
-                (e.source === targetId && e.target === sourceId)
+                (e.source === targetId && e.target === sourceId),
             )
 
             if (!exists) {
@@ -286,7 +286,7 @@ export const useEdgesStore = create<EdgesStore>()(
                 target: targetId,
                 sourceHandle: null,
                 targetHandle: null,
-                data: { ...DEFAULT_EDGE_DATA }
+                data: { ...DEFAULT_EDGE_DATA },
               })
             }
           }
@@ -361,9 +361,9 @@ export const useEdgesStore = create<EdgesStore>()(
 
       getEdgeById: (edgeId) => {
         return get().edges.find((e) => e.id === edgeId)
-      }
-    }))
-  )
+      },
+    })),
+  ),
 )
 
 // =============================================================================

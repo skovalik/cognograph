@@ -23,21 +23,21 @@
  * reads from the workspace store which lives in the renderer.
  */
 
-import { useWorkspaceStore } from '../stores/workspaceStore'
-import { getAvailableMediaTools } from './media/agentToolRegistry'
-import { calculateAutoFitDimensions } from '../utils/textMeasure'
-import { layoutEvents } from '../utils/layoutEvents'
 import type {
-  AgentToolDefinition,
   AgentSettings,
-  NodeData,
+  AgentToolDefinition,
   ArtifactNodeData,
-  ProjectNodeData,
   ConversationNodeData,
   EdgeData,
-  MemoryEntry
+  MemoryEntry,
+  NodeData,
+  ProjectNodeData,
 } from '@shared/types'
-import { DEFAULT_AGENT_SETTINGS, DEFAULT_AGENT_MEMORY } from '@shared/types'
+import { DEFAULT_AGENT_MEMORY, DEFAULT_AGENT_SETTINGS } from '@shared/types'
+import { useWorkspaceStore } from '../stores/workspaceStore'
+import { layoutEvents } from '../utils/layoutEvents'
+import { calculateAutoFitDimensions } from '../utils/textMeasure'
+import { getAvailableMediaTools } from './media/agentToolRegistry'
 
 // -----------------------------------------------------------------------------
 // Tool Definitions
@@ -52,10 +52,10 @@ const QUERY_TOOLS: AgentToolDefinition[] = [
       properties: {
         nodeId: {
           type: 'string',
-          description: 'Node ID (optional, defaults to current conversation)'
-        }
-      }
-    }
+          description: 'Node ID (optional, defaults to current conversation)',
+        },
+      },
+    },
   },
   {
     name: 'search_nodes',
@@ -65,31 +65,39 @@ const QUERY_TOOLS: AgentToolDefinition[] = [
       properties: {
         type: {
           type: 'string',
-          enum: ['conversation', 'project', 'note', 'task', 'artifact', 'workspace', 'orchestrator'],
-          description: 'Filter by node type'
+          enum: [
+            'conversation',
+            'project',
+            'note',
+            'task',
+            'artifact',
+            'workspace',
+            'orchestrator',
+          ],
+          description: 'Filter by node type',
         },
         titleContains: {
           type: 'string',
-          description: 'Filter by title substring (case-insensitive)'
+          description: 'Filter by title substring (case-insensitive)',
         },
         hasTag: {
           type: 'string',
-          description: 'Filter by tag'
+          description: 'Filter by tag',
         },
         limit: {
           type: 'number',
-          description: 'Max results (default: 10)'
-        }
-      }
-    }
+          description: 'Max results (default: 10)',
+        },
+      },
+    },
   },
   {
     name: 'get_selection',
     description: 'Get currently selected nodes',
     input_schema: {
       type: 'object',
-      properties: {}
-    }
+      properties: {},
+    },
   },
   {
     name: 'get_node',
@@ -97,24 +105,25 @@ const QUERY_TOOLS: AgentToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        nodeId: { type: 'string', description: 'The ID of the node to get details for' }
+        nodeId: { type: 'string', description: 'The ID of the node to get details for' },
       },
-      required: ['nodeId']
-    }
+      required: ['nodeId'],
+    },
   },
   {
     name: 'get_initial_context',
-    description: 'Get a complete overview of ALL nodes and edges on the canvas. Use this when asked what exists in the workspace, what the user\'s canvas looks like, or to detect changes.',
+    description:
+      "Get a complete overview of ALL nodes and edges on the canvas. Use this when asked what exists in the workspace, what the user's canvas looks like, or to detect changes.",
     input_schema: {
       type: 'object',
       properties: {
         includeContent: {
           type: 'boolean',
-          description: 'Include full node content in results (default: false for brevity)'
-        }
-      }
-    }
-  }
+          description: 'Include full node content in results (default: false for brevity)',
+        },
+      },
+    },
+  },
 ]
 
 const CREATE_NODE_TOOL: AgentToolDefinition = {
@@ -126,40 +135,41 @@ const CREATE_NODE_TOOL: AgentToolDefinition = {
       type: {
         type: 'string',
         enum: ['conversation', 'project', 'note', 'task', 'artifact', 'orchestrator'],
-        description: 'The type of node to create'
+        description: 'The type of node to create',
       },
       title: {
         type: 'string',
-        description: 'The title of the node'
+        description: 'The title of the node',
       },
       content: {
         type: 'string',
-        description: 'Content for notes/artifacts'
+        description: 'Content for notes/artifacts',
       },
       description: {
         type: 'string',
-        description: 'Description for projects/tasks'
+        description: 'Description for projects/tasks',
       },
       position: {
         type: 'object',
         properties: {
           x: { type: 'number' },
-          y: { type: 'number' }
+          y: { type: 'number' },
         },
-        description: 'Position in workspace. If omitted, positions near the agent conversation.'
+        description: 'Position in workspace. If omitted, positions near the agent conversation.',
       },
       connectTo: {
         type: 'string',
-        description: 'Node ID to connect to after creation'
+        description: 'Node ID to connect to after creation',
       },
       contentType: {
         type: 'string',
         enum: ['text', 'markdown', 'code', 'html', 'json', 'svg', 'mermaid'],
-        description: 'Content type for artifact nodes. Use "html" for HTML documents that render visually as web pages.'
-      }
+        description:
+          'Content type for artifact nodes. Use "html" for HTML documents that render visually as web pages.',
+      },
     },
-    required: ['type', 'title']
-  }
+    required: ['type', 'title'],
+  },
 }
 
 const CREATE_EDGE_TOOL: AgentToolDefinition = {
@@ -170,24 +180,25 @@ const CREATE_EDGE_TOOL: AgentToolDefinition = {
     properties: {
       source: {
         type: 'string',
-        description: 'Source node ID'
+        description: 'Source node ID',
       },
       target: {
         type: 'string',
-        description: 'Target node ID'
+        description: 'Target node ID',
       },
       label: {
         type: 'string',
-        description: 'Optional edge label'
-      }
+        description: 'Optional edge label',
+      },
     },
-    required: ['source', 'target']
-  }
+    required: ['source', 'target'],
+  },
 }
 
 const BATCH_CREATE_TOOL: AgentToolDefinition = {
   name: 'batch_create',
-  description: 'Create multiple nodes and edges in one call. MUCH faster than creating them one by one. Use this whenever you need to create 2+ nodes. Provide nodes first, then edges referencing nodes by their temp_id.',
+  description:
+    'Create multiple nodes and edges in one call. MUCH faster than creating them one by one. Use this whenever you need to create 2+ nodes. Provide nodes first, then edges referencing nodes by their temp_id.',
   input_schema: {
     type: 'object',
     properties: {
@@ -197,34 +208,54 @@ const BATCH_CREATE_TOOL: AgentToolDefinition = {
         items: {
           type: 'object',
           properties: {
-            temp_id: { type: 'string', description: 'Temporary ID to reference in edges (e.g. "phase1", "task1")' },
-            type: { type: 'string', enum: ['conversation', 'project', 'note', 'task', 'artifact', 'orchestrator'] },
+            temp_id: {
+              type: 'string',
+              description: 'Temporary ID to reference in edges (e.g. "phase1", "task1")',
+            },
+            type: {
+              type: 'string',
+              enum: ['conversation', 'project', 'note', 'task', 'artifact', 'orchestrator'],
+            },
             title: { type: 'string' },
             content: { type: 'string', description: 'Content for notes/artifacts' },
             description: { type: 'string', description: 'Description for projects/tasks' },
-            status: { type: 'string', enum: ['todo', 'in-progress', 'done'], description: 'Status for tasks' },
-            priority: { type: 'string', enum: ['low', 'medium', 'high'], description: 'Priority for tasks' },
-            contentType: { type: 'string', enum: ['text', 'markdown', 'code', 'html', 'json', 'svg', 'mermaid'], description: 'Content type for artifact nodes. Use "html" for HTML documents that render visually as web pages.' }
+            status: {
+              type: 'string',
+              enum: ['todo', 'in-progress', 'done'],
+              description: 'Status for tasks',
+            },
+            priority: {
+              type: 'string',
+              enum: ['low', 'medium', 'high'],
+              description: 'Priority for tasks',
+            },
+            contentType: {
+              type: 'string',
+              enum: ['text', 'markdown', 'code', 'html', 'json', 'svg', 'mermaid'],
+              description:
+                'Content type for artifact nodes. Use "html" for HTML documents that render visually as web pages.',
+            },
           },
-          required: ['temp_id', 'type', 'title']
-        }
+          required: ['temp_id', 'type', 'title'],
+        },
       },
       edges: {
         type: 'array',
-        description: 'Array of edges to create. Use temp_ids from the nodes array for source/target.',
+        description:
+          'Array of edges to create. Use temp_ids from the nodes array for source/target.',
         items: {
           type: 'object',
           properties: {
             source: { type: 'string', description: 'Source temp_id or real node ID' },
             target: { type: 'string', description: 'Target temp_id or real node ID' },
-            label: { type: 'string', description: 'Optional edge label' }
+            label: { type: 'string', description: 'Optional edge label' },
           },
-          required: ['source', 'target']
-        }
-      }
+          required: ['source', 'target'],
+        },
+      },
     },
-    required: ['nodes']
-  }
+    required: ['nodes'],
+  },
 }
 
 const UPDATE_NODE_TOOL: AgentToolDefinition = {
@@ -235,43 +266,44 @@ const UPDATE_NODE_TOOL: AgentToolDefinition = {
     properties: {
       nodeId: {
         type: 'string',
-        description: 'The ID of the node to update'
+        description: 'The ID of the node to update',
       },
       title: {
         type: 'string',
-        description: 'New title'
+        description: 'New title',
       },
       content: {
         type: 'string',
-        description: 'New content (for notes/artifacts)'
+        description: 'New content (for notes/artifacts)',
       },
       description: {
         type: 'string',
-        description: 'New description (for projects/tasks)'
+        description: 'New description (for projects/tasks)',
       },
       status: {
         type: 'string',
         enum: ['todo', 'in-progress', 'done'],
-        description: 'New status (for tasks)'
+        description: 'New status (for tasks)',
       },
       priority: {
         type: 'string',
         enum: ['low', 'medium', 'high'],
-        description: 'New priority (for tasks)'
+        description: 'New priority (for tasks)',
       },
       tags: {
         type: 'array',
         items: { type: 'string' },
-        description: 'New tags array'
+        description: 'New tags array',
       },
       contentType: {
         type: 'string',
         enum: ['text', 'markdown', 'code', 'html', 'json', 'svg', 'mermaid'],
-        description: 'Content type for artifact nodes. Use "html" for HTML documents that render visually as web pages.'
-      }
+        description:
+          'Content type for artifact nodes. Use "html" for HTML documents that render visually as web pages.',
+      },
     },
-    required: ['nodeId']
-  }
+    required: ['nodeId'],
+  },
 }
 
 const MOVE_NODE_TOOL: AgentToolDefinition = {
@@ -282,20 +314,20 @@ const MOVE_NODE_TOOL: AgentToolDefinition = {
     properties: {
       nodeId: {
         type: 'string',
-        description: 'The ID of the node to move'
+        description: 'The ID of the node to move',
       },
       position: {
         type: 'object',
         properties: {
           x: { type: 'number' },
-          y: { type: 'number' }
+          y: { type: 'number' },
         },
         required: ['x', 'y'],
-        description: 'New position coordinates'
-      }
+        description: 'New position coordinates',
+      },
     },
-    required: ['nodeId', 'position']
-  }
+    required: ['nodeId', 'position'],
+  },
 }
 
 const DELETE_NODE_TOOL: AgentToolDefinition = {
@@ -306,11 +338,11 @@ const DELETE_NODE_TOOL: AgentToolDefinition = {
     properties: {
       nodeId: {
         type: 'string',
-        description: 'The ID of the node to delete'
-      }
+        description: 'The ID of the node to delete',
+      },
     },
-    required: ['nodeId']
-  }
+    required: ['nodeId'],
+  },
 }
 
 const DELETE_EDGE_TOOL: AgentToolDefinition = {
@@ -321,15 +353,15 @@ const DELETE_EDGE_TOOL: AgentToolDefinition = {
     properties: {
       sourceId: {
         type: 'string',
-        description: 'Source node ID'
+        description: 'Source node ID',
       },
       targetId: {
         type: 'string',
-        description: 'Target node ID'
-      }
+        description: 'Target node ID',
+      },
     },
-    required: ['sourceId', 'targetId']
-  }
+    required: ['sourceId', 'targetId'],
+  },
 }
 
 const GET_TODOS_TOOL: AgentToolDefinition = {
@@ -341,28 +373,28 @@ const GET_TODOS_TOOL: AgentToolDefinition = {
       status: {
         type: 'string',
         enum: ['todo', 'in-progress', 'done'],
-        description: 'Filter by task status'
+        description: 'Filter by task status',
       },
       priority: {
         type: 'string',
         enum: ['none', 'low', 'medium', 'high'],
-        description: 'Filter by task priority'
+        description: 'Filter by task priority',
       },
       tags: {
         type: 'array',
         items: { type: 'string' },
-        description: 'Filter by tags (tasks must have all specified tags)'
+        description: 'Filter by tags (tasks must have all specified tags)',
       },
       projectId: {
         type: 'string',
-        description: 'Filter by project node ID (tasks connected to this project)'
+        description: 'Filter by project node ID (tasks connected to this project)',
       },
       limit: {
         type: 'number',
-        description: 'Max results (default: 20)'
-      }
-    }
-  }
+        description: 'Max results (default: 20)',
+      },
+    },
+  },
 }
 
 const ADD_COMMENT_TOOL: AgentToolDefinition = {
@@ -373,15 +405,15 @@ const ADD_COMMENT_TOOL: AgentToolDefinition = {
     properties: {
       nodeId: {
         type: 'string',
-        description: 'The ID of the node to add a comment to'
+        description: 'The ID of the node to add a comment to',
       },
       comment: {
         type: 'string',
-        description: 'The comment text to append'
-      }
+        description: 'The comment text to append',
+      },
     },
-    required: ['nodeId', 'comment']
-  }
+    required: ['nodeId', 'comment'],
+  },
 }
 
 // -----------------------------------------------------------------------------
@@ -391,69 +423,74 @@ const ADD_COMMENT_TOOL: AgentToolDefinition = {
 const FILESYSTEM_READ_TOOLS: AgentToolDefinition[] = [
   {
     name: 'read_file',
-    description: 'Read the contents of a file. Returns text content and total line count. Use startLine/endLine for large files.',
+    description:
+      'Read the contents of a file. Returns text content and total line count. Use startLine/endLine for large files.',
     input_schema: {
       type: 'object',
       properties: {
         path: { type: 'string', description: 'Absolute or relative file path' },
         startLine: { type: 'number', description: 'Start line (1-indexed, optional)' },
-        endLine: { type: 'number', description: 'End line (inclusive, optional)' }
+        endLine: { type: 'number', description: 'End line (inclusive, optional)' },
       },
-      required: ['path']
-    }
+      required: ['path'],
+    },
   },
   {
     name: 'list_directory',
-    description: 'List the contents of a directory. Returns file names, types (file/directory), and sizes.',
+    description:
+      'List the contents of a directory. Returns file names, types (file/directory), and sizes.',
     input_schema: {
       type: 'object',
       properties: {
-        path: { type: 'string', description: 'Directory path to list' }
+        path: { type: 'string', description: 'Directory path to list' },
       },
-      required: ['path']
-    }
+      required: ['path'],
+    },
   },
   {
     name: 'search_files',
-    description: 'Search for a regex pattern across files in a directory. Returns matching file paths, line numbers, and content snippets.',
+    description:
+      'Search for a regex pattern across files in a directory. Returns matching file paths, line numbers, and content snippets.',
     input_schema: {
       type: 'object',
       properties: {
         path: { type: 'string', description: 'Directory to search in' },
         pattern: { type: 'string', description: 'Regex pattern to search for' },
-        fileGlob: { type: 'string', description: 'Optional file name filter (e.g., "*.ts")' }
+        fileGlob: { type: 'string', description: 'Optional file name filter (e.g., "*.ts")' },
       },
-      required: ['path', 'pattern']
-    }
-  }
+      required: ['path', 'pattern'],
+    },
+  },
 ]
 
 const FILESYSTEM_WRITE_TOOLS: AgentToolDefinition[] = [
   {
     name: 'write_file',
-    description: 'Write content to a file, creating it and parent directories if needed. Overwrites existing content.',
+    description:
+      'Write content to a file, creating it and parent directories if needed. Overwrites existing content.',
     input_schema: {
       type: 'object',
       properties: {
         path: { type: 'string', description: 'File path to write to' },
-        content: { type: 'string', description: 'Content to write' }
+        content: { type: 'string', description: 'Content to write' },
       },
-      required: ['path', 'content']
-    }
+      required: ['path', 'content'],
+    },
   },
   {
     name: 'edit_file',
-    description: 'Make a targeted edit to a file by replacing the first occurrence of an exact string with new content.',
+    description:
+      'Make a targeted edit to a file by replacing the first occurrence of an exact string with new content.',
     input_schema: {
       type: 'object',
       properties: {
         path: { type: 'string', description: 'File path to edit' },
         oldString: { type: 'string', description: 'Exact string to find (must match exactly)' },
-        newString: { type: 'string', description: 'Replacement string' }
+        newString: { type: 'string', description: 'Replacement string' },
       },
-      required: ['path', 'oldString', 'newString']
-    }
-  }
+      required: ['path', 'oldString', 'newString'],
+    },
+  },
 ]
 
 const COMMAND_TOOL: AgentToolDefinition = {
@@ -463,10 +500,13 @@ const COMMAND_TOOL: AgentToolDefinition = {
     type: 'object',
     properties: {
       command: { type: 'string', description: 'Shell command to execute' },
-      cwd: { type: 'string', description: 'Working directory (optional, defaults to first allowed path)' }
+      cwd: {
+        type: 'string',
+        description: 'Working directory (optional, defaults to first allowed path)',
+      },
     },
-    required: ['command']
-  }
+    required: ['command'],
+  },
 }
 
 // -----------------------------------------------------------------------------
@@ -484,15 +524,15 @@ const MEMORY_TOOLS: AgentToolDefinition[] = [
         key: {
           type: 'string',
           description:
-            'A descriptive key for this memory (e.g., "project_root", "test_command", "coding_style"). Max 100 characters.'
+            'A descriptive key for this memory (e.g., "project_root", "test_command", "coding_style"). Max 100 characters.',
         },
         value: {
           type: 'string',
-          description: 'The information to remember. Max 10000 characters.'
-        }
+          description: 'The information to remember. Max 10000 characters.',
+        },
       },
-      required: ['key', 'value']
-    }
+      required: ['key', 'value'],
+    },
   },
   {
     name: 'get_memory',
@@ -502,34 +542,35 @@ const MEMORY_TOOLS: AgentToolDefinition[] = [
       properties: {
         key: {
           type: 'string',
-          description: 'The key of the memory entry to retrieve'
-        }
+          description: 'The key of the memory entry to retrieve',
+        },
       },
-      required: ['key']
-    }
+      required: ['key'],
+    },
   },
   {
     name: 'list_memories',
     description: 'List all stored memory entries with their keys and values.',
     input_schema: {
       type: 'object',
-      properties: {}
-    }
+      properties: {},
+    },
   },
   {
     name: 'delete_memory',
-    description: 'Delete a specific memory entry by key. Use this to remove outdated or incorrect memories.',
+    description:
+      'Delete a specific memory entry by key. Use this to remove outdated or incorrect memories.',
     input_schema: {
       type: 'object',
       properties: {
         key: {
           type: 'string',
-          description: 'The key of the memory entry to delete'
-        }
+          description: 'The key of the memory entry to delete',
+        },
       },
-      required: ['key']
-    }
-  }
+      required: ['key'],
+    },
+  },
 ]
 
 // -----------------------------------------------------------------------------
@@ -542,8 +583,8 @@ const MEMORY_TOOLS: AgentToolDefinition[] = [
  * finds artifact nodes with filePath properties, and extracts parent directories.
  *
  * Spatial topology controls agent permissions. Connect a folder artifact →
- * agent can access that folder. Disconnect it → access revoked. No
- * configuration UI needed.
+ * agent can access that folder. Disconnect it → access revoked.
+ * No configuration UI needed.
  */
 export function derivePathsFromContext(agentNodeId: string): string[] {
   const { nodes, edges } = useWorkspaceStore.getState()
@@ -558,20 +599,17 @@ export function derivePathsFromContext(agentNodeId: string): string[] {
 
     // Follow inbound edges (source → currentId)
     const inbound = edges.filter(
-      (e) => e.target === currentId && (e.data as EdgeData | undefined)?.active !== false
+      (e) => e.target === currentId && (e.data as EdgeData | undefined)?.active !== false,
     )
     // Follow bidirectional edges (currentId → target with direction: 'bidirectional')
     const bidirectional = edges.filter(
       (e) =>
         e.source === currentId &&
         (e.data as EdgeData | undefined)?.active !== false &&
-        (e.data as EdgeData | undefined)?.direction === 'bidirectional'
+        (e.data as EdgeData | undefined)?.direction === 'bidirectional',
     )
 
-    const neighborIds = [
-      ...inbound.map((e) => e.source),
-      ...bidirectional.map((e) => e.target)
-    ]
+    const neighborIds = [...inbound.map((e) => e.source), ...bidirectional.map((e) => e.target)]
 
     for (const neighborId of neighborIds) {
       if (visited.has(neighborId)) continue
@@ -667,7 +705,10 @@ export function getChatToolDefinitions(): AgentToolDefinition[] {
   ]
 }
 
-export function getToolsForAgent(settings: AgentSettings, agentNodeId?: string): AgentToolDefinition[] {
+export function getToolsForAgent(
+  settings: AgentSettings,
+  agentNodeId?: string,
+): AgentToolDefinition[] {
   const tools = [...QUERY_TOOLS] // Always include query tools
 
   if (settings.canCreateNodes) {
@@ -746,7 +787,7 @@ export async function getMCPToolsForAgent(settings: AgentSettings): Promise<{
     return { tools: [], mcpToolServerMap }
   }
 
-  const tools: AgentToolDefinition[] = result.tools.map(mcpTool => {
+  const tools: AgentToolDefinition[] = result.tools.map((mcpTool) => {
     // Prefix MCP tool names with server name to avoid collisions with canvas tools
     const prefixedName = `mcp_${mcpTool.serverId}_${mcpTool.name}`
     mcpToolServerMap.set(prefixedName, mcpTool.serverId)
@@ -754,7 +795,7 @@ export async function getMCPToolsForAgent(settings: AgentSettings): Promise<{
     return {
       name: prefixedName,
       description: `[${mcpTool.serverName}] ${mcpTool.description}`,
-      input_schema: mcpTool.inputSchema as AgentToolDefinition['input_schema']
+      input_schema: mcpTool.inputSchema as AgentToolDefinition['input_schema'],
     }
   })
 
@@ -807,7 +848,7 @@ export interface ToolExecutionResult {
 export async function executeTool(
   toolName: string,
   input: Record<string, unknown>,
-  agentConversationId: string
+  agentConversationId: string,
 ): Promise<ToolExecutionResult> {
   const store = useWorkspaceStore.getState()
 
@@ -818,7 +859,7 @@ export async function executeTool(
         const context = store.getContextForNode(nodeId)
         return {
           success: true,
-          result: { context: context || 'No context available.' }
+          result: { context: context || 'No context available.' },
         }
       }
 
@@ -847,12 +888,12 @@ export async function executeTool(
           id: n.id,
           type: n.data.type,
           title: (n.data as NodeData & { title?: string }).title,
-          position: n.position
+          position: n.position,
         }))
 
         return {
           success: true,
-          result: { nodes: limited, total: results.length }
+          result: { nodes: limited, total: results.length },
         }
       }
 
@@ -864,7 +905,7 @@ export async function executeTool(
               ? {
                   id,
                   type: node.data.type,
-                  title: (node.data as NodeData & { title?: string }).title
+                  title: (node.data as NodeData & { title?: string }).title,
                 }
               : null
           })
@@ -885,21 +926,25 @@ export async function executeTool(
               ...node.data,
               position: node.position,
               width: node.width,
-              height: node.height
-            }
-          }
+              height: node.height,
+            },
+          },
         }
       }
 
       case 'get_initial_context': {
         const includeContent = input.includeContent === true
-        const nodeList = store.nodes.map(n => {
-          const data = n.data as NodeData & { title?: string; content?: string; description?: string }
+        const nodeList = store.nodes.map((n) => {
+          const data = n.data as NodeData & {
+            title?: string
+            content?: string
+            description?: string
+          }
           const entry: Record<string, unknown> = {
             id: n.id,
             type: n.data.type,
             title: data.title || '(untitled)',
-            position: { x: Math.round(n.position.x), y: Math.round(n.position.y) }
+            position: { x: Math.round(n.position.x), y: Math.round(n.position.y) },
           }
           if (includeContent) {
             if (data.content) entry.content = data.content
@@ -907,20 +952,20 @@ export async function executeTool(
           }
           return entry
         })
-        const edgeList = store.edges.map(e => ({
+        const edgeList = store.edges.map((e) => ({
           id: e.id,
           source: e.source,
           target: e.target,
           label: (e.data as EdgeData | undefined)?.label || undefined,
-          strength: (e.data as EdgeData | undefined)?.strength || 'normal'
+          strength: (e.data as EdgeData | undefined)?.strength || 'normal',
         }))
         return {
           success: true,
           result: {
             nodes: nodeList,
             edges: edgeList,
-            summary: `${nodeList.length} nodes, ${edgeList.length} edges`
-          }
+            summary: `${nodeList.length} nodes, ${edgeList.length} edges`,
+          },
         }
       }
 
@@ -958,16 +1003,17 @@ export async function executeTool(
           const GRID_COLS = 3
           const COL_SPACING = 540
           const ROW_SPACING = 400
-          const nearbyCreated = store.nodes.filter(n =>
-            Math.abs(n.position.x - viewCenterX) < 1600 &&
-            Math.abs(n.position.y - viewCenterY) < 1600
+          const nearbyCreated = store.nodes.filter(
+            (n) =>
+              Math.abs(n.position.x - viewCenterX) < 1600 &&
+              Math.abs(n.position.y - viewCenterY) < 1600,
           ).length
           const col = nearbyCreated % GRID_COLS
           const row = Math.floor(nearbyCreated / GRID_COLS)
           const gridOffsetX = -((GRID_COLS - 1) * COL_SPACING) / 2
           finalPosition = {
             x: viewCenterX + gridOffsetX + col * COL_SPACING,
-            y: viewCenterY - 150 + row * ROW_SPACING
+            y: viewCenterY - 150 + row * ROW_SPACING,
           }
         }
 
@@ -992,7 +1038,7 @@ export async function executeTool(
             source: connectTo as string,
             target: nodeId,
             sourceHandle: null,
-            targetHandle: null
+            targetHandle: null,
           })
         }
 
@@ -1009,7 +1055,7 @@ export async function executeTool(
           source: source as string,
           target: target as string,
           sourceHandle: null,
-          targetHandle: null
+          targetHandle: null,
         })
 
         if (label) {
@@ -1021,7 +1067,16 @@ export async function executeTool(
 
       case 'batch_create': {
         const { nodes: nodeDefs = [], edges: edgeDefs = [] } = input as {
-          nodes: Array<{ temp_id: string; type: string; title: string; content?: string; description?: string; status?: string; priority?: string; contentType?: string }>
+          nodes: Array<{
+            temp_id: string
+            type: string
+            title: string
+            content?: string
+            description?: string
+            status?: string
+            priority?: string
+            contentType?: string
+          }>
           edges: Array<{ source: string; target: string; label?: string }>
         }
 
@@ -1049,7 +1104,7 @@ export async function executeTool(
           const gridOffsetX = -((GRID_COLS - 1) * COL_SPACING) / 2
           const pos = {
             x: viewCenterX + gridOffsetX + col * COL_SPACING,
-            y: viewCenterY - 150 + row * ROW_SPACING
+            y: viewCenterY - 150 + row * ROW_SPACING,
           }
 
           const nodeId = store.addNode(def.type as NodeData['type'], pos)
@@ -1072,13 +1127,18 @@ export async function executeTool(
 
         // Auto-fit nodes to content dimensions (Fix 1 — demo polish)
         const HEADER_H: Record<string, number> = {
-          task: 40, note: 44, artifact: 48, project: 44, text: 32, conversation: 48
+          task: 40,
+          note: 44,
+          artifact: 48,
+          project: 44,
+          text: 32,
+          conversation: 48,
         }
         const FOOTER_H = 36
 
         const fitItems: Array<{ nodeId: string; width: number; height: number }> = []
         for (const [_tempId, realId] of tempToReal.entries()) {
-          const node = useWorkspaceStore.getState().nodes.find(n => n.id === realId)
+          const node = useWorkspaceStore.getState().nodes.find((n) => n.id === realId)
           if (!node) continue
           const nodeData = node.data as any
           const nodeType = nodeData.type || 'note'
@@ -1101,8 +1161,18 @@ export async function executeTool(
             continue
           }
 
-          const contentFloor = content.length > 2000 ? 900 : content.length > 1000 ? 700 : content.length > 500 ? 500 : content.length > 200 ? 350 : 0
-          const widthFloor = content.length > 500 ? 520 : content.length > 300 ? 480 : content.length > 100 ? 340 : 0
+          const contentFloor =
+            content.length > 2000
+              ? 900
+              : content.length > 1000
+                ? 700
+                : content.length > 500
+                  ? 500
+                  : content.length > 200
+                    ? 350
+                    : 0
+          const widthFloor =
+            content.length > 500 ? 520 : content.length > 300 ? 480 : content.length > 100 ? 340 : 0
 
           const finalW = Math.max(currentW, dims.width, widthFloor)
           const finalH = Math.max(node.height ?? 140, dims.height, contentFloor)
@@ -1128,14 +1198,23 @@ export async function executeTool(
         // but the `store` param is a stale snapshot from before the batch started.
         const freshNodes = useWorkspaceStore.getState().nodes
         for (const edgeDef of edgeDefs) {
-          const sourceId = tempToReal.get(edgeDef.source as string) || edgeDef.source as string
-          const targetId = tempToReal.get(edgeDef.target as string) || edgeDef.target as string
+          const sourceId = tempToReal.get(edgeDef.source as string) || (edgeDef.source as string)
+          const targetId = tempToReal.get(edgeDef.target as string) || (edgeDef.target as string)
 
           // Verify both nodes exist (using fresh store state)
-          if (!freshNodes.find(n => n.id === sourceId) || !freshNodes.find(n => n.id === targetId)) continue
+          if (
+            !freshNodes.find((n) => n.id === sourceId) ||
+            !freshNodes.find((n) => n.id === targetId)
+          )
+            continue
 
           const edgeId = `${sourceId}-${targetId}`
-          store.addEdge({ source: sourceId, target: targetId, sourceHandle: null, targetHandle: null })
+          store.addEdge({
+            source: sourceId,
+            target: targetId,
+            sourceHandle: null,
+            targetHandle: null,
+          })
           if (edgeDef.label) store.updateEdge(edgeId, { label: edgeDef.label as string })
           createdEdges.push(edgeId)
         }
@@ -1144,21 +1223,23 @@ export async function executeTool(
         const createdNodeIds = Array.from(tempToReal.values())
         const createdEdgeIds = createdEdges
 
-        layoutEvents.dispatchEvent(new CustomEvent('run-layout', {
-          detail: {
-            nodeIds: createdNodeIds,
-            edgeIds: createdEdgeIds,
-            conversationId: agentConversationId
-          }
-        }))
+        layoutEvents.dispatchEvent(
+          new CustomEvent('run-layout', {
+            detail: {
+              nodeIds: createdNodeIds,
+              edgeIds: createdEdgeIds,
+              conversationId: agentConversationId,
+            },
+          }),
+        )
 
         return {
           success: true,
           result: {
             nodesCreated: createdNodes.length,
             edgesCreated: createdEdges.length,
-            nodeMap: Object.fromEntries(createdNodes.map(n => [n.tempId, n.nodeId]))
-          }
+            nodeMap: Object.fromEntries(createdNodes.map((n) => [n.tempId, n.nodeId])),
+          },
         }
       }
 
@@ -1198,9 +1279,7 @@ export async function executeTool(
 
       case 'unlink_nodes': {
         const { sourceId, targetId } = input
-        const edge = store.edges.find(
-          (e) => e.source === sourceId && e.target === targetId
-        )
+        const edge = store.edges.find((e) => e.source === sourceId && e.target === targetId)
         if (!edge) {
           return { success: false, error: `No edge found from ${sourceId} to ${targetId}` }
         }
@@ -1235,7 +1314,7 @@ export async function executeTool(
           const connectedTaskIds = new Set(
             store.edges
               .filter((e) => e.source === projectId || e.target === projectId)
-              .flatMap((e) => [e.source, e.target])
+              .flatMap((e) => [e.source, e.target]),
           )
           tasks = tasks.filter((n) => connectedTaskIds.has(n.id))
         }
@@ -1255,13 +1334,13 @@ export async function executeTool(
             priority: data.priority,
             tags: data.tags,
             description: data.description,
-            position: n.position
+            position: n.position,
           }
         })
 
         return {
           success: true,
-          result: { tasks: limited, total: tasks.length }
+          result: { tasks: limited, total: tasks.length },
         }
       }
 
@@ -1278,13 +1357,19 @@ export async function executeTool(
         // Append to content or description depending on node type
         const data = node.data as NodeData & { content?: string; description?: string }
         if ('content' in data && data.content !== undefined) {
-          store.updateNode(nodeId as string, {
-            content: data.content + commentBlock
-          } as Partial<NodeData>)
+          store.updateNode(
+            nodeId as string,
+            {
+              content: data.content + commentBlock,
+            } as Partial<NodeData>,
+          )
         } else {
-          store.updateNode(nodeId as string, {
-            description: (data.description || '') + commentBlock
-          } as Partial<NodeData>)
+          store.updateNode(
+            nodeId as string,
+            {
+              description: (data.description || '') + commentBlock,
+            } as Partial<NodeData>,
+          )
         }
 
         return { success: true, result: { nodeId, timestamp, comment } }
@@ -1307,14 +1392,14 @@ export async function executeTool(
         if (keyStr.length > memory.maxKeyLength) {
           return {
             success: false,
-            error: `Key exceeds maximum length of ${memory.maxKeyLength} characters (got ${keyStr.length})`
+            error: `Key exceeds maximum length of ${memory.maxKeyLength} characters (got ${keyStr.length})`,
           }
         }
 
         if (valueStr.length > memory.maxValueLength) {
           return {
             success: false,
-            error: `Value exceeds maximum length of ${memory.maxValueLength} characters (got ${valueStr.length})`
+            error: `Value exceeds maximum length of ${memory.maxValueLength} characters (got ${valueStr.length})`,
           }
         }
 
@@ -1325,7 +1410,7 @@ export async function executeTool(
           value: valueStr,
           createdAt: existing >= 0 ? memory.entries[existing]!.createdAt : new Date().toISOString(),
           updatedAt: existing >= 0 ? new Date().toISOString() : undefined,
-          source: 'agent'
+          source: 'agent',
         }
 
         const newEntries = [...memory.entries]
@@ -1340,7 +1425,7 @@ export async function executeTool(
         }
 
         store.updateNode(agentConversationId, {
-          agentMemory: { ...memory, entries: newEntries }
+          agentMemory: { ...memory, entries: newEntries },
         })
 
         return { success: true, result: { stored: keyStr, totalEntries: newEntries.length } }
@@ -1376,8 +1461,8 @@ export async function executeTool(
           result: {
             entries: memory.entries,
             totalEntries: memory.entries.length,
-            maxEntries: memory.maxEntries
-          }
+            maxEntries: memory.maxEntries,
+          },
         }
       }
 
@@ -1399,7 +1484,7 @@ export async function executeTool(
         const newEntries = memory.entries.filter((e) => e.key !== keyStr)
 
         store.updateNode(agentConversationId, {
-          agentMemory: { ...memory, entries: newEntries }
+          agentMemory: { ...memory, entries: newEntries },
         })
 
         return { success: true, result: { deleted: keyStr, totalEntries: newEntries.length } }
@@ -1417,7 +1502,7 @@ export async function executeTool(
           input.path as string,
           allowedPaths,
           input.startLine as number | undefined,
-          input.endLine as number | undefined
+          input.endLine as number | undefined,
         )
       }
 
@@ -1440,7 +1525,7 @@ export async function executeTool(
           input.path as string,
           input.pattern as string,
           allowedPaths,
-          input.fileGlob as string | undefined
+          input.fileGlob as string | undefined,
         )
       }
 
@@ -1453,7 +1538,7 @@ export async function executeTool(
         return await window.api.filesystem.writeFile(
           input.path as string,
           input.content as string,
-          allowedPaths
+          allowedPaths,
         )
       }
 
@@ -1467,7 +1552,7 @@ export async function executeTool(
           input.path as string,
           input.oldString as string,
           input.newString as string,
-          allowedPaths
+          allowedPaths,
         )
       }
 
@@ -1481,7 +1566,7 @@ export async function executeTool(
           input.command as string,
           allowedPaths,
           settings.allowedCommands || [],
-          input.cwd as string | undefined
+          input.cwd as string | undefined,
         )
       }
 
@@ -1490,7 +1575,9 @@ export async function executeTool(
       case 'generate_image': {
         try {
           const { executeGenerateImage } = await import('./media/tools/generateImage')
-          const result = await executeGenerateImage(input as Parameters<typeof executeGenerateImage>[0])
+          const result = await executeGenerateImage(
+            input as Parameters<typeof executeGenerateImage>[0],
+          )
           return { success: true, result }
         } catch (error) {
           return { success: false, error: `Failed to generate image: ${(error as Error).message}` }
@@ -1511,7 +1598,10 @@ export async function executeTool(
         try {
           // generate_audio executor not yet implemented — route through IPC media pipeline
           if (!window.api?.media?.generateAudio) {
-            return { success: false, error: 'Audio generation API not available. Provider may not be configured.' }
+            return {
+              success: false,
+              error: 'Audio generation API not available. Provider may not be configured.',
+            }
           }
           const result = await window.api.media.generateAudio(input as Record<string, unknown>)
           return { success: true, result }
@@ -1523,7 +1613,10 @@ export async function executeTool(
       case 'generate_video': {
         try {
           if (!window.api?.media?.generateVideo) {
-            return { success: false, error: 'Video generation API not available. Provider may not be configured.' }
+            return {
+              success: false,
+              error: 'Video generation API not available. Provider may not be configured.',
+            }
           }
           const result = await window.api.media.generateVideo(input as Record<string, unknown>)
           return { success: true, result }
@@ -1535,19 +1628,28 @@ export async function executeTool(
       case 'generate_3d': {
         try {
           if (!window.api?.media?.generate3D) {
-            return { success: false, error: '3D generation API not available. Provider may not be configured.' }
+            return {
+              success: false,
+              error: '3D generation API not available. Provider may not be configured.',
+            }
           }
           const result = await window.api.media.generate3D(input as Record<string, unknown>)
           return { success: true, result }
         } catch (error) {
-          return { success: false, error: `Failed to generate 3D model: ${(error as Error).message}` }
+          return {
+            success: false,
+            error: `Failed to generate 3D model: ${(error as Error).message}`,
+          }
         }
       }
 
       case 'analyze_media': {
         try {
           if (!window.api?.media?.analyzeMedia) {
-            return { success: false, error: 'Media analysis API not available. Provider may not be configured.' }
+            return {
+              success: false,
+              error: 'Media analysis API not available. Provider may not be configured.',
+            }
           }
           const result = await window.api.media.analyzeMedia(input as Record<string, unknown>)
           return { success: true, result }
@@ -1570,7 +1672,7 @@ export async function executeTool(
           return {
             success: result.success,
             result: result.result,
-            error: result.error
+            error: result.error,
           }
         }
         return { success: false, error: `Unknown tool: ${toolName}` }

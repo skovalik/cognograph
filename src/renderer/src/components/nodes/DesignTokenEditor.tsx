@@ -4,8 +4,8 @@
 // DesignTokenEditor — Renders inside NoteNode when noteMode === 'design-tokens'
 // Provides a monospace textarea for editing DesignTokenSet JSON with validation
 
-import { memo, useCallback, useState, useRef, useEffect } from 'react'
-import type { DesignTokenSet, DesignToken } from '@shared/types'
+import type { DesignToken, DesignTokenSet } from '@shared/types'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 
 interface DesignTokenEditorProps {
   content: string
@@ -47,7 +47,7 @@ function TokenSwatch({ token }: { token: DesignToken }): JSX.Element | null {
       className="inline-block w-3 h-3 rounded-sm border flex-shrink-0"
       style={{
         backgroundColor: token.value,
-        borderColor: 'var(--node-border-color, rgba(255,255,255,0.15))'
+        borderColor: 'var(--node-border-color, rgba(255,255,255,0.15))',
       }}
       title={token.value}
     />
@@ -62,7 +62,10 @@ function TokenGrid({ tokenSet }: { tokenSet: DesignTokenSet }): JSX.Element {
 
   if (entries.length === 0) {
     return (
-      <div className="text-[10px] opacity-50 italic px-1 py-0.5" style={{ color: 'var(--node-text-muted)' }}>
+      <div
+        className="text-[10px] opacity-50 italic px-1 py-0.5"
+        style={{ color: 'var(--node-text-muted)' }}
+      >
         No tokens defined. Edit JSON below.
       </div>
     )
@@ -71,19 +74,27 @@ function TokenGrid({ tokenSet }: { tokenSet: DesignTokenSet }): JSX.Element {
   return (
     <div className="flex flex-col gap-0.5 mb-1 max-h-[80px] overflow-y-auto">
       {entries.slice(0, 12).map(([name, token]) => (
-        <div key={name} className="flex items-center gap-1 px-1 text-[10px]" style={{ color: 'var(--node-text-secondary)' }}>
+        <div
+          key={name}
+          className="flex items-center gap-1 px-1 text-[10px]"
+          style={{ color: 'var(--node-text-secondary)' }}
+        >
           <TokenSwatch token={token} />
-          <span className="font-mono truncate flex-1" title={name}>{name}</span>
+          <span className="font-mono truncate flex-1" title={name}>
+            {name}
+          </span>
           <span
             className="px-1 py-0 rounded text-[9px] font-medium flex-shrink-0"
             style={{
               backgroundColor: 'rgba(139, 92, 246, 0.15)',
-              color: 'rgba(139, 92, 246, 0.9)'
+              color: 'rgba(139, 92, 246, 0.9)',
             }}
           >
             {token.type}
           </span>
-          <span className="font-mono truncate max-w-[80px] opacity-70" title={token.value}>{token.value}</span>
+          <span className="font-mono truncate max-w-[80px] opacity-70" title={token.value}>
+            {token.value}
+          </span>
         </div>
       ))}
       {entries.length > 12 && (
@@ -155,7 +166,7 @@ function DesignTokenEditorComponent({ content, onChange }: DesignTokenEditorProp
           tabSize: 2,
           whiteSpace: 'pre',
           overflowWrap: 'normal',
-          overflowX: 'auto'
+          overflowX: 'auto',
         }}
       />
 
@@ -165,7 +176,7 @@ function DesignTokenEditorComponent({ content, onChange }: DesignTokenEditorProp
           className="text-[10px] px-1.5 py-0.5 rounded"
           style={{
             backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            color: 'rgba(239, 68, 68, 0.9)'
+            color: 'rgba(239, 68, 68, 0.9)',
           }}
         >
           JSON Error: {parseError}

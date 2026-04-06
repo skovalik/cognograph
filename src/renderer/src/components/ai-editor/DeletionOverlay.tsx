@@ -9,8 +9,8 @@
  * Scales with viewport zoom level.
  */
 
+import { ArrowRight, Trash2 } from 'lucide-react'
 import { memo } from 'react'
-import { Trash2, ArrowRight } from 'lucide-react'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 
 interface DeletionOverlayProps {
@@ -30,7 +30,7 @@ function DeletionOverlayComponent({
   dimensions,
   zoom,
   preservedIn,
-  nodeTitle
+  nodeTitle,
 }: DeletionOverlayProps): JSX.Element {
   const reducedMotion = useReducedMotion()
 
@@ -51,28 +51,19 @@ function DeletionOverlayComponent({
         left: position.x,
         top: position.y,
         width: dimensions.width,
-        height: dimensions.height
+        height: dimensions.height,
       }}
     >
-      <div
-        className="deletion-overlay-content"
-        style={{ gap: scaledGap, padding: scaledPadding }}
-      >
+      <div className="deletion-overlay-content" style={{ gap: scaledGap, padding: scaledPadding }}>
         <Trash2
           className="deletion-icon"
           style={{ width: scaledIconSize, height: scaledIconSize }}
         />
-        <span
-          className="deletion-label"
-          style={{ fontSize: scaledLabelSize }}
-        >
+        <span className="deletion-label" style={{ fontSize: scaledLabelSize }}>
           {nodeTitle ? `"${nodeTitle}"` : 'Will be deleted'}
         </span>
         {reason && (
-          <span
-            className="deletion-reason"
-            style={{ fontSize: scaledReasonSize }}
-          >
+          <span className="deletion-reason" style={{ fontSize: scaledReasonSize }}>
             {reason}
           </span>
         )}
@@ -82,7 +73,7 @@ function DeletionOverlayComponent({
             style={{
               fontSize: scaledReasonSize,
               gap: Math.max(2, 4 * zoom),
-              marginTop: Math.max(2, 4 * zoom)
+              marginTop: Math.max(2, 4 * zoom),
             }}
           >
             <ArrowRight style={{ width: scaledReasonSize, height: scaledReasonSize }} />

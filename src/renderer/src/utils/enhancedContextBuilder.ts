@@ -10,38 +10,35 @@
  * - Workspace-level analysis
  */
 
-import type { Node, Edge } from '@xyflow/react'
 import type {
-  NodeData,
+  ContextChain,
   EdgeData,
   EnhancedContextAnalysis,
   GraphAnalysis,
-  SpatialAnalysis,
-  WorkspaceAnalysis,
   NodeCluster,
-  ContextChain,
-  SpatialRegion
+  NodeData,
+  SpatialAnalysis,
+  SpatialRegion,
+  WorkspaceAnalysis,
 } from '@shared/types'
+import type { Edge, Node } from '@xyflow/react'
 
 // Re-export types for convenience
 export type {
+  ContextChain,
   EnhancedContextAnalysis,
   GraphAnalysis,
-  SpatialAnalysis,
-  WorkspaceAnalysis,
   NodeCluster,
-  ContextChain,
-  SpatialRegion
+  SpatialAnalysis,
+  SpatialRegion,
+  WorkspaceAnalysis,
 }
 
 // -----------------------------------------------------------------------------
 // Graph Analysis
 // -----------------------------------------------------------------------------
 
-export function analyzeGraph(
-  nodes: Node<NodeData>[],
-  edges: Edge<EdgeData>[]
-): GraphAnalysis {
+export function analyzeGraph(nodes: Node<NodeData>[], edges: Edge<EdgeData>[]): GraphAnalysis {
   // Build adjacency list
   const adjacency = new Map<string, Set<string>>()
   for (const node of nodes) {
@@ -62,22 +59,17 @@ export function analyzeGraph(
   const contextChains = findContextChains(nodes, edges)
 
   // Find isolated nodes (no connections)
-  const isolatedNodes = nodes
-    .filter((n) => (adjacency.get(n.id)?.size ?? 0) === 0)
-    .map((n) => n.id)
+  const isolatedNodes = nodes.filter((n) => (adjacency.get(n.id)?.size ?? 0) === 0).map((n) => n.id)
 
   return {
     clusters,
     centralNodes,
     contextChains,
-    isolatedNodes
+    isolatedNodes,
   }
 }
 
-function findClusters(
-  nodes: Node<NodeData>[],
-  adjacency: Map<string, Set<string>>
-): NodeCluster[] {
+function findClusters(nodes: Node<NodeData>[], adjacency: Map<string, Set<string>>): NodeCluster[] {
   const visited = new Set<string>()
   const clusters: NodeCluster[] = []
   let clusterId = 0
@@ -116,14 +108,14 @@ function findClusters(
         const type = nodeObj.data.type
         typeCounts[type] = (typeCounts[type] || 0) + 1
       }
-      const dominantType = Object.entries(typeCounts)
-        .sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'unknown'
+      const dominantType =
+        Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'unknown'
 
       clusters.push({
         id: `cluster-${clusterId++}`,
         nodes: clusterNodes,
         dominantType,
-        centroid
+        centroid,
       })
     }
   }
@@ -134,7 +126,7 @@ function findClusters(
 function findCentralNodes(
   nodes: Node<NodeData>[],
   adjacency: Map<string, Set<string>>,
-  limit: number
+  limit: number,
 ): string[] {
   return nodes
     .map((n) => ({ id: n.id, degree: adjacency.get(n.id)?.size ?? 0 }))
@@ -144,10 +136,7 @@ function findCentralNodes(
     .map((n) => n.id)
 }
 
-function findContextChains(
-  nodes: Node<NodeData>[],
-  edges: Edge<EdgeData>[]
-): ContextChain[] {
+function findContextChains(nodes: Node<NodeData>[], edges: Edge<EdgeData>[]): ContextChain[] {
   const chains: ContextChain[] = []
 
   // Find all conversation nodes
@@ -187,7 +176,7 @@ function findContextChains(
       chains.push({
         conversationId: conv.id,
         contextSources,
-        depth: maxDepth
+        depth: maxDepth,
       })
     }
   }
@@ -205,7 +194,7 @@ export function analyzeSpatial(nodes: Node<NodeData>[]): SpatialAnalysis {
       bounds: { minX: 0, minY: 0, maxX: 1000, maxY: 1000 },
       density: 0,
       regions: [],
-      overlappingNodes: []
+      overlappingNodes: [],
     }
   }
 
@@ -241,13 +230,13 @@ export function analyzeSpatial(nodes: Node<NodeData>[]): SpatialAnalysis {
     bounds,
     density,
     regions,
-    overlappingNodes
+    overlappingNodes,
   }
 }
 
 function findSpatialRegions(
   nodes: Node<NodeData>[],
-  bounds: { minX: number; minY: number; maxX: number; maxY: number }
+  bounds: { minX: number; minY: number; maxX: number; maxY: number },
 ): SpatialRegion[] {
   // Divide canvas into grid cells
   const gridSize = 500 // 500px cells
@@ -264,7 +253,7 @@ function findSpatialRegions(
         x: bounds.minX + col * gridSize,
         y: bounds.minY + row * gridSize,
         width: gridSize,
-        height: gridSize
+        height: gridSize,
       }
 
       // Find nodes in this region
@@ -287,7 +276,7 @@ function findSpatialRegions(
           id: `region-${row}-${col}`,
           name: `Region (${row}, ${col})`,
           bounds: regionBounds,
-          nodes: regionNodes.map((n) => n.id)
+          nodes: regionNodes.map((n) => n.id),
         })
       }
     }
@@ -308,7 +297,7 @@ function findOverlappingNodes(nodes: Node<NodeData>[]): string[][] {
       x: nodeA.position.x,
       y: nodeA.position.y,
       width: aWidth,
-      height: aHeight
+      height: aHeight,
     }
 
     for (let j = i + 1; j < nodes.length; j++) {
@@ -319,7 +308,7 @@ function findOverlappingNodes(nodes: Node<NodeData>[]): string[][] {
         x: nodeB.position.x,
         y: nodeB.position.y,
         width: bWidth,
-        height: bHeight
+        height: bHeight,
       }
 
       // Check if rectangles overlap
@@ -347,7 +336,7 @@ function findOverlappingNodes(nodes: Node<NodeData>[]): string[][] {
 
 export function analyzeWorkspace(
   nodes: Node<NodeData>[],
-  edges: Edge<EdgeData>[]
+  edges: Edge<EdgeData>[],
 ): WorkspaceAnalysis {
   // Count nodes by type
   const nodesByType: Record<string, number> = {}
@@ -381,11 +370,7 @@ export function analyzeWorkspace(
   const orphanedNodes = nodes
     .filter((n) => {
       // Not a project, not connected, and has no parent project
-      return (
-        n.data.type !== 'project' &&
-        !connectedNodes.has(n.id) &&
-        !nodesWithParent.has(n.id)
-      )
+      return n.data.type !== 'project' && !connectedNodes.has(n.id) && !nodesWithParent.has(n.id)
     })
     .map((n) => n.id)
 
@@ -394,12 +379,12 @@ export function analyzeWorkspace(
     nodesByType,
     projectHierarchy,
     orphanedNodes,
-    recentlyModified: [] // Placeholder
+    recentlyModified: [], // Placeholder
   }
 }
 
 function buildProjectHierarchy(
-  nodes: Node<NodeData>[]
+  nodes: Node<NodeData>[],
 ): Array<{ id: string; title: string; childCount: number; depth: number }> {
   const projects = nodes.filter((n) => n.data.type === 'project')
   const result: Array<{ id: string; title: string; childCount: number; depth: number }> = []
@@ -431,7 +416,7 @@ function buildProjectHierarchy(
       id: project.id,
       title: projectData.title ?? 'Untitled Project',
       childCount: projectData.childNodeIds?.length ?? 0,
-      depth: getDepth(project.id)
+      depth: getDepth(project.id),
     })
   }
 
@@ -463,7 +448,7 @@ function calculateCentroid(nodes: Node<NodeData>[]): { x: number; y: number } {
 
   return {
     x: sumX / nodes.length,
-    y: sumY / nodes.length
+    y: sumY / nodes.length,
   }
 }
 
@@ -473,12 +458,12 @@ function calculateCentroid(nodes: Node<NodeData>[]): { x: number; y: number } {
 
 export function buildEnhancedContext(
   nodes: Node<NodeData>[],
-  edges: Edge<EdgeData>[]
+  edges: Edge<EdgeData>[],
 ): EnhancedContextAnalysis {
   return {
     graph: analyzeGraph(nodes, edges),
     spatial: analyzeSpatial(nodes),
-    workspace: analyzeWorkspace(nodes, edges)
+    workspace: analyzeWorkspace(nodes, edges),
   }
 }
 

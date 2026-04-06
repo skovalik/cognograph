@@ -14,8 +14,8 @@
 
 import { ipcMain } from 'electron'
 import * as fs from 'fs'
-import * as path from 'path'
 import * as os from 'os'
+import * as path from 'path'
 import { validatePath } from '../agent/filesystemTools'
 import { FolderListInputSchema } from './schemas'
 
@@ -84,31 +84,67 @@ export function registerFolderHandlers(): void {
     // Zod schema validation (SEC-0.1j)
     const parsed = FolderListInputSchema.safeParse({ folderPath })
     if (!parsed.success) {
-      return { success: false, entries: [], total: 0, truncated: false, error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}` }
+      return {
+        success: false,
+        entries: [],
+        total: 0,
+        truncated: false,
+        error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}`,
+      }
     }
     const validatedPath = parsed.data.folderPath
 
     if (validatedPath.includes('\x00')) {
-      return { success: false, entries: [], total: 0, truncated: false, error: 'Invalid path characters' }
+      return {
+        success: false,
+        entries: [],
+        total: 0,
+        truncated: false,
+        error: 'Invalid path characters',
+      }
     }
 
     if (!path.isAbsolute(validatedPath)) {
-      return { success: false, entries: [], total: 0, truncated: false, error: 'Path must be absolute' }
+      return {
+        success: false,
+        entries: [],
+        total: 0,
+        truncated: false,
+        error: 'Path must be absolute',
+      }
     }
 
     const pathParsed = path.parse(validatedPath)
     if (pathParsed.root === validatedPath) {
-      return { success: false, entries: [], total: 0, truncated: false, error: 'Cannot list root directory' }
+      return {
+        success: false,
+        entries: [],
+        total: 0,
+        truncated: false,
+        error: 'Cannot list root directory',
+      }
     }
 
     // SEC-0.1f: Workspace-scoped path validation
     if (allowedRoots.length === 0) {
-      return { success: false, entries: [], total: 0, truncated: false, error: 'No workspace loaded — folder listing is disabled' }
+      return {
+        success: false,
+        entries: [],
+        total: 0,
+        truncated: false,
+        error: 'No workspace loaded — folder listing is disabled',
+      }
     }
 
     const pathValidation = validatePath(validatedPath, allowedRoots)
     if (!pathValidation.valid) {
-      return { success: false, entries: [], total: 0, truncated: false, error: `Access denied: path is outside allowed directories` }
+      return {
+        success: false,
+        entries: [],
+        total: 0,
+        truncated: false,
+        error: `Access denied: path is outside allowed directories`,
+      }
     }
 
     try {
@@ -130,12 +166,10 @@ export function registerFolderHandlers(): void {
         return a.name.localeCompare(b.name)
       })
 
-      const entries: FolderListEntry[] = sorted
-        .slice(0, MAX_ENTRIES)
-        .map(d => ({
-          name: d.name,
-          type: d.isDirectory() ? 'directory' as const : 'file' as const,
-        }))
+      const entries: FolderListEntry[] = sorted.slice(0, MAX_ENTRIES).map((d) => ({
+        name: d.name,
+        type: d.isDirectory() ? ('directory' as const) : ('file' as const),
+      }))
 
       return {
         success: true,
@@ -146,10 +180,22 @@ export function registerFolderHandlers(): void {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       if (message.includes('ENOENT')) {
-        return { success: false, entries: [], total: 0, truncated: false, error: 'Folder not found' }
+        return {
+          success: false,
+          entries: [],
+          total: 0,
+          truncated: false,
+          error: 'Folder not found',
+        }
       }
       if (message.includes('EACCES') || message.includes('EPERM')) {
-        return { success: false, entries: [], total: 0, truncated: false, error: 'Permission denied' }
+        return {
+          success: false,
+          entries: [],
+          total: 0,
+          truncated: false,
+          error: 'Permission denied',
+        }
       }
       return { success: false, entries: [], total: 0, truncated: false, error: message }
     }

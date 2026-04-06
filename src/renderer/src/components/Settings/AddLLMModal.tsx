@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useState, useCallback } from 'react'
-import { X } from 'lucide-react'
-import { useConnectorStore } from '../../stores/connectorStore'
-import type { LLMConnector, ConnectorProvider } from '@shared/types'
+import type { ConnectorProvider, LLMConnector } from '@shared/types'
 import { CONNECTOR_PROVIDER_INFO } from '@shared/types'
+import { X } from 'lucide-react'
+import { memo, useCallback, useState } from 'react'
+import { useConnectorStore } from '../../stores/connectorStore'
 
 interface AddLLMModalProps {
   connector: LLMConnector | null // null = add mode, non-null = edit mode
@@ -19,7 +19,9 @@ function AddLLMModalComponent({ connector, onClose }: AddLLMModalProps): JSX.Ele
 
   const [name, setName] = useState(connector?.name || '')
   const [provider, setProvider] = useState<ConnectorProvider>(connector?.provider || 'anthropic')
-  const [model, setModel] = useState(connector?.model || CONNECTOR_PROVIDER_INFO['anthropic'].defaultModel)
+  const [model, setModel] = useState(
+    connector?.model || CONNECTOR_PROVIDER_INFO['anthropic'].defaultModel,
+  )
   const [apiKey, setApiKey] = useState('')
   const [baseUrl, setBaseUrl] = useState(connector?.baseUrl || '')
   const [saving, setSaving] = useState(false)
@@ -31,19 +33,22 @@ function AddLLMModalComponent({ connector, onClose }: AddLLMModalProps): JSX.Ele
   const providerInfo = CONNECTOR_PROVIDER_INFO[provider]
   const showBaseUrl = providerInfo?.requiresBaseUrl
 
-  const handleProviderChange = useCallback((newProvider: ConnectorProvider) => {
-    setProvider(newProvider)
-    const info = CONNECTOR_PROVIDER_INFO[newProvider]
-    if (info && !isEditing) {
-      setModel(info.defaultModel)
-      setName(info.label)
-      if (!info.requiresBaseUrl) {
-        setBaseUrl('')
-      } else if (newProvider === 'ollama') {
-        setBaseUrl('http://localhost:11434')
+  const handleProviderChange = useCallback(
+    (newProvider: ConnectorProvider) => {
+      setProvider(newProvider)
+      const info = CONNECTOR_PROVIDER_INFO[newProvider]
+      if (info && !isEditing) {
+        setModel(info.defaultModel)
+        setName(info.label)
+        if (!info.requiresBaseUrl) {
+          setBaseUrl('')
+        } else if (newProvider === 'ollama') {
+          setBaseUrl('http://localhost:11434')
+        }
       }
-    }
-  }, [isEditing])
+    },
+    [isEditing],
+  )
 
   const handleSave = useCallback(async () => {
     setError('')
@@ -70,7 +75,7 @@ function AddLLMModalComponent({ connector, onClose }: AddLLMModalProps): JSX.Ele
           provider,
           model: model.trim() || providerInfo.defaultModel,
           baseUrl: showBaseUrl ? baseUrl.trim() : undefined,
-          status: 'untested'
+          status: 'untested',
         })
 
         if (apiKey.trim()) {
@@ -83,7 +88,7 @@ function AddLLMModalComponent({ connector, onClose }: AddLLMModalProps): JSX.Ele
           name: name.trim(),
           provider,
           model: model.trim() || providerInfo.defaultModel,
-          baseUrl: showBaseUrl ? baseUrl.trim() : undefined
+          baseUrl: showBaseUrl ? baseUrl.trim() : undefined,
         })
 
         if (apiKey.trim()) {
@@ -98,7 +103,20 @@ function AddLLMModalComponent({ connector, onClose }: AddLLMModalProps): JSX.Ele
     } finally {
       setSaving(false)
     }
-  }, [name, provider, model, apiKey, baseUrl, showBaseUrl, isEditing, connector, addConnector, updateConnector, providerInfo, onClose])
+  }, [
+    name,
+    provider,
+    model,
+    apiKey,
+    baseUrl,
+    showBaseUrl,
+    isEditing,
+    connector,
+    addConnector,
+    updateConnector,
+    providerInfo,
+    onClose,
+  ])
 
   return (
     <div className="gui-backdrop gui-z-dropdowns flex items-center justify-center">
@@ -108,10 +126,7 @@ function AddLLMModalComponent({ connector, onClose }: AddLLMModalProps): JSX.Ele
           <h3 className="font-semibold gui-text">
             {isEditing ? 'Edit LLM Provider' : 'Add LLM Provider'}
           </h3>
-          <button
-            onClick={onClose}
-            className="gui-btn gui-btn-ghost gui-btn-icon rounded"
-          >
+          <button onClick={onClose} className="gui-btn gui-btn-ghost gui-btn-icon rounded">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -120,9 +135,7 @@ function AddLLMModalComponent({ connector, onClose }: AddLLMModalProps): JSX.Ele
         <div className="p-4 space-y-4">
           {/* Provider */}
           <div>
-            <label className="block text-xs font-medium gui-text-secondary mb-1.5">
-              Provider
-            </label>
+            <label className="block text-xs font-medium gui-text-secondary mb-1.5">Provider</label>
             <div className="grid grid-cols-3 gap-1.5">
               {PROVIDERS.map((p) => {
                 const info = CONNECTOR_PROVIDER_INFO[p]
@@ -131,9 +144,7 @@ function AddLLMModalComponent({ connector, onClose }: AddLLMModalProps): JSX.Ele
                     key={p}
                     onClick={() => handleProviderChange(p)}
                     className={`px-2 py-1.5 text-xs rounded border transition-colors ${
-                      provider === p
-                        ? 'gui-btn-accent'
-                        : 'gui-card'
+                      provider === p ? 'gui-btn-accent' : 'gui-card'
                     }`}
                   >
                     {info.label}
@@ -160,7 +171,8 @@ function AddLLMModalComponent({ connector, onClose }: AddLLMModalProps): JSX.Ele
           {/* API Key */}
           <div>
             <label className="block text-xs font-medium gui-text-secondary mb-1.5">
-              API Key {isEditing && <span className="font-normal">(leave blank to keep current)</span>}
+              API Key{' '}
+              {isEditing && <span className="font-normal">(leave blank to keep current)</span>}
             </label>
             <input
               type="password"
@@ -173,9 +185,7 @@ function AddLLMModalComponent({ connector, onClose }: AddLLMModalProps): JSX.Ele
 
           {/* Model */}
           <div>
-            <label className="block text-xs font-medium gui-text-secondary mb-1.5">
-              Model
-            </label>
+            <label className="block text-xs font-medium gui-text-secondary mb-1.5">Model</label>
             <input
               type="text"
               value={model}
@@ -196,32 +206,25 @@ function AddLLMModalComponent({ connector, onClose }: AddLLMModalProps): JSX.Ele
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
                 className="gui-input w-full px-3 py-2 text-sm rounded font-mono"
-                placeholder={provider === 'ollama' ? 'http://localhost:11434' : 'https://api.example.com/v1'}
+                placeholder={
+                  provider === 'ollama' ? 'http://localhost:11434' : 'https://api.example.com/v1'
+                }
               />
             </div>
           )}
 
           {/* Error */}
           {error && (
-            <div className="text-xs text-red-400 bg-red-500/10 px-3 py-2 rounded">
-              {error}
-            </div>
+            <div className="text-xs text-red-400 bg-red-500/10 px-3 py-2 rounded">{error}</div>
           )}
         </div>
 
         {/* Footer */}
         <div className="flex justify-end gap-2 p-4 border-t gui-border">
-          <button
-            onClick={onClose}
-            className="gui-btn gui-btn-ghost"
-          >
+          <button onClick={onClose} className="gui-btn gui-btn-ghost">
             Cancel
           </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="gui-btn gui-btn-accent"
-          >
+          <button onClick={handleSave} disabled={saving} className="gui-btn gui-btn-accent">
             {saving ? 'Saving...' : isEditing ? 'Update' : 'Add Provider'}
           </button>
         </div>

@@ -8,7 +8,7 @@
  * The "+" button reveals a text input for adding a new tag.
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface TagsFieldProps {
@@ -60,9 +60,7 @@ export function TagsField({ label, value, onChange }: TagsFieldProps): JSX.Eleme
 
   return (
     <div className="flex items-start justify-between gap-2">
-      <span className="text-[11px] text-[var(--text-secondary)] shrink-0 pt-1">
-        {label}
-      </span>
+      <span className="text-[11px] text-[var(--text-secondary)] shrink-0 pt-1">{label}</span>
       <div className="flex flex-wrap items-center gap-1 justify-end max-w-[200px]">
         {value.map((tag) => (
           <button

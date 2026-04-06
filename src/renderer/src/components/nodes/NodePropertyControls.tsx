@@ -3,10 +3,10 @@
 
 import { memo, useCallback } from 'react'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { StatusChip } from './widgets/StatusChip'
+import { BooleanChip } from './widgets/BooleanChip'
 import { PriorityIcon } from './widgets/PriorityIcon'
 import { SelectChip } from './widgets/SelectChip'
-import { BooleanChip } from './widgets/BooleanChip'
+import { StatusChip } from './widgets/StatusChip'
 
 /**
  * INLINE_FIELDS: Maps node type to the compact inline property fields shown
@@ -27,7 +27,18 @@ const INLINE_FIELDS: Record<string, string[]> = {
 
 // Options for select-type fields
 const FIELD_OPTIONS: Record<string, string[]> = {
-  noteMode: ['general', 'persona', 'reference', 'examples', 'background', 'design-tokens', 'page', 'component', 'content-model', 'wp-config'],
+  noteMode: [
+    'general',
+    'persona',
+    'reference',
+    'examples',
+    'background',
+    'design-tokens',
+    'page',
+    'component',
+    'content-model',
+    'wp-config',
+  ],
   provider: ['anthropic', 'openai', 'google', 'ollama', 'openrouter'],
   mode: ['chat', 'agent'],
   contentType: ['code', 'markdown', 'html', 'text', 'json', 'csv', 'svg', 'image', 'mermaid'],
@@ -94,7 +105,7 @@ export const NodePropertyControls = memo(function NodePropertyControls({
     (fieldId: string, value: unknown) => {
       updateNode(nodeId, { [fieldId]: value })
     },
-    [nodeId, updateNode]
+    [nodeId, updateNode],
   )
 
   const fields = INLINE_FIELDS[nodeType]

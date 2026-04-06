@@ -13,10 +13,10 @@
  * PFD Phase 5B: Canvas Interaction Patterns
  */
 
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useReactFlow } from '@xyflow/react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
+import { EscapePriority, escapeManager } from '../../utils/EscapeManager'
 
 interface SelectionRect {
   startX: number
@@ -35,7 +35,7 @@ const NODE_TYPE_COLORS: Record<string, string> = {
   workspace: '#06b6d4',
   text: '#6b7280',
   action: '#ec4899',
-  orchestrator: '#f97316'
+  orchestrator: '#f97316',
 }
 
 function isTextInput(el: Element | null): boolean {
@@ -62,7 +62,10 @@ export const ZoomOverlay = memo(function ZoomOverlay(): JSX.Element | null {
   // Compute the bounding box of all nodes (in flow coordinates)
   const computeFlowBounds = useCallback(() => {
     if (nodes.length === 0) return { minX: 0, minY: 0, maxX: 1000, maxY: 800 }
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity
     for (const node of nodes) {
       const w = (node.width as number) || 280
       const h = (node.height as number) || 140
@@ -78,7 +81,7 @@ export const ZoomOverlay = memo(function ZoomOverlay(): JSX.Element | null {
       minX: minX - padX,
       minY: minY - padY,
       maxX: maxX + padX,
-      maxY: maxY + padY
+      maxY: maxY + padY,
     }
   }, [nodes])
 
@@ -92,10 +95,10 @@ export const ZoomOverlay = memo(function ZoomOverlay(): JSX.Element | null {
       const ratioY = (screenY - overlayRect.top) / overlayRect.height
       return {
         x: bounds.minX + ratioX * flowWidth,
-        y: bounds.minY + ratioY * flowHeight
+        y: bounds.minY + ratioY * flowHeight,
       }
     },
-    [computeFlowBounds]
+    [computeFlowBounds],
   )
 
   // Handle Z key press/release
@@ -122,12 +125,12 @@ export const ZoomOverlay = memo(function ZoomOverlay(): JSX.Element | null {
             const topLeft = screenToFlow(
               Math.min(selection.startX, selection.endX),
               Math.min(selection.startY, selection.endY),
-              overlayRect
+              overlayRect,
             )
             const bottomRight = screenToFlow(
               Math.max(selection.startX, selection.endX),
               Math.max(selection.startY, selection.endY),
-              overlayRect
+              overlayRect,
             )
 
             const selectionWidth = bottomRight.x - topLeft.x
@@ -140,7 +143,7 @@ export const ZoomOverlay = memo(function ZoomOverlay(): JSX.Element | null {
               const zoom = Math.min(
                 viewportWidth / selectionWidth,
                 viewportHeight / selectionHeight,
-                4 // max zoom
+                4, // max zoom
               )
 
               const centerX = topLeft.x + selectionWidth / 2
@@ -150,9 +153,9 @@ export const ZoomOverlay = memo(function ZoomOverlay(): JSX.Element | null {
                 {
                   x: viewportWidth / 2 - centerX * zoom,
                   y: viewportHeight / 2 - centerY * zoom,
-                  zoom
+                  zoom,
                 },
-                { duration: 300 }
+                { duration: 300 },
               )
             }
           }
@@ -193,18 +196,16 @@ export const ZoomOverlay = memo(function ZoomOverlay(): JSX.Element | null {
       startX: e.clientX,
       startY: e.clientY,
       endX: e.clientX,
-      endY: e.clientY
+      endY: e.clientY,
     })
   }, [])
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
       if (!isDragging || !selection) return
-      setSelection((prev) =>
-        prev ? { ...prev, endX: e.clientX, endY: e.clientY } : null
-      )
+      setSelection((prev) => (prev ? { ...prev, endX: e.clientX, endY: e.clientY } : null))
     },
-    [isDragging, selection]
+    [isDragging, selection],
   )
 
   const handleMouseUp = useCallback(() => {
@@ -230,7 +231,7 @@ export const ZoomOverlay = memo(function ZoomOverlay(): JSX.Element | null {
       className="fixed inset-0 z-[var(--gui-z-modals,50)] cursor-crosshair"
       style={{
         background: 'rgba(0, 0, 0, 0.75)',
-        pointerEvents: 'auto'
+        pointerEvents: 'auto',
       }}
       aria-label="Zoom navigation overlay"
       onMouseDown={handleMouseDown}
@@ -279,7 +280,7 @@ export const ZoomOverlay = memo(function ZoomOverlay(): JSX.Element | null {
             left: Math.min(selection.startX, selection.endX),
             top: Math.min(selection.startY, selection.endY),
             width: Math.abs(selection.endX - selection.startX),
-            height: Math.abs(selection.endY - selection.startY)
+            height: Math.abs(selection.endY - selection.startY),
           }}
         />
       )}

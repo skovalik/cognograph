@@ -41,13 +41,13 @@ export const INTERMEDIATE_LOAD_THRESHOLD = 0.7
  */
 export function computeCognitiveLoadVisibility(
   zoomLevel: ZoomLevel,
-  cognitiveLoad: number
+  cognitiveLoad: number,
 ): CognitiveLoadVisibilityResult {
   switch (zoomLevel) {
     case 'ultra-far':
       return {
         isVisible: true,
-        reason: 'Always visible at overview zoom'
+        reason: 'Always visible at overview zoom',
       }
 
     case 'far':
@@ -55,19 +55,19 @@ export function computeCognitiveLoadVisibility(
       if (cognitiveLoad > INTERMEDIATE_LOAD_THRESHOLD) {
         return {
           isVisible: true,
-          reason: `Cognitive load (${cognitiveLoad.toFixed(2)}) exceeds threshold (${INTERMEDIATE_LOAD_THRESHOLD})`
+          reason: `Cognitive load (${cognitiveLoad.toFixed(2)}) exceeds threshold (${INTERMEDIATE_LOAD_THRESHOLD})`,
         }
       }
       return {
         isVisible: false,
-        reason: `Cognitive load (${cognitiveLoad.toFixed(2)}) below threshold (${INTERMEDIATE_LOAD_THRESHOLD})`
+        reason: `Cognitive load (${cognitiveLoad.toFixed(2)}) below threshold (${INTERMEDIATE_LOAD_THRESHOLD})`,
       }
 
     case 'close':
     case 'ultra-close':
       return {
         isVisible: false,
-        reason: 'Hidden at content-focus zoom levels'
+        reason: 'Hidden at content-focus zoom levels',
       }
 
     default: {
@@ -86,10 +86,10 @@ export function computeCognitiveLoadVisibility(
  */
 export function useCognitiveLoadVisibility(
   zoomLevel: ZoomLevel,
-  cognitiveLoad: number
+  cognitiveLoad: number,
 ): CognitiveLoadVisibilityResult {
   return useMemo(
     () => computeCognitiveLoadVisibility(zoomLevel, cognitiveLoad),
-    [zoomLevel, cognitiveLoad]
+    [zoomLevel, cognitiveLoad],
   )
 }

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useState, useCallback, memo } from 'react'
-import { X, Plus, Trash2 } from 'lucide-react'
-import type { PropertyType, PropertyDefinition, PropertyOption } from '@shared/types'
+import type { PropertyDefinition, PropertyOption, PropertyType } from '@shared/types'
+import { Plus, Trash2, X } from 'lucide-react'
+import { memo, useCallback, useState } from 'react'
 import { PROPERTY_TYPE_LABELS } from '../../constants/properties'
 
 // -----------------------------------------------------------------------------
@@ -26,13 +26,13 @@ const PROPERTY_TYPES: PropertyType[] = [
   'date',
   'datetime',
   'url',
-  'email'
+  'email',
 ]
 
 export const CreatePropertyModal = memo(function CreatePropertyModal({
   isOpen,
   onClose,
-  onCreateProperty
+  onCreateProperty,
 }: CreatePropertyModalProps) {
   const [name, setName] = useState('')
   const [type, setType] = useState<PropertyType>('text')
@@ -55,9 +55,12 @@ export const CreatePropertyModal = memo(function CreatePropertyModal({
     }
   }, [newOptionLabel, options])
 
-  const handleRemoveOption = useCallback((value: string) => {
-    setOptions(options.filter((o) => o.value !== value))
-  }, [options])
+  const handleRemoveOption = useCallback(
+    (value: string) => {
+      setOptions(options.filter((o) => o.value !== value))
+    },
+    [options],
+  )
 
   const handleSubmit = useCallback(() => {
     if (!name.trim()) return
@@ -67,7 +70,7 @@ export const CreatePropertyModal = memo(function CreatePropertyModal({
       type,
       showInCard,
       showInList,
-      required
+      required,
     }
 
     if (needsOptions && options.length > 0) {
@@ -85,7 +88,17 @@ export const CreatePropertyModal = memo(function CreatePropertyModal({
     setShowInList(true)
     setRequired(false)
     onClose()
-  }, [name, type, options, showInCard, showInList, required, needsOptions, onCreateProperty, onClose])
+  }, [
+    name,
+    type,
+    options,
+    showInCard,
+    showInList,
+    required,
+    needsOptions,
+    onCreateProperty,
+    onClose,
+  ])
 
   const handleClose = useCallback(() => {
     // Reset form
@@ -163,10 +176,7 @@ export const CreatePropertyModal = memo(function CreatePropertyModal({
                     key={opt.value}
                     className="flex items-center gap-2 px-2 py-1 bg-[var(--surface-panel)] rounded"
                   >
-                    <span
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: opt.color }}
-                    />
+                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: opt.color }} />
                     <span className="flex-1 text-sm text-[var(--text-secondary)]">{opt.label}</span>
                     <button
                       onClick={() => handleRemoveOption(opt.value)}

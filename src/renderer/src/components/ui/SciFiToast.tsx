@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
+import { memo, useCallback, useEffect } from 'react'
 import { create } from 'zustand'
-import { playSound, playSuccessSound, playErrorSound } from '../../services/audioService'
+import { playErrorSound, playSound, playSuccessSound } from '../../services/audioService'
 
 // -----------------------------------------------------------------------------
 // Toast Store
@@ -54,11 +54,15 @@ export const useToastStore = create<ToastStore>((set, get) => ({
     const { timeoutId } = get()
     if (timeoutId) clearTimeout(timeoutId)
     set({ visible: false, timeoutId: null })
-  }
+  },
 }))
 
 // Convenience function for external use
-export function sciFiToast(message: string, type?: 'success' | 'info' | 'warning', duration?: number): void {
+export function sciFiToast(
+  message: string,
+  type?: 'success' | 'info' | 'warning',
+  duration?: number,
+): void {
   useToastStore.getState().show(message, type, duration)
 }
 
@@ -96,7 +100,10 @@ export const SciFiToast = memo(function SciFiToast() {
           className="gui-toast gui-z-toasts fixed bottom-6 left-1/2 -translate-x-1/2 cursor-pointer"
           style={{ animation: 'scifi-toast-glow 2s ease-in-out infinite' }}
         >
-          <span className="font-mono text-sm tracking-wide" style={{ color: 'var(--gui-accent-primary)' }}>
+          <span
+            className="font-mono text-sm tracking-wide"
+            style={{ color: 'var(--gui-accent-primary)' }}
+          >
             <span className="mr-2 opacity-80">{typeIcon}</span>
             {message}
           </span>

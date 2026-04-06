@@ -50,8 +50,8 @@ interface LogEntry {
 // SyncLogger
 // -----------------------------------------------------------------------------
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024  // 5MB
-const MAX_ROTATED_FILES = 1  // Keep notion-sync.log + notion-sync.log.1
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_ROTATED_FILES = 1 // Keep notion-sync.log + notion-sync.log.1
 
 export class SyncLogger {
   private logPath: string
@@ -72,7 +72,7 @@ export class SyncLogger {
       level: 'INFO',
       event: 'PUSH_SUCCESS',
       workspaceId: wsId,
-      details: { nodeId, notionPageId, latencyMs }
+      details: { nodeId, notionPageId, latencyMs },
     })
   }
 
@@ -81,7 +81,7 @@ export class SyncLogger {
       level: 'INFO',
       event: 'PUSH_SKIP',
       workspaceId: wsId,
-      details: { nodeId, reason }
+      details: { nodeId, reason },
     })
   }
 
@@ -90,7 +90,7 @@ export class SyncLogger {
       level: 'ERROR',
       event: 'PUSH_FAILED',
       workspaceId: wsId,
-      details: { nodeId, error, queued }
+      details: { nodeId, error, queued },
     })
   }
 
@@ -99,7 +99,7 @@ export class SyncLogger {
       level: 'INFO',
       event: 'PULL_SUCCESS',
       workspaceId: wsId,
-      details: { nodeId, fieldsUpdated }
+      details: { nodeId, fieldsUpdated },
     })
   }
 
@@ -108,7 +108,7 @@ export class SyncLogger {
       level: 'INFO',
       event: 'PULL_SKIP',
       workspaceId: wsId,
-      details: { nodeId, reason }
+      details: { nodeId, reason },
     })
   }
 
@@ -117,7 +117,7 @@ export class SyncLogger {
       level: 'WARN',
       event: 'PULL_CONFLICT',
       workspaceId: wsId,
-      details: { nodeId, fields }
+      details: { nodeId, fields },
     })
   }
 
@@ -126,7 +126,7 @@ export class SyncLogger {
       level: 'ERROR',
       event: 'PULL_404',
       workspaceId: wsId,
-      details: { nodeId, notionPageId, cleared: true }
+      details: { nodeId, notionPageId, cleared: true },
     })
   }
 
@@ -135,7 +135,7 @@ export class SyncLogger {
       level: 'ERROR',
       event: 'PULL_FAILED',
       workspaceId: wsId,
-      details: { nodeId, error }
+      details: { nodeId, error },
     })
   }
 
@@ -144,7 +144,7 @@ export class SyncLogger {
       level: 'INFO',
       event: 'QUEUE_ADD',
       workspaceId: wsId,
-      details: { nodeId, reason }
+      details: { nodeId, reason },
     })
   }
 
@@ -153,7 +153,7 @@ export class SyncLogger {
       level: success ? 'INFO' : 'WARN',
       event: 'QUEUE_DRAIN',
       workspaceId: wsId,
-      details: { nodeId, success }
+      details: { nodeId, success },
     })
   }
 
@@ -162,7 +162,7 @@ export class SyncLogger {
       level: 'WARN',
       event: 'QUEUE_DROP',
       workspaceId: wsId,
-      details: { nodeId, retryCount, reason }
+      details: { nodeId, retryCount, reason },
     })
   }
 
@@ -171,7 +171,7 @@ export class SyncLogger {
       level: 'WARN',
       event: 'QUEUE_EVICT',
       workspaceId: wsId,
-      details: { count, oldestAge: `${oldestAgeHours}h` }
+      details: { count, oldestAge: `${oldestAgeHours}h` },
     })
   }
 
@@ -180,7 +180,7 @@ export class SyncLogger {
       level: 'INFO',
       event: 'SCHEMA_INIT',
       workspaceId: wsId,
-      details: { dbId, propertyName }
+      details: { dbId, propertyName },
     })
   }
 
@@ -189,7 +189,7 @@ export class SyncLogger {
       level: 'ERROR',
       event: 'SCHEMA_ERROR',
       workspaceId: wsId,
-      details: { dbId, error }
+      details: { dbId, error },
     })
   }
 
@@ -198,16 +198,22 @@ export class SyncLogger {
       level: 'INFO',
       event: 'SYNC_START',
       workspaceId: wsId,
-      details: { nodeCount }
+      details: { nodeCount },
     })
   }
 
-  syncComplete(wsId: string, pushed: number, skipped: number, failed: number, durationMs: number): void {
+  syncComplete(
+    wsId: string,
+    pushed: number,
+    skipped: number,
+    failed: number,
+    durationMs: number,
+  ): void {
     this.log({
       level: 'INFO',
       event: 'SYNC_COMPLETE',
       workspaceId: wsId,
-      details: { pushed, skipped, failed, durationMs }
+      details: { pushed, skipped, failed, durationMs },
     })
   }
 
@@ -216,7 +222,7 @@ export class SyncLogger {
       level: 'ERROR',
       event: 'SYNC_SUSPENDED',
       workspaceId: wsId,
-      details: { reason }
+      details: { reason },
     })
   }
 
@@ -225,7 +231,7 @@ export class SyncLogger {
       level: 'WARN',
       event: 'BACKOFF',
       workspaceId: wsId,
-      details: { currentIntervalMs, consecutiveFailures }
+      details: { currentIntervalMs, consecutiveFailures },
     })
   }
 
@@ -234,7 +240,7 @@ export class SyncLogger {
       level: 'WARN',
       event: 'DUPLICATION',
       workspaceId: wsId,
-      details: { affectedNodeCount }
+      details: { affectedNodeCount },
     })
   }
 
@@ -243,7 +249,7 @@ export class SyncLogger {
       level: 'INFO',
       event: 'RECOVERY',
       workspaceId: wsId,
-      details: { action, nodeCount }
+      details: { action, nodeCount },
     })
   }
 

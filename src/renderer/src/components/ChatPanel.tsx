@@ -1,32 +1,59 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
+import {
+  ArrowLeft,
+  Bot,
+  Boxes,
+  ChevronDown,
+  ChevronUp,
+  GripHorizontal,
+  Key,
+  Link,
+  MessageSquare,
+  Package,
+  Send,
+  Settings2,
+  Square,
+  X,
+} from 'lucide-react'
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { escapeManager, EscapePriority } from '../utils/EscapeManager'
-import { X, Send, Square, Link, Key, Package, ChevronDown, ChevronUp, Boxes, GripHorizontal, Bot, MessageSquare, Settings2, ArrowLeft } from 'lucide-react'
 import { toast } from 'react-hot-toast'
-import { StreamingMarkdown } from './StreamingMarkdown'
 import { useRatchetHeight } from '../hooks/useRatchetHeight'
-import { useWorkspaceStore, useIsStreaming as useStoreIsStreaming } from '../stores/workspaceStore'
+import { useIsStreaming as useStoreIsStreaming, useWorkspaceStore } from '../stores/workspaceStore'
+import { EscapePriority, escapeManager } from '../utils/EscapeManager'
 import { ContextIndicator } from './ContextIndicator'
-const ContextSettingsModal = lazy(() => import('./ContextSettingsModal').then(m => ({ default: m.ContextSettingsModal })))
-import { TokenMeter } from './TokenMeter'
-import { TokenIndicator } from './TokenEstimator'
-import { ToolCallBubble } from './ToolCallBubble'
-import { detectArtifacts } from '../utils/artifactDetection'
-import { runExtraction, debounceExtraction } from '../utils/extraction'
-import { sendAgentMessage, interruptAgent, initAgentService } from '../services/agentService'
-import { sendChatWithTools, cancelChatToolLoop, isChatToolLoopActive } from '../services/chatToolService'
-import { estimateCost } from '../utils/tokenEstimator'
-import { useSessionStatsStore } from '../stores/sessionStatsStore'
-import type { ConversationNodeData, Message, ConnectorProvider } from '@shared/types'
-import { DEFAULT_EXTRACTION_SETTINGS, DEFAULT_AGENT_SETTINGS, CONNECTOR_PROVIDER_INFO } from '@shared/types'
-import { logger } from '../utils/logger'
-import { InlineErrorBoundary } from './ErrorBoundary'
-import { CreditExhaustedPrompt } from './CreditExhaustedPrompt'
-import { useIsMobile } from '../hooks/useIsMobile'
+import { StreamingMarkdown } from './StreamingMarkdown'
+
+const ContextSettingsModal = lazy(() =>
+  import('./ContextSettingsModal').then((m) => ({ default: m.ContextSettingsModal })),
+)
+
 import { getFlag } from '@shared/featureFlags'
+import type { ConnectorProvider, ConversationNodeData, Message } from '@shared/types'
+import {
+  CONNECTOR_PROVIDER_INFO,
+  DEFAULT_AGENT_SETTINGS,
+  DEFAULT_EXTRACTION_SETTINGS,
+} from '@shared/types'
+import { useIsMobile } from '../hooks/useIsMobile'
+import { initAgentService, interruptAgent, sendAgentMessage } from '../services/agentService'
+import {
+  cancelChatToolLoop,
+  isChatToolLoopActive,
+  sendChatWithTools,
+} from '../services/chatToolService'
+import { useSessionStatsStore } from '../stores/sessionStatsStore'
+import { detectArtifacts } from '../utils/artifactDetection'
+import { debounceExtraction, runExtraction } from '../utils/extraction'
+import { logger } from '../utils/logger'
+import { estimateCost } from '../utils/tokenEstimator'
+import { CreditExhaustedPrompt } from './CreditExhaustedPrompt'
+import { InlineErrorBoundary } from './ErrorBoundary'
+import { TokenIndicator } from './TokenEstimator'
+import { TokenMeter } from './TokenMeter'
+import { ToolCallBubble } from './ToolCallBubble'
 
 interface ChatPanelProps {
   nodeId: string
@@ -35,7 +62,12 @@ interface ChatPanelProps {
   embedded?: boolean
 }
 
-function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedded = false }: ChatPanelProps): JSX.Element | null {
+function ChatPanelComponent({
+  nodeId,
+  isFocused = true,
+  isModal = false,
+  embedded = false,
+}: ChatPanelProps): JSX.Element | null {
   // All store subscriptions MUST come first
   const nodes = useWorkspaceStore((state) => state.nodes)
   const workspaceId = useWorkspaceStore((state) => state.workspaceId)
@@ -56,7 +88,9 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
   const getEffectiveLLMSettings = useWorkspaceStore((state) => state.getEffectiveLLMSettings)
   const deleteMessage = useWorkspaceStore((state) => state.deleteMessage)
   const getWorkspaceNodesForNode = useWorkspaceStore((state) => state.getWorkspaceNodesForNode)
-  const showTokenEstimates = useWorkspaceStore((state) => state.workspacePreferences.showTokenEstimates)
+  const showTokenEstimates = useWorkspaceStore(
+    (state) => state.workspacePreferences.showTokenEstimates,
+  )
 
   // Subscribe to store's streaming state (for agent mode)
   const storeIsStreaming = useStoreIsStreaming(nodeId)
@@ -106,7 +140,7 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
   const onCloseExtractRef = useRef<{ nodeData: any; extractionSettings: any; nodeId: string }>({
     nodeData: null,
     extractionSettings: null,
-    nodeId
+    nodeId,
   })
 
   // Find the node - use useMemo to avoid recalculating
@@ -135,7 +169,8 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
   // Derive isStreaming from store (agent/chat-tools mode) or local state (plain chat mode)
   // Agent mode and chat-with-tools use store state because their services control streaming
   // Plain chat mode uses local state because LLM event handlers control it
-  const isStreaming = (nodeData?.mode === 'agent' || storeIsStreaming) ? storeIsStreaming : isStreamingLocal
+  const isStreaming =
+    nodeData?.mode === 'agent' || storeIsStreaming ? storeIsStreaming : isStreamingLocal
 
   // Register Escape handler to cancel generation — higher priority than canvas deselect
   useEffect(() => {
@@ -145,16 +180,19 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
       // Cancel all active generation paths
       if (isChatToolLoopActive(nodeId)) cancelChatToolLoop(nodeId)
       interruptAgent(nodeId)
-      try { window.api?.llm?.cancel(nodeId) } catch {}
+      try {
+        window.api?.llm?.cancel(nodeId)
+      } catch {}
       setIsStreamingLocal(false)
     })
     return () => escapeManager.unregister(id)
   }, [isStreaming, nodeId])
 
   // Check if user has a BYOK key for the current provider
-  const byokKey = typeof window !== 'undefined'
-    ? localStorage.getItem(`cognograph:apikey:${nodeData?.provider || 'anthropic'}`)
-    : null
+  const byokKey =
+    typeof window !== 'undefined'
+      ? localStorage.getItem(`cognograph:apikey:${nodeData?.provider || 'anthropic'}`)
+      : null
 
   const connectedNodes = useMemo(() => {
     if (!isValidConversation) return []
@@ -193,12 +231,17 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
   useEffect(() => {
     if (!currentProvider) return
     let cancelled = false
-    window.api.settings.getApiKey(currentProvider).then((key: string | null) => {
-      if (!cancelled) setHasApiKey(Boolean(key))
-    }).catch(() => {
-      if (!cancelled) setHasApiKey(false)
-    })
-    return () => { cancelled = true }
+    window.api.settings
+      .getApiKey(currentProvider)
+      .then((key: string | null) => {
+        if (!cancelled) setHasApiKey(Boolean(key))
+      })
+      .catch(() => {
+        if (!cancelled) setHasApiKey(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [currentProvider])
 
   // Get extraction settings from node data
@@ -222,7 +265,7 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
         nodeId,
         messages,
         extractionSettings,
-        nodeData.extractedTitles || []
+        nodeData.extractedTitles || [],
       )
 
       results.forEach((result) => {
@@ -235,11 +278,11 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
             ...(result.type === 'task' && {
               priority: result.priority || 'medium',
               status: 'todo',
-              description: result.content
+              description: result.content,
             }),
-            tags: result.tags
+            tags: result.tags,
           },
-          confidence: result.confidence
+          confidence: result.confidence,
         })
       })
 
@@ -259,7 +302,7 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
     setIsExtracting,
     setLeftSidebarTab,
     leftSidebarOpen,
-    toggleLeftSidebar
+    toggleLeftSidebar,
   ])
 
   // Detect when user scrolls up (to not force scroll during streaming)
@@ -342,19 +385,24 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
 
           // Attach actual token usage to the assistant message
           if (!data.cancelled && data.usage) {
-            const cost = estimateCost(data.usage.inputTokens, data.usage.outputTokens, data.usage.model)
+            const cost = estimateCost(
+              data.usage.inputTokens,
+              data.usage.outputTokens,
+              data.usage.model,
+            )
             setLastMessageUsage(nodeId, {
               inputTokens: data.usage.inputTokens,
               outputTokens: data.usage.outputTokens,
-              costUSD: cost.totalCost
+              costUSD: cost.totalCost,
             })
 
             // Record to session stats — read fresh state to avoid stale closure
-            const currentNode = useWorkspaceStore.getState().nodes.find(n => n.id === nodeId)
+            const currentNode = useWorkspaceStore.getState().nodes.find((n) => n.id === nodeId)
             const effectiveSettings = useWorkspaceStore.getState().getEffectiveLLMSettings(nodeId)
-            const nodeProvider = currentNode?.data?.type === 'conversation'
-              ? (currentNode.data as ConversationNodeData).provider
-              : 'unknown'
+            const nodeProvider =
+              currentNode?.data?.type === 'conversation'
+                ? (currentNode.data as ConversationNodeData).provider
+                : 'unknown'
 
             useSessionStatsStore.getState().recordUsage({
               provider: nodeProvider,
@@ -375,7 +423,11 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
           currentResponseRef.current = ''
 
           // Trigger per-message extraction if enabled (debounced to avoid excessive calls)
-          if (!data.cancelled && extractionSettings.autoExtractEnabled && extractionSettings.extractionTrigger === 'per-message') {
+          if (
+            !data.cancelled &&
+            extractionSettings.autoExtractEnabled &&
+            extractionSettings.extractionTrigger === 'per-message'
+          ) {
             debounceExtraction(nodeId, triggerPerMessageExtraction)
           }
         }
@@ -404,7 +456,11 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
   // Uses ref to read latest values at unmount time (avoids stale closure)
   useEffect(() => {
     return () => {
-      const { nodeData: latestNodeData, extractionSettings: latestSettings, nodeId: latestNodeId } = onCloseExtractRef.current
+      const {
+        nodeData: latestNodeData,
+        extractionSettings: latestSettings,
+        nodeId: latestNodeId,
+      } = onCloseExtractRef.current
       // Only trigger if auto-extract is enabled and trigger mode is 'on-close'
       if (
         latestNodeData &&
@@ -417,7 +473,7 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
           latestNodeId,
           latestNodeData.messages,
           latestSettings,
-          latestNodeData.extractedTitles || []
+          latestNodeData.extractedTitles || [],
         ).then((results) => {
           results.forEach((result) => {
             addPendingExtraction({
@@ -429,11 +485,11 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
                 ...(result.type === 'task' && {
                   priority: result.priority || 'medium',
                   status: 'todo',
-                  description: result.content
+                  description: result.content,
                 }),
-                tags: result.tags
+                tags: result.tags,
               },
-              confidence: result.confidence
+              confidence: result.confidence,
             })
           })
         })
@@ -453,13 +509,19 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
       provider: nodeData.provider,
       temperature: undefined,
       maxTokens: undefined,
-      systemPrompt: undefined
+      systemPrompt: undefined,
     }
 
     // Check for API key or Supabase session (credit-backed)
     const apiKey = await window.api.settings.getApiKey(llmSettings.provider)
     if (!apiKey) {
-      const hasSession = false // Cloud auth not available in open-source build
+      let hasSession = false
+      try {
+        // Cloud features disabled in open-source build
+        throw new Error('No cloud auth in open-source build')
+      } catch {
+        /* Electron / open-source — no supabase */
+      }
       if (!hasSession) {
         toast.error(`Please set your ${llmSettings.provider} API key first`)
         setShowApiKeyModal(true)
@@ -507,26 +569,38 @@ function ChatPanelComponent({ nodeId, isFocused = true, isModal = false, embedde
       try {
         const wsState = useWorkspaceStore.getState()
         const vp = wsState.viewport
-        const vpCenterX = (-vp.x + (window.innerWidth / 2)) / vp.zoom
-        const vpCenterY = (-vp.y + (window.innerHeight / 2)) / vp.zoom
-        const halfW = (window.innerWidth / 2) / vp.zoom
-        const halfH = (window.innerHeight / 2) / vp.zoom
+        const vpCenterX = (-vp.x + window.innerWidth / 2) / vp.zoom
+        const vpCenterY = (-vp.y + window.innerHeight / 2) / vp.zoom
+        const halfW = window.innerWidth / 2 / vp.zoom
+        const halfH = window.innerHeight / 2 / vp.zoom
         const visibleNodes = wsState.nodes
-          .filter(n => {
+          .filter((n) => {
             const nx = n.position.x
             const ny = n.position.y
-            return nx >= vpCenterX - halfW && nx <= vpCenterX + halfW &&
-                   ny >= vpCenterY - halfH && ny <= vpCenterY + halfH
+            return (
+              nx >= vpCenterX - halfW &&
+              nx <= vpCenterX + halfW &&
+              ny >= vpCenterY - halfH &&
+              ny <= vpCenterY + halfH
+            )
           })
           .slice(0, 10)
-        const nodeList = visibleNodes.map(n => `  - "${n.data.title || n.id}" (${n.type}) at (${Math.round(n.position.x)}, ${Math.round(n.position.y)})`).join('\n')
+        const nodeList = visibleNodes
+          .map(
+            (n) =>
+              `  - "${n.data.title || n.id}" (${n.type}) at (${Math.round(n.position.x)}, ${Math.round(n.position.y)})`,
+          )
+          .join('\n')
         spatialContext = `\n\nSPATIAL AWARENESS:
 - Viewport center: (${Math.round(vpCenterX)}, ${Math.round(vpCenterY)}), zoom: ${vp.zoom.toFixed(2)}
 - Visible nodes (up to 10):\n${nodeList || '  (none visible)'}
 - The system auto-layouts newly created nodes near the viewport center when no explicit position is given.`
-      } catch { /* spatial context non-critical */ }
+      } catch {
+        /* spatial context non-critical */
+      }
 
-      const toolSystemPrompt = (llmSettings.systemPrompt || '') +
+      const toolSystemPrompt =
+        (llmSettings.systemPrompt || '') +
         `\nYou are an AI running inside Cognograph — a spatial AI workflow canvas where conversations, notes, tasks, and projects exist as nodes connected by edges on a 2D canvas. You ARE a conversation node on this canvas.
 
 YOUR IDENTITY:
@@ -550,14 +624,15 @@ NODE POSITIONING:
 - Just create the nodes and edges — the layout pipeline handles spacing, collision avoidance, and camera focus.
 
 CONTENT TYPES:
-When creating artifact nodes with HTML content, set contentType: "html" so the content renders as a visual web page preview. For code snippets, use contentType: "code". For plain text, use "text" (default).` + spatialContext
+When creating artifact nodes with HTML content, set contentType: "html" so the content renders as a visual web page preview. For code snippets, use contentType: "code". For plain text, use "text" (default).` +
+        spatialContext
 
       try {
         await sendChatWithTools(nodeId, userMessage, {
           model: llmSettings.model,
           maxTokens: llmSettings.maxTokens,
           systemPromptPrefix: toolSystemPrompt,
-          context: context || ''
+          context: context || '',
         })
       } catch (error) {
         toast.error('Failed to send message')
@@ -577,12 +652,14 @@ When creating artifact nodes with HTML content, set contentType: "html" so the c
       .filter((m) => m.role === 'user' || m.role === 'assistant')
       .map((m) => ({
         role: m.role,
-        content: m.content
+        content: m.content,
       }))
     messages.push({ role: 'user', content: userMessage })
 
     // Build system prompt with context
-    let systemPrompt = llmSettings.systemPrompt || `You are a helpful AI assistant inside Cognograph — a spatial canvas where AI conversations, notes, tasks, and projects live as connected nodes.
+    let systemPrompt =
+      llmSettings.systemPrompt ||
+      `You are a helpful AI assistant inside Cognograph — a spatial canvas where AI conversations, notes, tasks, and projects live as connected nodes.
 
 HOW THIS SYSTEM WORKS:
 - Each conversation node (like this one) can be connected to other nodes via edges
@@ -614,13 +691,24 @@ WHAT YOU SHOULD DO:
         messages: messages.filter((m) => m.role !== 'system'),
         systemPrompt,
         temperature: llmSettings.temperature,
-        maxTokens: llmSettings.maxTokens
+        maxTokens: llmSettings.maxTokens,
       })
     } catch (error) {
       setIsStreamingLocal(false)
       toast.error('Failed to send message')
     }
-  }, [input, isStreamingLocal, storeIsStreaming, nodeData, nodeId, addMessage, getContextForNode, effectiveLLMSettings, connectedNodes.length, workspaceNodes.length])
+  }, [
+    input,
+    isStreamingLocal,
+    storeIsStreaming,
+    nodeData,
+    nodeId,
+    addMessage,
+    getContextForNode,
+    effectiveLLMSettings,
+    connectedNodes.length,
+    workspaceNodes.length,
+  ])
 
   const handleCancel = useCallback(async () => {
     // Try all cancel paths — the streaming may be agent, chat-tools, or plain LLM
@@ -631,7 +719,11 @@ WHAT YOU SHOULD DO:
     // and default chat mode that routes through agent service)
     interruptAgent(nodeId)
     // Also try plain LLM cancel as fallback
-    try { await window.api.llm.cancel(nodeId) } catch { /* may not exist */ }
+    try {
+      await window.api.llm.cancel(nodeId)
+    } catch {
+      /* may not exist */
+    }
     setIsStreamingLocal(false)
   }, [nodeId])
 
@@ -642,7 +734,7 @@ WHAT YOU SHOULD DO:
         handleSend()
       }
     },
-    [handleSend]
+    [handleSend],
   )
 
   // NOTE: Early return moved to after ALL hooks (line ~770) to avoid React hooks rule violation.
@@ -660,7 +752,10 @@ WHAT YOU SHOULD DO:
     updateNode(nodeId, {
       mode: newMode,
       // Set default agent settings if enabling agent mode for the first time
-      agentSettings: newMode === 'agent' && !nodeData.agentSettings ? DEFAULT_AGENT_SETTINGS : nodeData.agentSettings
+      agentSettings:
+        newMode === 'agent' && !nodeData.agentSettings
+          ? DEFAULT_AGENT_SETTINGS
+          : nodeData.agentSettings,
     } as Partial<ConversationNodeData>)
   }, [nodeData, nodeId, updateNode])
 
@@ -671,17 +766,20 @@ WHAT YOU SHOULD DO:
   }, [focusChat, nodeId, isFocused])
 
   // Modal drag handlers
-  const handleDragStart = useCallback((e: React.MouseEvent) => {
-    if (!isModal) return
-    e.preventDefault()
-    setIsDragging(true)
-    dragStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      posX: modalPosition.x,
-      posY: modalPosition.y
-    }
-  }, [isModal, modalPosition])
+  const handleDragStart = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isModal) return
+      e.preventDefault()
+      setIsDragging(true)
+      dragStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        posX: modalPosition.x,
+        posY: modalPosition.y,
+      }
+    },
+    [isModal, modalPosition],
+  )
 
   useEffect(() => {
     if (!isDragging) return
@@ -698,7 +796,7 @@ WHAT YOU SHOULD DO:
         const deltaY = e.clientY - dragStartRef.current.y
         setModalPosition({
           x: dragStartRef.current.posX + deltaX,
-          y: dragStartRef.current.posY + deltaY
+          y: dragStartRef.current.posY + deltaY,
         })
       })
     }
@@ -724,18 +822,21 @@ WHAT YOU SHOULD DO:
   }, [isDragging])
 
   // Resize handlers for modal
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
-    if (!isModal) return
-    e.preventDefault()
-    e.stopPropagation()
-    setIsResizing(true)
-    resizeStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      width: modalSize.width,
-      height: modalSize.height
-    }
-  }, [isModal, modalSize])
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isModal) return
+      e.preventDefault()
+      e.stopPropagation()
+      setIsResizing(true)
+      resizeStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        width: modalSize.width,
+        height: modalSize.height,
+      }
+    },
+    [isModal, modalSize],
+  )
 
   useEffect(() => {
     if (!isResizing) return
@@ -750,7 +851,7 @@ WHAT YOU SHOULD DO:
         const deltaY = e.clientY - resizeStartRef.current.y
         setModalSize({
           width: Math.max(350, resizeStartRef.current.width + deltaX),
-          height: Math.max(300, resizeStartRef.current.height + deltaY)
+          height: Math.max(300, resizeStartRef.current.height + deltaY),
         })
       })
     }
@@ -789,9 +890,7 @@ WHAT YOU SHOULD DO:
   const bgClasses = 'bg-[var(--surface-panel)]'
   const borderClasses = 'border-[var(--border-subtle)]'
   const focusBorderClasses = isFocused ? 'border-blue-500' : borderClasses
-  const headerBgClasses = isFocused
-    ? 'border-blue-500/50 bg-blue-900/10'
-    : borderClasses
+  const headerBgClasses = isFocused ? 'border-blue-500/50 bg-blue-900/10' : borderClasses
   const textClasses = 'text-[var(--text-primary)]'
   const textMutedClasses = 'text-[var(--text-secondary)]'
   const textFaintClasses = 'text-[var(--text-muted)]'
@@ -817,11 +916,15 @@ WHAT YOU SHOULD DO:
             title="Switch AI provider"
           >
             {Object.entries(CONNECTOR_PROVIDER_INFO).map(([key, info]) => (
-              <option key={key} value={key}>{info.label}</option>
+              <option key={key} value={key}>
+                {info.label}
+              </option>
             ))}
           </select>
           {effectiveLLMSettings?.model && (
-            <span className="text-[10px] text-[var(--text-muted)] font-mono truncate">{effectiveLLMSettings.model}</span>
+            <span className="text-[10px] text-[var(--text-muted)] font-mono truncate">
+              {effectiveLLMSettings.model}
+            </span>
           )}
           {nodeData.mode === 'agent' && (
             <Bot className="w-3 h-3 text-[var(--accent-glow)] ml-auto flex-shrink-0" />
@@ -833,12 +936,19 @@ WHAT YOU SHOULD DO:
           <div
             className="mx-2 mt-1.5 px-2 py-1.5 rounded text-[11px] flex items-center gap-1.5"
             style={{
-              backgroundColor: 'color-mix(in srgb, var(--gui-accent-warning, #f59e0b) 15%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--gui-accent-warning, #f59e0b) 40%, transparent)',
+              backgroundColor:
+                'color-mix(in srgb, var(--gui-accent-warning, #f59e0b) 15%, transparent)',
+              border:
+                '1px solid color-mix(in srgb, var(--gui-accent-warning, #f59e0b) 40%, transparent)',
             }}
           >
-            <Key className="w-3 h-3 flex-shrink-0" style={{ color: 'var(--gui-accent-warning, #f59e0b)' }} />
-            <span>No API key for <strong>{currentProvider}</strong></span>
+            <Key
+              className="w-3 h-3 flex-shrink-0"
+              style={{ color: 'var(--gui-accent-warning, #f59e0b)' }}
+            />
+            <span>
+              No API key for <strong>{currentProvider}</strong>
+            </span>
             <button
               onClick={() => setShowApiKeyModal(true)}
               className="ml-auto px-1.5 py-0.5 rounded text-[10px] font-medium"
@@ -857,12 +967,10 @@ WHAT YOU SHOULD DO:
         >
           {nodeData.messages.length === 0 ? (
             <div className="h-full flex items-center justify-center">
-              <p className="text-[var(--text-muted)] text-center text-xs">
-                Start a conversation.
-              </p>
+              <p className="text-[var(--text-muted)] text-center text-xs">Start a conversation.</p>
             </div>
           ) : (
-            nodeData.messages.map((message, msgIndex) => (
+            nodeData.messages.map((message, msgIndex) =>
               message.role === 'tool_use' || message.role === 'tool_result' ? (
                 <ToolCallBubble key={message.id} message={message} isLightMode={isLightMode} />
               ) : (
@@ -873,23 +981,30 @@ WHAT YOU SHOULD DO:
                   isLightMode={isLightMode}
                   onDelete={() => deleteMessage(nodeId, msgIndex)}
                   embedded
-                  isStreaming={isStreaming && msgIndex === nodeData.messages.length - 1 && message.role === 'assistant'}
+                  isStreaming={
+                    isStreaming &&
+                    msgIndex === nodeData.messages.length - 1 &&
+                    message.role === 'assistant'
+                  }
                 />
-              )
-            ))
+              ),
+            )
           )}
 
           {/* Suggested Actions */}
           {nodeData.messages.length > 0 &&
-           nodeData.messages[nodeData.messages.length - 1]?.role === 'assistant' &&
-           !isStreaming && (
-            <SuggestedActions
-              nodeId={nodeId}
-              onContinue={() => { setInput('continue'); requestAnimationFrame(() => inputRef.current?.focus()) }}
-              onExtract={() => debounceExtraction(nodeId, triggerPerMessageExtraction)}
-              isLightMode={isLightMode}
-            />
-          )}
+            nodeData.messages[nodeData.messages.length - 1]?.role === 'assistant' &&
+            !isStreaming && (
+              <SuggestedActions
+                nodeId={nodeId}
+                onContinue={() => {
+                  setInput('continue')
+                  requestAnimationFrame(() => inputRef.current?.focus())
+                }}
+                onExtract={() => debounceExtraction(nodeId, triggerPerMessageExtraction)}
+                isLightMode={isLightMode}
+              />
+            )}
           <div ref={messagesEndRef} />
         </div>
 
@@ -902,13 +1017,30 @@ WHAT YOU SHOULD DO:
             />
           </div>
         )}
-        {!creditExhausted && remainingCredits !== null && remainingCredits > 0 && remainingCredits <= 5 && !byokKey && (
-          <p style={{ fontSize: '12px', color: 'var(--gold)', padding: '4px 12px', fontFamily: 'var(--font-mono)' }}>
-            {remainingCredits}&#162; remaining —{' '}
-            <a href="https://cognograph.app/signup" target="_blank" rel="noopener noreferrer"
-               style={{ color: 'var(--gold)', textDecoration: 'underline' }}>sign up for $1 more</a>
-          </p>
-        )}
+        {!creditExhausted &&
+          remainingCredits !== null &&
+          remainingCredits > 0 &&
+          remainingCredits <= 5 &&
+          !byokKey && (
+            <p
+              style={{
+                fontSize: '12px',
+                color: 'var(--gold)',
+                padding: '4px 12px',
+                fontFamily: 'var(--font-mono)',
+              }}
+            >
+              {remainingCredits}&#162; remaining —{' '}
+              <a
+                href="https://cognograph.app/signup"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: 'var(--gold)', textDecoration: 'underline' }}
+              >
+                sign up for $1 more
+              </a>
+            </p>
+          )}
 
         {/* Input */}
         <div className="p-2 border-t border-[var(--border-subtle)]">
@@ -918,8 +1050,8 @@ WHAT YOU SHOULD DO:
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={nodeData.mode === 'agent' ? "Ask the agent..." : "Type a message..."}
-              aria-label={nodeData.mode === 'agent' ? "Agent message input" : "Chat message input"}
+              placeholder={nodeData.mode === 'agent' ? 'Ask the agent...' : 'Type a message...'}
+              aria-label={nodeData.mode === 'agent' ? 'Agent message input' : 'Chat message input'}
               rows={1}
               disabled={isStreaming || (creditExhausted && !byokKey)}
               spellCheck={true}
@@ -957,12 +1089,18 @@ WHAT YOU SHOULD DO:
         {showApiKeyModal && (
           <ApiKeyModal
             provider={effectiveLLMSettings?.provider || nodeData.provider}
-            onSuccess={() => { setShowApiKeyModal(false); setHasApiKey(true) }}
+            onSuccess={() => {
+              setShowApiKeyModal(false)
+              setHasApiKey(true)
+            }}
             onClose={() => setShowApiKeyModal(false)}
           />
         )}
         <Suspense fallback={null}>
-          <ContextSettingsModal isOpen={showContextSettings} onClose={() => setShowContextSettings(false)} />
+          <ContextSettingsModal
+            isOpen={showContextSettings}
+            onClose={() => setShowContextSettings(false)}
+          />
         </Suspense>
       </div>
     )
@@ -979,12 +1117,16 @@ WHAT YOU SHOULD DO:
   const panel = (
     <div
       className={containerClasses}
-      style={isModal && !mobileOverlay ? {
-        transform: `translate(${modalPosition.x}px, ${modalPosition.y}px)`,
-        width: modalSize.width,
-        height: modalSize.height,
-        willChange: isDragging || isResizing ? 'transform' : 'auto'
-      } : undefined}
+      style={
+        isModal && !mobileOverlay
+          ? {
+              transform: `translate(${modalPosition.x}px, ${modalPosition.y}px)`,
+              width: modalSize.width,
+              height: modalSize.height,
+              willChange: isDragging || isResizing ? 'transform' : 'auto',
+            }
+          : undefined
+      }
       onClick={handleFocus}
     >
       {/* Mobile back button */}
@@ -997,7 +1139,13 @@ WHAT YOU SHOULD DO:
           >
             <ArrowLeft size={20} />
           </button>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: '16px', color: 'var(--text-primary)' }}>
+          <span
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '16px',
+              color: 'var(--text-primary)',
+            }}
+          >
             {nodeData.title || 'Chat'}
           </span>
         </div>
@@ -1005,108 +1153,125 @@ WHAT YOU SHOULD DO:
 
       {/* Header - draggable in modal mode (hidden on mobile overlay) */}
       {!mobileOverlay && (
-      <div
-        className={`gui-panel-header--minimal ${isModal ? 'cursor-move select-none' : ''}`}
-        onMouseDown={handleDragStart}
-      >
-        {/* Drag handle indicator for modal */}
-        {isModal && (
-          <div className="mr-2 flex-shrink-0">
-            <GripHorizontal className={`w-4 h-4 ${textFaintClasses}`} />
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <h2 className={`font-medium ${textClasses} truncate`} style={{ fontFamily: 'var(--font-display)' }}>{nodeData.title}</h2>
-          <div className={`flex items-center gap-2 text-xs ${textMutedClasses}`}>
-            <select
-              value={effectiveLLMSettings?.provider || nodeData.provider || 'anthropic'}
-              onChange={(e) => {
-                const newProvider = e.target.value as ConnectorProvider
-                const info = CONNECTOR_PROVIDER_INFO[newProvider]
-                updateNode(nodeId, { provider: newProvider, model: info?.defaultModel || '' })
-              }}
-              onClick={(e) => e.stopPropagation()}
-              className="capitalize px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 font-medium border-none outline-none cursor-pointer text-xs"
-              style={{ appearance: 'none', WebkitAppearance: 'none', paddingRight: '4px' }}
-              title="Switch AI provider"
+        <div
+          className={`gui-panel-header--minimal ${isModal ? 'cursor-move select-none' : ''}`}
+          onMouseDown={handleDragStart}
+        >
+          {/* Drag handle indicator for modal */}
+          {isModal && (
+            <div className="mr-2 flex-shrink-0">
+              <GripHorizontal className={`w-4 h-4 ${textFaintClasses}`} />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <h2
+              className={`font-medium ${textClasses} truncate`}
+              style={{ fontFamily: 'var(--font-display)' }}
             >
-              {Object.entries(CONNECTOR_PROVIDER_INFO).map(([key, info]) => (
-                <option key={key} value={key}>{info.label}</option>
-              ))}
-            </select>
-            {effectiveLLMSettings?.model && (
-              <span className={`${textFaintClasses} font-mono`}>{effectiveLLMSettings.model}</span>
-            )}
-            {connectedNodes.length > 0 && (
-              <span className="flex items-center gap-1">
-                <Link className="w-3 h-3" />
-                {connectedNodes.length} connected
-              </span>
-            )}
-            {workspaceNodes.length > 0 && (
-              <span className="flex items-center gap-1 text-violet-400">
-                <Boxes className="w-3 h-3" />
-                {workspaceNodes.length} workspace{workspaceNodes.length > 1 ? 's' : ''}
-              </span>
-            )}
+              {nodeData.title}
+            </h2>
+            <div className={`flex items-center gap-2 text-xs ${textMutedClasses}`}>
+              <select
+                value={effectiveLLMSettings?.provider || nodeData.provider || 'anthropic'}
+                onChange={(e) => {
+                  const newProvider = e.target.value as ConnectorProvider
+                  const info = CONNECTOR_PROVIDER_INFO[newProvider]
+                  updateNode(nodeId, { provider: newProvider, model: info?.defaultModel || '' })
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="capitalize px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 font-medium border-none outline-none cursor-pointer text-xs"
+                style={{ appearance: 'none', WebkitAppearance: 'none', paddingRight: '4px' }}
+                title="Switch AI provider"
+              >
+                {Object.entries(CONNECTOR_PROVIDER_INFO).map(([key, info]) => (
+                  <option key={key} value={key}>
+                    {info.label}
+                  </option>
+                ))}
+              </select>
+              {effectiveLLMSettings?.model && (
+                <span className={`${textFaintClasses} font-mono`}>
+                  {effectiveLLMSettings.model}
+                </span>
+              )}
+              {connectedNodes.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <Link className="w-3 h-3" />
+                  {connectedNodes.length} connected
+                </span>
+              )}
+              {workspaceNodes.length > 0 && (
+                <span className="flex items-center gap-1 text-violet-400">
+                  <Boxes className="w-3 h-3" />
+                  {workspaceNodes.length} workspace{workspaceNodes.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-1" onMouseDown={(e) => e.stopPropagation()}>
+            {/* Agent Mode Toggle */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleToggleAgentMode()
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              disabled={isStreaming}
+              className={`p-2 rounded transition-colors ${nodeData.mode !== 'agent' ? `${hoverBgClasses} ${textMutedClasses}` : ''} ${isStreaming ? 'opacity-50 cursor-not-allowed' : ''}`}
+              style={
+                nodeData.mode === 'agent'
+                  ? {
+                      backgroundColor:
+                        'color-mix(in srgb, var(--gui-accent-primary) 20%, transparent)',
+                      color: 'var(--gui-accent-primary)',
+                    }
+                  : undefined
+              }
+              title={
+                nodeData.mode === 'agent'
+                  ? 'Disable agent mode'
+                  : 'Enable agent mode (allows workspace manipulation)'
+              }
+            >
+              <Bot className="w-4 h-4" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowApiKeyModal(true)
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              className={`p-2 ${hoverBgClasses} rounded transition-colors`}
+              title="API Key Settings"
+              aria-label="API Key Settings"
+            >
+              <Key className={`w-4 h-4 ${textMutedClasses}`} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleClose()
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              className={`p-2 ${hoverBgClasses} rounded transition-colors`}
+              title="Close"
+              aria-label="Close chat panel"
+            >
+              <X className={`w-5 h-5 ${textMutedClasses}`} />
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-1" onMouseDown={(e) => e.stopPropagation()}>
-          {/* Agent Mode Toggle */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              handleToggleAgentMode()
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-            disabled={isStreaming}
-            className={`p-2 rounded transition-colors ${nodeData.mode !== 'agent' ? `${hoverBgClasses} ${textMutedClasses}` : ''} ${isStreaming ? 'opacity-50 cursor-not-allowed' : ''}`}
-            style={nodeData.mode === 'agent' ? {
-              backgroundColor: 'color-mix(in srgb, var(--gui-accent-primary) 20%, transparent)',
-              color: 'var(--gui-accent-primary)'
-            } : undefined}
-            title={nodeData.mode === 'agent' ? 'Disable agent mode' : 'Enable agent mode (allows workspace manipulation)'}
-          >
-            <Bot className="w-4 h-4" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setShowApiKeyModal(true)
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-            className={`p-2 ${hoverBgClasses} rounded transition-colors`}
-            title="API Key Settings"
-            aria-label="API Key Settings"
-          >
-            <Key className={`w-4 h-4 ${textMutedClasses}`} />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              handleClose()
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-            className={`p-2 ${hoverBgClasses} rounded transition-colors`}
-            title="Close"
-            aria-label="Close chat panel"
-          >
-            <X className={`w-5 h-5 ${textMutedClasses}`} />
-          </button>
-        </div>
-      </div>
       )}
 
       {/* Context indicator - compact badge with settings access */}
-      <div className={`px-4 py-2 border-t border-[var(--border-subtle)] flex items-center gap-2 ${isInjecting ? 'animate-pulse bg-blue-500/10' : ''}`}>
-        <InlineErrorBoundary name="ContextIndicator" fallback={
-          <span className={`text-xs ${textMutedClasses}`}>Context unavailable</span>
-        }>
-          <ContextIndicator
-            nodeId={nodeId}
-            compact={true}
-            className="flex-1"
-          />
+      <div
+        className={`px-4 py-2 border-t border-[var(--border-subtle)] flex items-center gap-2 ${isInjecting ? 'animate-pulse bg-blue-500/10' : ''}`}
+      >
+        <InlineErrorBoundary
+          name="ContextIndicator"
+          fallback={<span className={`text-xs ${textMutedClasses}`}>Context unavailable</span>}
+        >
+          <ContextIndicator nodeId={nodeId} compact={true} className="flex-1" />
         </InlineErrorBoundary>
         <button
           onClick={() => setShowContextSettings(true)}
@@ -1121,11 +1286,7 @@ WHAT YOU SHOULD DO:
       {/* Token usage meter */}
       <div className={`px-4 py-2 border-t border-[var(--border-subtle)]`}>
         {showTokenEstimates ? (
-          <TokenIndicator
-            nodeId={nodeId}
-            currentInput={input}
-            isLightMode={isLightMode}
-          />
+          <TokenIndicator nodeId={nodeId} currentInput={input} isLightMode={isLightMode} />
         ) : (
           <TokenMeter
             contextText={getContextForNode(nodeId)}
@@ -1142,12 +1303,17 @@ WHAT YOU SHOULD DO:
         <div
           className="mx-3 mt-2 px-3 py-2 rounded-md flex items-center gap-2 text-xs"
           style={{
-            backgroundColor: 'color-mix(in srgb, var(--gui-accent-warning, #f59e0b) 15%, transparent)',
-            border: '1px solid color-mix(in srgb, var(--gui-accent-warning, #f59e0b) 40%, transparent)',
-            color: 'var(--gui-text-primary)'
+            backgroundColor:
+              'color-mix(in srgb, var(--gui-accent-warning, #f59e0b) 15%, transparent)',
+            border:
+              '1px solid color-mix(in srgb, var(--gui-accent-warning, #f59e0b) 40%, transparent)',
+            color: 'var(--gui-text-primary)',
           }}
         >
-          <Key className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--gui-accent-warning, #f59e0b)' }} />
+          <Key
+            className="w-3.5 h-3.5 shrink-0"
+            style={{ color: 'var(--gui-accent-warning, #f59e0b)' }}
+          />
           <span className="flex-1">
             No API key set for <strong>{currentProvider}</strong>
           </span>
@@ -1156,7 +1322,7 @@ WHAT YOU SHOULD DO:
             className="px-2 py-0.5 rounded text-xs font-medium transition-colors"
             style={{
               backgroundColor: 'var(--gui-accent-warning, #f59e0b)',
-              color: '#000'
+              color: '#000',
             }}
           >
             Set Key
@@ -1175,19 +1341,13 @@ WHAT YOU SHOULD DO:
             <p className={`${textFaintClasses} text-center`}>
               Start a conversation.
               <br />
-              <span className="text-xs">
-                Connected nodes will provide context to the AI.
-              </span>
+              <span className="text-xs">Connected nodes will provide context to the AI.</span>
             </p>
           </div>
         ) : (
-          nodeData.messages.map((message, msgIndex) => (
+          nodeData.messages.map((message, msgIndex) =>
             message.role === 'tool_use' || message.role === 'tool_result' ? (
-              <ToolCallBubble
-                key={message.id}
-                message={message}
-                isLightMode={isLightMode}
-              />
+              <ToolCallBubble key={message.id} message={message} isLightMode={isLightMode} />
             ) : (
               <MessageBubble
                 key={message.id}
@@ -1195,32 +1355,36 @@ WHAT YOU SHOULD DO:
                 conversationNodeId={nodeId}
                 isLightMode={isLightMode}
                 onDelete={() => deleteMessage(nodeId, msgIndex)}
-                isStreaming={isStreaming && msgIndex === nodeData.messages.length - 1 && message.role === 'assistant'}
+                isStreaming={
+                  isStreaming &&
+                  msgIndex === nodeData.messages.length - 1 &&
+                  message.role === 'assistant'
+                }
               />
-            )
-          ))
+            ),
+          )
         )}
 
         {/* Suggested Actions - show after last assistant message when not streaming */}
         {nodeData.messages.length > 0 &&
-         nodeData.messages[nodeData.messages.length - 1]?.role === 'assistant' &&
-         !isStreaming && (
-          <SuggestedActions
-            nodeId={nodeId}
-            onContinue={() => {
-              setInput('continue')
-              // Small delay to let the input update, then trigger send
-              requestAnimationFrame(() => {
-                inputRef.current?.focus()
-              })
-            }}
-            onExtract={() => {
-              // Trigger extraction using the existing handler
-              debounceExtraction(nodeId, triggerPerMessageExtraction)
-            }}
-            isLightMode={isLightMode}
-          />
-        )}
+          nodeData.messages[nodeData.messages.length - 1]?.role === 'assistant' &&
+          !isStreaming && (
+            <SuggestedActions
+              nodeId={nodeId}
+              onContinue={() => {
+                setInput('continue')
+                // Small delay to let the input update, then trigger send
+                requestAnimationFrame(() => {
+                  inputRef.current?.focus()
+                })
+              }}
+              onExtract={() => {
+                // Trigger extraction using the existing handler
+                debounceExtraction(nodeId, triggerPerMessageExtraction)
+              }}
+              isLightMode={isLightMode}
+            />
+          )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -1233,13 +1397,30 @@ WHAT YOU SHOULD DO:
           />
         </div>
       )}
-      {!creditExhausted && remainingCredits !== null && remainingCredits > 0 && remainingCredits <= 5 && !byokKey && (
-        <p style={{ fontSize: '12px', color: 'var(--gold)', padding: '4px 16px', fontFamily: 'var(--font-mono)' }}>
-          {remainingCredits}&#162; remaining —{' '}
-          <a href="https://cognograph.app/signup" target="_blank" rel="noopener noreferrer"
-             style={{ color: 'var(--gold)', textDecoration: 'underline' }}>sign up for $1 more</a>
-        </p>
-      )}
+      {!creditExhausted &&
+        remainingCredits !== null &&
+        remainingCredits > 0 &&
+        remainingCredits <= 5 &&
+        !byokKey && (
+          <p
+            style={{
+              fontSize: '12px',
+              color: 'var(--gold)',
+              padding: '4px 16px',
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
+            {remainingCredits}&#162; remaining —{' '}
+            <a
+              href="https://cognograph.app/signup"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--gold)', textDecoration: 'underline' }}
+            >
+              sign up for $1 more
+            </a>
+          </p>
+        )}
 
       {/* Input */}
       <div className={`p-4 border-t ${borderClasses}`}>
@@ -1249,8 +1430,10 @@ WHAT YOU SHOULD DO:
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={nodeData.mode === 'agent' ? "Ask me to modify your workspace..." : "Type a message..."}
-            aria-label={nodeData.mode === 'agent' ? "Agent message input" : "Chat message input"}
+            placeholder={
+              nodeData.mode === 'agent' ? 'Ask me to modify your workspace...' : 'Type a message...'
+            }
+            aria-label={nodeData.mode === 'agent' ? 'Agent message input' : 'Chat message input'}
             rows={1}
             disabled={isStreaming || (creditExhausted && !byokKey)}
             spellCheck={true}
@@ -1291,11 +1474,7 @@ WHAT YOU SHOULD DO:
           onMouseDown={handleResizeStart}
           title="Drag to resize"
         >
-          <svg
-            className={`w-4 h-4 ${textFaintClasses}`}
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
+          <svg className={`w-4 h-4 ${textFaintClasses}`} viewBox="0 0 24 24" fill="currentColor">
             <path d="M22 22H20V20H22V22ZM22 18H20V16H22V18ZM18 22H16V20H18V22ZM22 14H20V12H22V14ZM18 18H16V16H18V18ZM14 22H12V20H14V22Z" />
           </svg>
         </div>
@@ -1342,211 +1521,239 @@ interface MessageBubbleProps {
   isStreaming?: boolean
 }
 
-const MessageBubble = memo(function MessageBubbleComponent({ message, conversationNodeId, isLightMode = false, onDelete, embedded = false, isStreaming: isStreamingProp = false }: MessageBubbleProps): JSX.Element {
-  const isUser = message.role === 'user'
-  const [showArtifacts, setShowArtifacts] = useState(false)
-  const spawnArtifactFromLLM = useWorkspaceStore((state) => state.spawnArtifactFromLLM)
+const MessageBubble = memo(
+  function MessageBubbleComponent({
+    message,
+    conversationNodeId,
+    isLightMode = false,
+    onDelete,
+    embedded = false,
+    isStreaming: isStreamingProp = false,
+  }: MessageBubbleProps): JSX.Element {
+    const isUser = message.role === 'user'
+    const [showArtifacts, setShowArtifacts] = useState(false)
+    const spawnArtifactFromLLM = useWorkspaceStore((state) => state.spawnArtifactFromLLM)
 
-  // Ratchet height: prevents layout shift by locking min-height during streaming
-  const { ref: ratchetRef, minHeight } = useRatchetHeight(isStreamingProp && !isUser)
+    // Ratchet height: prevents layout shift by locking min-height during streaming
+    const { ref: ratchetRef, minHeight } = useRatchetHeight(isStreamingProp && !isUser)
 
-  // Use a specific selector to get only the conversation node position
-  // This prevents re-renders when other nodes change
-  const conversationPosition = useWorkspaceStore(
-    useCallback((state) => {
-      const convNode = state.nodes.find((n) => n.id === conversationNodeId)
-      return convNode ? { x: convNode.position.x, y: convNode.position.y } : null
-    }, [conversationNodeId])
-  )
+    // Use a specific selector to get only the conversation node position
+    // This prevents re-renders when other nodes change
+    const conversationPosition = useWorkspaceStore(
+      useCallback(
+        (state) => {
+          const convNode = state.nodes.find((n) => n.id === conversationNodeId)
+          return convNode ? { x: convNode.position.x, y: convNode.position.y } : null
+        },
+        [conversationNodeId],
+      ),
+    )
 
-  // Detect extractable artifacts in assistant messages
-  const detectedArtifacts = useMemo(() => {
-    if (isUser || !message.content) return []
-    return detectArtifacts(message.content)
-  }, [isUser, message.content])
+    // Detect extractable artifacts in assistant messages
+    const detectedArtifacts = useMemo(() => {
+      if (isUser || !message.content) return []
+      return detectArtifacts(message.content)
+    }, [isUser, message.content])
 
-  const hasArtifacts = detectedArtifacts.length > 0
+    const hasArtifacts = detectedArtifacts.length > 0
 
-  // Get conversation node position for artifact placement
-  const getConversationPosition = useCallback(() => {
-    if (conversationPosition) {
-      return { x: conversationPosition.x + 420, y: conversationPosition.y }
-    }
-    return { x: 100, y: 100 }
-  }, [conversationPosition])
+    // Get conversation node position for artifact placement
+    const getConversationPosition = useCallback(() => {
+      if (conversationPosition) {
+        return { x: conversationPosition.x + 420, y: conversationPosition.y }
+      }
+      return { x: 100, y: 100 }
+    }, [conversationPosition])
 
-  const handleExtractArtifact = useCallback(
-    (artifactIndex: number) => {
-      const artifact = detectedArtifacts[artifactIndex]
-      if (!artifact) return
+    const handleExtractArtifact = useCallback(
+      (artifactIndex: number) => {
+        const artifact = detectedArtifacts[artifactIndex]
+        if (!artifact) return
 
-      const position = getConversationPosition()
-      // Offset each artifact vertically
-      position.y += artifactIndex * 250
+        const position = getConversationPosition()
+        // Offset each artifact vertically
+        position.y += artifactIndex * 250
 
-      spawnArtifactFromLLM(conversationNodeId, message.id, {
-        content: artifact.content,
-        type: artifact.type,
-        language: artifact.language,
-        title: artifact.title
+        spawnArtifactFromLLM(conversationNodeId, message.id, {
+          content: artifact.content,
+          type: artifact.type,
+          language: artifact.language,
+          title: artifact.title,
+        })
+
+        toast.success(`Extracted: ${artifact.title}`)
+      },
+      [
+        detectedArtifacts,
+        getConversationPosition,
+        spawnArtifactFromLLM,
+        conversationNodeId,
+        message.id,
+      ],
+    )
+
+    const handleExtractAll = useCallback(() => {
+      detectedArtifacts.forEach((artifact) => {
+        spawnArtifactFromLLM(conversationNodeId, message.id, {
+          content: artifact.content,
+          type: artifact.type,
+          language: artifact.language,
+          title: artifact.title,
+        })
       })
 
-      toast.success(`Extracted: ${artifact.title}`)
-    },
-    [detectedArtifacts, getConversationPosition, spawnArtifactFromLLM, conversationNodeId, message.id]
-  )
+      toast.success(
+        `Extracted ${detectedArtifacts.length} artifact${detectedArtifacts.length > 1 ? 's' : ''}`,
+      )
+      setShowArtifacts(false)
+    }, [detectedArtifacts, spawnArtifactFromLLM, conversationNodeId, message.id])
 
-  const handleExtractAll = useCallback(() => {
-    detectedArtifacts.forEach((artifact) => {
-      spawnArtifactFromLLM(conversationNodeId, message.id, {
-        content: artifact.content,
-        type: artifact.type,
-        language: artifact.language,
-        title: artifact.title
-      })
-    })
+    // Theme-aware message styling (using design tokens)
+    const assistantBgClasses =
+      'bg-[var(--surface-panel-secondary)] text-[var(--text-primary)] border border-[var(--border-subtle)]'
+    const inlineCodeClasses = 'bg-[var(--surface-panel-secondary)] text-[var(--text-primary)]'
+    const copyButtonClasses =
+      'bg-[var(--surface-panel-secondary)] hover:bg-[var(--surface-panel)] text-[var(--text-primary)]'
+    const proseClasses = isLightMode ? 'prose prose-sm' : 'prose prose-invert prose-sm'
 
-    toast.success(`Extracted ${detectedArtifacts.length} artifact${detectedArtifacts.length > 1 ? 's' : ''}`)
-    setShowArtifacts(false)
-  }, [detectedArtifacts, spawnArtifactFromLLM, conversationNodeId, message.id])
-
-  // Theme-aware message styling (using design tokens)
-  const assistantBgClasses = 'bg-[var(--surface-panel-secondary)] text-[var(--text-primary)] border border-[var(--border-subtle)]'
-  const inlineCodeClasses = 'bg-[var(--surface-panel-secondary)] text-[var(--text-primary)]'
-  const copyButtonClasses = 'bg-[var(--surface-panel-secondary)] hover:bg-[var(--surface-panel)] text-[var(--text-primary)]'
-  const proseClasses = isLightMode ? 'prose prose-sm' : 'prose prose-invert prose-sm'
-
-  return (
-    <div className={`group/msg flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-      <div className="relative">
-        {onDelete && (
-          <button
-            onClick={onDelete}
-            className="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-xs opacity-0 group-hover/msg:opacity-100 transition-opacity z-10"
-            style={{
-              backgroundColor: 'var(--gui-bg-tertiary, #374151)',
-              color: 'var(--gui-text-muted, #9ca3af)',
-              border: '1px solid var(--gui-border-subtle, #4b5563)'
-            }}
-            title="Delete message"
-            aria-label="Delete message"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        )}
-        <div
-          className={`${embedded ? 'max-w-full' : 'max-w-[85%]'} min-w-0 rounded-lg px-4 py-2 overflow-hidden ${
-            isUser
-              ? 'chat-message-user text-white'
-              : `chat-message-ai ${assistantBgClasses}`
-          }`}
-        >
-        {isUser ? (
-          <p className="whitespace-pre-wrap text-sm break-words">{message.content}</p>
-        ) : (
+    return (
+      <div className={`group/msg flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+        <div className="relative">
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-xs opacity-0 group-hover/msg:opacity-100 transition-opacity z-10"
+              style={{
+                backgroundColor: 'var(--gui-bg-tertiary, #374151)',
+                color: 'var(--gui-text-muted, #9ca3af)',
+                border: '1px solid var(--gui-border-subtle, #4b5563)',
+              }}
+              title="Delete message"
+              aria-label="Delete message"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
           <div
-            ref={ratchetRef}
-            className={`chat-message-content ${proseClasses} max-w-none w-full`}
-            style={minHeight > 0 ? { minHeight } : undefined}
+            className={`${embedded ? 'max-w-full' : 'max-w-[85%]'} min-w-0 rounded-lg px-4 py-2 overflow-hidden ${
+              isUser ? 'chat-message-user text-white' : `chat-message-ai ${assistantBgClasses}`
+            }`}
           >
-            <StreamingMarkdown
-              content={message.content || ''}
-              isStreaming={isStreamingProp}
-              proseClasses={proseClasses}
-              inlineCodeClasses={inlineCodeClasses}
-              copyButtonClasses={copyButtonClasses}
-            />
-            {/* Typing indicator when assistant message is empty (streaming) */}
-            {!message.content && (
-              <div className="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
+            {isUser ? (
+              <p className="whitespace-pre-wrap text-sm break-words">{message.content}</p>
+            ) : (
+              <div
+                ref={ratchetRef}
+                className={`chat-message-content ${proseClasses} max-w-none w-full`}
+                style={minHeight > 0 ? { minHeight } : undefined}
+              >
+                <StreamingMarkdown
+                  content={message.content || ''}
+                  isStreaming={isStreamingProp}
+                  proseClasses={proseClasses}
+                  inlineCodeClasses={inlineCodeClasses}
+                  copyButtonClasses={copyButtonClasses}
+                />
+                {/* Typing indicator when assistant message is empty (streaming) */}
+                {!message.content && (
+                  <div className="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Token usage badge for assistant messages */}
+        {!isUser && message.inputTokens != null && (
+          <div
+            className="mt-0.5 flex items-center gap-2 text-[10px] opacity-60"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            <span>{message.inputTokens.toLocaleString()} in</span>
+            <span>{(message.outputTokens ?? 0).toLocaleString()} out</span>
+            {message.costUSD != null && message.costUSD > 0 && (
+              <span>
+                ${message.costUSD < 0.01 ? message.costUSD.toFixed(4) : message.costUSD.toFixed(3)}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Artifact extraction UI for assistant messages */}
+        {!isUser && hasArtifacts && (
+          <div className="mt-1 max-w-[85%]">
+            <button
+              onClick={() => setShowArtifacts(!showArtifacts)}
+              className="flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+            >
+              <Package className="w-3.5 h-3.5" />
+              <span>
+                {detectedArtifacts.length} extractable artifact
+                {detectedArtifacts.length > 1 ? 's' : ''}
+              </span>
+              {showArtifacts ? (
+                <ChevronUp className="w-3 h-3" />
+              ) : (
+                <ChevronDown className="w-3 h-3" />
+              )}
+            </button>
+
+            {showArtifacts && (
+              <div className="mt-2 p-2 bg-[var(--surface-panel)]/50 border border-[var(--border-subtle)] rounded-lg space-y-2">
+                {detectedArtifacts.map((artifact, index) => (
+                  <div key={index} className="flex items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 rounded">
+                        {artifact.type}
+                      </span>
+                      <span className="text-[var(--text-secondary)] truncate">
+                        {artifact.title}
+                      </span>
+                      {artifact.language && (
+                        <span className="text-[var(--text-muted)]">{artifact.language}</span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleExtractArtifact(index)}
+                      className="px-2 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded transition-colors whitespace-nowrap"
+                    >
+                      Extract
+                    </button>
+                  </div>
+                ))}
+
+                {detectedArtifacts.length > 1 && (
+                  <button
+                    onClick={handleExtractAll}
+                    className="w-full mt-1 px-2 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 rounded transition-colors text-xs"
+                  >
+                    Extract All ({detectedArtifacts.length})
+                  </button>
+                )}
               </div>
             )}
           </div>
         )}
       </div>
-      </div>
-
-      {/* Token usage badge for assistant messages */}
-      {!isUser && message.inputTokens != null && (
-        <div className="mt-0.5 flex items-center gap-2 text-[10px] opacity-60" style={{ color: 'var(--text-muted)' }}>
-          <span>{message.inputTokens.toLocaleString()} in</span>
-          <span>{(message.outputTokens ?? 0).toLocaleString()} out</span>
-          {message.costUSD != null && message.costUSD > 0 && (
-            <span>${message.costUSD < 0.01 ? message.costUSD.toFixed(4) : message.costUSD.toFixed(3)}</span>
-          )}
-        </div>
-      )}
-
-      {/* Artifact extraction UI for assistant messages */}
-      {!isUser && hasArtifacts && (
-        <div className="mt-1 max-w-[85%]">
-          <button
-            onClick={() => setShowArtifacts(!showArtifacts)}
-            className="flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
-          >
-            <Package className="w-3.5 h-3.5" />
-            <span>
-              {detectedArtifacts.length} extractable artifact{detectedArtifacts.length > 1 ? 's' : ''}
-            </span>
-            {showArtifacts ? (
-              <ChevronUp className="w-3 h-3" />
-            ) : (
-              <ChevronDown className="w-3 h-3" />
-            )}
-          </button>
-
-          {showArtifacts && (
-            <div className="mt-2 p-2 bg-[var(--surface-panel)]/50 border border-[var(--border-subtle)] rounded-lg space-y-2">
-              {detectedArtifacts.map((artifact, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between gap-2 text-xs"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 rounded">
-                      {artifact.type}
-                    </span>
-                    <span className="text-[var(--text-secondary)] truncate">{artifact.title}</span>
-                    {artifact.language && (
-                      <span className="text-[var(--text-muted)]">{artifact.language}</span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => handleExtractArtifact(index)}
-                    className="px-2 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded transition-colors whitespace-nowrap"
-                  >
-                    Extract
-                  </button>
-                </div>
-              ))}
-
-              {detectedArtifacts.length > 1 && (
-                <button
-                  onClick={handleExtractAll}
-                  className="w-full mt-1 px-2 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 rounded transition-colors text-xs"
-                >
-                  Extract All ({detectedArtifacts.length})
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}, (prevProps, nextProps) => {
-  // Custom comparison - only re-render if message content actually changed
-  // Note: onDelete is excluded because it's an inline closure (always new reference)
-  // but it only changes when the parent's messages array changes, which is correct
-  return prevProps.message.id === nextProps.message.id &&
-         prevProps.message.content === nextProps.message.content &&
-         prevProps.conversationNodeId === nextProps.conversationNodeId &&
-         prevProps.isLightMode === nextProps.isLightMode &&
-         prevProps.isStreaming === nextProps.isStreaming
-})
+    )
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison - only re-render if message content actually changed
+    // Note: onDelete is excluded because it's an inline closure (always new reference)
+    // but it only changes when the parent's messages array changes, which is correct
+    return (
+      prevProps.message.id === nextProps.message.id &&
+      prevProps.message.content === nextProps.message.content &&
+      prevProps.conversationNodeId === nextProps.conversationNodeId &&
+      prevProps.isLightMode === nextProps.isLightMode &&
+      prevProps.isStreaming === nextProps.isStreaming
+    )
+  },
+)
 
 MessageBubble.displayName = 'MessageBubble'
 
@@ -1558,24 +1765,30 @@ interface SuggestedActionsProps {
   isLightMode?: boolean
 }
 
-function SuggestedActions({ nodeId, onContinue, onExtract, isLightMode: _isLightMode = false }: SuggestedActionsProps): JSX.Element {
-  const addNode = useWorkspaceStore(state => state.addNode)
-  const nodes = useWorkspaceStore(state => state.nodes)
+function SuggestedActions({
+  nodeId,
+  onContinue,
+  onExtract,
+  isLightMode: _isLightMode = false,
+}: SuggestedActionsProps): JSX.Element {
+  const addNode = useWorkspaceStore((state) => state.addNode)
+  const nodes = useWorkspaceStore((state) => state.nodes)
 
   const handleNewConversation = useCallback(() => {
     // Find the current node to get its position
-    const currentNode = nodes.find(n => n.id === nodeId)
+    const currentNode = nodes.find((n) => n.id === nodeId)
     if (currentNode) {
       // Create new conversation offset to the right
       addNode('conversation', {
         x: currentNode.position.x + 420,
-        y: currentNode.position.y
+        y: currentNode.position.y,
       })
     }
   }, [addNode, nodes, nodeId])
 
   // Using design tokens
-  const bgClasses = 'bg-[var(--surface-panel-secondary)]/50 hover:bg-[var(--surface-panel-secondary)]'
+  const bgClasses =
+    'bg-[var(--surface-panel-secondary)]/50 hover:bg-[var(--surface-panel-secondary)]'
   const textClasses = 'text-[var(--text-secondary)]'
 
   return (
@@ -1612,7 +1825,7 @@ function SuggestedActions({ nodeId, onContinue, onExtract, isLightMode: _isLight
 function ApiKeyModal({
   provider,
   onSuccess,
-  onClose
+  onClose,
 }: {
   provider: string
   onSuccess: () => void
@@ -1624,7 +1837,7 @@ function ApiKeyModal({
   const providerNames: Record<string, string> = {
     anthropic: 'Anthropic (Claude)',
     gemini: 'Google (Gemini)',
-    openai: 'OpenAI (GPT)'
+    openai: 'OpenAI (GPT)',
   }
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
@@ -1662,7 +1875,8 @@ function ApiKeyModal({
   // Using design tokens
   const modalBgClasses = 'bg-[var(--surface-panel-secondary)]'
   const textClasses = 'text-[var(--text-primary)]'
-  const inputClasses = 'bg-[var(--surface-panel)] border-[var(--border-subtle)] text-[var(--text-primary)]'
+  const inputClasses =
+    'bg-[var(--surface-panel)] border-[var(--border-subtle)] text-[var(--text-primary)]'
   const cancelTextClasses = 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
 
   return (
@@ -1681,9 +1895,7 @@ function ApiKeyModal({
             autoFocus
             disabled={isSaving}
           />
-          {error && (
-            <p className="text-red-500 text-sm mb-4">{error}</p>
-          )}
+          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
           <div className="flex gap-2 justify-end">
             <button
               type="button"

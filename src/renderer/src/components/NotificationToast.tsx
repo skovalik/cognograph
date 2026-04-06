@@ -14,15 +14,15 @@
  * - Click-to-dismiss or auto-dismiss via store timers
  */
 
+import { AnimatePresence, motion } from 'framer-motion'
+import { AlertCircle, AlertTriangle, ExternalLink, Info, X } from 'lucide-react'
 import { memo, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { AlertTriangle, AlertCircle, Info, X, ExternalLink } from 'lucide-react'
-import {
-  useNotificationStore,
-  type Notification,
-  type NotificationPriority
-} from '../stores/notificationStore'
 import { useCanvasViewportStore } from '../stores/canvasViewportStore'
+import {
+  type Notification,
+  type NotificationPriority,
+  useNotificationStore,
+} from '../stores/notificationStore'
 
 // =============================================================================
 // Priority Styles
@@ -31,13 +31,13 @@ import { useCanvasViewportStore } from '../stores/canvasViewportStore'
 const PRIORITY_BORDER: Record<NotificationPriority, string> = {
   error: 'border-l-red-500',
   warning: 'border-l-amber-400',
-  info: 'border-l-blue-400'
+  info: 'border-l-blue-400',
 }
 
 const PRIORITY_BG: Record<NotificationPriority, string> = {
   error: 'bg-red-500/5',
   warning: 'bg-amber-400/5',
-  info: 'bg-blue-400/5'
+  info: 'bg-blue-400/5',
 }
 
 function PriorityIcon({ priority }: { priority: NotificationPriority }): JSX.Element {
@@ -64,7 +64,7 @@ interface NotificationItemProps {
 const NotificationItem = memo(function NotificationItem({
   notification,
   onDismiss,
-  onJumpToNode
+  onJumpToNode,
 }: NotificationItemProps) {
   const { id, message, priority, count, nodeId, action } = notification
 
@@ -79,7 +79,7 @@ const NotificationItem = memo(function NotificationItem({
       e.stopPropagation()
       onDismiss(id)
     },
-    [id, onDismiss]
+    [id, onDismiss],
   )
 
   const handleAction = useCallback(
@@ -87,7 +87,7 @@ const NotificationItem = memo(function NotificationItem({
       e.stopPropagation()
       action?.callback()
     },
-    [action]
+    [action],
   )
 
   return (
@@ -104,7 +104,7 @@ const NotificationItem = memo(function NotificationItem({
         PRIORITY_BORDER[priority],
         PRIORITY_BG[priority],
         nodeId ? 'cursor-pointer hover:bg-[var(--bg-hover)]' : 'cursor-default',
-        'max-w-sm w-80 select-none'
+        'max-w-sm w-80 select-none',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -165,7 +165,7 @@ export const NotificationToast = memo(function NotificationToast() {
     (nodeId: string) => {
       centerNode(nodeId)
     },
-    [centerNode]
+    [centerNode],
   )
 
   return (

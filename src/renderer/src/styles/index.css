@@ -1075,6 +1075,14 @@ html, body, #root {
   }
 }
 
+/* Long-press visual feedback — applied by JS during touch-hold */
+.long-press-pending {
+  transform: scale(1.02);
+  box-shadow: 0 0 16px rgba(200, 150, 62, 0.3);
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+  z-index: 10 !important;
+}
+
 /* =============================================================================
    MOBILE CANVAS — Touch targets & chrome cleanup (PFD R1-R4)
    ============================================================================= */

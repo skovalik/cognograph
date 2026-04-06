@@ -4,8 +4,8 @@
 // Plugin Renderer Registry
 // Manages plugin UI components and creates typed bridges for renderer-side plugin calls
 
-import type { TypedPluginBridge, MethodMap } from './types'
 import { rendererEntries } from './plugins.renderer'
+import type { MethodMap, TypedPluginBridge } from './types'
 
 /**
  * RegisteredTab wraps a plugin component with its own bridge factory.
@@ -37,10 +37,12 @@ export async function initRendererPlugins(): Promise<void> {
   const isWeb = import.meta.env.VITE_BUILD_TARGET === 'web'
   if (!isWeb) {
     try {
-      const enabledIds = await window.api.plugins.getEnabledIds() as string[]
+      const enabledIds = (await window.api.plugins.getEnabledIds()) as string[]
       for (const { id } of rendererEntries) {
         if (!enabledIds.includes(id)) {
-          console.warn(`[plugin-renderer] Plugin '${id}' registered in renderer but not found in main process`)
+          console.warn(
+            `[plugin-renderer] Plugin '${id}' registered in renderer but not found in main process`,
+          )
         }
       }
     } catch {
@@ -59,7 +61,7 @@ export async function initRendererPlugins(): Promise<void> {
           const Component = tab.component
           const bridge = createPluginBridge(id)
           return <Component plugin={bridge} />
-        }
+        },
       })
     }
   }
@@ -86,6 +88,6 @@ export function createPluginBridge<M extends MethodMap>(pluginId: string): Typed
     call: <K extends keyof M & string>(method: K, ...args: M[K]['args']) =>
       window.api.plugin.call(pluginId, method, ...args) as Promise<M[K]['return']>,
     on: (event: string, callback: (...args: unknown[]) => void) =>
-      window.api.plugin.on(pluginId, event, callback)
+      window.api.plugin.on(pluginId, event, callback),
   }
 }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import type { ActionStep, ActionStepErrorBehavior, ActionStepType } from '@shared/actionTypes'
 import { memo, useCallback } from 'react'
-import type { ActionStep, ActionStepType, ActionStepErrorBehavior } from '@shared/actionTypes'
 
 const STEP_TYPE_OPTIONS: { value: ActionStepType; label: string }[] = [
   { value: 'update-property', label: 'Update Property' },
@@ -14,20 +14,20 @@ const STEP_TYPE_OPTIONS: { value: ActionStepType; label: string }[] = [
   { value: 'wait', label: 'Wait' },
   { value: 'condition', label: 'Condition (If)' },
   { value: 'llm-call', label: 'LLM Call' },
-  { value: 'http-request', label: 'HTTP Request' }
+  { value: 'http-request', label: 'HTTP Request' },
 ]
 
 const ERROR_BEHAVIOR_OPTIONS: { value: ActionStepErrorBehavior; label: string }[] = [
   { value: 'stop', label: 'Stop' },
   { value: 'continue', label: 'Continue' },
-  { value: 'retry', label: 'Retry (3x)' }
+  { value: 'retry', label: 'Retry (3x)' },
 ]
 
 const TARGET_OPTIONS = [
   { value: 'trigger-node', label: 'Trigger Node' },
   { value: 'action-node', label: 'Action Node' },
   { value: 'specific-node', label: 'Specific Node' },
-  { value: 'created-node', label: 'Created Node' }
+  { value: 'created-node', label: 'Created Node' },
 ]
 
 interface ActionStepConfigProps {
@@ -36,45 +36,90 @@ interface ActionStepConfigProps {
 }
 
 function ActionStepConfigComponent({ step, onChange }: ActionStepConfigProps): JSX.Element {
-  const handleTypeChange = useCallback((newType: ActionStepType) => {
-    const base = { id: step.id, label: step.label, onError: step.onError, disabled: step.disabled }
-    switch (newType) {
-      case 'update-property':
-        onChange({ ...base, type: 'update-property', config: { target: 'trigger-node', property: '', value: '' } })
-        break
-      case 'create-node':
-        onChange({ ...base, type: 'create-node', config: { nodeType: 'note', title: 'New Node', position: 'near-trigger' } })
-        break
-      case 'delete-node':
-        onChange({ ...base, type: 'delete-node', config: { target: 'trigger-node' } })
-        break
-      case 'move-node':
-        onChange({ ...base, type: 'move-node', config: { target: 'trigger-node', position: 'relative', x: 300, y: 0 } })
-        break
-      case 'link-nodes':
-        onChange({ ...base, type: 'link-nodes', config: { source: 'trigger-node', target: 'action-node' } })
-        break
-      case 'unlink-nodes':
-        onChange({ ...base, type: 'unlink-nodes', config: { source: 'trigger-node', target: 'action-node' } })
-        break
-      case 'wait':
-        onChange({ ...base, type: 'wait', config: { duration: 1000 } })
-        break
-      case 'condition':
-        onChange({ ...base, type: 'condition', config: { field: 'status', operator: 'equals', value: '', target: 'trigger-node', skipCount: 1 } })
-        break
-      case 'llm-call':
-        onChange({ ...base, type: 'llm-call', config: { prompt: '', variableName: 'llmResponse' } })
-        break
-      case 'http-request':
-        onChange({ ...base, type: 'http-request', config: { method: 'GET', url: '' } })
-        break
-    }
-  }, [step, onChange])
+  const handleTypeChange = useCallback(
+    (newType: ActionStepType) => {
+      const base = {
+        id: step.id,
+        label: step.label,
+        onError: step.onError,
+        disabled: step.disabled,
+      }
+      switch (newType) {
+        case 'update-property':
+          onChange({
+            ...base,
+            type: 'update-property',
+            config: { target: 'trigger-node', property: '', value: '' },
+          })
+          break
+        case 'create-node':
+          onChange({
+            ...base,
+            type: 'create-node',
+            config: { nodeType: 'note', title: 'New Node', position: 'near-trigger' },
+          })
+          break
+        case 'delete-node':
+          onChange({ ...base, type: 'delete-node', config: { target: 'trigger-node' } })
+          break
+        case 'move-node':
+          onChange({
+            ...base,
+            type: 'move-node',
+            config: { target: 'trigger-node', position: 'relative', x: 300, y: 0 },
+          })
+          break
+        case 'link-nodes':
+          onChange({
+            ...base,
+            type: 'link-nodes',
+            config: { source: 'trigger-node', target: 'action-node' },
+          })
+          break
+        case 'unlink-nodes':
+          onChange({
+            ...base,
+            type: 'unlink-nodes',
+            config: { source: 'trigger-node', target: 'action-node' },
+          })
+          break
+        case 'wait':
+          onChange({ ...base, type: 'wait', config: { duration: 1000 } })
+          break
+        case 'condition':
+          onChange({
+            ...base,
+            type: 'condition',
+            config: {
+              field: 'status',
+              operator: 'equals',
+              value: '',
+              target: 'trigger-node',
+              skipCount: 1,
+            },
+          })
+          break
+        case 'llm-call':
+          onChange({
+            ...base,
+            type: 'llm-call',
+            config: { prompt: '', variableName: 'llmResponse' },
+          })
+          break
+        case 'http-request':
+          onChange({ ...base, type: 'http-request', config: { method: 'GET', url: '' } })
+          break
+      }
+    },
+    [step, onChange],
+  )
 
-  const updateConfig = useCallback((updates: Record<string, unknown>) => {
-    onChange({ ...step, config: { ...step.config, ...updates } } as ActionStep)
-  }, [step, onChange])
+  const updateConfig = useCallback(
+    (updates: Record<string, unknown>) => {
+      onChange({ ...step, config: { ...step.config, ...updates } } as ActionStep)
+    },
+    [step, onChange],
+  )
 
   return (
     <div className="space-y-1.5">
@@ -85,18 +130,24 @@ function ActionStepConfigComponent({ step, onChange }: ActionStepConfigProps): J
           onChange={(e) => handleTypeChange(e.target.value as ActionStepType)}
           className="flex-1 text-[10px] gui-input rounded px-1.5 py-0.5"
         >
-          {STEP_TYPE_OPTIONS.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          {STEP_TYPE_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
           ))}
         </select>
         <select
           value={step.onError}
-          onChange={(e) => onChange({ ...step, onError: e.target.value as ActionStepErrorBehavior })}
+          onChange={(e) =>
+            onChange({ ...step, onError: e.target.value as ActionStepErrorBehavior })
+          }
           className="text-[10px] gui-input rounded px-1 py-0.5"
           title="On error behavior"
         >
-          {ERROR_BEHAVIOR_OPTIONS.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          {ERROR_BEHAVIOR_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
           ))}
         </select>
       </div>
@@ -109,8 +160,10 @@ function ActionStepConfigComponent({ step, onChange }: ActionStepConfigProps): J
             onChange={(e) => updateConfig({ target: e.target.value })}
             className="w-full text-[10px] gui-input rounded px-1.5 py-0.5"
           >
-            {TARGET_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            {TARGET_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
           {step.config.target === 'specific-node' && (
@@ -201,8 +254,10 @@ function ActionStepConfigComponent({ step, onChange }: ActionStepConfigProps): J
             onChange={(e) => updateConfig({ target: e.target.value })}
             className="w-full text-[10px] gui-input rounded px-1.5 py-0.5"
           >
-            {TARGET_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            {TARGET_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
           <div className="flex gap-1">
@@ -269,7 +324,9 @@ function ActionStepConfigComponent({ step, onChange }: ActionStepConfigProps): J
             <input
               type="number"
               value={step.config.maxTokens || ''}
-              onChange={(e) => updateConfig({ maxTokens: e.target.value ? parseInt(e.target.value) : undefined })}
+              onChange={(e) =>
+                updateConfig({ maxTokens: e.target.value ? parseInt(e.target.value) : undefined })
+              }
               placeholder="Max tokens"
               className="w-20 text-[10px] gui-input rounded px-1.5 py-0.5"
               min={1}
@@ -301,7 +358,7 @@ function ActionStepConfigComponent({ step, onChange }: ActionStepConfigProps): J
               className="flex-1 text-[10px] gui-input rounded px-1.5 py-0.5"
             />
           </div>
-          {(step.config.method !== 'GET') && (
+          {step.config.method !== 'GET' && (
             <textarea
               value={step.config.body || ''}
               onChange={(e) => updateConfig({ body: e.target.value || undefined })}
@@ -367,8 +424,10 @@ function ActionStepConfigComponent({ step, onChange }: ActionStepConfigProps): J
                 onChange={(e) => updateConfig({ source: e.target.value })}
                 className="w-full text-[10px] gui-input rounded px-1 py-0.5"
               >
-                {TARGET_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                {TARGET_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -379,8 +438,10 @@ function ActionStepConfigComponent({ step, onChange }: ActionStepConfigProps): J
                 onChange={(e) => updateConfig({ target: e.target.value })}
                 className="w-full text-[10px] gui-input rounded px-1 py-0.5"
               >
-                {TARGET_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                {TARGET_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
             </div>

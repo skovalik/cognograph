@@ -10,10 +10,11 @@
  * Phase 3B artboard panel.
  */
 
-import React, { memo, useCallback, useMemo, useState } from 'react'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
 import type { NodeData } from '@shared/types'
 import type { Node } from '@xyflow/react'
+import type React from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -65,17 +66,19 @@ function MiniKanbanComponent({
   const cards: KanbanCard[] = useWorkspaceStore(
     useCallback(
       (state: { nodes: Node<NodeData>[] }) => {
-        return childNodeIds.map((cid) => {
-          const node = state.nodes.find((n) => n.id === cid)
-          if (!node) return null
-          const d = node.data as Record<string, unknown>
-          return {
-            id: cid,
-            title: (d.title as string) || 'Untitled',
-            priority: d.priority as string | undefined,
-            status: (d.status as string) || 'todo',
-          }
-        }).filter(Boolean) as KanbanCard[]
+        return childNodeIds
+          .map((cid) => {
+            const node = state.nodes.find((n) => n.id === cid)
+            if (!node) return null
+            const d = node.data as Record<string, unknown>
+            return {
+              id: cid,
+              title: (d.title as string) || 'Untitled',
+              priority: d.priority as string | undefined,
+              status: (d.status as string) || 'todo',
+            }
+          })
+          .filter(Boolean) as KanbanCard[]
       },
       [childNodeIds],
     ),

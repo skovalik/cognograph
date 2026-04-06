@@ -6,18 +6,10 @@
  * Used by LayersPanel (FilesystemSection) and FilePreviewSection (node body).
  */
 
+import { File, FileAudio, FileCode, FileImage, FileText, FileVideo, Folder } from 'lucide-react'
 import { memo, useCallback } from 'react'
-import {
-  File,
-  FileCode,
-  FileText,
-  FileImage,
-  FileVideo,
-  FileAudio,
-  Folder,
-} from 'lucide-react'
-import { getFileIconName, type FileIconName } from '../utils/fileIconMap'
 import { cn } from '../lib/utils'
+import { type FileIconName, getFileIconName } from '../utils/fileIconMap'
 
 interface FileEntryRowProps {
   name: string
@@ -72,7 +64,7 @@ function FileEntryRowComponent({
         navigator.clipboard.writeText(fullPath).catch(() => {})
       }
     },
-    [onCopyPath, fullPath]
+    [onCopyPath, fullPath],
   )
 
   return (
@@ -81,7 +73,7 @@ function FileEntryRowComponent({
         'flex items-center gap-1.5 px-2 py-0.5 cursor-pointer transition-colors rounded-sm',
         'hover:bg-[var(--bg-hover,rgba(255,255,255,0.05))]',
         isDotfile && 'opacity-60',
-        highlighted && 'font-semibold text-[var(--accent)]'
+        highlighted && 'font-semibold text-[var(--accent)]',
       )}
       onClick={handleClick}
       onContextMenu={handleContextMenu}
@@ -96,7 +88,7 @@ function FileEntryRowComponent({
         className={cn(
           fontSize,
           'truncate font-mono',
-          highlighted ? 'text-[var(--accent)]' : 'gui-text-secondary'
+          highlighted ? 'text-[var(--accent)]' : 'gui-text-secondary',
         )}
       >
         {name}

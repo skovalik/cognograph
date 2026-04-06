@@ -7,21 +7,21 @@
  * Tests for edge CRUD operations in the workspace store.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { useWorkspaceStore } from '../workspaceStore'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  resetWorkspaceStore,
   getWorkspaceState,
-  seedNodes,
+  resetWorkspaceStore,
   seedEdge,
-  seedEdges
+  seedEdges,
+  seedNodes,
 } from '../../../../test/storeUtils'
 import {
-  createNoteNode,
   createConversationNode,
+  createNoteNode,
   createTestEdge,
-  resetTestCounters
+  resetTestCounters,
 } from '../../../../test/utils'
+import { useWorkspaceStore } from '../workspaceStore'
 
 describe('workspaceStore - Edge Operations', () => {
   beforeEach(() => {
@@ -262,7 +262,7 @@ describe('workspaceStore - Edge Operations', () => {
         source: 'note-1',
         target: 'conv-2',
         sourceHandle: null,
-        targetHandle: null
+        targetHandle: null,
       })
 
       const state = getWorkspaceState()
@@ -284,7 +284,7 @@ describe('workspaceStore - Edge Operations', () => {
         source: 'note-2',
         target: 'conv-1',
         sourceHandle: null,
-        targetHandle: null
+        targetHandle: null,
       })
 
       const state = getWorkspaceState()
@@ -306,7 +306,7 @@ describe('workspaceStore - Edge Operations', () => {
         source: 'note-1',
         target: 'conv-2',
         sourceHandle: null,
-        targetHandle: null
+        targetHandle: null,
       })
 
       const state = getWorkspaceState()

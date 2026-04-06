@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-  estimateTokens,
-  getUsageLevel,
-  getModelContextLimit,
   calculateTokenUsage,
-  MODEL_CONTEXT_LIMITS
+  estimateTokens,
+  getModelContextLimit,
+  getUsageLevel,
+  MODEL_CONTEXT_LIMITS,
 } from '../tokenEstimation'
 
 describe('tokenEstimation', () => {
@@ -94,7 +94,7 @@ describe('tokenEstimation', () => {
         'Context text here', // 17 chars = 5 tokens
         [{ content: 'Message one' }, { content: 'Message two' }], // 11 + 11 = 22 chars = 6 tokens
         'System prompt', // 13 chars = 4 tokens
-        'claude-3-opus'
+        'claude-3-opus',
       )
 
       expect(usage.contextTokens).toBe(5)

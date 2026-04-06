@@ -6,14 +6,39 @@
 // =============================================================================
 // Shows the generated configuration before applying - clean, readable format
 
-import { memo, useState } from 'react'
+import type {
+  ActionCondition,
+  ActionStep,
+  ActionTrigger,
+  AIGeneratedConfig,
+} from '@shared/actionTypes'
 import {
-  Play, RefreshCw, Clock, PlusCircle, Link, CheckCircle,
-  ArrowUp, Hash, Circle, MapPin, LogOut, Users, Target,
-  Pencil, Plus, Trash2, Move, Unlink, Timer, GitBranch,
-  Sparkles, Globe, AlertTriangle, Zap
+  AlertTriangle,
+  ArrowUp,
+  CheckCircle,
+  Circle,
+  Clock,
+  GitBranch,
+  Globe,
+  Hash,
+  Link,
+  LogOut,
+  MapPin,
+  Move,
+  Pencil,
+  Play,
+  Plus,
+  PlusCircle,
+  RefreshCw,
+  Sparkles,
+  Target,
+  Timer,
+  Trash2,
+  Unlink,
+  Users,
+  Zap,
 } from 'lucide-react'
-import type { AIGeneratedConfig, ActionTrigger, ActionStep, ActionCondition } from '@shared/actionTypes'
+import { memo, useState } from 'react'
 
 interface AIConfigPreviewProps {
   config: AIGeneratedConfig
@@ -40,7 +65,7 @@ const TRIGGER_ICONS: Record<string, typeof Play> = {
   'region-enter': MapPin,
   'region-exit': LogOut,
   'cluster-size': Users,
-  proximity: Target
+  proximity: Target,
 }
 
 // Step type icons
@@ -54,7 +79,7 @@ const STEP_ICONS: Record<string, typeof Pencil> = {
   wait: Timer,
   condition: GitBranch,
   'llm-call': Sparkles,
-  'http-request': Globe
+  'http-request': Globe,
 }
 
 function AIConfigPreviewComponent({
@@ -65,7 +90,7 @@ function AIConfigPreviewComponent({
   onApply,
   onApplyAndRun,
   onEdit,
-  onCancel
+  onCancel,
 }: AIConfigPreviewProps): JSX.Element {
   const [useSuggestedTitle, setUseSuggestedTitle] = useState(!!suggestedTitle)
 
@@ -156,9 +181,7 @@ function AIConfigPreviewComponent({
             <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
           </div>
           <div className="flex-1">
-            <div className="text-xs font-medium gui-text mb-1">
-              Steps ({config.actions.length})
-            </div>
+            <div className="text-xs font-medium gui-text mb-1">Steps ({config.actions.length})</div>
             <div className="space-y-1.5">
               {config.actions.map((step, i) => (
                 <div key={i} className="flex items-start gap-2">
@@ -223,7 +246,7 @@ function TriggerIcon({ type }: { type: string }): JSX.Element {
     'property-change': 'text-blue-400',
     schedule: 'text-yellow-400',
     'node-created': 'text-green-400',
-    'connection-made': 'text-purple-400'
+    'connection-made': 'text-purple-400',
   }
   return <Icon className={`w-3.5 h-3.5 ${colors[type] || 'text-blue-400'}`} />
 }
@@ -287,17 +310,25 @@ function ConditionDescription({ condition }: { condition: ActionCondition }): JS
     'greater-than': 'is greater than',
     'less-than': 'is less than',
     'is-empty': 'is empty',
-    'is-not-empty': 'is not empty'
+    'is-not-empty': 'is not empty',
   }
 
   const op = operators[condition.operator] || condition.operator
   const target = condition.target === 'trigger-node' ? 'trigger node' : condition.target
 
   if (condition.operator === 'is-empty' || condition.operator === 'is-not-empty') {
-    return <span>If {target}'s {condition.field} {op}</span>
+    return (
+      <span>
+        If {target}'s {condition.field} {op}
+      </span>
+    )
   }
 
-  return <span>If {target}'s {condition.field} {op} "{String(condition.value)}"</span>
+  return (
+    <span>
+      If {target}'s {condition.field} {op} "{String(condition.value)}"
+    </span>
+  )
 }
 
 // Step description
@@ -309,7 +340,7 @@ function StepDescription({ step }: { step: ActionStep }): JSX.Element {
     'delete-node': 'text-red-400',
     'llm-call': 'text-purple-400',
     'link-nodes': 'text-cyan-400',
-    'http-request': 'text-orange-400'
+    'http-request': 'text-orange-400',
   }
 
   let description = ''
@@ -354,7 +385,9 @@ function StepDescription({ step }: { step: ActionStep }): JSX.Element {
 
   return (
     <div className="flex items-center gap-1.5">
-      <Icon className={`w-3 h-3 flex-shrink-0 ${colors[step.type] || 'text-[var(--text-secondary)]'}`} />
+      <Icon
+        className={`w-3 h-3 flex-shrink-0 ${colors[step.type] || 'text-[var(--text-secondary)]'}`}
+      />
       <span className="text-xs gui-text-secondary">{description}</span>
     </div>
   )
@@ -378,7 +411,7 @@ function describeCron(cron: string): string {
     return 'Every Monday at 9:00 AM'
   }
   if (minute === '0' && hour.includes(',')) {
-    const hours = hour.split(',').map(h => {
+    const hours = hour.split(',').map((h) => {
       const num = parseInt(h)
       const ampm = num >= 12 ? 'PM' : 'AM'
       const hour12 = num > 12 ? num - 12 : num === 0 ? 12 : num

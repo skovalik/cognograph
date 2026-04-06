@@ -16,22 +16,26 @@
  * Monitors workspace changes to auto-advance steps when user completes actions.
  */
 
-import { memo, useEffect, useRef, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
-  StickyNote,
-  MessageSquare,
+  ArrowRight,
+  ChevronRight,
   Link2,
+  MessageSquare,
+  PartyPopper,
   Send,
   Sparkles,
-  PartyPopper,
-  ArrowRight,
+  StickyNote,
   X,
-  ChevronRight
 } from 'lucide-react'
-import { useProgramStore, selectTutorialActive, selectTutorialStep } from '../../stores/programStore'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { memo, useCallback, useEffect, useRef } from 'react'
 import type { TutorialStep } from '../../stores/programStore'
+import {
+  selectTutorialActive,
+  selectTutorialStep,
+  useProgramStore,
+} from '../../stores/programStore'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 
 // ---------------------------------------------------------------------------
 // Step Definitions
@@ -50,44 +54,45 @@ const STEP_CONFIGS: Record<TutorialStep, StepConfig> = {
     icon: StickyNote,
     title: 'Step 1: Create a Note',
     description: 'Press Shift+N to create a note, or right-click the canvas and select "New Note".',
-    hint: 'Paste some reference text into it — a paragraph about any topic you\'d like to ask the AI about.',
-    color: '#f59e0b'
+    hint: "Paste some reference text into it — a paragraph about any topic you'd like to ask the AI about.",
+    color: '#f59e0b',
   },
   'create-conversation': {
     icon: MessageSquare,
     title: 'Step 2: Create a Conversation',
     description: 'Press Shift+C to create a conversation node near your note.',
-    hint: 'This is where you\'ll chat with AI. Place it next to your note.',
-    color: '#C8963E'
+    hint: "This is where you'll chat with AI. Place it next to your note.",
+    color: '#C8963E',
   },
   'connect-them': {
     icon: Link2,
     title: 'Step 3: Connect Note → Conversation',
-    description: 'Drag from the note\'s connection handle to the conversation node.',
+    description: "Drag from the note's connection handle to the conversation node.",
     hint: 'Handles appear on hover at the edges of each node. This link tells the AI to use your note as context.',
-    color: '#F0EDE8'
+    color: '#F0EDE8',
   },
   'send-message': {
     icon: Send,
     title: 'Step 4: Ask a Question',
     description: 'Click the conversation node, then type a question in the chat panel.',
     hint: 'Ask something related to your note — the AI will use it as context!',
-    color: '#10b981'
+    color: '#10b981',
   },
   'see-context': {
     icon: Sparkles,
     title: 'Step 5: See the Magic',
     description: 'Watch the AI respond using context from your connected note.',
     hint: 'Notice the context indicator in the chat — it shows which nodes are providing context.',
-    color: '#6366f1'
+    color: '#6366f1',
   },
-  'complete': {
+  complete: {
     icon: PartyPopper,
-    title: 'You\'re Ready!',
-    description: 'You\'ve learned the core Cognograph workflow: Notes provide context to AI Conversations.',
+    title: "You're Ready!",
+    description:
+      "You've learned the core Cognograph workflow: Notes provide context to AI Conversations.",
     hint: '',
-    color: '#ec4899'
-  }
+    color: '#ec4899',
+  },
 }
 
 const STEP_ORDER: TutorialStep[] = [
@@ -96,7 +101,7 @@ const STEP_ORDER: TutorialStep[] = [
   'connect-them',
   'send-message',
   'see-context',
-  'complete'
+  'complete',
 ]
 
 // ---------------------------------------------------------------------------
@@ -131,7 +136,7 @@ function TutorialOverlayComponent(): JSX.Element | null {
 
       // Count total messages across all conversation nodes
       const messageCount = state.nodes
-        .filter(n => n.data.type === 'conversation')
+        .filter((n) => n.data.type === 'conversation')
         .reduce((sum, n) => sum + ((n.data as { messages?: unknown[] }).messages?.length || 0), 0)
       prevMessagesRef.current = messageCount
 
@@ -153,14 +158,14 @@ function TutorialOverlayComponent(): JSX.Element | null {
 
         // Step 1: Detect new note node
         if (step === 'create-note') {
-          const noteCount = current.nodes.filter(n => n.data.type === 'note').length
+          const noteCount = current.nodes.filter((n) => n.data.type === 'note').length
           const prevNoteCount = prevNodesRef.current
-            ? useWorkspaceStore.getState().nodes.filter(n => n.data.type === 'note').length
+            ? useWorkspaceStore.getState().nodes.filter((n) => n.data.type === 'note').length
             : 0
           // A note was just created if note count increased
           if (noteCount > 0 && current.nodes.length > prevNodesRef.current) {
             const hasNewNote = current.nodes.some(
-              n => n.data.type === 'note' && Date.now() - (n.data.createdAt || 0) < 5000
+              (n) => n.data.type === 'note' && Date.now() - (n.data.createdAt || 0) < 5000,
             )
             if (hasNewNote || noteCount > 0) {
               prevNodesRef.current = current.nodes.length
@@ -171,7 +176,7 @@ function TutorialOverlayComponent(): JSX.Element | null {
 
         // Step 2: Detect new conversation node
         if (step === 'create-conversation') {
-          const convCount = current.nodes.filter(n => n.data.type === 'conversation').length
+          const convCount = current.nodes.filter((n) => n.data.type === 'conversation').length
           if (convCount > 0 && current.nodes.length > prevNodesRef.current) {
             prevNodesRef.current = current.nodes.length
             advanceTutorial()
@@ -189,8 +194,11 @@ function TutorialOverlayComponent(): JSX.Element | null {
         // Step 4: Detect new message in a conversation
         if (step === 'send-message') {
           const messageCount = current.nodes
-            .filter(n => n.data.type === 'conversation')
-            .reduce((sum, n) => sum + ((n.data as { messages?: unknown[] }).messages?.length || 0), 0)
+            .filter((n) => n.data.type === 'conversation')
+            .reduce(
+              (sum, n) => sum + ((n.data as { messages?: unknown[] }).messages?.length || 0),
+              0,
+            )
           if (messageCount > prevMessagesRef.current) {
             prevMessagesRef.current = messageCount
             advanceTutorial()
@@ -200,8 +208,11 @@ function TutorialOverlayComponent(): JSX.Element | null {
         // Step 5: Auto-advance after a few seconds (user should notice the context)
         if (step === 'see-context') {
           const messageCount = current.nodes
-            .filter(n => n.data.type === 'conversation')
-            .reduce((sum, n) => sum + ((n.data as { messages?: unknown[] }).messages?.length || 0), 0)
+            .filter((n) => n.data.type === 'conversation')
+            .reduce(
+              (sum, n) => sum + ((n.data as { messages?: unknown[] }).messages?.length || 0),
+              0,
+            )
           // Advance once the AI has responded (2+ messages means user sent + AI replied)
           if (messageCount > prevMessagesRef.current + 1) {
             prevMessagesRef.current = messageCount
@@ -209,7 +220,7 @@ function TutorialOverlayComponent(): JSX.Element | null {
           }
         }
       },
-      { equalityFn: (a, b) => a.nodes === b.nodes && a.edges === b.edges }
+      { equalityFn: (a, b) => a.nodes === b.nodes && a.edges === b.edges },
     )
 
     return unsubscribe
@@ -261,7 +272,7 @@ function TutorialOverlayComponent(): JSX.Element | null {
           style={{
             background: 'var(--gui-bg, #1a1a2e)',
             border: '1px solid var(--gui-border, #2a2a4a)',
-            boxShadow: `0 20px 50px rgba(0, 0, 0, 0.4), 0 0 40px ${config.color}15`
+            boxShadow: `0 20px 50px rgba(0, 0, 0, 0.4), 0 0 40px ${config.color}15`,
           }}
         >
           {/* Close button */}
@@ -307,7 +318,10 @@ function TutorialOverlayComponent(): JSX.Element | null {
                   {config.description}
                 </p>
                 {config.hint && (
-                  <p className="text-[11px] mt-1.5 leading-relaxed" style={{ color: `${config.color}cc` }}>
+                  <p
+                    className="text-[11px] mt-1.5 leading-relaxed"
+                    style={{ color: `${config.color}cc` }}
+                  >
                     {config.hint}
                   </p>
                 )}
@@ -320,11 +334,13 @@ function TutorialOverlayComponent(): JSX.Element | null {
             className="px-5 py-2.5 flex items-center justify-between"
             style={{
               background: 'var(--gui-bg-hover, #1e1e35)',
-              borderTop: '1px solid var(--gui-border, #2a2a4a)'
+              borderTop: '1px solid var(--gui-border, #2a2a4a)',
             }}
           >
             <span className="text-[10px] gui-text-secondary">
-              {isLastStep ? 'Explore more features in the Command Palette (Ctrl+K)' : 'Tutorial auto-advances when you complete each step'}
+              {isLastStep
+                ? 'Explore more features in the Command Palette (Ctrl+K)'
+                : 'Tutorial auto-advances when you complete each step'}
             </span>
 
             {isLastStep ? (

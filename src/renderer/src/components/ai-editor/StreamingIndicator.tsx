@@ -9,9 +9,19 @@
  * Respects reduced motion preferences.
  */
 
-import { memo, useState, useEffect, useRef } from 'react'
-import { Radio, Eye, Brain, Sparkles, FileCheck, Loader2, X, CheckCircle, XCircle } from 'lucide-react'
 import type { StreamingPhase } from '@shared/types'
+import {
+  Brain,
+  CheckCircle,
+  Eye,
+  FileCheck,
+  Loader2,
+  Radio,
+  Sparkles,
+  X,
+  XCircle,
+} from 'lucide-react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 import LiveRegion from '../a11y/LiveRegion'
 
@@ -22,66 +32,69 @@ interface StreamingIndicatorProps {
   position?: 'corner' | 'inline'
 }
 
-const phaseConfig: Record<StreamingPhase, {
-  icon: typeof Radio
-  label: string
-  description: string
-  progress: number // 0-100 estimated progress
-}> = {
+const phaseConfig: Record<
+  StreamingPhase,
+  {
+    icon: typeof Radio
+    label: string
+    description: string
+    progress: number // 0-100 estimated progress
+  }
+> = {
   idle: {
     icon: Loader2,
     label: 'Ready',
     description: 'Waiting for input',
-    progress: 0
+    progress: 0,
   },
   connecting: {
     icon: Radio,
     label: 'Connecting',
     description: 'Establishing connection to AI...',
-    progress: 10
+    progress: 10,
   },
   analyzing: {
     icon: Eye,
     label: 'Analyzing',
     description: 'Analyzing your workspace...',
-    progress: 25
+    progress: 25,
   },
   thinking: {
     icon: Brain,
     label: 'Thinking',
     description: 'Reasoning about your request...',
-    progress: 45
+    progress: 45,
   },
   generating: {
     icon: Sparkles,
     label: 'Generating',
     description: 'Creating plan operations...',
-    progress: 70
+    progress: 70,
   },
   parsing: {
     icon: FileCheck,
     label: 'Finalizing',
     description: 'Processing response...',
-    progress: 90
+    progress: 90,
   },
   complete: {
     icon: CheckCircle,
     label: 'Complete',
     description: 'Plan ready for review',
-    progress: 100
+    progress: 100,
   },
   cancelled: {
     icon: XCircle,
     label: 'Cancelled',
     description: 'Operation cancelled',
-    progress: 0
+    progress: 0,
   },
   error: {
     icon: XCircle,
     label: 'Error',
     description: 'An error occurred',
-    progress: 0
-  }
+    progress: 0,
+  },
 }
 
 function formatElapsedTime(seconds: number): string {
@@ -96,7 +109,7 @@ function formatElapsedTime(seconds: number): string {
 function StreamingIndicatorComponent({
   phase,
   onCancel,
-  position = 'corner'
+  position = 'corner',
 }: StreamingIndicatorProps): JSX.Element | null {
   const reducedMotion = useReducedMotion()
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -147,10 +160,7 @@ function StreamingIndicatorComponent({
 
       {/* Progress bar */}
       <div className="progress-track">
-        <div
-          className="progress-fill"
-          style={{ width: `${config.progress}%` }}
-        />
+        <div className="progress-fill" style={{ width: `${config.progress}%` }} />
       </div>
 
       {/* Main content */}
@@ -166,17 +176,9 @@ function StreamingIndicatorComponent({
 
       {/* Footer with time and cancel */}
       <div className="indicator-footer">
-        {isActive && (
-          <span className="elapsed-time">
-            {formatElapsedTime(elapsedSeconds)}
-          </span>
-        )}
+        {isActive && <span className="elapsed-time">{formatElapsedTime(elapsedSeconds)}</span>}
         {isActive && onCancel && (
-          <button
-            className="cancel-button"
-            onClick={onCancel}
-            aria-label="Cancel AI generation"
-          >
+          <button className="cancel-button" onClick={onCancel} aria-label="Cancel AI generation">
             <X className="cancel-icon" />
             <span>Cancel</span>
           </button>

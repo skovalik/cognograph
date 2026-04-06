@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useState, useEffect, useCallback } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { generateSuggestions } from '../utils/promptSuggestion'
 
@@ -10,9 +10,9 @@ interface SuggestedPromptsProps {
 }
 
 function SuggestedPromptsComponent({ onSelect }: SuggestedPromptsProps): JSX.Element | null {
-  const nodes = useWorkspaceStore(s => s.nodes)
-  const edges = useWorkspaceStore(s => s.edges)
-  const commandLog = useWorkspaceStore(s => s.commandLog)
+  const nodes = useWorkspaceStore((s) => s.nodes)
+  const edges = useWorkspaceStore((s) => s.edges)
+  const commandLog = useWorkspaceStore((s) => s.commandLog)
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [visible, setVisible] = useState(true)
 
@@ -33,10 +33,13 @@ function SuggestedPromptsComponent({ onSelect }: SuggestedPromptsProps): JSX.Ele
     return () => clearTimeout(timer)
   }, [visible, suggestions])
 
-  const handleSelect = useCallback((text: string) => {
-    onSelect(text)
-    setVisible(false)
-  }, [onSelect])
+  const handleSelect = useCallback(
+    (text: string) => {
+      onSelect(text)
+      setVisible(false)
+    },
+    [onSelect],
+  )
 
   if (!visible || suggestions.length === 0) return null
 

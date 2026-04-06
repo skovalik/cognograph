@@ -12,8 +12,9 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { logger } from '../utils/logger'
 
-const API_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ORCHESTRATOR_URL)
-  || 'https://api.cognograph.app'
+const API_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ORCHESTRATOR_URL) ||
+  'https://api.cognograph.app'
 
 export type Plan = 'free' | 'pro' | null
 
@@ -87,8 +88,14 @@ export const useEntitlementsStore = create<EntitlementsState>()(
        */
       fetchEntitlements: async () => {
         try {
-          // Cloud auth not available in open-source build — use workspace token
+          // Try Supabase auth first (web/cloud mode)
           let authHeader: string | null = null
+          try {
+            // Cloud features disabled in open-source build
+            throw new Error('No cloud auth in open-source build')
+          } catch {
+            // Supabase not available (Electron / open-source mode) — try workspace token
+          }
 
           // Fallback: Electron workspace token
           if (!authHeader && (window as any).__ELECTRON__) {
@@ -111,7 +118,7 @@ export const useEntitlementsStore = create<EntitlementsState>()(
           }
 
           const response = await fetch(`${API_URL}/api/billing/status`, {
-            headers: { 'Authorization': authHeader }
+            headers: { Authorization: authHeader },
           })
 
           if (!response.ok) {
@@ -133,7 +140,6 @@ export const useEntitlementsStore = create<EntitlementsState>()(
           })
 
           logger.log('[Entitlements] Updated:', data.tier || data.plan)
-
         } catch (err) {
           console.error('[Entitlements] Fetch error:', err)
         }
@@ -181,7 +187,7 @@ export const useEntitlementsStore = create<EntitlementsState>()(
           gracePeriodStatus: 'none' as const,
           usage: null,
         })
-      }
+      },
     }),
     {
       name: 'cognograph-entitlements',
@@ -194,9 +200,9 @@ export const useEntitlementsStore = create<EntitlementsState>()(
         lastFetched: state.lastFetched,
         gracePeriodStatus: state.gracePeriodStatus,
         usage: state.usage,
-      })
-    }
-  )
+      }),
+    },
+  ),
 )
 
 // -----------------------------------------------------------------------------
@@ -273,9 +279,12 @@ export function startEntitlementsRefresh(): void {
   useEntitlementsStore.getState().fetchEntitlements()
 
   // Periodic refresh
-  refreshInterval = setInterval(() => {
-    useEntitlementsStore.getState().fetchEntitlements()
-  }, 5 * 60 * 1000) // 5 minutes
+  refreshInterval = setInterval(
+    () => {
+      useEntitlementsStore.getState().fetchEntitlements()
+    },
+    5 * 60 * 1000,
+  ) // 5 minutes
 }
 
 export function stopEntitlementsRefresh(): void {

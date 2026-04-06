@@ -13,16 +13,16 @@
  * Pure function tests (no React hooks required).
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   computeNodeContentVisibility,
   computeZoomLevel,
-  ZOOM_LEVEL_TO_LOD,
-  THRESHOLDS,
   HYSTERESIS,
   HYSTERESIS_WIDE,
+  type NodeContentVisibility,
+  THRESHOLDS,
+  ZOOM_LEVEL_TO_LOD,
   type ZoomLevel,
-  type NodeContentVisibility
 } from '../useNodeContentVisibility'
 
 // --- Helper: simulate a zoom sweep ----------------------------------------
@@ -71,7 +71,7 @@ describe('lodLevel -- numeric LOD mapping', () => {
 
   it('lodLevel increases monotonically with zoom level', () => {
     const levels: ZoomLevel[] = ['ultra-far', 'far', 'mid', 'close', 'ultra-close']
-    const lodValues = levels.map(l => computeNodeContentVisibility(l).lodLevel)
+    const lodValues = levels.map((l) => computeNodeContentVisibility(l).lodLevel)
     for (let i = 1; i < lodValues.length; i++) {
       expect(lodValues[i]).toBeGreaterThan(lodValues[i - 1])
     }
@@ -260,7 +260,7 @@ describe('hysteresis -- new fields stable at boundaries', () => {
 describe('exhaustiveness -- new fields defined at all levels', () => {
   const ALL_LEVELS: ZoomLevel[] = ['ultra-far', 'far', 'mid', 'close', 'ultra-close']
 
-  ALL_LEVELS.forEach(level => {
+  ALL_LEVELS.forEach((level) => {
     it(`"${level}" produces showEditor, showPlaceholders, and lodLevel`, () => {
       const vis = computeNodeContentVisibility(level)
       expect(typeof vis.showEditor).toBe('boolean')
@@ -317,7 +317,7 @@ describe('full zoom-in sweep -- new fields progression', () => {
     vis = computeNodeContentVisibility(level)
     expect(vis.lodLevel).toBe(1)
     expect(vis.showEditor).toBe(false)
-    expect(vis.showPlaceholders).toBe(true)  // placeholders appear at L1
+    expect(vis.showPlaceholders).toBe(true) // placeholders appear at L1
 
     // Zoom in to mid
     level = computeZoomLevel(0.11, level)
@@ -330,14 +330,14 @@ describe('full zoom-in sweep -- new fields progression', () => {
     level = computeZoomLevel(0.15, level)
     vis = computeNodeContentVisibility(level)
     expect(vis.lodLevel).toBe(3)
-    expect(vis.showEditor).toBe(true)        // editor mounts at L3
+    expect(vis.showEditor).toBe(true) // editor mounts at L3
     expect(vis.showPlaceholders).toBe(false)
 
     // Zoom in to ultra-close
     level = computeZoomLevel(1.04, level)
     vis = computeNodeContentVisibility(level)
     expect(vis.lodLevel).toBe(4)
-    expect(vis.showEditor).toBe(true)        // editor stays mounted
+    expect(vis.showEditor).toBe(true) // editor stays mounted
     expect(vis.showPlaceholders).toBe(false)
     expect(vis.showExpandedToolbar).toBe(true) // toolbar appears at L4
   })

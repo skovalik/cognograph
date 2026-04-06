@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useEffect, useCallback } from 'react'
-import { FileText, CheckSquare } from 'lucide-react'
 import { useReactFlow } from '@xyflow/react'
+import { CheckSquare, FileText } from 'lucide-react'
+import { memo, useCallback, useEffect } from 'react'
 import { useExtractionDrag, useWorkspaceStore } from '../../stores/workspaceStore'
-import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
+import { EscapePriority, escapeManager } from '../../utils/EscapeManager'
 
 function ExtractionDragPreviewComponent(): JSX.Element | null {
   const drag = useExtractionDrag()
-  const updateExtractionDragPosition = useWorkspaceStore((state) => state.updateExtractionDragPosition)
+  const updateExtractionDragPosition = useWorkspaceStore(
+    (state) => state.updateExtractionDragPosition,
+  )
   const dropExtraction = useWorkspaceStore((state) => state.dropExtraction)
   const cancelExtractionDrag = useWorkspaceStore((state) => state.cancelExtractionDrag)
 
@@ -37,7 +39,11 @@ function ExtractionDragPreviewComponent(): JSX.Element | null {
       }
     }
 
-    escapeManager.register('canvas-extraction-drag-cancel', EscapePriority.CANVAS, cancelExtractionDrag)
+    escapeManager.register(
+      'canvas-extraction-drag-cancel',
+      EscapePriority.CANVAS,
+      cancelExtractionDrag,
+    )
 
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
@@ -47,7 +53,13 @@ function ExtractionDragPreviewComponent(): JSX.Element | null {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [drag, updateExtractionDragPosition, dropExtraction, cancelExtractionDrag, screenToFlowPosition])
+  }, [
+    drag,
+    updateExtractionDragPosition,
+    dropExtraction,
+    cancelExtractionDrag,
+    screenToFlowPosition,
+  ])
 
   // Handle native drag events on the canvas
   const handleCanvasDragOver = useCallback((e: DragEvent): void => {
@@ -66,7 +78,7 @@ function ExtractionDragPreviewComponent(): JSX.Element | null {
       const flowPosition = screenToFlowPosition({ x: e.clientX, y: e.clientY })
       dropExtraction(flowPosition)
     },
-    [dropExtraction, screenToFlowPosition]
+    [dropExtraction, screenToFlowPosition],
   )
 
   // Add drag event listeners to canvas
@@ -99,7 +111,7 @@ function ExtractionDragPreviewComponent(): JSX.Element | null {
       className="extraction-drag-preview"
       style={{
         left: drag.position.x,
-        top: drag.position.y
+        top: drag.position.y,
       }}
     >
       <div className={iconClass}>

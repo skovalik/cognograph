@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-  getModelPricing,
-  estimateCost,
   buildTokenEstimate,
+  estimateCost,
   formatCost,
   formatTokenCount,
-  MODEL_PRICING
+  getModelPricing,
+  MODEL_PRICING,
 } from '../tokenEstimator'
 
 describe('tokenEstimator', () => {
@@ -30,10 +30,7 @@ describe('tokenEstimator', () => {
       // This tests the actual matching behavior rather than ideal behavior
       const pricing = getModelPricing('gpt-4o-mini-2024')
       // Should match either gpt-4 or gpt-4o-mini (both are valid partial matches)
-      expect([
-        MODEL_PRICING['gpt-4'],
-        MODEL_PRICING['gpt-4o-mini']
-      ]).toContainEqual(pricing)
+      expect([MODEL_PRICING['gpt-4'], MODEL_PRICING['gpt-4o-mini']]).toContainEqual(pricing)
     })
 
     it('should return default for unknown models', () => {
@@ -73,13 +70,10 @@ describe('tokenEstimator', () => {
     it('should build estimate with all components', () => {
       const estimate = buildTokenEstimate({
         contextText: 'Context from connected nodes',
-        messages: [
-          { content: 'User message' },
-          { content: 'Assistant response' }
-        ],
+        messages: [{ content: 'User message' }, { content: 'Assistant response' }],
         systemPrompt: 'You are a helpful assistant',
         currentInput: 'Current draft',
-        model: 'claude-3-opus'
+        model: 'claude-3-opus',
       })
 
       expect(estimate.breakdown.length).toBeGreaterThan(0)
@@ -96,10 +90,10 @@ describe('tokenEstimator', () => {
         contextText: 'Some context',
         messages: [{ content: 'A message' }],
         systemPrompt: 'System prompt here',
-        currentInput: 'User typing'
+        currentInput: 'User typing',
       })
 
-      const labels = estimate.breakdown.map(item => item.label)
+      const labels = estimate.breakdown.map((item) => item.label)
       expect(labels).toContain('System prompt')
       expect(labels).toContain('Context (connected nodes)')
       expect(labels).toContain('Conversation history')
@@ -111,12 +105,12 @@ describe('tokenEstimator', () => {
         contextText: '',
         contextBreakdown: [
           { label: 'Note: My Note', nodeId: 'note-1', text: 'Note content' },
-          { label: 'Project: My Project', nodeId: 'proj-1', text: 'Project desc' }
+          { label: 'Project: My Project', nodeId: 'proj-1', text: 'Project desc' },
         ],
-        messages: []
+        messages: [],
       })
 
-      const labels = estimate.breakdown.map(item => item.label)
+      const labels = estimate.breakdown.map((item) => item.label)
       expect(labels).toContain('Note: My Note')
       expect(labels).toContain('Project: My Project')
     })
@@ -124,7 +118,7 @@ describe('tokenEstimator', () => {
     it('should handle empty inputs', () => {
       const estimate = buildTokenEstimate({
         contextText: '',
-        messages: []
+        messages: [],
       })
 
       expect(estimate.inputTokens).toBe(0)

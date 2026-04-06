@@ -20,16 +20,16 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
       {
         type: 'node-completed',
         nodeType: 'task',
-        condition: 'node.parentProjectId != null'
-      }
+        condition: 'node.parentProjectId != null',
+      },
     ],
     steps: [
       {
         type: 'ai-summarize',
         params: {
           sourceNodeId: '{{triggeredNode.id}}',
-          prompt: 'Summarize what was accomplished in this task'
-        }
+          prompt: 'Summarize what was accomplished in this task',
+        },
       },
       {
         type: 'create-node',
@@ -37,9 +37,9 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
           type: 'note',
           title: 'Completed: {{triggeredNode.title}}',
           content: '{{previousStep.result}}',
-          parentId: '{{triggeredNode.parentProjectId}}'
-        }
-      }
+          parentId: '{{triggeredNode.parentProjectId}}',
+        },
+      },
     ],
     variables: [
       {
@@ -47,13 +47,13 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
         type: 'boolean',
         label: 'Include Timestamp',
         description: 'Add completion timestamp to the summary',
-        defaultValue: true
-      }
+        defaultValue: true,
+      },
     ],
     createdAt: Date.now(),
     updatedAt: Date.now(),
     usageCount: 0,
-    isBuiltIn: true
+    isBuiltIn: true,
   },
   {
     id: 'template-note-extract-tasks',
@@ -64,8 +64,8 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
     triggers: [
       {
         type: 'node-created',
-        nodeType: 'note'
-      }
+        nodeType: 'note',
+      },
     ],
     steps: [
       {
@@ -73,10 +73,10 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
         params: {
           prompt: 'Extract action items from this note and create task nodes for each',
           mode: 'generate',
-          sourceNodeId: '{{triggeredNode.id}}'
+          sourceNodeId: '{{triggeredNode.id}}',
         },
-        condition: 'triggeredNode.content.length > 50'
-      }
+        condition: 'triggeredNode.content.length > 50',
+      },
     ],
     variables: [
       {
@@ -84,13 +84,13 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
         type: 'number',
         label: 'Minimum Content Length',
         description: 'Only extract from notes with at least this many characters',
-        defaultValue: 50
-      }
+        defaultValue: 50,
+      },
     ],
     createdAt: Date.now(),
     updatedAt: Date.now(),
     usageCount: 0,
-    isBuiltIn: true
+    isBuiltIn: true,
   },
   {
     id: 'template-conversation-summary',
@@ -102,16 +102,17 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
       {
         type: 'node-updated',
         nodeType: 'conversation',
-        condition: 'node.messages.length > 5'
-      }
+        condition: 'node.messages.length > 5',
+      },
     ],
     steps: [
       {
         type: 'ai-summarize',
         params: {
           sourceNodeId: '{{triggeredNode.id}}',
-          prompt: 'Summarize this conversation, highlighting key decisions, action items, and insights'
-        }
+          prompt:
+            'Summarize this conversation, highlighting key decisions, action items, and insights',
+        },
       },
       {
         type: 'create-node',
@@ -121,18 +122,18 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
           content: '{{previousStep.result}}',
           position: {
             x: '{{triggeredNode.position.x + 300}}',
-            y: '{{triggeredNode.position.y}}'
-          }
-        }
+            y: '{{triggeredNode.position.y}}',
+          },
+        },
       },
       {
         type: 'create-edge',
         params: {
           source: '{{triggeredNode.id}}',
           target: '{{previousStep.nodeId}}',
-          label: 'summarized'
-        }
-      }
+          label: 'summarized',
+        },
+      },
     ],
     variables: [
       {
@@ -140,13 +141,13 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
         type: 'number',
         label: 'Minimum Messages',
         description: 'Only summarize conversations with at least this many messages',
-        defaultValue: 5
-      }
+        defaultValue: 5,
+      },
     ],
     createdAt: Date.now(),
     updatedAt: Date.now(),
     usageCount: 0,
-    isBuiltIn: true
+    isBuiltIn: true,
   },
   {
     id: 'template-daily-digest',
@@ -159,9 +160,9 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
         type: 'schedule',
         schedule: {
           frequency: 'daily',
-          time: '09:00'
-        }
-      }
+          time: '09:00',
+        },
+      },
     ],
     steps: [
       {
@@ -169,8 +170,9 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
         params: {
           mode: 'ask',
           scope: 'workspace',
-          prompt: 'Create a daily digest summarizing: 1) New nodes created yesterday, 2) Tasks completed, 3) Active conversations, 4) Suggested priorities for today'
-        }
+          prompt:
+            'Create a daily digest summarizing: 1) New nodes created yesterday, 2) Tasks completed, 3) Active conversations, 4) Suggested priorities for today',
+        },
       },
       {
         type: 'create-node',
@@ -178,9 +180,9 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
           type: 'note',
           title: 'Daily Digest - {{date}}',
           content: '{{previousStep.result}}',
-          tags: ['digest', 'daily']
-        }
-      }
+          tags: ['digest', 'daily'],
+        },
+      },
     ],
     variables: [
       {
@@ -188,13 +190,13 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
         type: 'string',
         label: 'Digest Time',
         description: 'Time to generate the daily digest (HH:MM format)',
-        defaultValue: '09:00'
-      }
+        defaultValue: '09:00',
+      },
     ],
     createdAt: Date.now(),
     updatedAt: Date.now(),
     usageCount: 0,
-    isBuiltIn: true
+    isBuiltIn: true,
   },
   {
     id: 'template-project-progress',
@@ -204,8 +206,8 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
     icon: 'Folder',
     triggers: [
       {
-        type: 'manual'
-      }
+        type: 'manual',
+      },
     ],
     steps: [
       {
@@ -213,8 +215,9 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
         params: {
           mode: 'ask',
           scope: 'selection',
-          prompt: 'Analyze this project and create a progress report including: 1) Overall completion percentage, 2) Completed vs pending tasks, 3) Key milestones achieved, 4) Potential blockers, 5) Recommended next steps'
-        }
+          prompt:
+            'Analyze this project and create a progress report including: 1) Overall completion percentage, 2) Completed vs pending tasks, 3) Key milestones achieved, 4) Potential blockers, 5) Recommended next steps',
+        },
       },
       {
         type: 'create-node',
@@ -222,15 +225,15 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
           type: 'note',
           title: 'Progress Report: {{selectedNode.title}}',
           content: '{{previousStep.result}}',
-          parentId: '{{selectedNode.id}}'
-        }
-      }
+          parentId: '{{selectedNode.id}}',
+        },
+      },
     ],
     variables: [],
     createdAt: Date.now(),
     updatedAt: Date.now(),
     usageCount: 0,
-    isBuiltIn: true
+    isBuiltIn: true,
   },
   {
     id: 'template-brainstorm-expand',
@@ -240,8 +243,8 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
     icon: 'Sparkles',
     triggers: [
       {
-        type: 'manual'
-      }
+        type: 'manual',
+      },
     ],
     steps: [
       {
@@ -249,9 +252,10 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
         params: {
           mode: 'generate',
           scope: 'selection',
-          prompt: 'Expand on each idea in this note. Create a separate detailed note for each idea, exploring it further with examples, implications, and potential next steps.'
-        }
-      }
+          prompt:
+            'Expand on each idea in this note. Create a separate detailed note for each idea, exploring it further with examples, implications, and potential next steps.',
+        },
+      },
     ],
     variables: [
       {
@@ -263,15 +267,15 @@ export const BUILT_IN_TEMPLATES: ActionTemplate[] = [
         options: [
           { label: 'Brief', value: 'brief' },
           { label: 'Medium', value: 'medium' },
-          { label: 'Detailed', value: 'detailed' }
-        ]
-      }
+          { label: 'Detailed', value: 'detailed' },
+        ],
+      },
     ],
     createdAt: Date.now(),
     updatedAt: Date.now(),
     usageCount: 0,
-    isBuiltIn: true
-  }
+    isBuiltIn: true,
+  },
 ]
 
 /**
@@ -286,9 +290,9 @@ export function getAllTemplates(userTemplates: ActionTemplate[] = []): ActionTem
  */
 export function getTemplatesByCategory(
   category: ActionTemplate['category'],
-  userTemplates: ActionTemplate[] = []
+  userTemplates: ActionTemplate[] = [],
 ): ActionTemplate[] {
-  return getAllTemplates(userTemplates).filter(t => t.category === category)
+  return getAllTemplates(userTemplates).filter((t) => t.category === category)
 }
 
 /**
@@ -296,12 +300,11 @@ export function getTemplatesByCategory(
  */
 export function searchTemplates(
   query: string,
-  userTemplates: ActionTemplate[] = []
+  userTemplates: ActionTemplate[] = [],
 ): ActionTemplate[] {
   const lowerQuery = query.toLowerCase()
   return getAllTemplates(userTemplates).filter(
-    t =>
-      t.name.toLowerCase().includes(lowerQuery) ||
-      t.description.toLowerCase().includes(lowerQuery)
+    (t) =>
+      t.name.toLowerCase().includes(lowerQuery) || t.description.toLowerCase().includes(lowerQuery),
   )
 }

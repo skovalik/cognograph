@@ -8,9 +8,9 @@
  * Supports workspace-specific error handling and automatic retry.
  */
 
-import { Component, type ReactNode, type ErrorInfo } from 'react'
-import { AlertTriangle, RefreshCw, Home, Bug, ChevronDown, ChevronUp } from 'lucide-react'
-import { captureException, addBreadcrumb } from '../services/sentry'
+import { AlertTriangle, Bug, ChevronDown, ChevronUp, Home, RefreshCw } from 'lucide-react'
+import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { addBreadcrumb, captureException } from '../services/sentry'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       errorInfo: null,
       retryCount: 0,
       showTechnicalDetails: false,
-      isRetrying: false
+      isRetrying: false,
     }
   }
 
@@ -61,14 +61,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     // Add breadcrumb for context
     addBreadcrumb('error', `Error caught in ${this.props.componentName || 'component'}`, 'error', {
-      componentStack: errorInfo.componentStack
+      componentStack: errorInfo.componentStack,
     })
 
     // Report to Sentry
     captureException(error, {
       componentName: this.props.componentName,
       componentStack: errorInfo.componentStack,
-      retryCount: this.state.retryCount
+      retryCount: this.state.retryCount,
     })
 
     // Call custom error handler
@@ -99,7 +99,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       error: null,
       errorInfo: null,
       retryCount: prevState.retryCount + 1,
-      isRetrying: true
+      isRetrying: true,
     }))
 
     // Reset isRetrying after a brief moment
@@ -117,17 +117,17 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   private handleReportBug = (): void => {
     const { error, errorInfo } = this.state
     const errorDetails = encodeURIComponent(
-      `Error: ${error?.message}\n\nStack: ${error?.stack}\n\nComponent: ${errorInfo?.componentStack}`
+      `Error: ${error?.message}\n\nStack: ${error?.stack}\n\nComponent: ${errorInfo?.componentStack}`,
     )
     window.open(
       `https://github.com/cognograph/cognograph/issues/new?title=Bug%20Report&body=${errorDetails}`,
-      '_blank'
+      '_blank',
     )
   }
 
   private toggleTechnicalDetails = (): void => {
     this.setState((prevState) => ({
-      showTechnicalDetails: !prevState.showTechnicalDetails
+      showTechnicalDetails: !prevState.showTechnicalDetails,
     }))
   }
 
@@ -261,7 +261,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
  */
 export function withErrorBoundary<P extends object>(
   WrappedComponent: React.ComponentType<P>,
-  options?: Omit<ErrorBoundaryProps, 'children'>
+  options?: Omit<ErrorBoundaryProps, 'children'>,
 ): React.FC<P> {
   const displayName = WrappedComponent.displayName || WrappedComponent.name || 'Component'
 
@@ -294,7 +294,10 @@ interface InlineErrorBoundaryState {
   hasError: boolean
 }
 
-export class InlineErrorBoundary extends Component<InlineErrorBoundaryProps, InlineErrorBoundaryState> {
+export class InlineErrorBoundary extends Component<
+  InlineErrorBoundaryProps,
+  InlineErrorBoundaryState
+> {
   constructor(props: InlineErrorBoundaryProps) {
     super(props)
     this.state = { hasError: false }
@@ -308,11 +311,11 @@ export class InlineErrorBoundary extends Component<InlineErrorBoundaryProps, Inl
     // Log but don't show full error UI — this is for non-critical components
     const name = this.props.name || 'InlineComponent'
     addBreadcrumb('error', `InlineErrorBoundary caught error in ${name}`, 'error', {
-      componentStack: errorInfo.componentStack
+      componentStack: errorInfo.componentStack,
     })
     captureException(error, {
       componentName: name,
-      componentStack: errorInfo.componentStack
+      componentStack: errorInfo.componentStack,
     })
     // eslint-disable-next-line no-console
     console.warn(`[InlineErrorBoundary] ${name} crashed:`, error.message)

@@ -8,8 +8,8 @@
  * makes deletion feel safe, enabling experimentation.
  */
 
+import { Clock, RotateCcw, Trash2, X } from 'lucide-react'
 import { memo, useCallback } from 'react'
-import { Trash2, RotateCcw, X, Clock } from 'lucide-react'
 import { useFeaturesStore, useWorkspaceStore } from '../stores'
 import type { TrashedItem } from '../stores/types'
 
@@ -22,7 +22,7 @@ const NODE_TYPE_NAMES: Record<string, string> = {
   artifact: 'Artifact',
   workspace: 'Workspace',
   text: 'Text',
-  action: 'Action'
+  action: 'Action',
 }
 
 // Format relative time
@@ -50,13 +50,19 @@ function TrashPanelComponent({ isOpen, onClose }: TrashPanelProps): JSX.Element 
   const permanentlyDelete = useWorkspaceStore((s) => s.permanentlyDelete) // Still in workspaceStore
   const emptyTrash = useFeaturesStore((s) => s.emptyTrash)
 
-  const handleRestore = useCallback((index: number) => {
-    restoreFromTrash(index)
-  }, [restoreFromTrash])
+  const handleRestore = useCallback(
+    (index: number) => {
+      restoreFromTrash(index)
+    },
+    [restoreFromTrash],
+  )
 
-  const handlePermanentDelete = useCallback((index: number) => {
-    permanentlyDelete(index)
-  }, [permanentlyDelete])
+  const handlePermanentDelete = useCallback(
+    (index: number) => {
+      permanentlyDelete(index)
+    },
+    [permanentlyDelete],
+  )
 
   const handleEmptyTrash = useCallback(() => {
     if (trash.length === 0) return
@@ -73,7 +79,7 @@ function TrashPanelComponent({ isOpen, onClose }: TrashPanelProps): JSX.Element 
     <div
       className="absolute top-20 right-4 gui-z-panels w-72 rounded-lg overflow-hidden shadow-xl animate-fade-in glass-soft"
       style={{
-        border: '1px solid var(--gui-border-subtle)'
+        border: '1px solid var(--gui-border-subtle)',
       }}
     >
       {/* Header */}
@@ -91,7 +97,7 @@ function TrashPanelComponent({ isOpen, onClose }: TrashPanelProps): JSX.Element 
               className="text-xs px-1.5 py-0.5 rounded"
               style={{
                 backgroundColor: 'var(--gui-bg-tertiary)',
-                color: 'var(--gui-text-muted)'
+                color: 'var(--gui-text-muted)',
               }}
             >
               {trash.length}
@@ -109,11 +115,7 @@ function TrashPanelComponent({ isOpen, onClose }: TrashPanelProps): JSX.Element 
               Empty
             </button>
           )}
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-white/10 ml-1"
-            title="Close"
-          >
+          <button onClick={onClose} className="p-1 rounded hover:bg-white/10 ml-1" title="Close">
             <X className="w-4 h-4" style={{ color: 'var(--gui-text-muted)' }} />
           </button>
         </div>
@@ -195,7 +197,10 @@ function TrashItem({ item, onRestore, onDelete }: TrashItemProps): JSX.Element {
         >
           {title}
         </div>
-        <div className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--gui-text-muted)' }}>
+        <div
+          className="flex items-center gap-1 text-[10px]"
+          style={{ color: 'var(--gui-text-muted)' }}
+        >
           <span>{typeName}</span>
           <span>·</span>
           <Clock className="w-2.5 h-2.5" />
@@ -203,7 +208,9 @@ function TrashItem({ item, onRestore, onDelete }: TrashItemProps): JSX.Element {
           {item.edges.length > 0 && (
             <>
               <span>·</span>
-              <span>{item.edges.length} edge{item.edges.length !== 1 ? 's' : ''}</span>
+              <span>
+                {item.edges.length} edge{item.edges.length !== 1 ? 's' : ''}
+              </span>
             </>
           )}
         </div>

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import { Lightbulb, X } from 'lucide-react'
 import { memo, useEffect, useState } from 'react'
-import { X, Lightbulb } from 'lucide-react'
 import type { ActiveTooltip } from '../../hooks/useOnboardingTooltips'
 
 interface OnboardingTooltipProps {
@@ -17,7 +17,7 @@ interface OnboardingTooltipProps {
  */
 export const OnboardingTooltip = memo(function OnboardingTooltip({
   tooltip,
-  onDismiss
+  onDismiss,
 }: OnboardingTooltipProps) {
   const [visible, setVisible] = useState(false)
 
@@ -33,14 +33,14 @@ export const OnboardingTooltip = memo(function OnboardingTooltip({
         position: 'fixed',
         left: Math.max(20, Math.min(tooltip.position.x - 160, window.innerWidth - 340)),
         top: Math.max(20, tooltip.position.y - 70),
-        zIndex: 9999
+        zIndex: 9999,
       }
     : {
         position: 'fixed',
         left: '50%',
         bottom: 80,
         transform: 'translateX(-50%)',
-        zIndex: 9999
+        zIndex: 9999,
       }
 
   return (

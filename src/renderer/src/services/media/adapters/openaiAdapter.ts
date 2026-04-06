@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { ProviderAdapter, type ImageGenParams, type MediaResult } from '../providerAdapter'
+import { type ImageGenParams, type MediaResult, ProviderAdapter } from '../providerAdapter'
 
 export class OpenAIAdapter extends ProviderAdapter {
   readonly name = 'openai'
@@ -27,10 +27,10 @@ export class OpenAIAdapter extends ProviderAdapter {
       const res = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       })
 
       if (!res.ok) {
@@ -50,7 +50,7 @@ export class OpenAIAdapter extends ProviderAdapter {
       return {
         buffer: new Blob([bytes], { type: 'image/png' }),
         mimeType: 'image/png',
-        metadata: { model: 'gpt-image-1' }
+        metadata: { model: 'gpt-image-1' },
       }
     })
   }

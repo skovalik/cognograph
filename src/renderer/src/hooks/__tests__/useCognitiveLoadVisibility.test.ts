@@ -9,10 +9,10 @@
  * and current load.
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   computeCognitiveLoadVisibility,
-  INTERMEDIATE_LOAD_THRESHOLD
+  INTERMEDIATE_LOAD_THRESHOLD,
 } from '../useCognitiveLoadVisibility'
 
 describe('computeCognitiveLoadVisibility', () => {

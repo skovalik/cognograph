@@ -344,56 +344,6 @@
   color: var(--accent-glow);
 }
 
-/* ═══ Mobile FAB ═══ */
-.mobile-command-fab {
-  position: fixed;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  right: 16px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--cg-accent, var(--accent-glow));
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  box-shadow: var(--shadow-modal, 0 8px 24px rgba(0, 0, 0, 0.4));
-  cursor: pointer;
-  z-index: var(--z-panels);
-  transition: transform var(--duration-normal, 200ms) var(--ease-default, ease);
-}
-.mobile-command-fab:active {
-  transform: scale(0.92);
-}
-
-/* ═══ Mobile Bottom Sheet ═══ */
-.mobile-command-sheet {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  max-height: 60vh;
-  z-index: var(--z-modals);
-  border-radius: var(--radius-xl, 12px) var(--radius-xl, 12px) 0 0;
-  padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  animation: slide-up-sheet var(--duration-enter, 200ms) var(--ease-out-expo, ease-out);
-}
-.mobile-command-sheet__handle {
-  width: 36px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--text-muted);
-  margin: 0 auto 8px;
-}
-@keyframes slide-up-sheet {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
 /* ═══ Terminal hint ═══ */
 
 .bottom-command-bar__terminal-hint {

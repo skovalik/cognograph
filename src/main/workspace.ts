@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { ipcMain, app, dialog, BrowserWindow } from 'electron'
-import { join } from 'path'
-import { promises as fs, watch as fsWatch, type FSWatcher } from 'fs'
-import type { WorkspaceData, WorkspaceInfo } from '@shared/types'
-import { backupManager } from './backupManager'
-import { validateWorkspaceData } from './workspaceValidation'
-import { workflowSync } from './services/notionSync'
 import { emitPluginEvent, updateWorkspaceCache } from '@plugins/registry'
+import type { WorkspaceData, WorkspaceInfo } from '@shared/types'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { type FSWatcher, promises as fs, watch as fsWatch } from 'fs'
+import { join } from 'path'
+import { backupManager } from './backupManager'
 import { migrateInlineMessages } from './ipc/conversationPersistence'
 import {
-  WorkspaceLoadSchema,
-  WorkspaceSaveSchema,
-  WorkspaceSaveAsSchema,
   WorkspaceDeleteSchema,
   WorkspaceLoadFromPathSchema,
+  WorkspaceLoadSchema,
+  WorkspaceSaveAsSchema,
+  WorkspaceSaveSchema,
   WorkspaceWatchSchema,
 } from './ipc/schemas'
+import { workflowSync } from './services/notionSync'
+import { validateWorkspaceData } from './workspaceValidation'
 
 // File watcher state
 const activeWatchers = new Map<string, FSWatcher>()
@@ -51,7 +51,10 @@ async function atomicWriteFile(filePath: string, content: string): Promise<void>
  * Drain the save queue for a workspace. If a pending save exists when the
  * current one finishes, execute it immediately (single-flight pattern).
  */
-async function drainSaveQueue(workspaceId: string, saveFn: (data: WorkspaceData) => Promise<void>): Promise<void> {
+async function drainSaveQueue(
+  workspaceId: string,
+  saveFn: (data: WorkspaceData) => Promise<void>,
+): Promise<void> {
   const entry = saveQueues.get(workspaceId)
   if (!entry) return
 
@@ -105,7 +108,7 @@ function getExtensionForContentType(contentType: string, language?: string): str
       shell: 'sh',
       bash: 'sh',
       powershell: 'ps1',
-      dockerfile: 'dockerfile'
+      dockerfile: 'dockerfile',
     }
     return langMap[language.toLowerCase()] || 'txt'
   }
@@ -119,7 +122,7 @@ function getExtensionForContentType(contentType: string, language?: string): str
     json: 'json',
     csv: 'csv',
     image: 'png',
-    text: 'txt'
+    text: 'txt',
   }
   return typeMap[contentType] || 'txt'
 }
@@ -171,7 +174,10 @@ export function registerWorkspaceHandlers(): void {
     // Zod validation (SEC-0.1j)
     const validated = WorkspaceSaveSchema.safeParse(data)
     if (!validated.success) {
-      return { success: false, error: `Validation failed: ${validated.error.issues[0]?.message || 'Invalid input'}` }
+      return {
+        success: false,
+        error: `Validation failed: ${validated.error.issues[0]?.message || 'Invalid input'}`,
+      }
     }
 
     try {
@@ -215,7 +221,10 @@ export function registerWorkspaceHandlers(): void {
           settings.lastWorkspaceId = saveData.id
           await atomicWriteFile(settingsPath, JSON.stringify(settings, null, 2))
         } catch {
-          await atomicWriteFile(settingsPath, JSON.stringify({ lastWorkspaceId: saveData.id }, null, 2))
+          await atomicWriteFile(
+            settingsPath,
+            JSON.stringify({ lastWorkspaceId: saveData.id }, null, 2),
+          )
         }
 
         // Emit workspace:saved event to all windows for Notion sync
@@ -224,7 +233,7 @@ export function registerWorkspaceHandlers(): void {
           const eventData = {
             filePath,
             canvasId: saveData.id,
-            version: saveData.version
+            version: saveData.version,
           }
 
           for (const win of windows) {
@@ -259,7 +268,10 @@ export function registerWorkspaceHandlers(): void {
     // Zod validation (SEC-0.1j)
     const parsed = WorkspaceLoadSchema.safeParse({ id })
     if (!parsed.success) {
-      return { success: false, error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}` }
+      return {
+        success: false,
+        error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}`,
+      }
     }
 
     try {
@@ -310,7 +322,7 @@ export function registerWorkspaceHandlers(): void {
             name: data.name,
             path: filePath,
             updatedAt: data.updatedAt,
-            nodeCount: data.nodes.length
+            nodeCount: data.nodes.length,
           })
         } catch {
           // Skip invalid files
@@ -327,7 +339,10 @@ export function registerWorkspaceHandlers(): void {
     // Zod validation (SEC-0.1j)
     const validated = WorkspaceDeleteSchema.safeParse({ id })
     if (!validated.success) {
-      return { success: false, error: `Validation failed: ${validated.error.issues[0]?.message || 'Invalid input'}` }
+      return {
+        success: false,
+        error: `Validation failed: ${validated.error.issues[0]?.message || 'Invalid input'}`,
+      }
     }
 
     try {
@@ -354,7 +369,10 @@ export function registerWorkspaceHandlers(): void {
     // Zod validation (SEC-0.1j)
     const parsed = WorkspaceSaveAsSchema.safeParse({ data, filePath })
     if (!parsed.success) {
-      return { success: false, error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}` }
+      return {
+        success: false,
+        error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}`,
+      }
     }
 
     try {
@@ -370,7 +388,10 @@ export function registerWorkspaceHandlers(): void {
     // Zod validation (SEC-0.1j)
     const validated = WorkspaceLoadFromPathSchema.safeParse({ filePath })
     if (!validated.success) {
-      return { success: false, error: `Validation failed: ${validated.error.issues[0]?.message || 'Invalid input'}` }
+      return {
+        success: false,
+        error: `Validation failed: ${validated.error.issues[0]?.message || 'Invalid input'}`,
+      }
     }
 
     try {
@@ -388,7 +409,10 @@ export function registerWorkspaceHandlers(): void {
     // Zod validation (SEC-0.1j)
     const parsed = WorkspaceWatchSchema.safeParse({ id })
     if (!parsed.success) {
-      return { success: false, error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}` }
+      return {
+        success: false,
+        error: `Validation failed: ${parsed.error.issues[0]?.message || 'Invalid input'}`,
+      }
     }
 
     try {
@@ -413,7 +437,11 @@ export function registerWorkspaceHandlers(): void {
         // Handle both 'change' and 'rename' events (Windows editors use write-to-temp-then-rename)
         if (eventType === 'rename') {
           // Verify the file still exists (was replaced, not deleted)
-          try { await fs.access(filePath) } catch { return }
+          try {
+            await fs.access(filePath)
+          } catch {
+            return
+          }
         } else if (eventType !== 'change') {
           return
         }
@@ -475,14 +503,17 @@ export function registerWorkspaceHandlers(): void {
   ipcMain.handle('dialog:showSaveDialog', async (_event, options: SaveDialogOptions) => {
     try {
       const window = BrowserWindow.getFocusedWindow()
-      const result = await dialog.showSaveDialog(window || undefined as unknown as BrowserWindow, {
-        title: options.title || 'Save Workspace',
-        defaultPath: options.defaultPath,
-        filters: options.filters || [
-          { name: 'Cognograph Workspace', extensions: ['json'] },
-          { name: 'All Files', extensions: ['*'] }
-        ]
-      })
+      const result = await dialog.showSaveDialog(
+        window || (undefined as unknown as BrowserWindow),
+        {
+          title: options.title || 'Save Workspace',
+          defaultPath: options.defaultPath,
+          filters: options.filters || [
+            { name: 'Cognograph Workspace', extensions: ['json'] },
+            { name: 'All Files', extensions: ['*'] },
+          ],
+        },
+      )
       return { success: true, canceled: result.canceled, filePath: result.filePath }
     } catch (error) {
       return { success: false, error: String(error) }
@@ -493,15 +524,18 @@ export function registerWorkspaceHandlers(): void {
   ipcMain.handle('dialog:showOpenDialog', async (_event, options: OpenDialogOptions) => {
     try {
       const window = BrowserWindow.getFocusedWindow()
-      const result = await dialog.showOpenDialog(window || undefined as unknown as BrowserWindow, {
-        title: options.title || 'Open Workspace',
-        defaultPath: options.defaultPath,
-        filters: options.filters || [
-          { name: 'Cognograph Workspace', extensions: ['json'] },
-          { name: 'All Files', extensions: ['*'] }
-        ],
-        properties: options.properties || ['openFile']
-      })
+      const result = await dialog.showOpenDialog(
+        window || (undefined as unknown as BrowserWindow),
+        {
+          title: options.title || 'Open Workspace',
+          defaultPath: options.defaultPath,
+          filters: options.filters || [
+            { name: 'Cognograph Workspace', extensions: ['json'] },
+            { name: 'All Files', extensions: ['*'] },
+          ],
+          properties: options.properties || ['openFile'],
+        },
+      )
       return { success: true, canceled: result.canceled, filePaths: result.filePaths }
     } catch (error) {
       return { success: false, error: String(error) }
@@ -524,29 +558,39 @@ export function registerWorkspaceHandlers(): void {
         // For now, show dialog to save first file and inform user
         // Full zip support would require adding archiver dependency
         const firstFile = artifact.files[0]!
-        const result = await dialog.showSaveDialog(window || undefined as unknown as BrowserWindow, {
-          title: 'Save Artifact (Multi-file - saving first file)',
-          defaultPath: firstFile.filename,
-          filters: [{ name: 'All Files', extensions: ['*'] }]
-        })
+        const result = await dialog.showSaveDialog(
+          window || (undefined as unknown as BrowserWindow),
+          {
+            title: 'Save Artifact (Multi-file - saving first file)',
+            defaultPath: firstFile.filename,
+            filters: [{ name: 'All Files', extensions: ['*'] }],
+          },
+        )
 
         if (result.canceled || !result.filePath) {
           return { success: false, canceled: true }
         }
 
         await fs.writeFile(result.filePath, firstFile.content, 'utf-8')
-        return { success: true, path: result.filePath, note: 'Multi-file artifact: only first file saved. Full zip support coming soon.' }
+        return {
+          success: true,
+          path: result.filePath,
+          note: 'Multi-file artifact: only first file saved. Full zip support coming soon.',
+        }
       }
 
       // Single file download
-      const result = await dialog.showSaveDialog(window || undefined as unknown as BrowserWindow, {
-        title: 'Save Artifact',
-        defaultPath: defaultFilename,
-        filters: [
-          { name: `${artifact.contentType.toUpperCase()} Files`, extensions: [ext] },
-          { name: 'All Files', extensions: ['*'] }
-        ]
-      })
+      const result = await dialog.showSaveDialog(
+        window || (undefined as unknown as BrowserWindow),
+        {
+          title: 'Save Artifact',
+          defaultPath: defaultFilename,
+          filters: [
+            { name: `${artifact.contentType.toUpperCase()} Files`, extensions: [ext] },
+            { name: 'All Files', extensions: ['*'] },
+          ],
+        },
+      )
 
       if (result.canceled || !result.filePath) {
         return { success: false, canceled: true }

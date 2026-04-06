@@ -14,10 +14,14 @@
  * - Three levels: permanent, once, deny
  */
 
+import { AlertTriangle, FileText, FolderOpen, Globe, Lock, Unlock } from 'lucide-react'
 import { memo, useState } from 'react'
-import { Lock, Unlock, FolderOpen, Globe, FileText, AlertTriangle } from 'lucide-react'
 
-export type PermissionType = 'filesystem_read' | 'filesystem_write' | 'network_fetch' | 'shell_execute'
+export type PermissionType =
+  | 'filesystem_read'
+  | 'filesystem_write'
+  | 'network_fetch'
+  | 'shell_execute'
 
 export type PermissionDuration = 'once' | 'session' | 'workspace' | 'permanent'
 
@@ -37,38 +41,41 @@ interface InlinePermissionProps {
   isLoading?: boolean
 }
 
-const TYPE_CONFIG: Record<PermissionType, {
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-  description: string
-}> = {
+const TYPE_CONFIG: Record<
+  PermissionType,
+  {
+    icon: React.ComponentType<{ className?: string }>
+    label: string
+    description: string
+  }
+> = {
   filesystem_read: {
     icon: FolderOpen,
     label: 'Read Files',
-    description: 'Read files from your computer'
+    description: 'Read files from your computer',
   },
   filesystem_write: {
     icon: FileText,
     label: 'Write Files',
-    description: 'Create or modify files on your computer'
+    description: 'Create or modify files on your computer',
   },
   network_fetch: {
     icon: Globe,
     label: 'Fetch URL',
-    description: 'Fetch content from the web'
+    description: 'Fetch content from the web',
   },
   shell_execute: {
     icon: AlertTriangle,
     label: 'Run Command',
-    description: 'Execute a shell command'
-  }
+    description: 'Execute a shell command',
+  },
 }
 
 function InlinePermissionComponent({
   request,
   onGrant,
   onDeny,
-  isLoading = false
+  isLoading = false,
 }: InlinePermissionProps): JSX.Element {
   const [rememberChoice, setRememberChoice] = useState(false)
   const config = TYPE_CONFIG[request.type]
@@ -82,17 +89,16 @@ function InlinePermissionComponent({
   const isHighRisk = request.type === 'filesystem_write' || request.type === 'shell_execute'
 
   return (
-    <div className={`
+    <div
+      className={`
       inline-permission
       rounded-lg
       border
       p-4
       my-3
-      ${isHighRisk
-        ? 'bg-amber-500/10 border-amber-500/30'
-        : 'bg-blue-500/10 border-blue-500/30'
-      }
-    `}>
+      ${isHighRisk ? 'bg-amber-500/10 border-amber-500/30' : 'bg-blue-500/10 border-blue-500/30'}
+    `}
+    >
       {/* Header */}
       <div className="flex items-center gap-2 mb-3">
         <Lock className={`w-4 h-4 ${isHighRisk ? 'text-amber-400' : 'text-blue-400'}`} />
@@ -102,9 +108,7 @@ function InlinePermissionComponent({
       </div>
 
       {/* Description */}
-      <p className="text-sm text-[var(--text-secondary)] mb-3">
-        {request.reason}
-      </p>
+      <p className="text-sm text-[var(--text-secondary)] mb-3">{request.reason}</p>
 
       {/* Resource being accessed */}
       <div className="flex items-center gap-2 p-2 rounded bg-black/20 mb-3">
@@ -162,9 +166,10 @@ function InlinePermissionComponent({
             font-medium text-sm
             transition-colors
             disabled:opacity-50 disabled:cursor-not-allowed
-            ${isHighRisk
-              ? 'bg-amber-600 hover:bg-amber-500 text-white'
-              : 'bg-blue-600 hover:bg-blue-500 text-white'
+            ${
+              isHighRisk
+                ? 'bg-amber-600 hover:bg-amber-500 text-white'
+                : 'bg-blue-600 hover:bg-blue-500 text-white'
             }
           `}
         >

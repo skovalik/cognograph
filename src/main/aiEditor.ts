@@ -9,30 +9,26 @@
  * Supports agent mode with query tools for smarter context gathering.
  */
 
-import { ipcMain, safeStorage, BrowserWindow } from 'electron'
-import Store from 'electron-store'
 import Anthropic from '@anthropic-ai/sdk'
+import { BrowserWindow, ipcMain, safeStorage } from 'electron'
+import Store from 'electron-store'
 import { v4 as uuid } from 'uuid'
+import type { IPCResponse } from '../shared/ipc-types'
+import { createIPCError, createIPCSuccess, IPC_ERROR_CODES } from '../shared/ipc-types'
 import type {
   AIEditorContext,
-  MutationPlan,
+  ConversationMessage,
   MutationOp,
+  MutationPlan,
   PlanWarning,
-  ConversationMessage
 } from '../shared/types'
-import type { IPCResponse } from '../shared/ipc-types'
 import {
-  createIPCSuccess,
-  createIPCError,
-  IPC_ERROR_CODES
-} from '../shared/ipc-types'
-import {
-  createStreamingSession,
   cancelStreamingSession,
-  updateSessionPhase,
   cleanupSession,
+  createStreamingSession,
+  emitStreamComplete,
   emitStreamPhase,
-  emitStreamComplete
+  updateSessionPhase,
 } from './services/streaming'
 
 interface EncryptedKeys {
@@ -62,89 +58,102 @@ function getMainWindow(): BrowserWindow | null {
 const QUERY_TOOLS: Anthropic.Tool[] = [
   {
     name: 'search_nodes',
-    description: 'Search for nodes in the workspace by type, title, or tags. Use this to discover nodes that might be relevant to the task.',
+    description:
+      'Search for nodes in the workspace by type, title, or tags. Use this to discover nodes that might be relevant to the task.',
     input_schema: {
       type: 'object' as const,
       properties: {
         type: {
           type: 'string',
-          enum: ['conversation', 'project', 'note', 'task', 'artifact', 'workspace', 'text', 'action'],
-          description: 'Filter by node type'
+          enum: [
+            'conversation',
+            'project',
+            'note',
+            'task',
+            'artifact',
+            'workspace',
+            'text',
+            'action',
+          ],
+          description: 'Filter by node type',
         },
         titleContains: {
           type: 'string',
-          description: 'Filter by title substring (case-insensitive)'
+          description: 'Filter by title substring (case-insensitive)',
         },
         hasTag: {
           type: 'string',
-          description: 'Filter by tag'
+          description: 'Filter by tag',
         },
         limit: {
           type: 'number',
-          description: 'Max results (default: 20)'
-        }
-      }
-    }
+          description: 'Max results (default: 20)',
+        },
+      },
+    },
   },
   {
     name: 'get_node',
-    description: 'Get full details of a specific node including all its data. Use this to inspect a node more closely.',
+    description:
+      'Get full details of a specific node including all its data. Use this to inspect a node more closely.',
     input_schema: {
       type: 'object' as const,
       properties: {
         nodeId: {
           type: 'string',
-          description: 'The ID of the node to get details for'
-        }
+          description: 'The ID of the node to get details for',
+        },
       },
-      required: ['nodeId']
-    }
+      required: ['nodeId'],
+    },
   },
   {
     name: 'get_connected_nodes',
-    description: 'Get all nodes connected to a specific node. Useful for understanding relationships.',
+    description:
+      'Get all nodes connected to a specific node. Useful for understanding relationships.',
     input_schema: {
       type: 'object' as const,
       properties: {
         nodeId: {
           type: 'string',
-          description: 'The ID of the node to find connections for'
-        }
+          description: 'The ID of the node to find connections for',
+        },
       },
-      required: ['nodeId']
-    }
+      required: ['nodeId'],
+    },
   },
   {
     name: 'ready_to_generate_plan',
-    description: 'Call this when you have gathered enough context and are ready to generate the mutation plan. Pass your final plan as the argument.',
+    description:
+      'Call this when you have gathered enough context and are ready to generate the mutation plan. Pass your final plan as the argument.',
     input_schema: {
       type: 'object' as const,
       properties: {
         operations: {
           type: 'array',
           description: 'Array of mutation operations',
-          items: { type: 'object' }
+          items: { type: 'object' },
         },
         warnings: {
           type: 'array',
           description: 'Array of warnings',
-          items: { type: 'object' }
+          items: { type: 'object' },
         },
         reasoning: {
           type: 'string',
-          description: 'Brief explanation of what the plan does'
-        }
+          description: 'Brief explanation of what the plan does',
+        },
       },
-      required: ['operations', 'reasoning']
-    }
-  }
+      required: ['operations', 'reasoning'],
+    },
+  },
 ]
 
 // Execute a query tool by forwarding to the renderer process
 async function executeQueryTool(
   toolName: string,
   input: Record<string, unknown>,
-  context: AIEditorContext
+  context: AIEditorContext,
 ): Promise<unknown> {
   // Execute tools locally using the context we already have
   switch (toolName) {
@@ -173,7 +182,7 @@ async function executeQueryTool(
 
       return {
         nodes: results.slice(0, limit as number),
-        total: results.length
+        total: results.length,
       }
     }
 
@@ -201,7 +210,7 @@ async function executeQueryTool(
 
       return {
         connectedNodes,
-        edges: context.edges.filter((e) => e.source === nodeId || e.target === nodeId)
+        edges: context.edges.filter((e) => e.source === nodeId || e.target === nodeId),
       }
     }
 
@@ -437,7 +446,7 @@ Your goal is to answer questions about the workspace:
 - Explain how different parts of the workflow interact
 - Help the user understand their workspace better
 
-Think about: "What information would help the user understand and improve their workspace?"`
+Think about: "What information would help the user understand and improve their workspace?"`,
   }
 
   return basePrompt + modeSpecificPrompt[mode]
@@ -475,7 +484,9 @@ function buildUserPrompt(context: AIEditorContext): string {
   if (context.visibleNodes.length > 0) {
     parts.push('Other visible nodes:')
     for (const node of context.visibleNodes) {
-      parts.push(`- ${node.id}: ${node.type} "${node.title}" at (${Math.round(node.position.x)}, ${Math.round(node.position.y)})`)
+      parts.push(
+        `- ${node.id}: ${node.type} "${node.title}" at (${Math.round(node.position.x)}, ${Math.round(node.position.y)})`,
+      )
     }
     parts.push('')
   }
@@ -489,17 +500,27 @@ function buildUserPrompt(context: AIEditorContext): string {
     parts.push('')
   }
 
-  parts.push('Viewport center: (' +
-    Math.round((context.viewport.x + context.canvasBounds.maxX) / 2) + ', ' +
-    Math.round((context.viewport.y + context.canvasBounds.maxY) / 2) + ')')
+  parts.push(
+    'Viewport center: (' +
+      Math.round((context.viewport.x + context.canvasBounds.maxX) / 2) +
+      ', ' +
+      Math.round((context.viewport.y + context.canvasBounds.maxY) / 2) +
+      ')',
+  )
 
   parts.push('')
-  parts.push('Respond with ONLY the JSON mutation plan. No markdown formatting, no explanations outside the JSON.')
+  parts.push(
+    'Respond with ONLY the JSON mutation plan. No markdown formatting, no explanations outside the JSON.',
+  )
 
   return parts.join('\n')
 }
 
-function parsePlanResponse(content: string): { operations: MutationOp[]; warnings: PlanWarning[]; reasoning?: string } {
+function parsePlanResponse(content: string): {
+  operations: MutationOp[]
+  warnings: PlanWarning[]
+  reasoning?: string
+} {
   // Try to extract JSON from the response
   let jsonStr = content.trim()
 
@@ -527,7 +548,7 @@ function parsePlanResponse(content: string): { operations: MutationOp[]; warning
     return {
       operations: parsed.operations || [],
       warnings: parsed.warnings || [],
-      reasoning: parsed.reasoning
+      reasoning: parsed.reasoning,
     }
   } catch (error) {
     console.error('[AIEditor:parse] Failed to parse response:', error)
@@ -537,21 +558,25 @@ function parsePlanResponse(content: string): { operations: MutationOp[]; warning
     // This handles cases where the AI asks clarifying questions instead of returning JSON
     return {
       operations: [],
-      warnings: [{
-        level: 'error',
-        message: 'AI response was not valid JSON. Please try rephrasing your request.'
-      }],
-      reasoning: content.substring(0, 300)
+      warnings: [
+        {
+          level: 'error',
+          message: 'AI response was not valid JSON. Please try rephrasing your request.',
+        },
+      ],
+      reasoning: content.substring(0, 300),
     }
   }
 }
 
-async function generatePlanWithAnthropic(context: AIEditorContext): Promise<IPCResponse<MutationPlan>> {
+async function generatePlanWithAnthropic(
+  context: AIEditorContext,
+): Promise<IPCResponse<MutationPlan>> {
   const apiKey = getApiKey('anthropic')
   if (!apiKey) {
     return createIPCError(
       IPC_ERROR_CODES.LLM_API_ERROR,
-      'Anthropic API key not set. Please add your API key in settings.'
+      'Anthropic API key not set. Please add your API key in settings.',
     )
   }
 
@@ -571,15 +596,12 @@ async function generatePlanWithAnthropic(context: AIEditorContext): Promise<IPCR
       max_tokens: 4096,
       temperature: 0.3,
       system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }]
+      messages: [{ role: 'user', content: userPrompt }],
     })
 
-    const textContent = response.content.find(block => block.type === 'text')
+    const textContent = response.content.find((block) => block.type === 'text')
     if (!textContent || textContent.type !== 'text') {
-      return createIPCError(
-        IPC_ERROR_CODES.LLM_INVALID_RESPONSE,
-        'No text response from AI'
-      )
+      return createIPCError(IPC_ERROR_CODES.LLM_INVALID_RESPONSE, 'No text response from AI')
     }
 
     console.log('[AIEditor] Response received, parsing...')
@@ -588,12 +610,12 @@ async function generatePlanWithAnthropic(context: AIEditorContext): Promise<IPCR
 
     // Calculate estimated changes
     const estimatedChanges = {
-      nodesCreated: operations.filter(op => op.op === 'create-node').length,
-      nodesDeleted: operations.filter(op => op.op === 'delete-node').length,
-      nodesUpdated: operations.filter(op => op.op === 'update-node').length,
-      nodesMoved: operations.filter(op => op.op === 'move-node').length,
-      edgesCreated: operations.filter(op => op.op === 'create-edge').length,
-      edgesDeleted: operations.filter(op => op.op === 'delete-edge').length
+      nodesCreated: operations.filter((op) => op.op === 'create-node').length,
+      nodesDeleted: operations.filter((op) => op.op === 'delete-node').length,
+      nodesUpdated: operations.filter((op) => op.op === 'update-node').length,
+      nodesMoved: operations.filter((op) => op.op === 'move-node').length,
+      edgesCreated: operations.filter((op) => op.op === 'create-edge').length,
+      edgesDeleted: operations.filter((op) => op.op === 'delete-edge').length,
     }
 
     const plan: MutationPlan = {
@@ -604,13 +626,13 @@ async function generatePlanWithAnthropic(context: AIEditorContext): Promise<IPCR
       operations,
       warnings,
       reasoning,
-      estimatedChanges
+      estimatedChanges,
     }
 
     console.log('[AIEditor] Plan generated:', {
       operations: operations.length,
       warnings: warnings.length,
-      ...estimatedChanges
+      ...estimatedChanges,
     })
 
     return createIPCSuccess(plan)
@@ -619,7 +641,7 @@ async function generatePlanWithAnthropic(context: AIEditorContext): Promise<IPCR
     return createIPCError(
       IPC_ERROR_CODES.AI_EDITOR_GENERATION_FAILED,
       error instanceof Error ? error.message : 'Unknown error occurred',
-      error instanceof Error ? error.stack : undefined
+      error instanceof Error ? error.stack : undefined,
     )
   }
 }
@@ -686,18 +708,20 @@ Position types:
     edit: `\nMODE: EDIT - Fix and improve workflow: broken context chains, missing edges, orphaned nodes, restructure for modularity.`,
     organize: `\nMODE: ORGANIZE - Arrange layout to show data flow: context sources above/left of conversations, clear visual flow direction.`,
     automate: `\nMODE: AUTOMATE - Create automation workflows: action nodes with triggers, conditions, and proper context wiring.`,
-    ask: `\nMODE: ASK - Analyze and explain the workspace: structure, relationships, context flow, and improvement suggestions.`
+    ask: `\nMODE: ASK - Analyze and explain the workspace: structure, relationships, context flow, and improvement suggestions.`,
   }
 
   return basePrompt + modePrompts[mode]
 }
 
-async function generatePlanWithAgentMode(context: AIEditorContext): Promise<IPCResponse<MutationPlan>> {
+async function generatePlanWithAgentMode(
+  context: AIEditorContext,
+): Promise<IPCResponse<MutationPlan>> {
   const apiKey = getApiKey('anthropic')
   if (!apiKey) {
     return createIPCError(
       IPC_ERROR_CODES.LLM_API_ERROR,
-      'Anthropic API key not set. Please add your API key in settings.'
+      'Anthropic API key not set. Please add your API key in settings.',
     )
   }
 
@@ -706,17 +730,23 @@ async function generatePlanWithAgentMode(context: AIEditorContext): Promise<IPCR
     const systemPrompt = buildAgentSystemPrompt(context.mode)
 
     // Build initial user prompt with FULL context so agent doesn't need to explore much
-    const selectedNodesInfo = context.selectedNodes.map(n =>
-      `  - ${n.id}: ${n.type} "${n.title}" at (${Math.round(n.position.x)}, ${Math.round(n.position.y)})`
-    ).join('\n')
+    const selectedNodesInfo = context.selectedNodes
+      .map(
+        (n) =>
+          `  - ${n.id}: ${n.type} "${n.title}" at (${Math.round(n.position.x)}, ${Math.round(n.position.y)})`,
+      )
+      .join('\n')
 
-    const visibleNodesInfo = context.visibleNodes.map(n =>
-      `  - ${n.id}: ${n.type} "${n.title}" at (${Math.round(n.position.x)}, ${Math.round(n.position.y)})`
-    ).join('\n')
+    const visibleNodesInfo = context.visibleNodes
+      .map(
+        (n) =>
+          `  - ${n.id}: ${n.type} "${n.title}" at (${Math.round(n.position.x)}, ${Math.round(n.position.y)})`,
+      )
+      .join('\n')
 
-    const edgesInfo = context.edges.map(e =>
-      `  - ${e.source} → ${e.target}${e.label ? ` [${e.label}]` : ''}`
-    ).join('\n')
+    const edgesInfo = context.edges
+      .map((e) => `  - ${e.source} → ${e.target}${e.label ? ` [${e.label}]` : ''}`)
+      .join('\n')
 
     const userPrompt = `User's request: ${context.prompt}
 
@@ -752,18 +782,18 @@ Only use query tools if you need specific node content/details not shown here.`
         temperature: 0.3,
         system: systemPrompt,
         messages,
-        tools: QUERY_TOOLS
+        tools: QUERY_TOOLS,
       })
 
       // Check for tool use
       const toolUseBlocks = response.content.filter(
-        (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use'
+        (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use',
       )
 
       if (toolUseBlocks.length === 0) {
         // No tool use - try to parse any text response as a plan
         const textBlock = response.content.find(
-          (block): block is Anthropic.TextBlock => block.type === 'text'
+          (block): block is Anthropic.TextBlock => block.type === 'text',
         )
         if (textBlock) {
           const { operations, warnings, reasoning } = parsePlanResponse(textBlock.text)
@@ -771,7 +801,7 @@ Only use query tools if you need specific node content/details not shown here.`
         }
         return createIPCError(
           IPC_ERROR_CODES.AI_EDITOR_GENERATION_FAILED,
-          'AI did not generate a plan. Please try again.'
+          'AI did not generate a plan. Please try again.',
         )
       }
 
@@ -793,7 +823,7 @@ Only use query tools if you need specific node content/details not shown here.`
             context,
             input.operations || [],
             input.warnings || [],
-            input.reasoning
+            input.reasoning,
           )
         }
 
@@ -801,13 +831,13 @@ Only use query tools if you need specific node content/details not shown here.`
         const result = await executeQueryTool(
           toolUse.name,
           toolUse.input as Record<string, unknown>,
-          context
+          context,
         )
 
         toolResults.push({
           type: 'tool_result',
           tool_use_id: toolUse.id,
-          content: JSON.stringify(result, null, 2)
+          content: JSON.stringify(result, null, 2),
         })
       }
 
@@ -818,14 +848,14 @@ Only use query tools if you need specific node content/details not shown here.`
 
     return createIPCError(
       IPC_ERROR_CODES.AI_EDITOR_GENERATION_FAILED,
-      'Agent reached maximum iterations without generating a plan.'
+      'Agent reached maximum iterations without generating a plan.',
     )
   } catch (error) {
     console.error('[AIEditor:Agent] Error:', error)
     return createIPCError(
       IPC_ERROR_CODES.AI_EDITOR_GENERATION_FAILED,
       error instanceof Error ? error.message : 'Unknown error occurred',
-      error instanceof Error ? error.stack : undefined
+      error instanceof Error ? error.stack : undefined,
     )
   }
 }
@@ -834,15 +864,15 @@ function createPlanResponse(
   context: AIEditorContext,
   operations: MutationOp[],
   warnings: PlanWarning[],
-  reasoning?: string
+  reasoning?: string,
 ): IPCResponse<MutationPlan> {
   const estimatedChanges = {
-    nodesCreated: operations.filter(op => op.op === 'create-node').length,
-    nodesDeleted: operations.filter(op => op.op === 'delete-node').length,
-    nodesUpdated: operations.filter(op => op.op === 'update-node').length,
-    nodesMoved: operations.filter(op => op.op === 'move-node').length,
-    edgesCreated: operations.filter(op => op.op === 'create-edge').length,
-    edgesDeleted: operations.filter(op => op.op === 'delete-edge').length
+    nodesCreated: operations.filter((op) => op.op === 'create-node').length,
+    nodesDeleted: operations.filter((op) => op.op === 'delete-node').length,
+    nodesUpdated: operations.filter((op) => op.op === 'update-node').length,
+    nodesMoved: operations.filter((op) => op.op === 'move-node').length,
+    edgesCreated: operations.filter((op) => op.op === 'create-edge').length,
+    edgesDeleted: operations.filter((op) => op.op === 'delete-edge').length,
   }
 
   const plan: MutationPlan = {
@@ -853,13 +883,13 @@ function createPlanResponse(
     operations,
     warnings,
     reasoning,
-    estimatedChanges
+    estimatedChanges,
   }
 
   console.log('[AIEditor] Plan generated:', {
     operations: operations.length,
     warnings: warnings.length,
-    ...estimatedChanges
+    ...estimatedChanges,
   })
 
   return createIPCSuccess(plan)
@@ -885,7 +915,7 @@ async function generatePlanWithStreaming(context: AIEditorContext): Promise<void
   if (!apiKey) {
     mainWindow.webContents.send('aiEditor:plan:error', {
       error: 'Anthropic API key not set. Please add your API key in settings.',
-      requestId
+      requestId,
     })
     return
   }
@@ -904,7 +934,7 @@ async function generatePlanWithStreaming(context: AIEditorContext): Promise<void
     emitStreamPhase(mainWindow, 'aiEditor:plan', {
       phase: 'analyzing',
       message: 'Analyzing workspace context...',
-      requestId
+      requestId,
     })
 
     console.log('[AIEditor:Streaming] Starting plan generation...')
@@ -919,7 +949,7 @@ async function generatePlanWithStreaming(context: AIEditorContext): Promise<void
       max_tokens: 4096,
       temperature: 0.3,
       system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }]
+      messages: [{ role: 'user', content: userPrompt }],
     })
 
     // Check for cancellation before processing
@@ -932,7 +962,7 @@ async function generatePlanWithStreaming(context: AIEditorContext): Promise<void
     emitStreamPhase(mainWindow, 'aiEditor:plan', {
       phase: 'planning',
       message: 'Generating mutation plan...',
-      requestId
+      requestId,
     })
 
     for await (const event of stream) {
@@ -947,7 +977,7 @@ async function generatePlanWithStreaming(context: AIEditorContext): Promise<void
         mainWindow.webContents.send('aiEditor:plan:chunk', {
           type: 'text',
           content: event.delta.text,
-          requestId
+          requestId,
         })
       }
     }
@@ -957,7 +987,7 @@ async function generatePlanWithStreaming(context: AIEditorContext): Promise<void
     emitStreamPhase(mainWindow, 'aiEditor:plan', {
       phase: 'finalizing',
       message: 'Parsing plan...',
-      requestId
+      requestId,
     })
 
     // Parse the response
@@ -965,12 +995,12 @@ async function generatePlanWithStreaming(context: AIEditorContext): Promise<void
 
     // Calculate estimated changes
     const estimatedChanges = {
-      nodesCreated: operations.filter(op => op.op === 'create-node').length,
-      nodesDeleted: operations.filter(op => op.op === 'delete-node').length,
-      nodesUpdated: operations.filter(op => op.op === 'update-node').length,
-      nodesMoved: operations.filter(op => op.op === 'move-node').length,
-      edgesCreated: operations.filter(op => op.op === 'create-edge').length,
-      edgesDeleted: operations.filter(op => op.op === 'delete-edge').length
+      nodesCreated: operations.filter((op) => op.op === 'create-node').length,
+      nodesDeleted: operations.filter((op) => op.op === 'delete-node').length,
+      nodesUpdated: operations.filter((op) => op.op === 'update-node').length,
+      nodesMoved: operations.filter((op) => op.op === 'move-node').length,
+      edgesCreated: operations.filter((op) => op.op === 'create-edge').length,
+      edgesDeleted: operations.filter((op) => op.op === 'delete-edge').length,
     }
 
     const plan: MutationPlan = {
@@ -981,13 +1011,13 @@ async function generatePlanWithStreaming(context: AIEditorContext): Promise<void
       operations,
       warnings,
       reasoning,
-      estimatedChanges
+      estimatedChanges,
     }
 
     console.log('[AIEditor:Streaming] Plan generated:', {
       operations: operations.length,
       warnings: warnings.length,
-      ...estimatedChanges
+      ...estimatedChanges,
     })
 
     // Emit complete
@@ -996,7 +1026,7 @@ async function generatePlanWithStreaming(context: AIEditorContext): Promise<void
       success: true,
       data: plan,
       duration: Date.now() - session.startTime,
-      requestId
+      requestId,
     })
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
@@ -1004,7 +1034,7 @@ async function generatePlanWithStreaming(context: AIEditorContext): Promise<void
       emitStreamPhase(mainWindow, 'aiEditor:plan', {
         phase: 'cancelled',
         message: 'Generation cancelled',
-        requestId
+        requestId,
       })
     } else {
       console.error('[AIEditor:Streaming] Error:', error)
@@ -1012,7 +1042,7 @@ async function generatePlanWithStreaming(context: AIEditorContext): Promise<void
       // Include requestId in error payload so renderer can match it
       mainWindow.webContents.send('aiEditor:plan:error', {
         error: error instanceof Error ? error.message : 'Unknown error occurred',
-        requestId
+        requestId,
       })
     }
   } finally {
@@ -1052,7 +1082,7 @@ async function refinePlan(request: RefinePlanRequest): Promise<IPCResponse<Mutat
   if (!apiKey) {
     return createIPCError(
       IPC_ERROR_CODES.LLM_API_ERROR,
-      'Anthropic API key not set. Please add your API key in settings.'
+      'Anthropic API key not set. Please add your API key in settings.',
     )
   }
 
@@ -1096,7 +1126,7 @@ Available operation types:
     for (const msg of request.conversationHistory) {
       messages.push({
         role: msg.role,
-        content: msg.content
+        content: msg.content,
       })
     }
 
@@ -1121,15 +1151,12 @@ Please provide the refined plan as a JSON object.`
       max_tokens: 4096,
       temperature: 0.3,
       system: systemPrompt,
-      messages
+      messages,
     })
 
-    const textContent = response.content.find(block => block.type === 'text')
+    const textContent = response.content.find((block) => block.type === 'text')
     if (!textContent || textContent.type !== 'text') {
-      return createIPCError(
-        IPC_ERROR_CODES.LLM_API_ERROR,
-        'No text response from API'
-      )
+      return createIPCError(IPC_ERROR_CODES.LLM_API_ERROR, 'No text response from API')
     }
 
     const parsedPlan = parsePlanResponse(textContent.text)
@@ -1139,7 +1166,7 @@ Please provide the refined plan as a JSON object.`
       ...request.currentPlan,
       operations: parsedPlan.operations,
       warnings: parsedPlan.warnings,
-      reasoning: parsedPlan.reasoning || request.currentPlan.reasoning
+      reasoning: parsedPlan.reasoning || request.currentPlan.reasoning,
     }
 
     console.log('[AIEditor:Refine] Refined plan:', refinedPlan.operations.length, 'operations')
@@ -1149,7 +1176,7 @@ Please provide the refined plan as a JSON object.`
     console.error('[AIEditor:Refine] Error:', error)
     return createIPCError(
       IPC_ERROR_CODES.LLM_API_ERROR,
-      error instanceof Error ? error.message : 'Unknown error during refinement'
+      error instanceof Error ? error.message : 'Unknown error during refinement',
     )
   }
 }
@@ -1168,14 +1195,14 @@ export function registerAIEditorHandlers(): void {
   // Streaming plan generation
   ipcMain.handle('ai:generatePlanStreaming', async (_event, context: AIEditorContext) => {
     // Don't await - let it stream in the background
-    generatePlanWithStreaming(context).catch(err => {
+    generatePlanWithStreaming(context).catch((err) => {
       console.error('[AIEditor:Streaming] Unhandled error:', err)
       // Notify renderer so UI doesn't hang indefinitely
       const mainWindow = getMainWindow()
       if (mainWindow) {
         mainWindow.webContents.send('aiEditor:plan:error', {
           error: err instanceof Error ? err.message : 'Streaming failed unexpectedly',
-          requestId: context.requestId
+          requestId: context.requestId,
         })
       }
     })

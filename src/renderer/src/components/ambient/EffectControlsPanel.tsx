@@ -9,11 +9,12 @@
  * Theme-linked props show a reset button when overridden by the user.
  */
 
-import React, { memo, useCallback } from 'react'
-import type { AmbientEffectType, AmbientEffectSettings } from '@shared/types'
+import type { AmbientEffectSettings, AmbientEffectType } from '@shared/types'
+import { Link, RotateCcw } from 'lucide-react'
+import type React from 'react'
+import { memo, useCallback } from 'react'
 import { EFFECT_REGISTRY, type PropSchema } from './effectRegistry'
 import { hexToRgbFloat, rgbFloatToHex } from './utils/colorConvert'
-import { Link, RotateCcw } from 'lucide-react'
 
 interface EffectControlsPanelProps {
   effectType: AmbientEffectType
@@ -38,7 +39,7 @@ function EffectControlsPanelComponent({
   // Theme-linked = direct themeColorProps + derived-from props
   const themeLinkedKeys = new Set([
     ...entry.themeColorProps,
-    ...entry.propSchema.filter(s => s.deriveFrom).map(s => s.key),
+    ...entry.propSchema.filter((s) => s.deriveFrom).map((s) => s.key),
   ])
 
   const updateProp = useCallback(
@@ -52,7 +53,7 @@ function EffectControlsPanelComponent({
       }
       onChange({ ...settings, effectProps: newEffectProps })
     },
-    [effectType, settings, onChange]
+    [effectType, settings, onChange],
   )
 
   const resetProp = useCallback(
@@ -69,7 +70,7 @@ function EffectControlsPanelComponent({
       }
       onChange({ ...settings, effectProps: newEffectProps })
     },
-    [effectType, settings, onChange]
+    [effectType, settings, onChange],
   )
 
   const resetDefaults = useCallback(() => {
@@ -94,7 +95,12 @@ function EffectControlsPanelComponent({
           <span className={`text-[10px] ${textMuted} w-20 truncate`}>Quality</span>
           <select
             value={settings.performanceMode ?? 'auto'}
-            onChange={(e) => onChange({ ...settings, performanceMode: e.target.value as 'auto' | 'quality' | 'battery' })}
+            onChange={(e) =>
+              onChange({
+                ...settings,
+                performanceMode: e.target.value as 'auto' | 'quality' | 'battery',
+              })
+            }
             className={`flex-1 text-[10px] ${textMuted} bg-transparent border border-current/20 rounded px-1 py-0.5`}
           >
             <option value="auto">Auto (adaptive)</option>
@@ -166,9 +172,7 @@ function ControlRow({
 }): JSX.Element {
   const labelEl = (
     <span className={`text-[10px] ${textMuted} w-20 truncate inline-flex items-center gap-0.5`}>
-      {isThemeLinked && !isOverridden && (
-        <Link size={7} className="shrink-0 opacity-50" />
-      )}
+      {isThemeLinked && !isOverridden && <Link size={7} className="shrink-0 opacity-50" />}
       {schema.label}
     </span>
   )
@@ -242,12 +246,9 @@ function SliderControl({
   textMuted: string
   labelEl: React.ReactNode
 }) {
-  const decimals = schema.step && schema.step < 1
-    ? Math.max(1, -Math.floor(Math.log10(schema.step)))
-    : 0
-  const displayValue = decimals > 0
-    ? (value ?? 0).toFixed(decimals)
-    : String(value ?? 0)
+  const decimals =
+    schema.step && schema.step < 1 ? Math.max(1, -Math.floor(Math.log10(schema.step))) : 0
+  const displayValue = decimals > 0 ? (value ?? 0).toFixed(decimals) : String(value ?? 0)
 
   return (
     <div className="flex items-center gap-2">
@@ -397,9 +398,7 @@ function ColorArrayControl({
   return (
     <div className="space-y-1">
       <span className={`text-[10px] ${textMuted} inline-flex items-center gap-0.5`}>
-        {isThemeLinked && !isOverridden && (
-          <Link size={7} className="shrink-0 opacity-50" />
-        )}
+        {isThemeLinked && !isOverridden && <Link size={7} className="shrink-0 opacity-50" />}
         {schema.label}
       </span>
       <div className="flex flex-wrap gap-1 items-center">

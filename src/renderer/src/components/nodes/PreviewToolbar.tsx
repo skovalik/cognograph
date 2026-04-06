@@ -9,18 +9,18 @@
 // Replaces standard ArtifactNode header buttons when previewEnabled is true.
 // =============================================================================
 
-import { memo, useCallback } from 'react'
+import type { PreviewViewport } from '@shared/types'
 import {
-  Monitor,
-  Tablet,
-  Smartphone,
-  RefreshCw,
-  RotateCw,
-  MousePointer,
   ExternalLink,
   EyeOff,
+  Monitor,
+  MousePointer,
+  RefreshCw,
+  RotateCw,
+  Smartphone,
+  Tablet,
 } from 'lucide-react'
-import type { PreviewViewport } from '@shared/types'
+import { memo, useCallback } from 'react'
 import { clampPreviewScale, PREVIEW_VIEWPORT_WIDTHS } from '../../utils/previewUrlValidation'
 
 interface PreviewToolbarProps {

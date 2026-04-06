@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import { ChevronDown, Wrench } from 'lucide-react'
 import { useState } from 'react'
-import { Wrench, ChevronDown } from 'lucide-react'
 import { getAvailableMediaTools } from '../../services/media/agentToolRegistry'
 
-const MEDIA_PROVIDERS = ['stability', 'openai', 'google', 'replicate', 'runway', 'elevenlabs'] as const
+const MEDIA_PROVIDERS = [
+  'stability',
+  'openai',
+  'google',
+  'replicate',
+  'runway',
+  'elevenlabs',
+] as const
 
 const PROVIDER_LABELS: Record<string, string> = {
   stability: 'Stability AI',
@@ -36,14 +43,14 @@ export function AgentToolsTab(): JSX.Element {
   })
 
   const toggleTool = (name: string) => {
-    setToolPrefs(prev => ({
+    setToolPrefs((prev) => ({
       ...prev,
       [name]: { ...prev[name], enabled: !prev[name]?.enabled },
     }))
   }
 
   const setDefaultProvider = (toolName: string, provider: string) => {
-    setToolPrefs(prev => ({
+    setToolPrefs((prev) => ({
       ...prev,
       [toolName]: { ...prev[toolName], defaultProvider: provider },
     }))
@@ -66,7 +73,7 @@ export function AgentToolsTab(): JSX.Element {
 
       {/* Available tools */}
       <div className="flex flex-col gap-2">
-        {tools.map(tool => {
+        {tools.map((tool) => {
           const pref = toolPrefs[tool.name] || { enabled: true }
           return (
             <div
@@ -80,26 +87,27 @@ export function AgentToolsTab(): JSX.Element {
                 className="accent-[var(--accent-primary)]"
               />
               <div className="flex-1 min-w-0">
-                <span className="text-sm text-[var(--text-primary)] font-medium">
-                  {tool.name}
-                </span>
-                <p className="text-xs text-[var(--text-secondary)] truncate">
-                  {tool.description}
-                </p>
+                <span className="text-sm text-[var(--text-primary)] font-medium">{tool.name}</span>
+                <p className="text-xs text-[var(--text-secondary)] truncate">{tool.description}</p>
               </div>
               {/* Default provider dropdown */}
               <div className="relative">
                 <select
                   value={pref.defaultProvider || 'auto'}
-                  onChange={e => setDefaultProvider(tool.name, e.target.value)}
+                  onChange={(e) => setDefaultProvider(tool.name, e.target.value)}
                   className="text-xs px-2 py-1 pr-6 rounded border border-[var(--border-subtle)] bg-[var(--surface-primary)] text-[var(--text-primary)] appearance-none cursor-pointer"
                 >
                   <option value="auto">Auto</option>
-                  {MEDIA_PROVIDERS.map(p => (
-                    <option key={p} value={p}>{PROVIDER_LABELS[p]}</option>
+                  {MEDIA_PROVIDERS.map((p) => (
+                    <option key={p} value={p}>
+                      {PROVIDER_LABELS[p]}
+                    </option>
                   ))}
                 </select>
-                <ChevronDown size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none" />
+                <ChevronDown
+                  size={10}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none"
+                />
               </div>
             </div>
           )
@@ -112,7 +120,7 @@ export function AgentToolsTab(): JSX.Element {
           Output Behavior
         </label>
         <div className="flex gap-2">
-          {(['artifact', 'inline', 'both'] as const).map(mode => (
+          {(['artifact', 'inline', 'both'] as const).map((mode) => (
             <button
               key={mode}
               onClick={() => setOutputBehavior(mode)}
@@ -127,9 +135,11 @@ export function AgentToolsTab(): JSX.Element {
           ))}
         </div>
         <p className="text-xs text-[var(--text-muted)]">
-          {outputBehavior === 'artifact' && 'Generated media creates a new artifact node on the canvas.'}
+          {outputBehavior === 'artifact' &&
+            'Generated media creates a new artifact node on the canvas.'}
           {outputBehavior === 'inline' && 'Generated media is shown inline in the conversation.'}
-          {outputBehavior === 'both' && 'Generated media creates an artifact node and shows inline.'}
+          {outputBehavior === 'both' &&
+            'Generated media creates an artifact node and shows inline.'}
         </p>
       </div>
 
@@ -144,7 +154,7 @@ export function AgentToolsTab(): JSX.Element {
             min={1}
             max={4}
             value={maxConcurrent}
-            onChange={e => setMaxConcurrent(Number(e.target.value))}
+            onChange={(e) => setMaxConcurrent(Number(e.target.value))}
             className="flex-1 accent-[var(--accent-primary)]"
           />
           <span className="text-sm text-[var(--text-primary)] tabular-nums w-4 text-center">

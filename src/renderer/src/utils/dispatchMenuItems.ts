@@ -31,7 +31,7 @@ import type { DispatchMenuItemConfig } from './dispatchTypes'
 export function getDispatchMenuItems(
   _nodeId: string,
   nodeType: string,
-  _nodeData: NodeData
+  _nodeData: NodeData,
 ): DispatchMenuItemConfig[] {
   if (nodeType !== 'task') {
     return []

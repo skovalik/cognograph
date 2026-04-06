@@ -7,12 +7,18 @@
  * Tests for action step execution.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { executeActionSteps } from '../actionExecutor'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { resetWorkspaceStore, getWorkspaceState, seedNode, seedNodes, seedEdge } from '../../../../test/storeUtils'
-import { createNoteNode, createTestEdge, resetTestCounters } from '../../../../test/utils'
 import type { ActionStep, ExecutionContext } from '@shared/actionTypes'
+import { beforeEach, describe, expect, it } from 'vitest'
+import {
+  getWorkspaceState,
+  resetWorkspaceStore,
+  seedEdge,
+  seedNode,
+  seedNodes,
+} from '../../../../test/storeUtils'
+import { createNoteNode, createTestEdge, resetTestCounters } from '../../../../test/utils'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { executeActionSteps } from '../actionExecutor'
 
 describe('actionExecutor', () => {
   beforeEach(() => {
@@ -23,10 +29,15 @@ describe('actionExecutor', () => {
   const createContext = (overrides: Partial<ExecutionContext> = {}): ExecutionContext => ({
     triggerNodeId: 'trigger-node-1',
     actionNodeId: 'action-node-1',
-    event: { type: 'property-change', nodeId: 'trigger-node-1', timestamp: Date.now(), data: { property: 'status', value: 'done' } },
+    event: {
+      type: 'property-change',
+      nodeId: 'trigger-node-1',
+      timestamp: Date.now(),
+      data: { property: 'status', value: 'done' },
+    },
     variables: {},
     startedAt: Date.now(),
-    ...overrides
+    ...overrides,
   })
 
   describe('executeActionSteps', () => {
@@ -44,9 +55,9 @@ describe('actionExecutor', () => {
             config: {
               target: 'trigger-node',
               property: 'title',
-              value: 'Updated Title'
-            }
-          }
+              value: 'Updated Title',
+            },
+          },
         ]
 
         const context = createContext()
@@ -75,9 +86,9 @@ describe('actionExecutor', () => {
             config: {
               target: 'trigger-node',
               property: 'title',
-              value: 'Updated Title'
-            }
-          }
+              value: 'Updated Title',
+            },
+          },
         ]
 
         const context = createContext()
@@ -104,9 +115,9 @@ describe('actionExecutor', () => {
             config: {
               target: 'action-node',
               property: 'title',
-              value: 'Action Updated'
-            }
-          }
+              value: 'Action Updated',
+            },
+          },
         ]
 
         const context = createContext()
@@ -133,9 +144,9 @@ describe('actionExecutor', () => {
               target: 'specific-node',
               targetNodeId: 'note-2',
               property: 'title',
-              value: 'Specific Update'
-            }
-          }
+              value: 'Specific Update',
+            },
+          },
         ]
 
         const context = createContext({ triggerNodeId: 'note-1' })
@@ -161,9 +172,9 @@ describe('actionExecutor', () => {
               title: 'New Note',
               position: 'absolute',
               absoluteX: 100,
-              absoluteY: 200
-            }
-          }
+              absoluteY: 200,
+            },
+          },
         ]
 
         const context = createContext()
@@ -180,7 +191,7 @@ describe('actionExecutor', () => {
       it('should create node relative to trigger node', async () => {
         const triggerNote = createNoteNode('Trigger', {
           id: 'trigger-node-1',
-          position: { x: 100, y: 100 }
+          position: { x: 100, y: 100 },
         })
         seedNode(triggerNote)
 
@@ -194,9 +205,9 @@ describe('actionExecutor', () => {
               title: 'Relative Note',
               position: 'near-trigger',
               offsetX: 200,
-              offsetY: 50
-            }
-          }
+              offsetY: 50,
+            },
+          },
         ]
 
         const context = createContext()
@@ -223,9 +234,9 @@ describe('actionExecutor', () => {
             type: 'delete-node',
             onError: 'stop',
             config: {
-              target: 'trigger-node'
-            }
-          }
+              target: 'trigger-node',
+            },
+          },
         ]
 
         const context = createContext()
@@ -242,7 +253,7 @@ describe('actionExecutor', () => {
       it('should move node to absolute position', async () => {
         const note = createNoteNode('Test', {
           id: 'trigger-node-1',
-          position: { x: 0, y: 0 }
+          position: { x: 0, y: 0 },
         })
         seedNode(note)
 
@@ -255,9 +266,9 @@ describe('actionExecutor', () => {
               target: 'trigger-node',
               position: 'absolute',
               x: 500,
-              y: 300
-            }
-          }
+              y: 300,
+            },
+          },
         ]
 
         const context = createContext()
@@ -283,9 +294,9 @@ describe('actionExecutor', () => {
             onError: 'stop',
             config: {
               source: 'trigger-node',
-              target: 'action-node'
-            }
-          }
+              target: 'action-node',
+            },
+          },
         ]
 
         const context = createContext()
@@ -315,9 +326,9 @@ describe('actionExecutor', () => {
             onError: 'stop',
             config: {
               source: 'trigger-node',
-              target: 'action-node'
-            }
-          }
+              target: 'action-node',
+            },
+          },
         ]
 
         const context = createContext()
@@ -338,9 +349,9 @@ describe('actionExecutor', () => {
             type: 'wait',
             onError: 'stop',
             config: {
-              duration: 50 // 50ms
-            }
-          }
+              duration: 50, // 50ms
+            },
+          },
         ]
 
         const startTime = Date.now()
@@ -369,8 +380,8 @@ describe('actionExecutor', () => {
               field: 'title',
               operator: 'equals',
               value: 'Not Matching',
-              skipCount: 1
-            }
+              skipCount: 1,
+            },
           },
           {
             id: 'step-2',
@@ -379,9 +390,9 @@ describe('actionExecutor', () => {
             config: {
               target: 'trigger-node',
               property: 'title',
-              value: 'Should Be Skipped'
-            }
-          }
+              value: 'Should Be Skipped',
+            },
+          },
         ]
 
         const context = createContext()
@@ -411,8 +422,8 @@ describe('actionExecutor', () => {
               field: 'title',
               operator: 'equals',
               value: 'Match Me',
-              skipCount: 1
-            }
+              skipCount: 1,
+            },
           },
           {
             id: 'step-2',
@@ -421,9 +432,9 @@ describe('actionExecutor', () => {
             config: {
               target: 'trigger-node',
               property: 'title',
-              value: 'Should Run'
-            }
-          }
+              value: 'Should Run',
+            },
+          },
         ]
 
         const context = createContext()
@@ -451,8 +462,8 @@ describe('actionExecutor', () => {
               targetNodeId: 'non-existent',
               position: 'absolute',
               x: 100,
-              y: 100
-            }
+              y: 100,
+            },
           },
           {
             id: 'step-2',
@@ -463,9 +474,9 @@ describe('actionExecutor', () => {
               title: 'Should Not Run',
               position: 'absolute',
               absoluteX: 0,
-              absoluteY: 0
-            }
-          }
+              absoluteY: 0,
+            },
+          },
         ]
 
         const context = createContext()
@@ -492,8 +503,8 @@ describe('actionExecutor', () => {
               targetNodeId: 'non-existent',
               position: 'absolute',
               x: 100,
-              y: 100
-            }
+              y: 100,
+            },
           },
           {
             id: 'step-2',
@@ -504,9 +515,9 @@ describe('actionExecutor', () => {
               title: 'Should Run',
               position: 'absolute',
               absoluteX: 0,
-              absoluteY: 0
-            }
-          }
+              absoluteY: 0,
+            },
+          },
         ]
 
         const context = createContext()
@@ -533,8 +544,8 @@ describe('actionExecutor', () => {
               title: 'First Node',
               position: 'absolute',
               absoluteX: 0,
-              absoluteY: 0
-            }
+              absoluteY: 0,
+            },
           },
           {
             id: 'step-2',
@@ -545,9 +556,9 @@ describe('actionExecutor', () => {
               title: 'Second Node',
               position: 'absolute',
               absoluteX: 200,
-              absoluteY: 0
-            }
-          }
+              absoluteY: 0,
+            },
+          },
         ]
 
         const context = createContext()

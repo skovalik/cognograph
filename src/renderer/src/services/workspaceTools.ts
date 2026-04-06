@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useWorkspaceStore } from '../stores/workspaceStore'
+import type { ActionStep, ActionTrigger } from '@shared/actionTypes'
 import type { NodeData } from '@shared/types'
-import type { ActionTrigger, ActionStep } from '@shared/actionTypes'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 // Tool definition shape (matches what getChatToolDefinitions returns)
 interface ToolDefinition {
@@ -171,14 +171,13 @@ function getViewportCenter(jitter = 100): { x: number; y: number } {
 // ── Tool Executors ──────────────────────────────────────────────────────────
 
 async function executeCreateAgent(
-  input: Record<string, unknown>
+  input: Record<string, unknown>,
 ): Promise<{ success: boolean; result?: any; error?: string }> {
   try {
     const store = useWorkspaceStore.getState()
     const task = input.task as string
     const title =
-      (input.title as string | undefined) ||
-      task.slice(0, 50) + (task.length > 50 ? '...' : '')
+      (input.title as string | undefined) || task.slice(0, 50) + (task.length > 50 ? '...' : '')
     const connectToNodeIds = (input.connectToNodeIds as string[] | undefined) || []
 
     const pos = getViewportCenter()
@@ -205,7 +204,7 @@ async function executeCreateAgent(
 }
 
 async function executeCreateAction(
-  input: Record<string, unknown>
+  input: Record<string, unknown>,
 ): Promise<{ success: boolean; result?: any; error?: string }> {
   try {
     const store = useWorkspaceStore.getState()
@@ -246,7 +245,7 @@ async function executeCreateAction(
 }
 
 async function executeCreateRegion(
-  input: Record<string, unknown>
+  input: Record<string, unknown>,
 ): Promise<{ success: boolean; result?: any; error?: string }> {
   try {
     // Import spatialRegionStore dynamically to avoid circular deps
@@ -257,7 +256,10 @@ async function executeCreateRegion(
       | { x: number; y: number; zoom: number }
       | undefined
     const defaultPos = vp
-      ? { x: (-vp.x + window.innerWidth / 2) / vp.zoom - 200, y: (-vp.y + window.innerHeight / 2) / vp.zoom - 150 }
+      ? {
+          x: (-vp.x + window.innerWidth / 2) / vp.zoom - 200,
+          y: (-vp.y + window.innerHeight / 2) / vp.zoom - 150,
+        }
       : { x: 300, y: 200 }
 
     const regionId = regionStore.addRegion({
@@ -278,7 +280,7 @@ async function executeCreateRegion(
 }
 
 async function executeExecutePlan(
-  input: Record<string, unknown>
+  input: Record<string, unknown>,
 ): Promise<{ success: boolean; result?: any; error?: string }> {
   try {
     const store = useWorkspaceStore.getState()
@@ -317,7 +319,12 @@ async function executeExecutePlan(
       const sourceId = idMap[e.source]
       const targetId = idMap[e.target]
       if (sourceId && targetId) {
-        store.addEdge({ source: sourceId, target: targetId, sourceHandle: null, targetHandle: null })
+        store.addEdge({
+          source: sourceId,
+          target: targetId,
+          sourceHandle: null,
+          targetHandle: null,
+        })
         edgeCount++
       }
     }
@@ -343,7 +350,7 @@ export function getWorkspaceToolDefinitions(): ToolDefinition[] {
 
 export async function executeWorkspaceTool(
   name: string,
-  input: Record<string, unknown>
+  input: Record<string, unknown>,
 ): Promise<{ success: boolean; result?: any; error?: string }> {
   switch (name) {
     case 'create_agent':

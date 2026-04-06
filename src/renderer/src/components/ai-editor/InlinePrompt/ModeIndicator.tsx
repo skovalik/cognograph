@@ -8,17 +8,10 @@
  * Clickable to manually change mode. Keyboard accessible.
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react'
-import {
-  Sparkles,
-  Pencil,
-  LayoutGrid,
-  Zap,
-  MessageCircle,
-  ChevronDown
-} from 'lucide-react'
 import type { AIEditorMode } from '@shared/types'
 import { AI_EDITOR_MODE_DESCRIPTIONS } from '@shared/types'
+import { ChevronDown, LayoutGrid, MessageCircle, Pencil, Sparkles, Zap } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 
 interface ModeIndicatorProps {
   mode: AIEditorMode
@@ -31,7 +24,7 @@ const modeIcons: Record<AIEditorMode, React.ComponentType<{ className?: string }
   edit: Pencil,
   organize: LayoutGrid,
   automate: Zap,
-  ask: MessageCircle
+  ask: MessageCircle,
 }
 
 const modeColors: Record<AIEditorMode, string> = {
@@ -39,13 +32,13 @@ const modeColors: Record<AIEditorMode, string> = {
   edit: '#60a5fa',
   organize: '#4ade80',
   automate: '#fbbf24',
-  ask: '#f472b6'
+  ask: '#f472b6',
 }
 
 function ModeIndicatorComponent({
   mode,
   onModeChange,
-  inferredFromPrompt = false
+  inferredFromPrompt = false,
 }: ModeIndicatorProps): JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -89,7 +82,7 @@ function ModeIndicatorComponent({
         onModeChange(modes[prevIndex])
       }
     },
-    [isOpen, mode, onModeChange]
+    [isOpen, mode, onModeChange],
   )
 
   const handleModeSelect = useCallback(
@@ -98,7 +91,7 @@ function ModeIndicatorComponent({
       setIsOpen(false)
       buttonRef.current?.focus()
     },
-    [onModeChange]
+    [onModeChange],
   )
 
   return (

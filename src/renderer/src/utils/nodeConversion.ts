@@ -27,31 +27,43 @@ export function getConversionTargets(sourceType: NodeData['type']): ConversionRu
     case 'note':
       return [
         { targetType: 'task', label: 'Task', description: 'Content becomes description' },
-        { targetType: 'conversation', label: 'Conversation', description: 'Content becomes first message' },
+        {
+          targetType: 'conversation',
+          label: 'Conversation',
+          description: 'Content becomes first message',
+        },
         { targetType: 'artifact', label: 'Artifact', description: 'Content preserved as markdown' },
-        { targetType: 'text', label: 'Text Label', description: 'Becomes a simple text node' }
+        { targetType: 'text', label: 'Text Label', description: 'Becomes a simple text node' },
       ]
     case 'task':
       return [
         { targetType: 'note', label: 'Note', description: 'Description becomes content' },
-        { targetType: 'conversation', label: 'Conversation', description: 'Description becomes first message' },
-        { targetType: 'text', label: 'Text Label', description: 'Becomes a simple text node' }
+        {
+          targetType: 'conversation',
+          label: 'Conversation',
+          description: 'Description becomes first message',
+        },
+        { targetType: 'text', label: 'Text Label', description: 'Becomes a simple text node' },
       ]
     case 'conversation':
       return [
         { targetType: 'note', label: 'Note', description: 'Messages are not preserved' },
-        { targetType: 'task', label: 'Task', description: 'Title preserved, messages dropped' }
+        { targetType: 'task', label: 'Task', description: 'Title preserved, messages dropped' },
       ]
     case 'artifact':
       return [
         { targetType: 'note', label: 'Note', description: 'Content preserved' },
-        { targetType: 'text', label: 'Text Label', description: 'Becomes a simple text node' }
+        { targetType: 'text', label: 'Text Label', description: 'Becomes a simple text node' },
       ]
     case 'text':
       return [
         { targetType: 'note', label: 'Note', description: 'Content becomes note body' },
         { targetType: 'task', label: 'Task', description: 'Content becomes description' },
-        { targetType: 'conversation', label: 'Conversation', description: 'Content becomes first message' }
+        {
+          targetType: 'conversation',
+          label: 'Conversation',
+          description: 'Content becomes first message',
+        },
       ]
     // Project, workspace, and action nodes can't be meaningfully converted
     default:

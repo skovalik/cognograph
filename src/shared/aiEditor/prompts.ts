@@ -11,11 +11,7 @@
  * Extracted from src/main/aiEditor.ts (lines 231-544, 628-732).
  */
 
-import type {
-  AIEditorContext,
-  MutationOp,
-  PlanWarning,
-} from '../types'
+import type { AIEditorContext, MutationOp, PlanWarning } from '../types'
 
 // =============================================================================
 // buildSystemPrompt — Non-agent system prompt for plan generation
@@ -228,7 +224,7 @@ Your goal is to answer questions about the workspace:
 - Explain how different parts of the workflow interact
 - Help the user understand their workspace better
 
-Think about: "What information would help the user understand and improve their workspace?"`
+Think about: "What information would help the user understand and improve their workspace?"`,
   }
 
   return basePrompt + modeSpecificPrompt[mode]
@@ -271,7 +267,9 @@ export function buildUserPrompt(context: AIEditorContext): string {
   if (context.visibleNodes.length > 0) {
     parts.push('Other visible nodes:')
     for (const node of context.visibleNodes) {
-      parts.push(`- ${node.id}: ${node.type} "${node.title}" at (${Math.round(node.position.x)}, ${Math.round(node.position.y)})`)
+      parts.push(
+        `- ${node.id}: ${node.type} "${node.title}" at (${Math.round(node.position.x)}, ${Math.round(node.position.y)})`,
+      )
     }
     parts.push('')
   }
@@ -285,12 +283,18 @@ export function buildUserPrompt(context: AIEditorContext): string {
     parts.push('')
   }
 
-  parts.push('Viewport center: (' +
-    Math.round((context.viewport.x + context.canvasBounds.maxX) / 2) + ', ' +
-    Math.round((context.viewport.y + context.canvasBounds.maxY) / 2) + ')')
+  parts.push(
+    'Viewport center: (' +
+      Math.round((context.viewport.x + context.canvasBounds.maxX) / 2) +
+      ', ' +
+      Math.round((context.viewport.y + context.canvasBounds.maxY) / 2) +
+      ')',
+  )
 
   parts.push('')
-  parts.push('Respond with ONLY the JSON mutation plan. No markdown formatting, no explanations outside the JSON.')
+  parts.push(
+    'Respond with ONLY the JSON mutation plan. No markdown formatting, no explanations outside the JSON.',
+  )
 
   return parts.join('\n')
 }
@@ -300,7 +304,11 @@ export function buildUserPrompt(context: AIEditorContext): string {
 // Source: src/main/aiEditor.ts lines 499-544
 // =============================================================================
 
-export function parsePlanResponse(content: string): { operations: MutationOp[]; warnings: PlanWarning[]; reasoning?: string } {
+export function parsePlanResponse(content: string): {
+  operations: MutationOp[]
+  warnings: PlanWarning[]
+  reasoning?: string
+} {
   // Try to extract JSON from the response
   let jsonStr = content.trim()
 
@@ -328,7 +336,7 @@ export function parsePlanResponse(content: string): { operations: MutationOp[]; 
     return {
       operations: parsed.operations || [],
       warnings: parsed.warnings || [],
-      reasoning: parsed.reasoning
+      reasoning: parsed.reasoning,
     }
   } catch (error) {
     console.error('[AIEditor:parse] Failed to parse response:', error)
@@ -338,11 +346,13 @@ export function parsePlanResponse(content: string): { operations: MutationOp[]; 
     // This handles cases where the AI asks clarifying questions instead of returning JSON
     return {
       operations: [],
-      warnings: [{
-        level: 'error',
-        message: 'AI response was not valid JSON. Please try rephrasing your request.'
-      }],
-      reasoning: content.substring(0, 300)
+      warnings: [
+        {
+          level: 'error',
+          message: 'AI response was not valid JSON. Please try rephrasing your request.',
+        },
+      ],
+      reasoning: content.substring(0, 300),
     }
   }
 }
@@ -410,7 +420,7 @@ Position types:
     edit: `\nMODE: EDIT - Fix and improve workflow: broken context chains, missing edges, orphaned nodes, restructure for modularity.`,
     organize: `\nMODE: ORGANIZE - Arrange layout to show data flow: context sources above/left of conversations, clear visual flow direction.`,
     automate: `\nMODE: AUTOMATE - Create automation workflows: action nodes with triggers, conditions, and proper context wiring.`,
-    ask: `\nMODE: ASK - Analyze and explain the workspace: structure, relationships, context flow, and improvement suggestions.`
+    ask: `\nMODE: ASK - Analyze and explain the workspace: structure, relationships, context flow, and improvement suggestions.`,
   }
 
   return basePrompt + modePrompts[mode]
@@ -422,17 +432,23 @@ Position types:
 // =============================================================================
 
 export function buildAgentUserPrompt(context: AIEditorContext): string {
-  const selectedNodesInfo = context.selectedNodes.map(n =>
-    `  - ${n.id}: ${n.type} "${n.title}" at (${Math.round(n.position.x)}, ${Math.round(n.position.y)})`
-  ).join('\n')
+  const selectedNodesInfo = context.selectedNodes
+    .map(
+      (n) =>
+        `  - ${n.id}: ${n.type} "${n.title}" at (${Math.round(n.position.x)}, ${Math.round(n.position.y)})`,
+    )
+    .join('\n')
 
-  const visibleNodesInfo = context.visibleNodes.map(n =>
-    `  - ${n.id}: ${n.type} "${n.title}" at (${Math.round(n.position.x)}, ${Math.round(n.position.y)})`
-  ).join('\n')
+  const visibleNodesInfo = context.visibleNodes
+    .map(
+      (n) =>
+        `  - ${n.id}: ${n.type} "${n.title}" at (${Math.round(n.position.x)}, ${Math.round(n.position.y)})`,
+    )
+    .join('\n')
 
-  const edgesInfo = context.edges.map(e =>
-    `  - ${e.source} → ${e.target}${e.label ? ` [${e.label}]` : ''}`
-  ).join('\n')
+  const edgesInfo = context.edges
+    .map((e) => `  - ${e.source} → ${e.target}${e.label ? ` [${e.label}]` : ''}`)
+    .join('\n')
 
   const userPrompt = `User's request: ${context.prompt}
 

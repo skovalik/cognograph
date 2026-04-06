@@ -42,7 +42,7 @@ function forward(level: LogLevel, args: unknown[]): void {
     timestamp: ts,
     level,
     source: extractSource(message),
-    message
+    message,
   }
 
   // Ring buffer
@@ -63,10 +63,22 @@ export function interceptConsole(): void {
   const origError = console.error
   const origInfo = console.info
 
-  console.log = (...args) => { origLog(...args); forward('log', args) }
-  console.warn = (...args) => { origWarn(...args); forward('warn', args) }
-  console.error = (...args) => { origError(...args); forward('error', args) }
-  console.info = (...args) => { origInfo(...args); forward('info', args) }
+  console.log = (...args) => {
+    origLog(...args)
+    forward('log', args)
+  }
+  console.warn = (...args) => {
+    origWarn(...args)
+    forward('warn', args)
+  }
+  console.error = (...args) => {
+    origError(...args)
+    forward('error', args)
+  }
+  console.info = (...args) => {
+    origInfo(...args)
+    forward('info', args)
+  }
 }
 
 export function getLogBuffer(): ConsoleLogEntry[] {

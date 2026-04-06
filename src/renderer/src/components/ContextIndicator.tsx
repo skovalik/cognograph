@@ -7,13 +7,13 @@
  * Shows which nodes are contributing context to the current conversation/agent.
  * Compact badge by default, expands to show full list on click.
  *
- * Design goal: automatic context with visibility
+ * Design principle: "Automatic with visibility"
  */
 
-import { useState, useMemo, useEffect, useRef } from 'react'
-import { useWorkspaceStore } from '@/stores'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
+import { useWorkspaceStore } from '@/stores'
 
 interface ContextSource {
   nodeId: string
@@ -32,7 +32,11 @@ interface ContextIndicatorProps {
  * Parse getContextForNode() output to extract individual sources.
  * Avoids duplicate BFS traversal - reuses existing context string.
  */
-function parseContextSources(contextText: string, nodeId: string, allNodes: Array<{ id: string; data: { type: string; title?: string; [key: string]: unknown } }>): ContextSource[] {
+function parseContextSources(
+  contextText: string,
+  nodeId: string,
+  allNodes: Array<{ id: string; data: { type: string; title?: string; [key: string]: unknown } }>,
+): ContextSource[] {
   if (!contextText || contextText.trim() === '') {
     return []
   }
@@ -48,12 +52,12 @@ function parseContextSources(contextText: string, nodeId: string, allNodes: Arra
     const headerMatch = section.match(/^\[([^\]]+): ([^\]]+)\]/)
     if (!headerMatch) return
 
-    const role = headerMatch[1]  // e.g., "Reference", "Project Scope"
-    const title = headerMatch[2]  // e.g., "Requirements"
+    const role = headerMatch[1] // e.g., "Reference", "Project Scope"
+    const title = headerMatch[2] // e.g., "Requirements"
 
     // Find matching node by title
-    const node = allNodes.find(n => {
-      if (n.id === nodeId) return false  // Exclude self
+    const node = allNodes.find((n) => {
+      if (n.id === nodeId) return false // Exclude self
       return n.data.title === title
     })
 
@@ -65,7 +69,7 @@ function parseContextSources(contextText: string, nodeId: string, allNodes: Arra
         nodeId: node.id,
         title,
         type: node.data.type,
-        tokens
+        tokens,
       })
     }
   })
@@ -78,10 +82,10 @@ function ContextSkeleton({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1 px-2 py-1 rounded-md",
-        "text-xs font-medium text-muted-foreground",
-        "border border-border/50",
-        className
+        'inline-flex items-center gap-1 px-2 py-1 rounded-md',
+        'text-xs font-medium text-muted-foreground',
+        'border border-border/50',
+        className,
       )}
       aria-label="Calculating context..."
       role="status"
@@ -95,8 +99,8 @@ function ContextSkeleton({ className }: { className?: string }) {
 export function ContextIndicator({ nodeId, compact = true, className }: ContextIndicatorProps) {
   const [expanded, setExpanded] = useState(false)
   const [isCalculating, setIsCalculating] = useState(true)
-  const getContextForNode = useWorkspaceStore(state => state.getContextForNode)
-  const allNodes = useWorkspaceStore(state => state.nodes)
+  const getContextForNode = useWorkspaceStore((state) => state.getContextForNode)
+  const allNodes = useWorkspaceStore((state) => state.nodes)
   const computedRef = useRef(false)
 
   const { sources, totalTokens } = useMemo(() => {
@@ -125,7 +129,7 @@ export function ContextIndicator({ nodeId, compact = true, className }: ContextI
   // No context - show muted message
   if (sources.length === 0) {
     return (
-      <div className={cn("text-xs text-muted-foreground", className)}>
+      <div className={cn('text-xs text-muted-foreground', className)}>
         No context nodes connected
       </div>
     )
@@ -137,18 +141,20 @@ export function ContextIndicator({ nodeId, compact = true, className }: ContextI
       <button
         onClick={() => setExpanded(true)}
         className={cn(
-          "inline-flex items-center gap-1 px-2 py-1 rounded-md",
-          "text-xs font-medium",
-          "bg-primary/10 hover:bg-primary/20",
-          "text-primary",
-          "transition-colors",
-          "border border-primary/20",
-          className
+          'inline-flex items-center gap-1 px-2 py-1 rounded-md',
+          'text-xs font-medium',
+          'bg-primary/10 hover:bg-primary/20',
+          'text-primary',
+          'transition-colors',
+          'border border-primary/20',
+          className,
         )}
         aria-label={`${sources.length} context source${sources.length !== 1 ? 's' : ''}, ${totalTokens} tokens. Click to expand`}
       >
         <span className="text-[10px]">📎</span>
-        <span>{sources.length} context{sources.length !== 1 ? 's' : ''}</span>
+        <span>
+          {sources.length} context{sources.length !== 1 ? 's' : ''}
+        </span>
         <span className="text-muted-foreground">•</span>
         <span>{totalTokens}t</span>
       </button>
@@ -157,7 +163,12 @@ export function ContextIndicator({ nodeId, compact = true, className }: ContextI
 
   // Expanded mode - full list
   return (
-    <div className={cn("context-indicator-expanded rounded-md border border-border bg-card p-3 space-y-2", className)}>
+    <div
+      className={cn(
+        'context-indicator-expanded rounded-md border border-border bg-card p-3 space-y-2',
+        className,
+      )}
+    >
       <div className="flex items-center justify-between">
         <div className="text-sm font-medium flex items-center gap-1.5">
           <span className="text-base">📎</span>
@@ -181,9 +192,7 @@ export function ContextIndicator({ nodeId, compact = true, className }: ContextI
             <span className="flex-1 truncate" title={source.title}>
               {source.title}
             </span>
-            <span className="text-muted-foreground text-[10px]">
-              ({source.tokens}t)
-            </span>
+            <span className="text-muted-foreground text-[10px]">({source.tokens}t)</span>
           </li>
         ))}
       </ul>

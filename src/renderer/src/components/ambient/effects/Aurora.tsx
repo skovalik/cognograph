@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useEffect, useRef } from 'react';
-import { Renderer, Program, Mesh, Color, Triangle } from 'ogl';
-import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
+import { Color, Mesh, Program, Renderer, Triangle } from 'ogl'
+import { useEffect, useRef } from 'react'
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality'
 
 const VERT = `#version 300 es
 in vec2 position;
 void main() {
   gl_Position = vec4(position, 0.0, 1.0);
 }
-`;
+`
 
 const FRAG = `#version 300 es
 precision highp float;
@@ -115,65 +115,65 @@ void main() {
 
   fragColor = vec4(auroraColor * auroraAlpha, auroraAlpha);
 }
-`;
+`
 
 interface AuroraProps {
-  colorStops?: string[];
-  amplitude?: number;
-  blend?: number;
-  time?: number;
-  speed?: number;
-  isDark?: boolean;
-  opacity?: number;
-  qualityRef?: React.RefObject<AdaptiveQualityState>;
-  reportFrame?: () => void;
+  colorStops?: string[]
+  amplitude?: number
+  blend?: number
+  time?: number
+  speed?: number
+  isDark?: boolean
+  opacity?: number
+  qualityRef?: React.RefObject<AdaptiveQualityState>
+  reportFrame?: () => void
 }
 
 export default function Aurora(props: AuroraProps) {
-  const { colorStops = ['#5227FF', '#7cff67', '#5227FF'], amplitude = 1.0, blend = 0.5 } = props;
-  const propsRef = useRef<AuroraProps>(props);
-  propsRef.current = props;
+  const { colorStops = ['#5227FF', '#7cff67', '#5227FF'], amplitude = 1.0, blend = 0.5 } = props
+  const propsRef = useRef<AuroraProps>(props)
+  propsRef.current = props
 
-  const ctnDom = useRef<HTMLDivElement>(null);
+  const ctnDom = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const ctn = ctnDom.current;
-    if (!ctn) return;
+    const ctn = ctnDom.current
+    if (!ctn) return
 
     const renderer = new Renderer({
       alpha: true,
       premultipliedAlpha: true,
       antialias: true,
       dpr: 1.0,
-    });
-    const gl = renderer.gl;
-    gl.clearColor(0, 0, 0, 0);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    gl.canvas.style.backgroundColor = 'transparent';
+    })
+    const gl = renderer.gl
+    gl.clearColor(0, 0, 0, 0)
+    gl.enable(gl.BLEND)
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+    gl.canvas.style.backgroundColor = 'transparent'
 
-    let program: Program | undefined;
+    let program: Program | undefined
 
     function resize() {
-      if (!ctn) return;
-      const width = ctn.offsetWidth;
-      const height = ctn.offsetHeight;
-      renderer.setSize(width, height);
+      if (!ctn) return
+      const width = ctn.offsetWidth
+      const height = ctn.offsetHeight
+      renderer.setSize(width, height)
       if (program) {
-        program.uniforms.uResolution.value = [width, height];
+        program.uniforms.uResolution.value = [width, height]
       }
     }
-    window.addEventListener('resize', resize);
+    window.addEventListener('resize', resize)
 
-    const geometry = new Triangle(gl);
+    const geometry = new Triangle(gl)
     if (geometry.attributes.uv) {
-      delete geometry.attributes.uv;
+      delete geometry.attributes.uv
     }
 
-    const colorStopsArray = colorStops.map(hex => {
-      const c = new Color(hex);
-      return [c.r, c.g, c.b];
-    });
+    const colorStopsArray = colorStops.map((hex) => {
+      const c = new Color(hex)
+      return [c.r, c.g, c.b]
+    })
 
     program = new Program(gl, {
       vertex: VERT,
@@ -184,63 +184,66 @@ export default function Aurora(props: AuroraProps) {
         uColorStops: { value: colorStopsArray },
         uResolution: { value: [ctn.offsetWidth, ctn.offsetHeight] },
         uBlend: { value: blend },
-        uIsDark: { value: (props.isDark ?? true) ? 1 : 0 }
-      }
-    });
+        uIsDark: { value: (props.isDark ?? true) ? 1 : 0 },
+      },
+    })
 
-    const mesh = new Mesh(gl, { geometry, program });
-    ctn.appendChild(gl.canvas);
+    const mesh = new Mesh(gl, { geometry, program })
+    ctn.appendChild(gl.canvas)
 
-    let animateId = 0;
-    let frameCount = 0;
-    let currentScale = -1;
+    let animateId = 0
+    let frameCount = 0
+    let currentScale = -1
     const update = (t: number) => {
-      animateId = requestAnimationFrame(update);
-      if (propsRef.current.qualityRef?.current && !propsRef.current.qualityRef.current.shouldRender) return;
-      if (propsRef.current.reportFrame) propsRef.current.reportFrame();
-      if (propsRef.current.qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
+      animateId = requestAnimationFrame(update)
+      if (propsRef.current.qualityRef?.current && !propsRef.current.qualityRef.current.shouldRender)
+        return
+      if (propsRef.current.reportFrame) propsRef.current.reportFrame()
+      if (propsRef.current.qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return
       if (propsRef.current.qualityRef?.current) {
-        const scale = propsRef.current.qualityRef.current.resolutionScale * propsRef.current.qualityRef.current.dprCap;
+        const scale =
+          propsRef.current.qualityRef.current.resolutionScale *
+          propsRef.current.qualityRef.current.dprCap
         if (scale !== currentScale && ctn) {
-          currentScale = scale;
-          const width = ctn.offsetWidth * scale;
-          const height = ctn.offsetHeight * scale;
-          renderer.setSize(width, height);
+          currentScale = scale
+          const width = ctn.offsetWidth * scale
+          const height = ctn.offsetHeight * scale
+          renderer.setSize(width, height)
           // OGL setSize also sets canvas CSS dimensions — force back to 100% so
           // low-res content stretches to fill container (CSS upscaling, not shrinking)
-          const c = renderer.gl.canvas as HTMLCanvasElement;
-          c.style.width = '100%';
-          c.style.height = '100%';
-          if (program) program.uniforms.uResolution.value = [width, height];
+          const c = renderer.gl.canvas as HTMLCanvasElement
+          c.style.width = '100%'
+          c.style.height = '100%'
+          if (program) program.uniforms.uResolution.value = [width, height]
         }
       }
-      const { time = t * 0.01, speed = 1.0 } = propsRef.current;
+      const { time = t * 0.01, speed = 1.0 } = propsRef.current
       if (program) {
-        program.uniforms.uTime.value = time * speed * 0.1;
-        program.uniforms.uAmplitude.value = propsRef.current.amplitude ?? 1.0;
-        program.uniforms.uBlend.value = propsRef.current.blend ?? blend;
-        program.uniforms.uIsDark.value = (propsRef.current.isDark ?? true) ? 1 : 0;
-        const stops = propsRef.current.colorStops ?? colorStops;
+        program.uniforms.uTime.value = time * speed * 0.1
+        program.uniforms.uAmplitude.value = propsRef.current.amplitude ?? 1.0
+        program.uniforms.uBlend.value = propsRef.current.blend ?? blend
+        program.uniforms.uIsDark.value = (propsRef.current.isDark ?? true) ? 1 : 0
+        const stops = propsRef.current.colorStops ?? colorStops
         program.uniforms.uColorStops.value = stops.map((hex: string) => {
-          const c = new Color(hex);
-          return [c.r, c.g, c.b];
-        });
-        renderer.render({ scene: mesh });
+          const c = new Color(hex)
+          return [c.r, c.g, c.b]
+        })
+        renderer.render({ scene: mesh })
       }
-    };
-    animateId = requestAnimationFrame(update);
+    }
+    animateId = requestAnimationFrame(update)
 
-    resize();
+    resize()
 
     return () => {
-      cancelAnimationFrame(animateId);
-      window.removeEventListener('resize', resize);
+      cancelAnimationFrame(animateId)
+      window.removeEventListener('resize', resize)
       if (ctn && gl.canvas.parentNode === ctn) {
-        ctn.removeChild(gl.canvas);
+        ctn.removeChild(gl.canvas)
       }
-      gl.getExtension('WEBGL_lose_context')?.loseContext();
-    };
-  }, [amplitude]);
+      gl.getExtension('WEBGL_lose_context')?.loseContext()
+    }
+  }, [amplitude])
 
-  return <div ref={ctnDom} className="w-full h-full" style={{ opacity: props.opacity ?? 1 }} />;
+  return <div ref={ctnDom} className="w-full h-full" style={{ opacity: props.opacity ?? 1 }} />
 }

@@ -12,9 +12,9 @@
  * - Corrupt last line skipped on load
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { join } from 'path'
 import type { Message } from '@shared/types/nodes'
+import { join } from 'path'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // vi.hoisted runs before vi.mock hoisting — safe to reference in factories
 const mockFiles = vi.hoisted(() => new Map<string, string>())
@@ -47,7 +47,9 @@ vi.mock('fs', () => {
   const readFile = vi.fn(async (path: string) => {
     const content = mockFiles.get(path)
     if (content === undefined) {
-      const err = new Error(`ENOENT: no such file or directory, open '${path}'`) as NodeJS.ErrnoException
+      const err = new Error(
+        `ENOENT: no such file or directory, open '${path}'`,
+      ) as NodeJS.ErrnoException
       err.code = 'ENOENT'
       throw err
     }
@@ -62,7 +64,9 @@ vi.mock('fs', () => {
   })
   const access = vi.fn(async (path: string) => {
     if (!mockFiles.has(path)) {
-      const err = new Error(`ENOENT: no such file or directory, access '${path}'`) as NodeJS.ErrnoException
+      const err = new Error(
+        `ENOENT: no such file or directory, access '${path}'`,
+      ) as NodeJS.ErrnoException
       err.code = 'ENOENT'
       throw err
     }
@@ -97,9 +101,9 @@ vi.mock('fs', () => {
 // Import AFTER mocks are set up
 import {
   appendMessage,
-  loadMessages,
-  loadConversationMessages,
   enrichMessage,
+  loadConversationMessages,
+  loadMessages,
   migrateInlineMessages,
   type PersistedMessage,
 } from '../conversationPersistence'
@@ -123,7 +127,11 @@ function makeMessage(
 const WORKSPACE_ID = 'test-workspace-1'
 const JSONL_PATH = join('/mock/user/data', 'workspaces', `${WORKSPACE_ID}.messages.jsonl`)
 const WORKSPACE_JSON_PATH = join('/mock/user/data', 'workspaces', `${WORKSPACE_ID}.json`)
-const BACKUP_JSON_PATH = join('/mock/user/data', 'workspaces', `${WORKSPACE_ID}.pre-jsonl-backup.json`)
+const BACKUP_JSON_PATH = join(
+  '/mock/user/data',
+  'workspaces',
+  `${WORKSPACE_ID}.pre-jsonl-backup.json`,
+)
 
 describe('Conversation Persistence (JSONL)', () => {
   beforeEach(() => {

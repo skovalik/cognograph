@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
+import {
+  selectDismissedTooltips,
+  selectHasCompletedOnboarding,
+  useProgramStore,
+} from '../stores/programStore'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import { useProgramStore, selectDismissedTooltips, selectHasCompletedOnboarding } from '../stores/programStore'
 
 /**
  * Tooltip definitions: each maps a trigger condition to a message.
@@ -20,35 +24,35 @@ export const ONBOARDING_TOOLTIPS: Record<string, TooltipDefinition> = {
   'first-note': {
     id: 'first-note',
     message: 'Connect this note to a conversation — AI will use its content as context.',
-    anchorNodeType: 'note'
+    anchorNodeType: 'note',
   },
   'first-edge': {
     id: 'first-edge',
-    message: 'Context flows along edges. Connected conversations can now see this node\'s content.'
+    message: "Context flows along edges. Connected conversations can now see this node's content.",
   },
   'first-edge-to-conversation': {
     id: 'first-edge-to-conversation',
-    message: 'This conversation now has context! Check the context indicator in the chat panel.'
+    message: 'This conversation now has context! Check the context indicator in the chat panel.',
   },
   'first-task': {
     id: 'first-task',
     message: 'Tasks have status and priority. Connect them to conversations to provide AI context.',
-    anchorNodeType: 'task'
+    anchorNodeType: 'task',
   },
   'first-project': {
     id: 'first-project',
     message: 'Projects are containers. Drag nodes into a project to group them.',
-    anchorNodeType: 'project'
+    anchorNodeType: 'project',
   },
   'first-action': {
     id: 'first-action',
     message: 'Action nodes respond to events. Configure a trigger to automate your workflow.',
-    anchorNodeType: 'action'
+    anchorNodeType: 'action',
   },
   'first-command-palette': {
     id: 'first-command-palette',
-    message: 'The Command Palette gives you quick access to everything. Try typing a node name!'
-  }
+    message: 'The Command Palette gives you quick access to everything. Try typing a node name!',
+  },
 }
 
 export interface ActiveTooltip {
@@ -113,32 +117,35 @@ export function useOnboardingTooltips(): {
   const autoDismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Use a simple state-like ref + forceUpdate pattern to avoid excessive re-renders
   const forceUpdateRef = useRef(0)
-  const setActiveTooltip = useCallback((tooltip: ActiveTooltip | null) => {
-    activeTooltipRef.current = tooltip
-    // Clear any existing auto-dismiss timer
-    if (autoDismissTimerRef.current) {
-      clearTimeout(autoDismissTimerRef.current)
-      autoDismissTimerRef.current = null
-    }
-    // Track show count for per-hint cap
-    if (tooltip) {
-      incrementHintShowCount(tooltip.id)
-    }
-    // Set auto-dismiss timer for 8 seconds
-    if (tooltip) {
-      autoDismissTimerRef.current = setTimeout(() => {
-        if (activeTooltipRef.current?.id === tooltip.id) {
-          dismissTooltip(tooltip.id)
-          activeTooltipRef.current = null
-          forceUpdateRef.current++
-          // Trigger re-render
-          window.dispatchEvent(new CustomEvent('onboarding-tooltip-update'))
-        }
-      }, 8000)
-    }
-    forceUpdateRef.current++
-    window.dispatchEvent(new CustomEvent('onboarding-tooltip-update'))
-  }, [dismissTooltip])
+  const setActiveTooltip = useCallback(
+    (tooltip: ActiveTooltip | null) => {
+      activeTooltipRef.current = tooltip
+      // Clear any existing auto-dismiss timer
+      if (autoDismissTimerRef.current) {
+        clearTimeout(autoDismissTimerRef.current)
+        autoDismissTimerRef.current = null
+      }
+      // Track show count for per-hint cap
+      if (tooltip) {
+        incrementHintShowCount(tooltip.id)
+      }
+      // Set auto-dismiss timer for 8 seconds
+      if (tooltip) {
+        autoDismissTimerRef.current = setTimeout(() => {
+          if (activeTooltipRef.current?.id === tooltip.id) {
+            dismissTooltip(tooltip.id)
+            activeTooltipRef.current = null
+            forceUpdateRef.current++
+            // Trigger re-render
+            window.dispatchEvent(new CustomEvent('onboarding-tooltip-update'))
+          }
+        }, 8000)
+      }
+      forceUpdateRef.current++
+      window.dispatchEvent(new CustomEvent('onboarding-tooltip-update'))
+    },
+    [dismissTooltip],
+  )
 
   const dismiss = useCallback(() => {
     const current = activeTooltipRef.current
@@ -151,7 +158,9 @@ export function useOnboardingTooltips(): {
   // Listen for tooltip update events to trigger re-renders
   useEffect(() => {
     // We use a small trick: listen for our own custom event to force re-renders
-    const handler = (): void => { forceUpdateRef.current++ }
+    const handler = (): void => {
+      forceUpdateRef.current++
+    }
     window.addEventListener('onboarding-tooltip-update', handler)
     return () => window.removeEventListener('onboarding-tooltip-update', handler)
   }, [])
@@ -194,7 +203,7 @@ export function useOnboardingTooltips(): {
           projects: 0,
           actions: 0,
           edges: useWorkspaceStore.getState().edges.length,
-          edgesToConversation: 0
+          edgesToConversation: 0,
         }
 
         let lastNoteId = ''
@@ -205,10 +214,22 @@ export function useOnboardingTooltips(): {
         for (const node of nodes) {
           if (node.data.isArchived) continue
           switch (node.data.type) {
-            case 'note': counts.notes++; lastNoteId = node.id; break
-            case 'task': counts.tasks++; lastTaskId = node.id; break
-            case 'project': counts.projects++; lastProjectId = node.id; break
-            case 'action': counts.actions++; lastActionId = node.id; break
+            case 'note':
+              counts.notes++
+              lastNoteId = node.id
+              break
+            case 'task':
+              counts.tasks++
+              lastTaskId = node.id
+              break
+            case 'project':
+              counts.projects++
+              lastProjectId = node.id
+              break
+            case 'action':
+              counts.actions++
+              lastActionId = node.id
+              break
           }
         }
 
@@ -225,34 +246,42 @@ export function useOnboardingTooltips(): {
             id: 'first-note',
             message: ONBOARDING_TOOLTIPS['first-note'].message,
             position: getNodeScreenPosition(lastNoteId),
-            nodeId: lastNoteId
+            nodeId: lastNoteId,
           })
         } else if (counts.tasks > prev.tasks && prev.tasks === 0 && shouldShow('first-task')) {
           setActiveTooltip({
             id: 'first-task',
             message: ONBOARDING_TOOLTIPS['first-task'].message,
             position: getNodeScreenPosition(lastTaskId),
-            nodeId: lastTaskId
+            nodeId: lastTaskId,
           })
-        } else if (counts.projects > prev.projects && prev.projects === 0 && shouldShow('first-project')) {
+        } else if (
+          counts.projects > prev.projects &&
+          prev.projects === 0 &&
+          shouldShow('first-project')
+        ) {
           setActiveTooltip({
             id: 'first-project',
             message: ONBOARDING_TOOLTIPS['first-project'].message,
             position: getNodeScreenPosition(lastProjectId),
-            nodeId: lastProjectId
+            nodeId: lastProjectId,
           })
-        } else if (counts.actions > prev.actions && prev.actions === 0 && shouldShow('first-action')) {
+        } else if (
+          counts.actions > prev.actions &&
+          prev.actions === 0 &&
+          shouldShow('first-action')
+        ) {
           setActiveTooltip({
             id: 'first-action',
             message: ONBOARDING_TOOLTIPS['first-action'].message,
             position: getNodeScreenPosition(lastActionId),
-            nodeId: lastActionId
+            nodeId: lastActionId,
           })
         }
 
         prevCountsRef.current = counts
       },
-      { equalityFn: Object.is }
+      { equalityFn: Object.is },
     )
 
     const unsubEdges = useWorkspaceStore.subscribe(
@@ -268,23 +297,26 @@ export function useOnboardingTooltips(): {
           setActiveTooltip({
             id: 'first-edge',
             message: ONBOARDING_TOOLTIPS['first-edge'].message,
-            position: null
+            position: null,
           })
         }
         // Detect first edge to a conversation node
-        else if (newEdgeCount > (prevEdges?.length || 0) && shouldShow('first-edge-to-conversation')) {
+        else if (
+          newEdgeCount > (prevEdges?.length || 0) &&
+          shouldShow('first-edge-to-conversation')
+        ) {
           const nodes = useWorkspaceStore.getState().nodes
-          const prevEdgeIds = new Set(prevEdges?.map(e => e.id) || [])
-          const newEdges = edges.filter(e => !prevEdgeIds.has(e.id))
+          const prevEdgeIds = new Set(prevEdges?.map((e) => e.id) || [])
+          const newEdges = edges.filter((e) => !prevEdgeIds.has(e.id))
 
           for (const edge of newEdges) {
-            const targetNode = nodes.find(n => n.id === edge.target)
+            const targetNode = nodes.find((n) => n.id === edge.target)
             if (targetNode?.data.type === 'conversation') {
               setActiveTooltip({
                 id: 'first-edge-to-conversation',
                 message: ONBOARDING_TOOLTIPS['first-edge-to-conversation'].message,
                 position: null,
-                nodeId: edge.target
+                nodeId: edge.target,
               })
               break
             }
@@ -295,7 +327,7 @@ export function useOnboardingTooltips(): {
           prevCountsRef.current.edges = newEdgeCount
         }
       },
-      { equalityFn: Object.is }
+      { equalityFn: Object.is },
     )
 
     // Listen for command palette open (first time)
@@ -304,7 +336,7 @@ export function useOnboardingTooltips(): {
         setActiveTooltip({
           id: 'first-command-palette',
           message: ONBOARDING_TOOLTIPS['first-command-palette'].message,
-          position: null
+          position: null,
         })
       }
     }
@@ -322,6 +354,6 @@ export function useOnboardingTooltips(): {
 
   return {
     activeTooltip: activeTooltipRef.current,
-    dismiss
+    dismiss,
   }
 }

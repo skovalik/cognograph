@@ -11,12 +11,12 @@
  * Navigate/ModeBadge removed.
  */
 
-import { memo, useCallback, useState, useEffect, useRef } from 'react'
-import { Zap, RefreshCw } from 'lucide-react'
+import { RefreshCw, Zap } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { useMultiplayer } from '../hooks/useMultiplayer'
 import { useOrchestratorStore } from '../stores/orchestratorStore'
 import { useUIStore } from '../stores/uiStore'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import { useMultiplayer } from '../hooks/useMultiplayer'
 import { FilterViewDropdown } from './FilterViewDropdown'
 import '../styles/canvas-badges.css'
 
@@ -33,7 +33,7 @@ function AgentLogBadge(): JSX.Element {
   const popoverRef = useRef<HTMLDivElement>(null)
 
   const count = Array.from(activeRuns.values()).filter(
-    (run) => run.status === 'running' || run.status === 'paused'
+    (run) => run.status === 'running' || run.status === 'paused',
   ).length
 
   // Close popover on outside click
@@ -48,14 +48,17 @@ function AgentLogBadge(): JSX.Element {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [popoverOpen])
 
-  const handleEntryClick = useCallback((entryId: string) => {
-    if (leftSidebarOpen) {
-      useWorkspaceStore.getState().toggleLeftSidebar()
-    }
-    useUIStore.getState().setResponsePanelOpen(true)
-    useUIStore.getState().setActiveCommandId(entryId)
-    setPopoverOpen(false)
-  }, [leftSidebarOpen])
+  const handleEntryClick = useCallback(
+    (entryId: string) => {
+      if (leftSidebarOpen) {
+        useWorkspaceStore.getState().toggleLeftSidebar()
+      }
+      useUIStore.getState().setResponsePanelOpen(true)
+      useUIStore.getState().setActiveCommandId(entryId)
+      setPopoverOpen(false)
+    },
+    [leftSidebarOpen],
+  )
 
   return (
     <div ref={popoverRef} style={{ position: 'relative' }}>
@@ -72,28 +75,52 @@ function AgentLogBadge(): JSX.Element {
       {/* Popover — command log entries */}
       {popoverOpen && commandLog.length > 0 && (
         <div className="agent-log-popover glass-soft">
-          {commandLog.slice().reverse().map(entry => (
-            <button
-              key={entry.id}
-              className={`agent-log-popover__entry ${entry.id === activeCommandId ? 'agent-log-popover__entry--active' : ''}`}
-              onClick={() => handleEntryClick(entry.id)}
-            >
-              <span className="agent-log-popover__status" style={{
-                color: entry.status === 'done' ? 'var(--accent-glow)'
-                  : entry.status === 'running' ? 'var(--text-secondary)'
-                  : entry.status === 'error' ? '#ef4444'
-                  : 'var(--text-muted)'
-              }}>
-                {entry.status === 'running' ? '●' : entry.status === 'done' ? '✓' : entry.status === 'error' ? '!' : '—'}
-              </span>
-              <span className="agent-log-popover__text">{entry.input}</span>
-            </button>
-          ))}
+          {commandLog
+            .slice()
+            .reverse()
+            .map((entry) => (
+              <button
+                key={entry.id}
+                className={`agent-log-popover__entry ${entry.id === activeCommandId ? 'agent-log-popover__entry--active' : ''}`}
+                onClick={() => handleEntryClick(entry.id)}
+              >
+                <span
+                  className="agent-log-popover__status"
+                  style={{
+                    color:
+                      entry.status === 'done'
+                        ? 'var(--accent-glow)'
+                        : entry.status === 'running'
+                          ? 'var(--text-secondary)'
+                          : entry.status === 'error'
+                            ? '#ef4444'
+                            : 'var(--text-muted)',
+                  }}
+                >
+                  {entry.status === 'running'
+                    ? '●'
+                    : entry.status === 'done'
+                      ? '✓'
+                      : entry.status === 'error'
+                        ? '!'
+                        : '—'}
+                </span>
+                <span className="agent-log-popover__text">{entry.input}</span>
+              </button>
+            ))}
         </div>
       )}
 
       {popoverOpen && commandLog.length === 0 && (
-        <div className="agent-log-popover glass-soft" style={{ padding: '12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
+        <div
+          className="agent-log-popover glass-soft"
+          style={{
+            padding: '12px',
+            textAlign: 'center',
+            color: 'var(--text-muted)',
+            fontSize: '12px',
+          }}
+        >
           No commands yet
         </div>
       )}
@@ -118,13 +145,14 @@ function SyncBadge(): JSX.Element | null {
 
   if (!isMultiplayer) return null
 
-  const label = {
-    connected: 'Synced',
-    connecting: 'Connecting…',
-    syncing: 'Syncing…',
-    disconnected: 'Offline',
-    error: 'Sync error',
-  }[connectionStatus] ?? connectionStatus
+  const label =
+    {
+      connected: 'Synced',
+      connecting: 'Connecting…',
+      syncing: 'Syncing…',
+      disconnected: 'Offline',
+      error: 'Sync error',
+    }[connectionStatus] ?? connectionStatus
 
   return (
     <button
@@ -132,7 +160,9 @@ function SyncBadge(): JSX.Element | null {
       onClick={() => window.dispatchEvent(new CustomEvent('toggle-multiplayer-panel'))}
       title={`Multiplayer: ${label}`}
     >
-      <RefreshCw className={`w-3.5 h-3.5${connectionStatus === 'syncing' || connectionStatus === 'connecting' ? ' animate-spin' : ''}`} />
+      <RefreshCw
+        className={`w-3.5 h-3.5${connectionStatus === 'syncing' || connectionStatus === 'connecting' ? ' animate-spin' : ''}`}
+      />
       {label}
     </button>
   )

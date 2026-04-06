@@ -26,7 +26,7 @@ function validateToolConfig(config: ToolConfig): void {
   }
   if (!TOOL_NAME_RE.test(config.name)) {
     throw new Error(
-      `Tool name "${config.name}" contains invalid characters. Allowed: [a-zA-Z0-9_-]`
+      `Tool name "${config.name}" contains invalid characters. Allowed: [a-zA-Z0-9_-]`,
     )
   }
 
@@ -40,7 +40,7 @@ function validateToolConfig(config: ToolConfig): void {
   // Duck-type check for Zod schema — must have .parse or .safeParse
   if (typeof (config.inputSchema as { safeParse?: unknown }).safeParse !== 'function') {
     throw new Error(
-      `Tool "${config.name}": "inputSchema" must be a Zod schema (missing .safeParse)`
+      `Tool "${config.name}": "inputSchema" must be a Zod schema (missing .safeParse)`,
     )
   }
 

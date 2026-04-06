@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import { memo, useEffect, useRef, useState } from 'react'
 
 /**
  * Splash Screen - Node Constellation
@@ -23,7 +23,7 @@ const NODE_TYPES = [
   { type: 'action', color: '#f97316' },
   { type: 'note', color: '#f59e0b' },
   { type: 'project', color: '#a855f7' },
-  { type: 'note', color: '#f59e0b' }
+  { type: 'note', color: '#f59e0b' },
 ]
 
 // Base positions for nodes (will be jittered)
@@ -37,28 +37,31 @@ const BASE_POSITIONS = [
   { x: 234, y: 141 },
   { x: 304, y: 136 },
   { x: 84, y: 191 },
-  { x: 284, y: 186 }
+  { x: 284, y: 186 },
 ]
 
 // Edge definitions: [fromNode, toNode]
 const EDGES = [
-  [0, 1], [0, 2],  // From conversation
-  [1, 3], [1, 4],  // From project-1
-  [2, 6], [2, 7],  // From note-1
-  [4, 5],          // Task → Artifact
-  [5, 6],          // Artifact → Action
-  [3, 8],          // Project → Project-child
-  [7, 9]           // Note → Note-child
+  [0, 1],
+  [0, 2], // From conversation
+  [1, 3],
+  [1, 4], // From project-1
+  [2, 6],
+  [2, 7], // From note-1
+  [4, 5], // Task → Artifact
+  [5, 6], // Artifact → Action
+  [3, 8], // Project → Project-child
+  [7, 9], // Note → Note-child
 ]
 
 // Flow paths: which nodes light up for each animation cycle
 const FLOW_PATHS = [
-  [0, 1, 4],           // Conversation → Project → Task
-  [0, 2, 6],           // Conversation → Note → Action
-  [4, 5, 6],           // Task → Artifact → Action
-  [0, 1, 3, 8],        // Conversation → Project chain
-  [0, 2, 7, 9],        // Conversation → Note chain
-  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] // All lit
+  [0, 1, 4], // Conversation → Project → Task
+  [0, 2, 6], // Conversation → Note → Action
+  [4, 5, 6], // Task → Artifact → Action
+  [0, 1, 3, 8], // Conversation → Project chain
+  [0, 2, 7, 9], // Conversation → Note chain
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], // All lit
 ]
 
 interface NodeData {
@@ -87,7 +90,7 @@ export const SplashScreen = memo(function SplashScreen() {
       { w: 26, h: 20 },
       { w: 22, h: 22 },
       { w: 20, h: 26 },
-      { w: 18, h: 30 }
+      { w: 18, h: 30 },
     ]
 
     const nodeData: NodeData[] = []
@@ -114,7 +117,7 @@ export const SplashScreen = memo(function SplashScreen() {
         cx: x + w / 2,
         cy: y + h / 2,
         color: NODE_TYPES[index].color,
-        delay: index * 0.08
+        delay: index * 0.08,
       })
     })
 
@@ -133,7 +136,7 @@ export const SplashScreen = memo(function SplashScreen() {
       const previousPath = FLOW_PATHS[(pathIndex - 1 + FLOW_PATHS.length) % FLOW_PATHS.length]
 
       // Set fading nodes (previous path that's not in current)
-      const fading = new Set(previousPath.filter(n => !currentPath.includes(n)))
+      const fading = new Set(previousPath.filter((n) => !currentPath.includes(n)))
       setFadingNodes(fading)
 
       // After short delay, set active nodes
@@ -185,46 +188,45 @@ export const SplashScreen = memo(function SplashScreen() {
       transition={{ duration: 0.4, ease: 'easeInOut' }}
     >
       {/* Constellation container */}
-      <div
-        ref={canvasRef}
-        className="relative"
-        style={{ width: 400, height: 320 }}
-      >
+      <div ref={canvasRef} className="relative" style={{ width: 400, height: 320 }}>
         {/* Edge layer (SVG) */}
         <svg
           className="absolute inset-0 pointer-events-none"
           viewBox="0 0 400 320"
           preserveAspectRatio="xMidYMid meet"
         >
-          {nodes.length > 0 && EDGES.map(([from, to], idx) => {
-            const start = getEdgePoint(from, to)
-            const end = getEdgePoint(to, from)
-            const isActive = activeNodes.has(from) && activeNodes.has(to)
-            return (
-              <motion.line
-                key={idx}
-                x1={start.x}
-                y1={start.y}
-                x2={end.x}
-                y2={end.y}
-                stroke={nodes[from]?.color || '#666'}
-                strokeWidth={2}
-                strokeLinecap="round"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{
-                  pathLength: 1,
-                  opacity: isActive ? 0.8 : 0.3,
-                  strokeDasharray: isActive ? '6 4' : 'none',
-                  strokeDashoffset: isActive ? [0, -10] : 0
-                }}
-                transition={{
-                  pathLength: { delay: 0.8 + idx * 0.05, duration: 0.4 },
-                  opacity: { delay: 0.8 + idx * 0.05, duration: 0.3 },
-                  strokeDashoffset: isActive ? { duration: 0.5, repeat: Infinity, ease: 'linear' } : {}
-                }}
-              />
-            )
-          })}
+          {nodes.length > 0 &&
+            EDGES.map(([from, to], idx) => {
+              const start = getEdgePoint(from, to)
+              const end = getEdgePoint(to, from)
+              const isActive = activeNodes.has(from) && activeNodes.has(to)
+              return (
+                <motion.line
+                  key={idx}
+                  x1={start.x}
+                  y1={start.y}
+                  x2={end.x}
+                  y2={end.y}
+                  stroke={nodes[from]?.color || '#666'}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{
+                    pathLength: 1,
+                    opacity: isActive ? 0.8 : 0.3,
+                    strokeDasharray: isActive ? '6 4' : 'none',
+                    strokeDashoffset: isActive ? [0, -10] : 0,
+                  }}
+                  transition={{
+                    pathLength: { delay: 0.8 + idx * 0.05, duration: 0.4 },
+                    opacity: { delay: 0.8 + idx * 0.05, duration: 0.3 },
+                    strokeDashoffset: isActive
+                      ? { duration: 0.5, repeat: Infinity, ease: 'linear' }
+                      : {},
+                  }}
+                />
+              )
+            })}
         </svg>
 
         {/* Nodes */}
@@ -243,7 +245,7 @@ export const SplashScreen = memo(function SplashScreen() {
                 borderWidth: 2,
                 borderStyle: 'solid',
                 borderColor: node.color,
-                background: 'rgba(13, 13, 20, 0.95)'
+                background: 'rgba(13, 13, 20, 0.95)',
               }}
               initial={{ scale: 0, opacity: 0 }}
               animate={{
@@ -253,12 +255,12 @@ export const SplashScreen = memo(function SplashScreen() {
                   ? `0 0 8px ${node.color}, 0 0 16px ${node.color}`
                   : isFading
                     ? `0 0 4px ${node.color}`
-                    : 'none'
+                    : 'none',
               }}
               transition={{
                 scale: { delay: node.delay, duration: 0.3, type: 'spring', stiffness: 300 },
                 opacity: { delay: node.delay, duration: 0.3 },
-                boxShadow: { duration: 0.4 }
+                boxShadow: { duration: 0.4 },
               }}
             />
           )

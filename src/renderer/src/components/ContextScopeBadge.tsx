@@ -27,7 +27,7 @@ function ContextScopeBadgeComponent(): JSX.Element | null {
 
     return {
       depths: Array.from(byDepth.entries()).sort((a, b) => a[0] - b[0]),
-      roles: Array.from(byRole.entries()).sort((a, b) => b[1] - a[1])
+      roles: Array.from(byRole.entries()).sort((a, b) => b[1] - a[1]),
     }
   }, [active, includedNodeIds])
 
@@ -38,7 +38,7 @@ function ContextScopeBadgeComponent(): JSX.Element | null {
     instruction: 'Instruction',
     example: 'Example',
     background: 'Background',
-    scope: 'Scope'
+    scope: 'Scope',
   }
 
   return (
@@ -57,7 +57,10 @@ function ContextScopeBadgeComponent(): JSX.Element | null {
             <span className="context-scope-badge__label">By depth</span>
             {breakdown.depths.map(([depth, count]) => (
               <div key={depth} className="context-scope-badge__row">
-                <span className="context-scope-badge__depth" style={{ opacity: 1 - (depth - 1) * 0.3 }}>
+                <span
+                  className="context-scope-badge__depth"
+                  style={{ opacity: 1 - (depth - 1) * 0.3 }}
+                >
                   Depth {depth}
                 </span>
                 <span>{count}</span>

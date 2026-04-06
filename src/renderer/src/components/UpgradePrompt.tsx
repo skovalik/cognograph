@@ -7,43 +7,39 @@
  * Displays feature name, benefit description, and upgrade CTA.
  */
 
-import { memo, useState, useCallback, useEffect, useRef } from 'react'
-import { Lock, X, ArrowRight, Sparkles } from 'lucide-react'
-import { escapeManager, EscapePriority } from '../utils/EscapeManager'
-import {
-  usePlan,
-  getRequiredPlan,
-  type Plan
-} from '../stores/entitlementsStore'
+import { ArrowRight, Lock, Sparkles, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { getRequiredPlan, type Plan, usePlan } from '../stores/entitlementsStore'
+import { EscapePriority, escapeManager } from '../utils/EscapeManager'
 
 // Feature display information
 const FEATURE_INFO: Record<string, { name: string; description: string; benefit: string }> = {
   cloud_sync: {
     name: 'Cloud Sync',
     description: 'Sync your workspaces across devices and access them from anywhere.',
-    benefit: 'Never lose your work - automatic backup and cross-device access.'
+    benefit: 'Never lose your work - automatic backup and cross-device access.',
   },
   cloud_terminal_unlimited: {
     name: 'Unlimited Cloud Terminals',
     description: 'Run unlimited cloud terminal sessions without daily limits.',
-    benefit: 'Full-power cloud development environment, always available.'
+    benefit: 'Full-power cloud development environment, always available.',
   },
   orchestrator_node: {
-    name: 'Orchestrator Nodes',
+    name: 'CLI Nodes',
     description: 'Multi-step AI pipelines with branching and error handling.',
-    benefit: 'Chain AI agents together for complex automated workflows.'
+    benefit: 'Chain AI agents together for complex automated workflows.',
   },
   full_context_injection: {
     name: 'Full Context Injection',
     description: 'Inject full workspace context into AI conversations.',
-    benefit: 'Give AI complete project awareness for better responses.'
+    benefit: 'Give AI complete project awareness for better responses.',
   },
 }
 
 // Plan display information (null plan = unauthenticated, treated same as free for display)
 const PLAN_INFO: Record<NonNullable<Plan>, { name: string; price: string }> = {
   free: { name: 'Free', price: '$0' },
-  pro: { name: 'Pro', price: '$9/mo' },
+  pro: { name: 'Pro', price: '$15/mo' },
 }
 
 function getPlanInfo(plan: Plan): { name: string; price: string } {
@@ -59,14 +55,14 @@ interface UpgradePromptProps {
 export const UpgradePrompt = memo(function UpgradePrompt({
   feature,
   onClose,
-  variant = 'modal'
+  variant = 'modal',
 }: UpgradePromptProps) {
   const currentPlan = usePlan()
   const requiredPlan = getRequiredPlan(feature)
   const featureInfo = FEATURE_INFO[feature] || {
     name: feature,
     description: 'This feature requires an upgraded plan.',
-    benefit: 'Unlock more capabilities with an upgrade.'
+    benefit: 'Unlock more capabilities with an upgrade.',
   }
   const planInfo = getPlanInfo(requiredPlan)
 
@@ -90,7 +86,7 @@ export const UpgradePrompt = memo(function UpgradePrompt({
   const handleUpgrade = useCallback(async () => {
     setIsLoading(true)
     try {
-      // Cloud billing not available in open-source build
+      // Cloud features disabled in open-source build
       window.open('https://cognograph.app/#pricing', '_blank')
     } finally {
       setIsLoading(false)
@@ -106,6 +102,7 @@ export const UpgradePrompt = memo(function UpgradePrompt({
         </div>
         <p className="text-xs text-[var(--text-secondary)] mb-2">{featureInfo.description}</p>
         <button
+          type="button"
           onClick={handleUpgrade}
           className="w-full text-xs py-1.5 px-3 rounded flex items-center justify-center gap-1"
           style={{ background: 'var(--gold)', color: 'var(--bg-primary)' }}
@@ -120,7 +117,10 @@ export const UpgradePrompt = memo(function UpgradePrompt({
   if (variant === 'inline') {
     return (
       <div className="flex items-center gap-3 p-3 bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-lg">
-        <div className="p-2 rounded-full" style={{ background: 'color-mix(in srgb, var(--gold) 10%, transparent)' }}>
+        <div
+          className="p-2 rounded-full"
+          style={{ background: 'color-mix(in srgb, var(--gold) 10%, transparent)' }}
+        >
           <Lock size={16} style={{ color: 'var(--gold)' }} />
         </div>
         <div className="flex-1 min-w-0">
@@ -128,6 +128,7 @@ export const UpgradePrompt = memo(function UpgradePrompt({
           <p className="text-xs text-[var(--text-secondary)] truncate">{featureInfo.description}</p>
         </div>
         <button
+          type="button"
           onClick={handleUpgrade}
           disabled={isLoading}
           className="shrink-0 text-xs py-1.5 px-3 rounded flex items-center gap-1 disabled:opacity-50"
@@ -147,6 +148,7 @@ export const UpgradePrompt = memo(function UpgradePrompt({
         {/* Close button */}
         {onClose && (
           <button
+            type="button"
             onClick={onClose}
             className="absolute top-3 right-3 p-1 rounded hover:bg-[var(--bg-hover)] text-[var(--text-secondary)]"
           >
@@ -156,7 +158,10 @@ export const UpgradePrompt = memo(function UpgradePrompt({
 
         {/* Header */}
         <div className="p-6 text-center border-b border-[var(--border-default)]">
-          <div className="inline-flex p-3 rounded-full mb-4" style={{ background: 'color-mix(in srgb, var(--gold) 15%, transparent)' }}>
+          <div
+            className="inline-flex p-3 rounded-full mb-4"
+            style={{ background: 'color-mix(in srgb, var(--gold) 15%, transparent)' }}
+          >
             <Sparkles size={24} style={{ color: 'var(--gold)' }} />
           </div>
           <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-1">
@@ -169,12 +174,19 @@ export const UpgradePrompt = memo(function UpgradePrompt({
 
         {/* Content */}
         <div className="p-6">
-          <p className="text-sm text-[var(--text-secondary)] mb-4">
-            {featureInfo.description}
-          </p>
+          <p className="text-sm text-[var(--text-secondary)] mb-4">{featureInfo.description}</p>
 
-          <div className="p-3 rounded-lg mb-6" style={{ background: 'color-mix(in srgb, var(--gold) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--gold) 20%, transparent)' }}>
-            <p className="text-sm flex items-start gap-2" style={{ color: 'var(--gui-accent-secondary)' }}>
+          <div
+            className="p-3 rounded-lg mb-6"
+            style={{
+              background: 'color-mix(in srgb, var(--gold) 10%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--gold) 20%, transparent)',
+            }}
+          >
+            <p
+              className="text-sm flex items-start gap-2"
+              style={{ color: 'var(--gui-accent-secondary)' }}
+            >
               <Sparkles size={14} className="shrink-0 mt-0.5" />
               {featureInfo.benefit}
             </p>
@@ -184,13 +196,23 @@ export const UpgradePrompt = memo(function UpgradePrompt({
           <div className="flex gap-3 mb-6">
             <div className="flex-1 p-3 rounded-lg border border-[var(--border-default)] opacity-50">
               <p className="text-xs text-[var(--text-secondary)] mb-1">Current</p>
-              <p className="font-medium text-[var(--text-primary)]">{getPlanInfo(currentPlan).name}</p>
+              <p className="font-medium text-[var(--text-primary)]">
+                {getPlanInfo(currentPlan).name}
+              </p>
             </div>
             <div className="flex items-center">
               <ArrowRight size={16} className="text-[var(--text-secondary)]" />
             </div>
-            <div className="flex-1 p-3 rounded-lg" style={{ border: '2px solid var(--gold)', background: 'color-mix(in srgb, var(--gold) 5%, transparent)' }}>
-              <p className="text-xs mb-1" style={{ color: 'var(--gold)' }}>Upgrade to</p>
+            <div
+              className="flex-1 p-3 rounded-lg"
+              style={{
+                border: '2px solid var(--gold)',
+                background: 'color-mix(in srgb, var(--gold) 5%, transparent)',
+              }}
+            >
+              <p className="text-xs mb-1" style={{ color: 'var(--gold)' }}>
+                Upgrade to
+              </p>
               <p className="font-medium text-[var(--text-primary)]">{planInfo.name}</p>
               <p className="text-xs text-[var(--text-secondary)]">{planInfo.price}</p>
             </div>
@@ -198,6 +220,7 @@ export const UpgradePrompt = memo(function UpgradePrompt({
 
           {/* CTA */}
           <button
+            type="button"
             ref={upgradeBtnRef}
             onClick={handleUpgrade}
             disabled={isLoading}

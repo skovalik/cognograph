@@ -8,31 +8,26 @@
  * budget meters, and run controls. Expanded version of the L3 orchestrator view.
  */
 
+import type { ConnectedAgentStatus, OrchestratorNodeData } from '@shared/types'
+import { Pause, Play, Square, Workflow } from 'lucide-react'
 import { memo, useCallback, useMemo } from 'react'
-import { Play, Pause, Square, Workflow } from 'lucide-react'
 import { useNodesStore } from '../../stores/nodesStore'
-import type {
-  OrchestratorNodeData,
-  ConnectedAgentStatus,
-} from '@shared/types'
 
 interface OrchestratorArtboardProps {
   nodeId: string
 }
 
 // Agent status indicators
-const STATUS_DISPLAY: Record<
-  ConnectedAgentStatus,
-  { icon: string; color: string; label: string }
-> = {
-  idle: { icon: '\u25CB', color: '#9ca3af', label: 'Idle' },
-  queued: { icon: '\u23F3', color: '#60a5fa', label: 'Queued' },
-  running: { icon: '\u25C9', color: '#fbbf24', label: 'Running' },
-  completed: { icon: '\u2713', color: '#34d399', label: 'Completed' },
-  failed: { icon: '\u2717', color: '#f87171', label: 'Failed' },
-  skipped: { icon: '\u2298', color: '#6b7280', label: 'Skipped' },
-  retrying: { icon: '\u21BB', color: '#fb923c', label: 'Retrying' },
-}
+const STATUS_DISPLAY: Record<ConnectedAgentStatus, { icon: string; color: string; label: string }> =
+  {
+    idle: { icon: '\u25CB', color: '#9ca3af', label: 'Idle' },
+    queued: { icon: '\u23F3', color: '#60a5fa', label: 'Queued' },
+    running: { icon: '\u25C9', color: '#fbbf24', label: 'Running' },
+    completed: { icon: '\u2713', color: '#34d399', label: 'Completed' },
+    failed: { icon: '\u2717', color: '#f87171', label: 'Failed' },
+    skipped: { icon: '\u2298', color: '#6b7280', label: 'Skipped' },
+    retrying: { icon: '\u21BB', color: '#fb923c', label: 'Retrying' },
+  }
 
 const STRATEGY_LABELS: Record<string, string> = {
   sequential: 'Sequential',
@@ -40,10 +35,7 @@ const STRATEGY_LABELS: Record<string, string> = {
   conditional: 'Conditional',
 }
 
-function getBudgetPercentage(
-  used: number,
-  limit: number | undefined
-): number | null {
+function getBudgetPercentage(used: number, limit: number | undefined): number | null {
   if (limit === undefined || limit <= 0) return null
   return Math.min((used / limit) * 100, 100)
 }
@@ -54,9 +46,7 @@ function getBudgetColor(pct: number): string {
   return '#10b981'
 }
 
-function OrchestratorArtboardComponent({
-  nodeId,
-}: OrchestratorArtboardProps): JSX.Element {
+function OrchestratorArtboardComponent({ nodeId }: OrchestratorArtboardProps): JSX.Element {
   const nodes = useNodesStore((s) => s.nodes)
 
   const node = nodes.find((n) => n.id === nodeId)
@@ -71,20 +61,15 @@ function OrchestratorArtboardComponent({
   const budgetTokens = useMemo(
     () =>
       getBudgetPercentage(
-        (currentRun?.totalInputTokens ?? 0) +
-          (currentRun?.totalOutputTokens ?? 0),
-        nodeData?.budget.maxTotalTokens
+        (currentRun?.totalInputTokens ?? 0) + (currentRun?.totalOutputTokens ?? 0),
+        nodeData?.budget.maxTotalTokens,
       ),
-    [currentRun, nodeData?.budget.maxTotalTokens]
+    [currentRun, nodeData?.budget.maxTotalTokens],
   )
 
   const budgetCost = useMemo(
-    () =>
-      getBudgetPercentage(
-        currentRun?.totalCostUSD ?? 0,
-        nodeData?.budget.maxTotalCostUSD
-      ),
-    [currentRun, nodeData?.budget.maxTotalCostUSD]
+    () => getBudgetPercentage(currentRun?.totalCostUSD ?? 0, nodeData?.budget.maxTotalCostUSD),
+    [currentRun, nodeData?.budget.maxTotalCostUSD],
   )
 
   // Run controls
@@ -128,12 +113,7 @@ function OrchestratorArtboardComponent({
       }
       entries.push({
         timestamp: run.completedAt ?? run.startedAt,
-        level:
-          run.status === 'failed'
-            ? 'error'
-            : run.status === 'completed'
-            ? 'info'
-            : 'warn',
+        level: run.status === 'failed' ? 'error' : run.status === 'completed' ? 'info' : 'warn',
         message: `Pipeline ${run.status} — $${run.totalCostUSD.toFixed(4)} total`,
       })
     }
@@ -171,8 +151,7 @@ function OrchestratorArtboardComponent({
 
         {/* Failure policy */}
         <span className="text-xs" style={{ color: 'var(--gui-text-muted)' }}>
-          {nodeData.failurePolicy.type} (max {nodeData.failurePolicy.maxRetries}{' '}
-          retries)
+          {nodeData.failurePolicy.type} (max {nodeData.failurePolicy.maxRetries} retries)
         </span>
 
         {/* Run controls */}
@@ -317,10 +296,7 @@ function OrchestratorArtboardComponent({
               </div>
             ) : null}
             {budgetTokens === null && budgetCost === null && (
-              <span
-                className="text-xs"
-                style={{ color: 'var(--gui-text-muted)' }}
-              >
+              <span className="text-xs" style={{ color: 'var(--gui-text-muted)' }}>
                 Unlimited
               </span>
             )}
@@ -340,10 +316,7 @@ function OrchestratorArtboardComponent({
                   className="w-6 h-6 opacity-30"
                   style={{ color: 'var(--gui-text-muted)' }}
                 />
-                <span
-                  className="text-xs italic"
-                  style={{ color: 'var(--gui-text-muted)' }}
-                >
+                <span className="text-xs italic" style={{ color: 'var(--gui-text-muted)' }}>
                   No agents connected
                 </span>
               </div>
@@ -367,9 +340,7 @@ function OrchestratorArtboardComponent({
                       </span>
                       <span
                         style={{ color: statusInfo.color }}
-                        className={
-                          agent.status === 'running' ? 'animate-pulse' : ''
-                        }
+                        className={agent.status === 'running' ? 'animate-pulse' : ''}
                       >
                         {statusInfo.icon}
                       </span>
@@ -441,8 +412,8 @@ function OrchestratorArtboardComponent({
                         entry.level === 'error'
                           ? '#ef4444'
                           : entry.level === 'warn'
-                          ? '#f59e0b'
-                          : 'var(--gui-text-muted)',
+                            ? '#f59e0b'
+                            : 'var(--gui-text-muted)',
                     }}
                   >
                     {entry.level}
@@ -454,8 +425,8 @@ function OrchestratorArtboardComponent({
                         entry.level === 'error'
                           ? '#ef4444'
                           : entry.level === 'warn'
-                          ? '#f59e0b'
-                          : 'var(--gui-text-primary)',
+                            ? '#f59e0b'
+                            : 'var(--gui-text-primary)',
                     }}
                   >
                     {entry.message}

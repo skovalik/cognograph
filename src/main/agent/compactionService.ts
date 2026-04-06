@@ -26,8 +26,8 @@
  */
 
 import type { LLMProvider } from '../tools/types'
-import { estimateTokens } from './tokenEstimation'
 import { logger } from '../utils/logger'
+import { estimateTokens } from './tokenEstimation'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -75,10 +75,7 @@ export interface CompactionSummary {
  * Injected as a dependency so the service is testable without
  * actually calling an LLM.
  */
-export type CompactionLLMCall = (
-  systemPrompt: string,
-  userPrompt: string
-) => Promise<string>
+export type CompactionLLMCall = (systemPrompt: string, userPrompt: string) => Promise<string>
 
 /**
  * Result of a full compaction pass.
@@ -160,17 +157,14 @@ export class CompactionCircuitBreaker {
  * Extract the original task description from the conversation.
  * Looks for the first substantive user message (skipping tool results).
  */
-function extractOriginalTask(
-  messages: CompactionMessage[],
-  provider: LLMProvider
-): string {
+function extractOriginalTask(messages: CompactionMessage[], provider: LLMProvider): string {
   for (const msg of messages) {
     if (msg.role !== 'user') continue
 
     // Skip tool result messages
     if (provider === 'anthropic' && Array.isArray(msg.content)) {
       const hasToolResult = (msg.content as Array<Record<string, unknown>>).some(
-        (block) => block.type === 'tool_result'
+        (block) => block.type === 'tool_result',
       )
       if (hasToolResult) continue
     }
@@ -212,14 +206,17 @@ function extractVerbatimQuotes(messages: CompactionMessage[]): string[] {
     if (!text) continue
 
     // Extract sentences that look like decisions, preferences, or corrections
-    const sentences = text.split(/[.!?]+/).map((s) => s.trim()).filter(Boolean)
+    const sentences = text
+      .split(/[.!?]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
     for (const sentence of sentences) {
       // Keep sentences that are directive or evaluative
       if (
         sentence.length > 10 &&
         sentence.length < 200 &&
         (/\b(should|must|always|never|prefer|want|need|don't|do not|instead)\b/i.test(sentence) ||
-         /\b(yes|no|correct|wrong|exactly|that's right)\b/i.test(sentence))
+          /\b(yes|no|correct|wrong|exactly|that's right)\b/i.test(sentence))
       ) {
         quotes.push(sentence)
       }
@@ -240,35 +237,39 @@ function extractVerbatimQuotes(messages: CompactionMessage[]): string[] {
 function buildCompactionPrompt(
   messages: CompactionMessage[],
   originalTask: string,
-  verbatimQuotes: string[]
+  verbatimQuotes: string[],
 ): string {
   // Serialize messages into a readable transcript
-  const transcript = messages.map((msg) => {
-    let content = ''
-    if (typeof msg.content === 'string') {
-      content = msg.content
-    } else if (Array.isArray(msg.content)) {
-      content = (msg.content as Array<Record<string, unknown>>)
-        .map((b) => {
-          if (b.type === 'text' && typeof b.text === 'string') return b.text as string
-          if (b.type === 'tool_use') return `[Tool call: ${b.name as string}]`
-          if (b.type === 'tool_result') return `[Tool result]`
-          return '[other content]'
-        })
-        .join('\n')
-    }
-    return `[${msg.role}]: ${content}`
-  }).join('\n\n')
+  const transcript = messages
+    .map((msg) => {
+      let content = ''
+      if (typeof msg.content === 'string') {
+        content = msg.content
+      } else if (Array.isArray(msg.content)) {
+        content = (msg.content as Array<Record<string, unknown>>)
+          .map((b) => {
+            if (b.type === 'text' && typeof b.text === 'string') return b.text as string
+            if (b.type === 'tool_use') return `[Tool call: ${b.name as string}]`
+            if (b.type === 'tool_result') return `[Tool result]`
+            return '[other content]'
+          })
+          .join('\n')
+      }
+      return `[${msg.role}]: ${content}`
+    })
+    .join('\n\n')
 
   // Truncate transcript if too long (keep under ~50k chars)
   const maxTranscript = 50_000
-  const truncatedTranscript = transcript.length > maxTranscript
-    ? transcript.slice(0, maxTranscript) + '\n\n[... transcript truncated for compaction]'
-    : transcript
+  const truncatedTranscript =
+    transcript.length > maxTranscript
+      ? transcript.slice(0, maxTranscript) + '\n\n[... transcript truncated for compaction]'
+      : transcript
 
-  const quotesSection = verbatimQuotes.length > 0
-    ? `\n\nVerbatim quotes from user (PRESERVE THESE):\n${verbatimQuotes.map((q) => `- "${q}"`).join('\n')}`
-    : ''
+  const quotesSection =
+    verbatimQuotes.length > 0
+      ? `\n\nVerbatim quotes from user (PRESERVE THESE):\n${verbatimQuotes.map((q) => `- "${q}"`).join('\n')}`
+      : ''
 
   return `You are compacting a conversation to fit within the context window. Generate a structured JSON summary.
 
@@ -355,7 +356,7 @@ function replaceToolResults(
   messages: CompactionMessage[],
   summary: CompactionSummary,
   provider: LLMProvider,
-  recentWindow: number
+  recentWindow: number,
 ): CompactionMessage[] {
   const splitIndex = Math.max(0, messages.length - recentWindow)
   const olderMessages = messages.slice(0, splitIndex)
@@ -403,7 +404,7 @@ function isToolResultForProvider(msg: CompactionMessage, provider: LLMProvider):
     case 'anthropic':
       if (msg.role !== 'user' || !Array.isArray(msg.content)) return false
       return (msg.content as Array<Record<string, unknown>>).some(
-        (block) => block.type === 'tool_result'
+        (block) => block.type === 'tool_result',
       )
     case 'openai':
       return msg.role === 'tool'
@@ -421,9 +422,7 @@ function isToolResultForProvider(msg: CompactionMessage, provider: LLMProvider):
  */
 function hasToolUseContent(msg: CompactionMessage): boolean {
   if (!Array.isArray(msg.content)) return false
-  return (msg.content as Array<Record<string, unknown>>).some(
-    (block) => block.type === 'tool_use'
-  )
+  return (msg.content as Array<Record<string, unknown>>).some((block) => block.type === 'tool_use')
 }
 
 /**
@@ -513,13 +512,14 @@ function formatSummaryText(summary: CompactionSummary): string {
 export async function compactConversation(
   messages: CompactionMessage[],
   config: CompactionConfig,
-  circuitBreaker: CompactionCircuitBreaker
+  circuitBreaker: CompactionCircuitBreaker,
 ): Promise<CompactionResult> {
   // Check circuit breaker
   if (circuitBreaker.isTripped) {
     return {
       success: false,
-      error: 'Compaction circuit breaker is tripped — too many consecutive failures. Context may be too large for continued operation.',
+      error:
+        'Compaction circuit breaker is tripped — too many consecutive failures. Context may be too large for continued operation.',
       circuitBreakerTripped: true,
     }
   }
@@ -545,7 +545,7 @@ export async function compactConversation(
     const tripped = circuitBreaker.recordFailure()
     const errorMsg = err instanceof Error ? err.message : String(err)
     logger.warn(
-      `[CompactionService] LLM call failed (${circuitBreaker.failures}/${CIRCUIT_BREAKER_THRESHOLD}): ${errorMsg}`
+      `[CompactionService] LLM call failed (${circuitBreaker.failures}/${CIRCUIT_BREAKER_THRESHOLD}): ${errorMsg}`,
     )
     return {
       success: false,
@@ -559,7 +559,7 @@ export async function compactConversation(
   if (!summary) {
     const tripped = circuitBreaker.recordFailure()
     logger.warn(
-      `[CompactionService] Failed to parse summary response (${circuitBreaker.failures}/${CIRCUIT_BREAKER_THRESHOLD})`
+      `[CompactionService] Failed to parse summary response (${circuitBreaker.failures}/${CIRCUIT_BREAKER_THRESHOLD})`,
     )
     return {
       success: false,
@@ -585,9 +585,9 @@ export async function compactConversation(
 
   logger.log(
     `[CompactionService] Compaction successful. ` +
-    `${messages.length} → ${compactedMessages.length} messages, ` +
-    `${summary.keyDecisions.length} decisions, ` +
-    `${summary.verbatimQuotes.length} quotes preserved`
+      `${messages.length} → ${compactedMessages.length} messages, ` +
+      `${summary.keyDecisions.length} decisions, ` +
+      `${summary.verbatimQuotes.length} quotes preserved`,
   )
 
   return {
@@ -611,14 +611,12 @@ export async function compactConversation(
 export function shouldFullCompact(
   messages: CompactionMessage[],
   provider: LLMProvider,
-  tokenBudget: number
+  tokenBudget: number,
 ): boolean {
   // Estimate current tokens
   let totalTokens = 0
   for (const msg of messages) {
-    const text = typeof msg.content === 'string'
-      ? msg.content
-      : JSON.stringify(msg.content)
+    const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
     totalTokens += estimateTokens(text) + 4 // +4 for message overhead
   }
 

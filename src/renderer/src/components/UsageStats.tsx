@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import { toast } from 'react-hot-toast'
 import { useSessionStatsStore } from '../stores/sessionStatsStore'
 import { formatCost, formatTokenCount } from '../utils/tokenEstimator'
-import { toast } from 'react-hot-toast'
 
 export function UsageStats(): JSX.Element {
   const totalInputTokens = useSessionStatsStore((s) => s.totalInputTokens)
@@ -39,20 +39,32 @@ export function UsageStats(): JSX.Element {
         <h4 className="text-sm font-medium gui-text-secondary">Session Totals</h4>
         <div className="grid grid-cols-2 gap-3">
           <div className="p-3 rounded gui-surface-raised">
-            <div className="text-xs" style={{ color: 'var(--gui-text-muted)' }}>Requests</div>
+            <div className="text-xs" style={{ color: 'var(--gui-text-muted)' }}>
+              Requests
+            </div>
             <div className="text-lg font-semibold gui-text">{totalRequests}</div>
           </div>
           <div className="p-3 rounded gui-surface-raised">
-            <div className="text-xs" style={{ color: 'var(--gui-text-muted)' }}>Total Cost</div>
+            <div className="text-xs" style={{ color: 'var(--gui-text-muted)' }}>
+              Total Cost
+            </div>
             <div className="text-lg font-semibold gui-text">{formatCost(totalCostUSD)}</div>
           </div>
           <div className="p-3 rounded gui-surface-raised">
-            <div className="text-xs" style={{ color: 'var(--gui-text-muted)' }}>Input Tokens</div>
-            <div className="text-lg font-semibold gui-text">{formatTokenCount(totalInputTokens)}</div>
+            <div className="text-xs" style={{ color: 'var(--gui-text-muted)' }}>
+              Input Tokens
+            </div>
+            <div className="text-lg font-semibold gui-text">
+              {formatTokenCount(totalInputTokens)}
+            </div>
           </div>
           <div className="p-3 rounded gui-surface-raised">
-            <div className="text-xs" style={{ color: 'var(--gui-text-muted)' }}>Output Tokens</div>
-            <div className="text-lg font-semibold gui-text">{formatTokenCount(totalOutputTokens)}</div>
+            <div className="text-xs" style={{ color: 'var(--gui-text-muted)' }}>
+              Output Tokens
+            </div>
+            <div className="text-lg font-semibold gui-text">
+              {formatTokenCount(totalOutputTokens)}
+            </div>
           </div>
         </div>
       </div>
@@ -75,7 +87,10 @@ export function UsageStats(): JSX.Element {
               </thead>
               <tbody>
                 {modelEntries.map((entry) => (
-                  <tr key={`${entry.provider}:${entry.model}`} className="gui-text border-t gui-border">
+                  <tr
+                    key={`${entry.provider}:${entry.model}`}
+                    className="gui-text border-t gui-border"
+                  >
                     <td className="py-1.5 capitalize">{entry.provider}</td>
                     <td className="py-1.5 font-mono text-xs">{entry.model}</td>
                     <td className="py-1.5 text-right">{entry.requestCount}</td>

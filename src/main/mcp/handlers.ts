@@ -4,10 +4,10 @@
 // Tool call handlers - Phase 14
 // Implements each MCP tool using the FileSyncProvider directly
 
-import type { MCPSyncProvider, WorkspaceNode } from './provider'
+import type { DesignToken, DesignTokenSet } from '../../shared/types/common'
+import { buildContextForNode, invalidateBFSCaches } from '../services/contextWriter'
 import { formatTokens, type TokenFormat } from './formatters/tokenFormatter'
-import type { DesignTokenSet, DesignToken } from '../../shared/types/common'
-import { buildContextForNode } from '../services/contextWriter'
+import type { MCPSyncProvider, WorkspaceNode } from './provider'
 
 type ToolArgs = Record<string, unknown>
 
@@ -17,7 +17,7 @@ type ToolArgs = Record<string, unknown>
 export async function handleToolCall(
   provider: MCPSyncProvider,
   toolName: string,
-  args: ToolArgs
+  args: ToolArgs,
 ): Promise<unknown> {
   switch (toolName) {
     case 'get_todos':
@@ -89,7 +89,7 @@ function handleGetTodos(provider: MCPSyncProvider, args: ToolArgs): unknown {
 
   return {
     count: tasks.length,
-    todos: tasks.map(formatNodeForOutput)
+    todos: tasks.map(formatNodeForOutput),
   }
 }
 
@@ -104,7 +104,7 @@ function handleGetNode(provider: MCPSyncProvider, args: ToolArgs): unknown {
 }
 
 function handleSearchNodes(provider: MCPSyncProvider, args: ToolArgs): unknown {
-  const query = (args.query as string || '').toLowerCase()
+  const query = ((args.query as string) || '').toLowerCase()
   if (!query) throw new Error("'query' is required")
 
   const types = args.types as string[] | undefined
@@ -125,7 +125,7 @@ function handleSearchNodes(provider: MCPSyncProvider, args: ToolArgs): unknown {
 
   return {
     count: results.length,
-    nodes: results.slice(0, limit).map(formatNodeForOutput)
+    nodes: results.slice(0, limit).map(formatNodeForOutput),
   }
 }
 
@@ -144,8 +144,8 @@ function handleGetContextChain(provider: MCPSyncProvider, args: ToolArgs): unkno
     contextNodes: chain.map((entry) => ({
       ...formatNodeForOutput(entry.node),
       depth: entry.depth,
-      edgeLabel: entry.edgeLabel
-    }))
+      edgeLabel: entry.edgeLabel,
+    })),
   }
 }
 
@@ -163,7 +163,7 @@ function handleUpdateNode(provider: MCPSyncProvider, args: ToolArgs): unknown {
   const updated = provider.getNode(id)
   return {
     success: true,
-    node: updated ? formatNodeForOutput(updated) : null
+    node: updated ? formatNodeForOutput(updated) : null,
   }
 }
 
@@ -195,7 +195,7 @@ function handleCreateNode(provider: MCPSyncProvider, args: ToolArgs): unknown {
   const node = provider.getNode(nodeId)
   return {
     success: true,
-    node: node ? formatNodeForOutput(node) : { id: nodeId }
+    node: node ? formatNodeForOutput(node) : { id: nodeId },
   }
 }
 
@@ -248,8 +248,7 @@ function handleUnlinkNodes(provider: MCPSyncProvider, args: ToolArgs): unknown {
   const edges = provider.getEdges()
   const edge = edges.find(
     (e) =>
-      (e.source === source && e.target === target) ||
-      (e.source === target && e.target === source)
+      (e.source === source && e.target === target) || (e.source === target && e.target === source),
   )
 
   if (!edge) {
@@ -269,14 +268,21 @@ function handleTokensGet(provider: MCPSyncProvider, args: ToolArgs): unknown {
   // Validate format
   const validFormats: TokenFormat[] = ['raw', 'css', 'tailwind']
   if (!validFormats.includes(format)) {
-    return { error: 'UNSUPPORTED_FORMAT', message: `Format "${format}" is not supported. Use raw, css, or tailwind.` }
+    return {
+      error: 'UNSUPPORTED_FORMAT',
+      message: `Format "${format}" is not supported. Use raw, css, or tailwind.`,
+    }
   }
 
   // Discover token nodes
   const tokenNodes = discoverTokenNodes(provider, requestedNodeId, filterTag)
 
   if (tokenNodes.length === 0) {
-    return { error: 'NO_TOKEN_NODES', message: 'No design token nodes found in workspace. Create a Note node with noteMode "design-tokens" and add token JSON to its content.' }
+    return {
+      error: 'NO_TOKEN_NODES',
+      message:
+        'No design token nodes found in workspace. Create a Note node with noteMode "design-tokens" and add token JSON to its content.',
+    }
   }
 
   // Parse and merge token data from all discovered nodes
@@ -290,7 +296,11 @@ function handleTokensGet(provider: MCPSyncProvider, args: ToolArgs): unknown {
     const nodeId = node.id
 
     if (!content.trim()) {
-      errors.push({ nodeId, error: 'EMPTY_CONTENT', message: 'Token node exists but has no content' })
+      errors.push({
+        nodeId,
+        error: 'EMPTY_CONTENT',
+        message: 'Token node exists but has no content',
+      })
       continue
     }
 
@@ -303,12 +313,20 @@ function handleTokensGet(provider: MCPSyncProvider, args: ToolArgs): unknown {
     }
 
     if (typeof parsed !== 'object' || parsed === null) {
-      errors.push({ nodeId, error: 'PARSE_ERROR', message: 'Token node content is not a JSON object' })
+      errors.push({
+        nodeId,
+        error: 'PARSE_ERROR',
+        message: 'Token node content is not a JSON object',
+      })
       continue
     }
 
     if (typeof parsed.name !== 'string') {
-      errors.push({ nodeId, error: 'SCHEMA_MISMATCH', message: 'Token data missing required field: name' })
+      errors.push({
+        nodeId,
+        error: 'SCHEMA_MISMATCH',
+        message: 'Token data missing required field: name',
+      })
       continue
     }
 
@@ -330,10 +348,12 @@ function handleTokensGet(provider: MCPSyncProvider, args: ToolArgs): unknown {
   }
 
   // Build merged DesignTokenSet
-  const mergedSet: DesignTokenSet & { tokensWithSource?: Record<string, DesignToken & { sourceNodeId: string }> } = {
+  const mergedSet: DesignTokenSet & {
+    tokensWithSource?: Record<string, DesignToken & { sourceNodeId: string }>
+  } = {
     name: mergedName || 'Untitled Token Set',
     description: mergedDescription,
-    tokens: {}
+    tokens: {},
   }
 
   // Strip sourceNodeId for the clean tokens, keep for raw format
@@ -348,7 +368,7 @@ function handleTokensGet(provider: MCPSyncProvider, args: ToolArgs): unknown {
       name: mergedSet.name,
       description: mergedSet.description,
       tokens: mergedTokens, // includes sourceNodeId
-      nodeCount: tokenNodes.length
+      nodeCount: tokenNodes.length,
     }
     if (errors.length > 0) result.warnings = errors
     return result
@@ -360,7 +380,7 @@ function handleTokensGet(provider: MCPSyncProvider, args: ToolArgs): unknown {
     const result: Record<string, unknown> = {
       format,
       output: formatted,
-      nodeCount: tokenNodes.length
+      nodeCount: tokenNodes.length,
     }
     if (errors.length > 0) result.warnings = errors
     return result
@@ -379,7 +399,7 @@ function handleTokensGet(provider: MCPSyncProvider, args: ToolArgs): unknown {
 function discoverTokenNodes(
   provider: MCPSyncProvider,
   specificNodeId?: string,
-  filterTag?: string
+  filterTag?: string,
 ): WorkspaceNode[] {
   // If a specific node ID is requested, only return that node
   if (specificNodeId) {
@@ -479,9 +499,9 @@ function handleSiteGetPages(provider: MCPSyncProvider, args: ToolArgs): unknown 
   const offset = (args.offset as number) || 0
 
   // Find all page-mode note nodes
-  let pageNodes = provider.getNodes().filter(
-    (n) => n.data.type === 'note' && n.data.noteMode === 'page'
-  )
+  let pageNodes = provider
+    .getNodes()
+    .filter((n) => n.data.type === 'note' && n.data.noteMode === 'page')
 
   // Filter by status if specified and not 'all'
   if (statusFilter && statusFilter !== 'all') {
@@ -499,14 +519,13 @@ function handleSiteGetPages(provider: MCPSyncProvider, args: ToolArgs): unknown 
   })
 
   // Apply pagination
-  const slicedNodes = limit !== undefined
-    ? pageNodes.slice(offset, offset + limit)
-    : pageNodes.slice(offset)
+  const slicedNodes =
+    limit !== undefined ? pageNodes.slice(offset, offset + limit) : pageNodes.slice(offset)
 
   // Find component-mode nodes for cross-referencing
-  const componentNodes = provider.getNodes().filter(
-    (n) => n.data.type === 'note' && n.data.noteMode === 'component'
-  )
+  const componentNodes = provider
+    .getNodes()
+    .filter((n) => n.data.type === 'note' && n.data.noteMode === 'component')
 
   const pages: PageOutput[] = slicedNodes.map((node) => {
     const page = node.data.page as Record<string, unknown> | undefined
@@ -532,7 +551,7 @@ function handleSiteGetPages(provider: MCPSyncProvider, args: ToolArgs): unknown 
 
           // Look up the matching component-mode node for library/status info
           const matchingComp = componentNodes.find(
-            (cn) => (cn.data.component as Record<string, unknown> | undefined)?.name === comp.name
+            (cn) => (cn.data.component as Record<string, unknown> | undefined)?.name === comp.name,
           )
           if (matchingComp) {
             const compData = matchingComp.data.component as Record<string, unknown>
@@ -615,7 +634,10 @@ function handleSiteGetComponents(provider: MCPSyncProvider, args: ToolArgs): unk
       return { error: 'NOT_FOUND', message: `Node not found: ${nodeId}` }
     }
     if (found.data.type !== 'note' || found.data.noteMode !== 'page') {
-      return { error: 'NOT_A_PAGE', message: `Node ${nodeId} is not a page node (noteMode is not page)` }
+      return {
+        error: 'NOT_A_PAGE',
+        message: `Node ${nodeId} is not a page node (noteMode is not page)`,
+      }
     }
     pageNode = found
   } else if (route) {
@@ -625,7 +647,9 @@ function handleSiteGetComponents(provider: MCPSyncProvider, args: ToolArgs): unk
         (n) =>
           n.data.type === 'note' &&
           n.data.noteMode === 'page' &&
-          normalizeRoute((n.data.page as Record<string, unknown> | undefined)?.route as string || '/') === normalizedRoute
+          normalizeRoute(
+            ((n.data.page as Record<string, unknown> | undefined)?.route as string) || '/',
+          ) === normalizedRoute,
       )
       .sort((a, b) => ((a.data.createdAt as number) || 0) - ((b.data.createdAt as number) || 0))
 
@@ -659,7 +683,7 @@ function handleSiteGetComponents(provider: MCPSyncProvider, args: ToolArgs): unk
 function buildPageSpec(
   provider: MCPSyncProvider,
   pageNode: WorkspaceNode,
-  allNodes: WorkspaceNode[]
+  allNodes: WorkspaceNode[],
 ): Record<string, unknown> {
   const page = pageNode.data.page as Record<string, unknown> | undefined
   const components = (page?.components as Array<Record<string, unknown>>) || []
@@ -667,7 +691,7 @@ function buildPageSpec(
 
   // Find component-mode nodes
   const componentNodes = allNodes.filter(
-    (n) => n.data.type === 'note' && n.data.noteMode === 'component'
+    (n) => n.data.type === 'note' && n.data.noteMode === 'component',
   )
 
   const visited = new Set<string>()
@@ -684,7 +708,7 @@ function buildPageSpec(
 
       // Look up the component-mode node
       const matchingComp = componentNodes.find(
-        (cn) => (cn.data.component as Record<string, unknown> | undefined)?.name === compName
+        (cn) => (cn.data.component as Record<string, unknown> | undefined)?.name === compName,
       )
 
       if (matchingComp) {
@@ -760,7 +784,7 @@ function handleSiteUpdatePageStatus(provider: MCPSyncProvider, args: ToolArgs): 
   if (!status) throw new Error("'status' is required")
 
   // Validate status
-  if (!VALID_PAGE_STATUSES.includes(status as typeof VALID_PAGE_STATUSES[number])) {
+  if (!VALID_PAGE_STATUSES.includes(status as (typeof VALID_PAGE_STATUSES)[number])) {
     return {
       error: 'INVALID_STATUS',
       message: `Invalid status. Must be one of: ${VALID_PAGE_STATUSES.join(', ')}`,
@@ -801,9 +825,9 @@ function handleWebGetContentModels(provider: MCPSyncProvider, args: ToolArgs): u
   const postTypeFilter = args.postType as string | undefined
 
   // Find all content-model note nodes
-  let contentModelNodes = provider.getNodes().filter(
-    (n) => n.data.type === 'note' && n.data.noteMode === 'content-model',
-  )
+  let contentModelNodes = provider
+    .getNodes()
+    .filter((n) => n.data.type === 'note' && n.data.noteMode === 'content-model')
 
   // Filter by postType if specified
   if (postTypeFilter) {
@@ -845,7 +869,8 @@ function handleWebGetContentModels(provider: MCPSyncProvider, args: ToolArgs): u
 
 function handleWebGetWPConfig(provider: MCPSyncProvider): unknown {
   // Find wp-config note nodes
-  const wpConfigNodes = provider.getNodes()
+  const wpConfigNodes = provider
+    .getNodes()
     .filter((n) => n.data.type === 'note' && n.data.noteMode === 'wp-config')
     .sort((a, b) => {
       const aCreated = (a.data.createdAt as number) || 0
@@ -856,7 +881,8 @@ function handleWebGetWPConfig(provider: MCPSyncProvider): unknown {
   if (wpConfigNodes.length === 0) {
     return {
       error: 'NO_WP_CONFIG',
-      message: 'No wp-config node found in workspace. Create a Note node with noteMode "wp-config".',
+      message:
+        'No wp-config node found in workspace. Create a Note node with noteMode "wp-config".',
     }
   }
 
@@ -886,8 +912,8 @@ function handleWebGetWPConfig(provider: MCPSyncProvider): unknown {
 // --- Context Injection Handler ---
 
 async function handleGetInitialContext(
-  _provider: MCPSyncProvider,
-  args: ToolArgs
+  provider: MCPSyncProvider,
+  args: ToolArgs,
 ): Promise<unknown> {
   let nodeId = args.nodeId as string | undefined
 
@@ -899,23 +925,28 @@ async function handleGetInitialContext(
   if (!nodeId) {
     return {
       error: 'NO_NODE_ID',
-      message: 'No nodeId provided and COGNOGRAPH_NODE_ID env var not set.'
+      message: 'No nodeId provided and COGNOGRAPH_NODE_ID env var not set.',
     }
   }
 
   try {
-    const context = await buildContextForNode(nodeId)
+    invalidateBFSCaches()
+    const context = await buildContextForNode(
+      nodeId,
+      { nodes: provider.getNodes(), edges: provider.getEdges() },
+      { useCache: false },
+    )
     return {
       nodeId,
       markdown: context.markdown,
       totalTokens: context.totalTokens,
       entryCount: context.entries.length,
-      contextFilePath: context.filePath
+      contextFilePath: context.filePath,
     }
   } catch (error) {
     return {
       error: 'CONTEXT_BUILD_FAILED',
-      message: error instanceof Error ? error.message : String(error)
+      message: error instanceof Error ? error.message : String(error),
     }
   }
 }
@@ -931,7 +962,7 @@ interface ContextChainEntry {
 function buildContextChain(
   provider: MCPSyncProvider,
   startNodeId: string,
-  maxDepth: number
+  maxDepth: number,
 ): ContextChainEntry[] {
   const result: ContextChainEntry[] = []
   const visited = new Set<string>([startNodeId])
@@ -962,7 +993,7 @@ function buildContextChain(
         result.push({
           node: sourceNode,
           depth: depth + 1,
-          edgeLabel: edge.data?.label as string | undefined
+          edgeLabel: edge.data?.label as string | undefined,
         })
 
         nextFrontier.push({ nodeId: edge.source, depth: depth + 1 })
@@ -970,7 +1001,7 @@ function buildContextChain(
 
       // For bidirectional edges, also check where source === current node
       const outgoingBidi = edges.filter(
-        (e) => e.source === nodeId && e.data?.direction === 'bidirectional'
+        (e) => e.source === nodeId && e.data?.direction === 'bidirectional',
       )
       for (const edge of outgoingBidi) {
         if (visited.has(edge.target)) continue
@@ -983,7 +1014,7 @@ function buildContextChain(
         result.push({
           node: targetNode,
           depth: depth + 1,
-          edgeLabel: edge.data?.label as string | undefined
+          edgeLabel: edge.data?.label as string | undefined,
         })
 
         nextFrontier.push({ nodeId: edge.target, depth: depth + 1 })
@@ -1002,7 +1033,7 @@ function formatNodeForOutput(node: WorkspaceNode): Record<string, unknown> {
     id: node.id,
     type: data.type,
     title: data.title || undefined,
-    position: node.position
+    position: node.position,
   }
 
   // Type-specific fields
@@ -1068,7 +1099,7 @@ function formatNodeFull(node: WorkspaceNode): Record<string, unknown> {
     id: node.id,
     type: node.data.type,
     position: node.position,
-    data: node.data
+    data: node.data,
   }
 }
 

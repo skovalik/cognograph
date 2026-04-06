@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, vi } from 'vitest'
-import { createBuiltinTools } from '../builtinTools'
+import { describe, expect, it, vi } from 'vitest'
 import type { BuiltinToolDeps } from '../builtinTools'
+import { createBuiltinTools } from '../builtinTools'
 import type { Tool } from '../types'
 
 // ---------------------------------------------------------------------------
@@ -14,13 +14,23 @@ function mockDeps(overrides: Partial<BuiltinToolDeps> = {}): BuiltinToolDeps {
   return {
     executeInRenderer: vi.fn().mockResolvedValue({ ok: true }),
     getCurrentConversationId: vi.fn().mockReturnValue('conv-123'),
-    readFile: vi.fn().mockReturnValue({ success: true, result: { content: 'hello', totalLines: 1 } }),
+    readFile: vi
+      .fn()
+      .mockReturnValue({ success: true, result: { content: 'hello', totalLines: 1 } }),
     writeFile: vi.fn().mockReturnValue({ success: true, result: { path: '/a.ts', bytes: 5 } }),
-    editFile: vi.fn().mockReturnValue({ success: true, result: { path: '/a.ts', replacements: 1 } }),
+    editFile: vi
+      .fn()
+      .mockReturnValue({ success: true, result: { path: '/a.ts', replacements: 1 } }),
     listDirectory: vi.fn().mockReturnValue({ success: true, result: { entries: [], count: 0 } }),
-    searchFiles: vi.fn().mockReturnValue({ success: true, result: { matches: [], totalMatches: 0 } }),
-    executeCommand: vi.fn().mockResolvedValue({ success: true, result: { stdout: '', exitCode: 0 } }),
-    getSecurityContext: vi.fn().mockReturnValue({ allowedPaths: ['/workspace'], allowedCommands: ['ls'] }),
+    searchFiles: vi
+      .fn()
+      .mockReturnValue({ success: true, result: { matches: [], totalMatches: 0 } }),
+    executeCommand: vi
+      .fn()
+      .mockResolvedValue({ success: true, result: { stdout: '', exitCode: 0 } }),
+    getSecurityContext: vi
+      .fn()
+      .mockReturnValue({ allowedPaths: ['/workspace'], allowedCommands: ['ls'] }),
     ...overrides,
   }
 }

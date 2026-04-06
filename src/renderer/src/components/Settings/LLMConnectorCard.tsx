@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useState, useCallback } from 'react'
-import { Trash2, TestTube, Star, Pencil, Loader2 } from 'lucide-react'
-import type { LLMConnector, ConnectorProvider } from '@shared/types'
+import type { ConnectorProvider, LLMConnector } from '@shared/types'
 import { CONNECTOR_PROVIDER_INFO } from '@shared/types'
+import { Loader2, Pencil, Star, TestTube, Trash2 } from 'lucide-react'
+import { memo, useCallback, useState } from 'react'
 
 interface LLMConnectorCardProps {
   connector: LLMConnector
@@ -27,17 +27,19 @@ function LLMConnectorCardComponent({
 
   const providerInfo = CONNECTOR_PROVIDER_INFO[connector.provider as ConnectorProvider]
 
-  const statusColor = connector.status === 'connected'
-    ? 'bg-green-500'
-    : connector.status === 'error'
-      ? 'bg-red-500'
-      : 'bg-[var(--text-muted)]'
+  const statusColor =
+    connector.status === 'connected'
+      ? 'bg-green-500'
+      : connector.status === 'error'
+        ? 'bg-red-500'
+        : 'bg-[var(--text-muted)]'
 
-  const statusLabel = connector.status === 'connected'
-    ? 'Connected'
-    : connector.status === 'error'
-      ? 'Error'
-      : 'Untested'
+  const statusLabel =
+    connector.status === 'connected'
+      ? 'Connected'
+      : connector.status === 'error'
+        ? 'Error'
+        : 'Untested'
 
   const handleRemove = useCallback(() => {
     if (confirmRemove) {
@@ -56,9 +58,7 @@ function LLMConnectorCardComponent({
         <div className="flex items-center gap-2">
           <div className={`w-2.5 h-2.5 rounded-full ${statusColor}`} title={statusLabel} />
           <span className="text-sm font-medium gui-text">{connector.name}</span>
-          {connector.isDefault && (
-            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-          )}
+          {connector.isDefault && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
         </div>
         <span className="text-xs gui-text-secondary">
           {providerInfo?.label || connector.provider}
@@ -68,9 +68,7 @@ function LLMConnectorCardComponent({
       {/* Model info */}
       <div className="text-xs gui-text-secondary">
         Model: {connector.model || 'default'}
-        {connector.baseUrl && (
-          <span className="ml-2">| URL: {connector.baseUrl}</span>
-        )}
+        {connector.baseUrl && <span className="ml-2">| URL: {connector.baseUrl}</span>}
       </div>
 
       {/* Error message */}
@@ -116,9 +114,7 @@ function LLMConnectorCardComponent({
         <button
           onClick={handleRemove}
           className={`gui-btn gui-btn-sm ml-auto ${
-            confirmRemove
-              ? 'bg-red-500/20 text-red-400'
-              : 'gui-btn-ghost'
+            confirmRemove ? 'bg-red-500/20 text-red-400' : 'gui-btn-ghost'
           }`}
           title={confirmRemove ? 'Click again to confirm' : 'Remove'}
         >

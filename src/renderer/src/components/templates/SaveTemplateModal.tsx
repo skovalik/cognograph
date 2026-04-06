@@ -8,14 +8,14 @@
  * Allows configuring template name, description, folder, and placeholder detection.
  */
 
-import { memo, useState, useCallback, useMemo, useEffect } from 'react'
-import { X, Save, FolderPlus, Tag, Layers } from 'lucide-react'
-import { useTemplateStore, useSaveModalState, useFolders } from '../../stores/templateStore'
+import type { EdgeData, NodeData } from '@shared/types'
+import type { Edge, Node } from '@xyflow/react'
+import { FolderPlus, Layers, Save, Tag, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { useFolders, useSaveModalState, useTemplateStore } from '../../stores/templateStore'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
 import { createTemplateFromSelection, suggestTemplateName } from '../../utils/templateUtils'
 import { TemplatePreview } from './TemplatePreview'
-import type { Node, Edge } from '@xyflow/react'
-import type { NodeData, EdgeData } from '@shared/types'
 
 // -----------------------------------------------------------------------------
 // Component
@@ -59,10 +59,14 @@ function SaveTemplateModalComponent(): JSX.Element | null {
   const templatePreview = useMemo(() => {
     if (selectedNodes.length === 0) return null
     try {
-      return createTemplateFromSelection(selectedNodes as Node<NodeData>[], selectedEdges as Edge<EdgeData>[], {
-        includeContent,
-        detectPlaceholders
-      })
+      return createTemplateFromSelection(
+        selectedNodes as Node<NodeData>[],
+        selectedEdges as Edge<EdgeData>[],
+        {
+          includeContent,
+          detectPlaceholders,
+        },
+      )
     } catch {
       return null
     }
@@ -94,9 +98,12 @@ function SaveTemplateModalComponent(): JSX.Element | null {
     setTagInput('')
   }, [tagInput, tags])
 
-  const handleRemoveTag = useCallback((tagToRemove: string) => {
-    setTags(tags.filter((t) => t !== tagToRemove))
-  }, [tags])
+  const handleRemoveTag = useCallback(
+    (tagToRemove: string) => {
+      setTags(tags.filter((t) => t !== tagToRemove))
+    },
+    [tags],
+  )
 
   const handleTagKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -105,7 +112,7 @@ function SaveTemplateModalComponent(): JSX.Element | null {
         handleAddTag()
       }
     },
-    [handleAddTag]
+    [handleAddTag],
   )
 
   const handleCreateFolder = useCallback(() => {
@@ -143,7 +150,7 @@ function SaveTemplateModalComponent(): JSX.Element | null {
         source: 'user',
         icon: undefined,
         color: undefined,
-        thumbnail: null
+        thumbnail: null,
       })
 
       handleClose()
@@ -158,7 +165,7 @@ function SaveTemplateModalComponent(): JSX.Element | null {
     templatePreview,
     includeContent,
     addTemplate,
-    handleClose
+    handleClose,
   ])
 
   if (!open || !context) return null
@@ -186,19 +193,15 @@ function SaveTemplateModalComponent(): JSX.Element | null {
           <div className="flex gap-4">
             <div className="flex-shrink-0">
               {templatePreview && (
-                <TemplatePreview
-                  template={templatePreview}
-                  maxWidth={160}
-                  maxHeight={120}
-                />
+                <TemplatePreview template={templatePreview} maxWidth={160} maxHeight={120} />
               )}
             </div>
             <div className="flex-1 text-sm text-[var(--text-secondary)]">
               <p>
-                <strong className="text-[var(--text-primary)]">{selectedNodes.length}</strong>{' '}
-                node{selectedNodes.length !== 1 ? 's' : ''} and{' '}
-                <strong className="text-[var(--text-primary)]">{selectedEdges.length}</strong>{' '}
-                edge{selectedEdges.length !== 1 ? 's' : ''} selected
+                <strong className="text-[var(--text-primary)]">{selectedNodes.length}</strong> node
+                {selectedNodes.length !== 1 ? 's' : ''} and{' '}
+                <strong className="text-[var(--text-primary)]">{selectedEdges.length}</strong> edge
+                {selectedEdges.length !== 1 ? 's' : ''} selected
               </p>
               {templatePreview && templatePreview.placeholders.length > 0 && (
                 <p className="mt-1">
@@ -376,10 +379,13 @@ function SaveTemplateModalComponent(): JSX.Element | null {
               className="p-3 rounded"
               style={{
                 backgroundColor: 'color-mix(in srgb, var(--gui-accent-primary) 10%, transparent)',
-                border: '1px solid color-mix(in srgb, var(--gui-accent-primary) 20%, transparent)'
+                border: '1px solid color-mix(in srgb, var(--gui-accent-primary) 20%, transparent)',
               }}
             >
-              <h3 className="text-sm font-medium mb-2" style={{ color: 'var(--gui-accent-primary)' }}>
+              <h3
+                className="text-sm font-medium mb-2"
+                style={{ color: 'var(--gui-accent-primary)' }}
+              >
                 Detected Placeholders
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -388,11 +394,14 @@ function SaveTemplateModalComponent(): JSX.Element | null {
                     key={p.key}
                     className="px-2 py-1 rounded text-xs"
                     style={{
-                      backgroundColor: 'color-mix(in srgb, var(--gui-accent-primary) 20%, transparent)',
-                      color: 'color-mix(in srgb, var(--gui-accent-primary) 70%, white)'
+                      backgroundColor:
+                        'color-mix(in srgb, var(--gui-accent-primary) 20%, transparent)',
+                      color: 'color-mix(in srgb, var(--gui-accent-primary) 70%, white)',
                     }}
                   >
-                    {'{{'}{p.key}{'}}'}
+                    {'{{'}
+                    {p.key}
+                    {'}}'}
                   </span>
                 ))}
               </div>

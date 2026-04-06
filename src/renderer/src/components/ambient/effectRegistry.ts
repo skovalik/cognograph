@@ -8,8 +8,8 @@
  * theme-linked color props, and category grouping.
  */
 
-import React from 'react'
 import type { AmbientEffectType } from '@shared/types'
+import React from 'react'
 
 // ---------------------------------------------------------------------------
 // Schema types
@@ -32,12 +32,12 @@ export interface PropSchema {
   /** Derive this color from another resolved prop instead of the raw theme color */
   deriveFrom?: {
     sourceKey: string
-    darken?: number      // 0-1, how much to darken (0.8 = 80% darker)
-    desaturate?: number  // 0-1, factor to multiply saturation by (0.5 = half saturation)
-    hueShift?: number    // fractional hue shift (-0.05 = slight left/ccw shift)
+    darken?: number // 0-1, how much to darken (0.8 = 80% darker)
+    desaturate?: number // 0-1, factor to multiply saturation by (0.5 = half saturation)
+    hueShift?: number // fractional hue shift (-0.05 = slight left/ccw shift)
     /** Override derivation for light mode (swaps darken→lighten, etc.) */
     lightMode?: {
-      lighten?: number     // 0-1, how much to lighten (0.85 = push 85% toward white)
+      lighten?: number // 0-1, how much to lighten (0.85 = push 85% toward white)
       desaturate?: number
       hueShift?: number
     }
@@ -61,25 +61,25 @@ export interface EffectRegistryEntry {
 // ---------------------------------------------------------------------------
 
 const LetterGlitch = React.lazy(() => import('./effects/LetterGlitch'))
-const Iridescence  = React.lazy(() => import('./effects/Iridescence'))
-const Threads      = React.lazy(() => import('./effects/Threads'))
-const DotGrid      = React.lazy(() => import('./effects/DotGrid'))
-const StaticGrid   = React.lazy(() => import('./effects/StaticGrid'))
-const Dither       = React.lazy(() => import('./effects/Dither'))
+const Iridescence = React.lazy(() => import('./effects/Iridescence'))
+const Threads = React.lazy(() => import('./effects/Threads'))
+const DotGrid = React.lazy(() => import('./effects/DotGrid'))
+const StaticGrid = React.lazy(() => import('./effects/StaticGrid'))
+const Dither = React.lazy(() => import('./effects/Dither'))
 const PrismaticBurst = React.lazy(() => import('./effects/PrismaticBurst'))
-const PixelSnow    = React.lazy(() => import('./effects/PixelSnow'))
-const Beams        = React.lazy(() => import('./effects/Beams'))
-const Grainient    = React.lazy(() => import('./effects/Grainient'))
-const Plasma       = React.lazy(() => import('./effects/Plasma'))
-const Particles    = React.lazy(() => import('./effects/Particles'))
-const Aurora       = React.lazy(() => import('./effects/Aurora'))
-const ColorBends   = React.lazy(() => import('./effects/ColorBends'))
-const PixelBlast   = React.lazy(() => import('./effects/PixelBlast'))
+const PixelSnow = React.lazy(() => import('./effects/PixelSnow'))
+const Beams = React.lazy(() => import('./effects/Beams'))
+const Grainient = React.lazy(() => import('./effects/Grainient'))
+const Plasma = React.lazy(() => import('./effects/Plasma'))
+const Particles = React.lazy(() => import('./effects/Particles'))
+const Aurora = React.lazy(() => import('./effects/Aurora'))
+const ColorBends = React.lazy(() => import('./effects/ColorBends'))
+const PixelBlast = React.lazy(() => import('./effects/PixelBlast'))
 const FloatingLines = React.lazy(() => import('./effects/FloatingLines'))
-const Silk         = React.lazy(() => import('./effects/Silk'))
-const LightPillar  = React.lazy(() => import('./effects/LightPillar'))
-const Prism        = React.lazy(() => import('./effects/Prism'))
-const LiquidEther  = React.lazy(() => import('./effects/LiquidEther'))
+const Silk = React.lazy(() => import('./effects/Silk'))
+const LightPillar = React.lazy(() => import('./effects/LightPillar'))
+const Prism = React.lazy(() => import('./effects/Prism'))
+const LiquidEther = React.lazy(() => import('./effects/LiquidEther'))
 const DitherCursor = React.lazy(() => import('./effects/DitherCursor'))
 
 // ---------------------------------------------------------------------------
@@ -103,7 +103,13 @@ const ENTRIES: EffectRegistryEntry[] = [
       smooth: true,
     },
     propSchema: [
-      { key: 'glitchColors', label: 'Colors', controlType: 'color-array', isThemeLinked: true, colorFormat: 'hex' },
+      {
+        key: 'glitchColors',
+        label: 'Colors',
+        controlType: 'color-array',
+        isThemeLinked: true,
+        colorFormat: 'hex',
+      },
       { key: 'glitchSpeed', label: 'Speed', controlType: 'slider', min: 10, max: 200, step: 10 },
       { key: 'letterOpacity', label: 'Opacity', controlType: 'slider', min: 0, max: 1, step: 0.05 },
       { key: 'centerVignette', label: 'Center Vignette', controlType: 'toggle' },
@@ -133,18 +139,68 @@ const ENTRIES: EffectRegistryEntry[] = [
     propSchema: [
       { key: 'dotSize', label: 'Dot Size', controlType: 'slider', min: 2, max: 50, step: 1 },
       { key: 'gap', label: 'Gap', controlType: 'slider', min: 4, max: 64, step: 1 },
-      { key: 'baseColor', label: 'Base Color', controlType: 'color', isThemeLinked: true, colorFormat: 'hex',
+      {
+        key: 'baseColor',
+        label: 'Base Color',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'hex',
         deriveFrom: {
-          sourceKey: 'activeColor', darken: 0.8, desaturate: 0.5, hueShift: -0.05,
+          sourceKey: 'activeColor',
+          darken: 0.8,
+          desaturate: 0.5,
+          hueShift: -0.05,
           lightMode: { lighten: 0.75, desaturate: 0.6, hueShift: -0.02 },
-        } },
-      { key: 'activeColor', label: 'Active Color', controlType: 'color', isThemeLinked: true, colorFormat: 'hex' },
+        },
+      },
+      {
+        key: 'activeColor',
+        label: 'Active Color',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'hex',
+      },
       { key: 'proximity', label: 'Proximity', controlType: 'slider', min: 50, max: 400, step: 10 },
-      { key: 'speedTrigger', label: 'Speed Trigger', controlType: 'slider', min: 50, max: 800, step: 25 },
-      { key: 'shockRadius', label: 'Shock Radius', controlType: 'slider', min: 50, max: 500, step: 25 },
-      { key: 'shockStrength', label: 'Shock Strength', controlType: 'slider', min: 1, max: 20, step: 1 },
-      { key: 'resistance', label: 'Resistance', controlType: 'slider', min: 100, max: 2000, step: 50 },
-      { key: 'returnDuration', label: 'Return Duration', controlType: 'slider', min: 0.01, max: 4, step: 0.01 },
+      {
+        key: 'speedTrigger',
+        label: 'Speed Trigger',
+        controlType: 'slider',
+        min: 50,
+        max: 800,
+        step: 25,
+      },
+      {
+        key: 'shockRadius',
+        label: 'Shock Radius',
+        controlType: 'slider',
+        min: 50,
+        max: 500,
+        step: 25,
+      },
+      {
+        key: 'shockStrength',
+        label: 'Shock Strength',
+        controlType: 'slider',
+        min: 1,
+        max: 20,
+        step: 1,
+      },
+      {
+        key: 'resistance',
+        label: 'Resistance',
+        controlType: 'slider',
+        min: 100,
+        max: 2000,
+        step: 50,
+      },
+      {
+        key: 'returnDuration',
+        label: 'Return Duration',
+        controlType: 'slider',
+        min: 0.01,
+        max: 4,
+        step: 0.01,
+      },
     ],
     themeColorProps: ['activeColor'],
   },
@@ -166,11 +222,37 @@ const ENTRIES: EffectRegistryEntry[] = [
     propSchema: [
       { key: 'dotSize', label: 'Dot Size', controlType: 'slider', min: 0.5, max: 4, step: 0.5 },
       { key: 'gap', label: 'Gap', controlType: 'slider', min: 10, max: 40, step: 2 },
-      { key: 'color', label: 'Dot Color', controlType: 'color', isThemeLinked: false, colorFormat: 'hex' },
+      {
+        key: 'color',
+        label: 'Dot Color',
+        controlType: 'color',
+        isThemeLinked: false,
+        colorFormat: 'hex',
+      },
       { key: 'opacity', label: 'Opacity', controlType: 'slider', min: 0.01, max: 0.2, step: 0.01 },
-      { key: 'glowColor', label: 'Glow Color', controlType: 'color', isThemeLinked: true, colorFormat: 'hex' },
-      { key: 'glowOpacity', label: 'Glow Intensity', controlType: 'slider', min: 0.1, max: 0.8, step: 0.05 },
-      { key: 'glowRadius', label: 'Glow Radius', controlType: 'slider', min: 50, max: 250, step: 10 },
+      {
+        key: 'glowColor',
+        label: 'Glow Color',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'hex',
+      },
+      {
+        key: 'glowOpacity',
+        label: 'Glow Intensity',
+        controlType: 'slider',
+        min: 0.1,
+        max: 0.8,
+        step: 0.05,
+      },
+      {
+        key: 'glowRadius',
+        label: 'Glow Radius',
+        controlType: 'slider',
+        min: 50,
+        max: 250,
+        step: 10,
+      },
     ],
     themeColorProps: ['glowColor'],
   },
@@ -192,15 +274,56 @@ const ENTRIES: EffectRegistryEntry[] = [
       mouseRadius: 1,
     },
     propSchema: [
-      { key: 'effectOpacity', label: 'Opacity', controlType: 'slider', min: 0.05, max: 1, step: 0.05 },
-      { key: 'waveSpeed', label: 'Wave Speed', controlType: 'slider', min: 0.001, max: 0.2, step: 0.001 },
-      { key: 'waveFrequency', label: 'Wave Frequency', controlType: 'slider', min: 1, max: 10, step: 0.5 },
-      { key: 'waveAmplitude', label: 'Wave Amplitude', controlType: 'slider', min: 0.05, max: 1, step: 0.05 },
-      { key: 'waveColor', label: 'Wave Color', controlType: 'color', isThemeLinked: true, colorFormat: 'rgb-float' },
+      {
+        key: 'effectOpacity',
+        label: 'Opacity',
+        controlType: 'slider',
+        min: 0.05,
+        max: 1,
+        step: 0.05,
+      },
+      {
+        key: 'waveSpeed',
+        label: 'Wave Speed',
+        controlType: 'slider',
+        min: 0.001,
+        max: 0.2,
+        step: 0.001,
+      },
+      {
+        key: 'waveFrequency',
+        label: 'Wave Frequency',
+        controlType: 'slider',
+        min: 1,
+        max: 10,
+        step: 0.5,
+      },
+      {
+        key: 'waveAmplitude',
+        label: 'Wave Amplitude',
+        controlType: 'slider',
+        min: 0.05,
+        max: 1,
+        step: 0.05,
+      },
+      {
+        key: 'waveColor',
+        label: 'Wave Color',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'rgb-float',
+      },
       { key: 'colorNum', label: 'Color Levels', controlType: 'slider', min: 2, max: 16, step: 1 },
       { key: 'pixelSize', label: 'Pixel Size', controlType: 'slider', min: 1, max: 8, step: 1 },
       { key: 'enableMouseInteraction', label: 'Mouse Interaction', controlType: 'toggle' },
-      { key: 'mouseRadius', label: 'Mouse Radius', controlType: 'slider', min: 0.1, max: 1, step: 0.05 },
+      {
+        key: 'mouseRadius',
+        label: 'Mouse Radius',
+        controlType: 'slider',
+        min: 0.1,
+        max: 1,
+        step: 0.05,
+      },
     ],
     themeColorProps: ['waveColor'],
   },
@@ -221,13 +344,24 @@ const ENTRIES: EffectRegistryEntry[] = [
       edgeFade: 0.5,
     },
     propSchema: [
-      { key: 'color', label: 'Color', controlType: 'color', isThemeLinked: true, colorFormat: 'hex' },
-      { key: 'variant', label: 'Variant', controlType: 'select', options: [
-        { value: 'square', label: 'Square' },
-        { value: 'circle', label: 'Circle' },
-        { value: 'triangle', label: 'Triangle' },
-        { value: 'diamond', label: 'Diamond' },
-      ]},
+      {
+        key: 'color',
+        label: 'Color',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'hex',
+      },
+      {
+        key: 'variant',
+        label: 'Variant',
+        controlType: 'select',
+        options: [
+          { value: 'square', label: 'Square' },
+          { value: 'circle', label: 'Circle' },
+          { value: 'triangle', label: 'Triangle' },
+          { value: 'diamond', label: 'Diamond' },
+        ],
+      },
       { key: 'pixelSize', label: 'Pixel Size', controlType: 'slider', min: 1, max: 10, step: 1 },
       { key: 'speed', label: 'Speed', controlType: 'slider', min: 0.05, max: 2, step: 0.05 },
       { key: 'edgeFade', label: 'Edge Fade', controlType: 'slider', min: 0, max: 1, step: 0.05 },
@@ -255,17 +389,42 @@ const ENTRIES: EffectRegistryEntry[] = [
       direction: 125,
     },
     propSchema: [
-      { key: 'color', label: 'Color', controlType: 'color', isThemeLinked: true, colorFormat: 'hex' },
-      { key: 'flakeSize', label: 'Flake Size', controlType: 'slider', min: 0.001, max: 0.1, step: 0.001 },
+      {
+        key: 'color',
+        label: 'Color',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'hex',
+      },
+      {
+        key: 'flakeSize',
+        label: 'Flake Size',
+        controlType: 'slider',
+        min: 0.001,
+        max: 0.1,
+        step: 0.001,
+      },
       { key: 'speed', label: 'Speed', controlType: 'slider', min: 0.1, max: 5, step: 0.1 },
       { key: 'density', label: 'Density', controlType: 'slider', min: 0.05, max: 1, step: 0.05 },
-      { key: 'brightness', label: 'Brightness', controlType: 'slider', min: 0.5, max: 3, step: 0.1 },
+      {
+        key: 'brightness',
+        label: 'Brightness',
+        controlType: 'slider',
+        min: 0.5,
+        max: 3,
+        step: 0.1,
+      },
       { key: 'depthFade', label: 'Depth Fade', controlType: 'slider', min: 0, max: 20, step: 1 },
-      { key: 'variant', label: 'Variant', controlType: 'select', options: [
-        { value: 'square', label: 'Square' },
-        { value: 'round', label: 'Round' },
-        { value: 'snowflake', label: 'Snowflake' },
-      ]},
+      {
+        key: 'variant',
+        label: 'Variant',
+        controlType: 'select',
+        options: [
+          { value: 'square', label: 'Square' },
+          { value: 'round', label: 'Round' },
+          { value: 'snowflake', label: 'Snowflake' },
+        ],
+      },
       { key: 'direction', label: 'Direction', controlType: 'slider', min: 0, max: 360, step: 5 },
     ],
     themeColorProps: ['color'],
@@ -286,7 +445,13 @@ const ENTRIES: EffectRegistryEntry[] = [
       opacity: 1,
     },
     propSchema: [
-      { key: 'colorStops', label: 'Color Stops', controlType: 'color-array', isThemeLinked: true, colorFormat: 'hex' },
+      {
+        key: 'colorStops',
+        label: 'Color Stops',
+        controlType: 'color-array',
+        isThemeLinked: true,
+        colorFormat: 'hex',
+      },
       { key: 'amplitude', label: 'Amplitude', controlType: 'slider', min: 0.1, max: 3, step: 0.1 },
       { key: 'blend', label: 'Blend', controlType: 'slider', min: 0, max: 1, step: 0.05 },
       { key: 'speed', label: 'Speed', controlType: 'slider', min: 0.1, max: 5, step: 0.1 },
@@ -312,20 +477,51 @@ const ENTRIES: EffectRegistryEntry[] = [
       opacity: 1,
     },
     propSchema: [
-      { key: 'color1', label: 'Color 1', controlType: 'color', isThemeLinked: true, colorFormat: 'hex' },
-      { key: 'color2', label: 'Color 2', controlType: 'color', isThemeLinked: true, colorFormat: 'hex',
+      {
+        key: 'color1',
+        label: 'Color 1',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'hex',
+      },
+      {
+        key: 'color2',
+        label: 'Color 2',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'hex',
         deriveFrom: {
-          sourceKey: 'color1', darken: 0.5, desaturate: 0.2, hueShift: 0.15,
+          sourceKey: 'color1',
+          darken: 0.5,
+          desaturate: 0.2,
+          hueShift: 0.15,
           lightMode: { lighten: 0.3, desaturate: 0.3, hueShift: 0.15 },
-        } },
-      { key: 'color3', label: 'Color 3', controlType: 'color', isThemeLinked: true, colorFormat: 'hex',
+        },
+      },
+      {
+        key: 'color3',
+        label: 'Color 3',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'hex',
         deriveFrom: {
-          sourceKey: 'color1', darken: 0.2, desaturate: 0.4, hueShift: -0.05,
+          sourceKey: 'color1',
+          darken: 0.2,
+          desaturate: 0.4,
+          hueShift: -0.05,
           lightMode: { lighten: 0.5, desaturate: 0.5, hueShift: -0.05 },
-        } },
+        },
+      },
       { key: 'timeSpeed', label: 'Speed', controlType: 'slider', min: 0.05, max: 2, step: 0.05 },
       { key: 'grainAmount', label: 'Grain', controlType: 'slider', min: 0, max: 0.5, step: 0.01 },
-      { key: 'noiseScale', label: 'Noise Scale', controlType: 'slider', min: 1, max: 16, step: 0.5 },
+      {
+        key: 'noiseScale',
+        label: 'Noise Scale',
+        controlType: 'slider',
+        min: 1,
+        max: 16,
+        step: 0.5,
+      },
       { key: 'contrast', label: 'Contrast', controlType: 'slider', min: 0.5, max: 2, step: 0.05 },
       { key: 'saturation', label: 'Saturation', controlType: 'slider', min: 0, max: 2, step: 0.05 },
       { key: 'opacity', label: 'Opacity', controlType: 'slider', min: 0.05, max: 1, step: 0.05 },
@@ -347,13 +543,24 @@ const ENTRIES: EffectRegistryEntry[] = [
       mouseInteractive: false,
     },
     propSchema: [
-      { key: 'color', label: 'Color', controlType: 'color', isThemeLinked: true, colorFormat: 'hex' },
+      {
+        key: 'color',
+        label: 'Color',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'hex',
+      },
       { key: 'speed', label: 'Speed', controlType: 'slider', min: 0.1, max: 10, step: 0.1 },
-      { key: 'direction', label: 'Direction', controlType: 'select', options: [
-        { value: 'forward', label: 'Forward' },
-        { value: 'reverse', label: 'Reverse' },
-        { value: 'pingpong', label: 'Ping-Pong' },
-      ]},
+      {
+        key: 'direction',
+        label: 'Direction',
+        controlType: 'select',
+        options: [
+          { value: 'forward', label: 'Forward' },
+          { value: 'reverse', label: 'Reverse' },
+          { value: 'pingpong', label: 'Ping-Pong' },
+        ],
+      },
       { key: 'scale', label: 'Scale', controlType: 'slider', min: 0.1, max: 10, step: 0.1 },
       { key: 'opacity', label: 'Opacity', controlType: 'slider', min: 0.1, max: 1, step: 0.05 },
       { key: 'mouseInteractive', label: 'Mouse Interaction', controlType: 'toggle' },
@@ -377,8 +584,21 @@ const ENTRIES: EffectRegistryEntry[] = [
     propSchema: [
       { key: 'speed', label: 'Speed', controlType: 'slider', min: 0.5, max: 20, step: 0.5 },
       { key: 'scale', label: 'Scale', controlType: 'slider', min: 0.1, max: 5, step: 0.1 },
-      { key: 'color', label: 'Color', controlType: 'color', isThemeLinked: true, colorFormat: 'hex' },
-      { key: 'noiseIntensity', label: 'Noise Intensity', controlType: 'slider', min: 0, max: 5, step: 0.1 },
+      {
+        key: 'color',
+        label: 'Color',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'hex',
+      },
+      {
+        key: 'noiseIntensity',
+        label: 'Noise Intensity',
+        controlType: 'slider',
+        min: 0,
+        max: 5,
+        step: 0.1,
+      },
       { key: 'rotation', label: 'Rotation', controlType: 'slider', min: 0, max: 360, step: 5 },
       { key: 'opacity', label: 'Opacity', controlType: 'slider', min: 0.05, max: 1, step: 0.05 },
     ],
@@ -409,10 +629,23 @@ const ENTRIES: EffectRegistryEntry[] = [
       { key: 'particleCount', label: 'Count', controlType: 'slider', min: 50, max: 1000, step: 50 },
       { key: 'particleSpread', label: 'Spread', controlType: 'slider', min: 2, max: 30, step: 1 },
       { key: 'speed', label: 'Speed', controlType: 'slider', min: 0.01, max: 1, step: 0.01 },
-      { key: 'particleColors', label: 'Colors', controlType: 'color-array', isThemeLinked: true, colorFormat: 'hex' },
+      {
+        key: 'particleColors',
+        label: 'Colors',
+        controlType: 'color-array',
+        isThemeLinked: true,
+        colorFormat: 'hex',
+      },
       { key: 'moveParticlesOnHover', label: 'Hover Interaction', controlType: 'toggle' },
       { key: 'alphaParticles', label: 'Alpha Particles', controlType: 'toggle' },
-      { key: 'particleBaseSize', label: 'Base Size', controlType: 'slider', min: 10, max: 500, step: 10 },
+      {
+        key: 'particleBaseSize',
+        label: 'Base Size',
+        controlType: 'slider',
+        min: 10,
+        max: 500,
+        step: 10,
+      },
       { key: 'disableRotation', label: 'Disable Rotation', controlType: 'toggle' },
     ],
     themeColorProps: ['particleColors'],
@@ -431,7 +664,13 @@ const ENTRIES: EffectRegistryEntry[] = [
       opacity: 1,
     },
     propSchema: [
-      { key: 'color', label: 'Color', controlType: 'color', isThemeLinked: true, colorFormat: 'rgb-float' },
+      {
+        key: 'color',
+        label: 'Color',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'rgb-float',
+      },
       { key: 'amplitude', label: 'Amplitude', controlType: 'slider', min: 0.1, max: 5, step: 0.1 },
       { key: 'distance', label: 'Distance', controlType: 'slider', min: 0, max: 5, step: 0.1 },
       { key: 'enableMouseInteraction', label: 'Mouse Interaction', controlType: 'toggle' },
@@ -457,13 +696,40 @@ const ENTRIES: EffectRegistryEntry[] = [
       opacity: 1,
     },
     propSchema: [
-      { key: 'linesGradient', label: 'Colors', controlType: 'color-array', isThemeLinked: true, colorFormat: 'hex' },
+      {
+        key: 'linesGradient',
+        label: 'Colors',
+        controlType: 'color-array',
+        isThemeLinked: true,
+        colorFormat: 'hex',
+      },
       { key: 'lineCount', label: 'Line Count', controlType: 'slider', min: 2, max: 30, step: 1 },
-      { key: 'lineDistance', label: 'Line Distance', controlType: 'slider', min: 1, max: 20, step: 1 },
+      {
+        key: 'lineDistance',
+        label: 'Line Distance',
+        controlType: 'slider',
+        min: 1,
+        max: 20,
+        step: 1,
+      },
       { key: 'animationSpeed', label: 'Speed', controlType: 'slider', min: 0.1, max: 5, step: 0.1 },
       { key: 'interactive', label: 'Interactive', controlType: 'toggle' },
-      { key: 'bendRadius', label: 'Bend Radius', controlType: 'slider', min: 0.5, max: 15, step: 0.5 },
-      { key: 'bendStrength', label: 'Bend Strength', controlType: 'slider', min: -2, max: 2, step: 0.1 },
+      {
+        key: 'bendRadius',
+        label: 'Bend Radius',
+        controlType: 'slider',
+        min: 0.5,
+        max: 15,
+        step: 0.5,
+      },
+      {
+        key: 'bendStrength',
+        label: 'Bend Strength',
+        controlType: 'slider',
+        min: -2,
+        max: 2,
+        step: 0.1,
+      },
       { key: 'parallax', label: 'Parallax', controlType: 'toggle' },
       { key: 'opacity', label: 'Opacity', controlType: 'slider', min: 0.05, max: 1, step: 0.05 },
     ],
@@ -489,7 +755,13 @@ const ENTRIES: EffectRegistryEntry[] = [
       { key: 'beamWidth', label: 'Width', controlType: 'slider', min: 0.5, max: 10, step: 0.5 },
       { key: 'beamHeight', label: 'Height', controlType: 'slider', min: 5, max: 30, step: 1 },
       { key: 'beamNumber', label: 'Count', controlType: 'slider', min: 2, max: 30, step: 1 },
-      { key: 'lightColor', label: 'Color', controlType: 'color', isThemeLinked: true, colorFormat: 'hex' },
+      {
+        key: 'lightColor',
+        label: 'Color',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'hex',
+      },
       { key: 'speed', label: 'Speed', controlType: 'slider', min: 0.1, max: 10, step: 0.1 },
       { key: 'noiseIntensity', label: 'Noise', controlType: 'slider', min: 0, max: 5, step: 0.25 },
       { key: 'scale', label: 'Scale', controlType: 'slider', min: 0.05, max: 1, step: 0.05 },
@@ -517,11 +789,31 @@ const ENTRIES: EffectRegistryEntry[] = [
       isBounce: false,
     },
     propSchema: [
-      { key: 'colors', label: 'Colors', controlType: 'color-array', isThemeLinked: true, colorFormat: 'hex' },
+      {
+        key: 'colors',
+        label: 'Colors',
+        controlType: 'color-array',
+        isThemeLinked: true,
+        colorFormat: 'hex',
+      },
       { key: 'mouseForce', label: 'Mouse Force', controlType: 'slider', min: 1, max: 100, step: 1 },
-      { key: 'cursorSize', label: 'Cursor Size', controlType: 'slider', min: 10, max: 500, step: 10 },
+      {
+        key: 'cursorSize',
+        label: 'Cursor Size',
+        controlType: 'slider',
+        min: 10,
+        max: 500,
+        step: 10,
+      },
       { key: 'isViscous', label: 'Viscous', controlType: 'toggle' },
-      { key: 'resolution', label: 'Resolution', controlType: 'slider', min: 0.1, max: 1, step: 0.1 },
+      {
+        key: 'resolution',
+        label: 'Resolution',
+        controlType: 'slider',
+        min: 0.1,
+        max: 1,
+        step: 0.1,
+      },
       { key: 'autoDemo', label: 'Auto Demo', controlType: 'toggle' },
       { key: 'autoSpeed', label: 'Auto Speed', controlType: 'slider', min: 0.1, max: 5, step: 0.1 },
       { key: 'isBounce', label: 'Bounce', controlType: 'toggle' },
@@ -547,7 +839,13 @@ const ENTRIES: EffectRegistryEntry[] = [
       opacity: 1,
     },
     propSchema: [
-      { key: 'colors', label: 'Colors', controlType: 'color-array', isThemeLinked: true, colorFormat: 'hex' },
+      {
+        key: 'colors',
+        label: 'Colors',
+        controlType: 'color-array',
+        isThemeLinked: true,
+        colorFormat: 'hex',
+      },
       { key: 'speed', label: 'Speed', controlType: 'slider', min: 0.01, max: 2, step: 0.01 },
       { key: 'rotation', label: 'Rotation', controlType: 'slider', min: 0, max: 360, step: 5 },
       { key: 'autoRotate', label: 'Auto Rotate', controlType: 'slider', min: 0, max: 5, step: 0.1 },
@@ -575,9 +873,22 @@ const ENTRIES: EffectRegistryEntry[] = [
       opacity: 1,
     },
     propSchema: [
-      { key: 'color', label: 'Color', controlType: 'color', isThemeLinked: true, colorFormat: 'rgb-float' },
+      {
+        key: 'color',
+        label: 'Color',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'rgb-float',
+      },
       { key: 'speed', label: 'Speed', controlType: 'slider', min: 0.1, max: 5, step: 0.1 },
-      { key: 'amplitude', label: 'Amplitude', controlType: 'slider', min: 0.01, max: 0.5, step: 0.01 },
+      {
+        key: 'amplitude',
+        label: 'Amplitude',
+        controlType: 'slider',
+        min: 0.01,
+        max: 0.5,
+        step: 0.01,
+      },
       { key: 'mouseReact', label: 'Mouse Interaction', controlType: 'toggle' },
       { key: 'opacity', label: 'Opacity', controlType: 'slider', min: 0.05, max: 1, step: 0.05 },
     ],
@@ -598,12 +909,23 @@ const ENTRIES: EffectRegistryEntry[] = [
     propSchema: [
       { key: 'intensity', label: 'Intensity', controlType: 'slider', min: 0.1, max: 5, step: 0.1 },
       { key: 'speed', label: 'Speed', controlType: 'slider', min: 0.1, max: 5, step: 0.1 },
-      { key: 'animationType', label: 'Animation', controlType: 'select', options: [
-        { value: 'rotate', label: 'Rotate' },
-        { value: 'rotate3d', label: 'Rotate 3D' },
-        { value: 'hover', label: 'Hover' },
-      ]},
-      { key: 'colors', label: 'Colors', controlType: 'color-array', isThemeLinked: true, colorFormat: 'hex' },
+      {
+        key: 'animationType',
+        label: 'Animation',
+        controlType: 'select',
+        options: [
+          { value: 'rotate', label: 'Rotate' },
+          { value: 'rotate3d', label: 'Rotate 3D' },
+          { value: 'hover', label: 'Hover' },
+        ],
+      },
+      {
+        key: 'colors',
+        label: 'Colors',
+        controlType: 'color-array',
+        isThemeLinked: true,
+        colorFormat: 'hex',
+      },
     ],
     themeColorProps: ['colors'],
   },
@@ -626,25 +948,59 @@ const ENTRIES: EffectRegistryEntry[] = [
       quality: 'high',
     },
     propSchema: [
-      { key: 'topColor', label: 'Top Color', controlType: 'color', isThemeLinked: true, colorFormat: 'hex' },
-      { key: 'bottomColor', label: 'Bottom Color', controlType: 'color', isThemeLinked: true, colorFormat: 'hex',
+      {
+        key: 'topColor',
+        label: 'Top Color',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'hex',
+      },
+      {
+        key: 'bottomColor',
+        label: 'Bottom Color',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'hex',
         deriveFrom: {
-          sourceKey: 'topColor', darken: 0.2, desaturate: 0.1, hueShift: 0.1,
+          sourceKey: 'topColor',
+          darken: 0.2,
+          desaturate: 0.1,
+          hueShift: 0.1,
           lightMode: { lighten: 0.3, desaturate: 0.2, hueShift: 0.1 },
-        } },
+        },
+      },
       { key: 'intensity', label: 'Intensity', controlType: 'slider', min: 0.1, max: 3, step: 0.1 },
-      { key: 'rotationSpeed', label: 'Rotation Speed', controlType: 'slider', min: 0, max: 3, step: 0.1 },
+      {
+        key: 'rotationSpeed',
+        label: 'Rotation Speed',
+        controlType: 'slider',
+        min: 0,
+        max: 3,
+        step: 0.1,
+      },
       { key: 'interactive', label: 'Interactive', controlType: 'toggle' },
       { key: 'glowAmount', label: 'Glow', controlType: 'slider', min: 0, max: 0.05, step: 0.001 },
       { key: 'pillarWidth', label: 'Width', controlType: 'slider', min: 0.5, max: 10, step: 0.5 },
       { key: 'pillarHeight', label: 'Height', controlType: 'slider', min: 0.1, max: 2, step: 0.1 },
       { key: 'noiseIntensity', label: 'Noise', controlType: 'slider', min: 0, max: 2, step: 0.05 },
-      { key: 'pillarRotation', label: 'Rotation', controlType: 'slider', min: 0, max: 360, step: 5 },
-      { key: 'quality', label: 'Quality', controlType: 'select', options: [
-        { value: 'low', label: 'Low' },
-        { value: 'medium', label: 'Medium' },
-        { value: 'high', label: 'High' },
-      ]},
+      {
+        key: 'pillarRotation',
+        label: 'Rotation',
+        controlType: 'slider',
+        min: 0,
+        max: 360,
+        step: 5,
+      },
+      {
+        key: 'quality',
+        label: 'Quality',
+        controlType: 'select',
+        options: [
+          { value: 'low', label: 'Low' },
+          { value: 'medium', label: 'Medium' },
+          { value: 'high', label: 'High' },
+        ],
+      },
     ],
     themeColorProps: ['topColor'],
   },
@@ -668,11 +1024,16 @@ const ENTRIES: EffectRegistryEntry[] = [
     propSchema: [
       { key: 'height', label: 'Height', controlType: 'slider', min: 1, max: 10, step: 0.5 },
       { key: 'baseWidth', label: 'Base Width', controlType: 'slider', min: 1, max: 15, step: 0.5 },
-      { key: 'animationType', label: 'Animation', controlType: 'select', options: [
-        { value: 'rotate', label: 'Rotate' },
-        { value: 'hover', label: 'Hover' },
-        { value: '3drotate', label: '3D Rotate' },
-      ]},
+      {
+        key: 'animationType',
+        label: 'Animation',
+        controlType: 'select',
+        options: [
+          { value: 'rotate', label: 'Rotate' },
+          { value: 'hover', label: 'Hover' },
+          { value: '3drotate', label: '3D Rotate' },
+        ],
+      },
       { key: 'glow', label: 'Glow', controlType: 'slider', min: 0, max: 3, step: 0.1 },
       { key: 'noise', label: 'Noise', controlType: 'slider', min: 0, max: 2, step: 0.05 },
       { key: 'scale', label: 'Scale', controlType: 'slider', min: 0.5, max: 10, step: 0.1 },
@@ -699,10 +1060,37 @@ const ENTRIES: EffectRegistryEntry[] = [
       opacity: 1,
     },
     propSchema: [
-      { key: 'color', label: 'Color', controlType: 'color', isThemeLinked: true, colorFormat: 'rgb-float' },
-      { key: 'radius', label: 'Brush Radius', controlType: 'slider', min: 0.01, max: 0.5, step: 0.01 },
-      { key: 'decay', label: 'Fade Speed', controlType: 'slider', min: 0.001, max: 0.05, step: 0.001 },
-      { key: 'intensity', label: 'Intensity', controlType: 'slider', min: 0.05, max: 1, step: 0.05 },
+      {
+        key: 'color',
+        label: 'Color',
+        controlType: 'color',
+        isThemeLinked: true,
+        colorFormat: 'rgb-float',
+      },
+      {
+        key: 'radius',
+        label: 'Brush Radius',
+        controlType: 'slider',
+        min: 0.01,
+        max: 0.5,
+        step: 0.01,
+      },
+      {
+        key: 'decay',
+        label: 'Fade Speed',
+        controlType: 'slider',
+        min: 0.001,
+        max: 0.05,
+        step: 0.001,
+      },
+      {
+        key: 'intensity',
+        label: 'Intensity',
+        controlType: 'slider',
+        min: 0.05,
+        max: 1,
+        step: 0.05,
+      },
       { key: 'ditherSize', label: 'Dither Size', controlType: 'slider', min: 1, max: 8, step: 0.5 },
       { key: 'exponent', label: 'Contrast', controlType: 'slider', min: 1, max: 4, step: 0.1 },
       { key: 'opacity', label: 'Opacity', controlType: 'slider', min: 0.05, max: 1, step: 0.05 },
@@ -717,14 +1105,21 @@ const ENTRIES: EffectRegistryEntry[] = [
 
 /** Map from effect type ID → registry entry */
 export const EFFECT_REGISTRY: Record<string, EffectRegistryEntry> = Object.fromEntries(
-  ENTRIES.map((entry) => [entry.id, entry])
+  ENTRIES.map((entry) => [entry.id, entry]),
 )
 
 /** All effect IDs (excluding 'none') */
 export const ALL_EFFECT_IDS: AmbientEffectType[] = ENTRIES.map((e) => e.id)
 
 /** Unique categories in display order */
-export const EFFECT_CATEGORIES = ['Patterns', 'Atmosphere', 'Particles', 'Fluid', 'Light', 'Cursor'] as const
+export const EFFECT_CATEGORIES = [
+  'Patterns',
+  'Atmosphere',
+  'Particles',
+  'Fluid',
+  'Light',
+  'Cursor',
+] as const
 
 /** Effects grouped by category */
 export const EFFECTS_BY_CATEGORY = EFFECT_CATEGORIES.map((cat) => ({

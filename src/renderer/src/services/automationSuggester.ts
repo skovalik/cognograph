@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import type { ActionStep, ActionTrigger } from '@shared/actionTypes'
 import type { HistoryAction, NodeData } from '@shared/types'
-import type { ActionTrigger, ActionStep } from '@shared/actionTypes'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 
 export interface AutomationSuggestion {
@@ -58,7 +58,7 @@ export function analyzeHistoryForPatterns(): AutomationSuggestion[] {
 
   // Convert patterns to suggestions
   return patterns
-    .filter(p => p.frequency >= MIN_PATTERN_FREQUENCY)
+    .filter((p) => p.frequency >= MIN_PATTERN_FREQUENCY)
     .map(patternToSuggestion)
     .filter((s): s is AutomationSuggestion => s !== null)
     .slice(0, 3) // Max 3 suggestions at a time
@@ -69,7 +69,7 @@ export function analyzeHistoryForPatterns(): AutomationSuggestion[] {
  * Can be sent to the LLM for more nuanced automation ideas.
  */
 export function generatePatternPrompt(patterns: DetectedPattern[]): string {
-  const patternDescriptions = patterns.map(p => {
+  const patternDescriptions = patterns.map((p) => {
     switch (p.type) {
       case 'repetitive-update':
         return `The user repeatedly updates the "${p.details.property}" property from "${p.details.fromValue}" to "${p.details.toValue}" on ${p.details.nodeType} nodes (${p.frequency} times).`
@@ -106,7 +106,14 @@ function detectRepetitiveUpdates(actions: HistoryAction[], patterns: DetectedPat
       const keys = Object.keys(action.after)
       for (const key of keys) {
         // Skip system properties that shouldn't trigger automations
-        if (key === 'updatedAt' || key === 'lastAccessedAt' || key === 'accessCount' || key === 'createdAt' || key === 'id') continue
+        if (
+          key === 'updatedAt' ||
+          key === 'lastAccessedAt' ||
+          key === 'accessCount' ||
+          key === 'createdAt' ||
+          key === 'id'
+        )
+          continue
 
         const fromValue = action.before[key as keyof typeof action.before]
         const toValue = action.after[key as keyof typeof action.after]
@@ -124,8 +131,8 @@ function detectRepetitiveUpdates(actions: HistoryAction[], patterns: DetectedPat
             details: {
               property: key,
               fromValue,
-              toValue
-            }
+              toValue,
+            },
           })
         }
       }
@@ -137,16 +144,13 @@ function detectRepetitiveUpdates(actions: HistoryAction[], patterns: DetectedPat
       patterns.push({
         type: 'repetitive-update',
         frequency: value.count,
-        details: value.details
+        details: value.details,
       })
     }
   }
 }
 
-function detectSpatialClusters(
-  actions: HistoryAction[],
-  patterns: DetectedPattern[]
-): void {
+function detectSpatialClusters(actions: HistoryAction[], patterns: DetectedPattern[]): void {
   // Look for nodes created in proximity to each other
   const createdNodePositions: Array<{ x: number; y: number; type: string }> = []
 
@@ -155,7 +159,7 @@ function detectSpatialClusters(
       createdNodePositions.push({
         x: action.node.position.x,
         y: action.node.position.y,
-        type: action.node.data.type
+        type: action.node.data.type,
       })
     }
   }
@@ -176,17 +180,18 @@ function detectSpatialClusters(
     // Check if they're clustered (within 500px of each other)
     const centroidX = positions.reduce((sum, p) => sum + p.x, 0) / positions.length
     const centroidY = positions.reduce((sum, p) => sum + p.y, 0) / positions.length
-    const avgRadius = positions.reduce((sum, p) => {
-      const dx = p.x - centroidX
-      const dy = p.y - centroidY
-      return sum + Math.sqrt(dx * dx + dy * dy)
-    }, 0) / positions.length
+    const avgRadius =
+      positions.reduce((sum, p) => {
+        const dx = p.x - centroidX
+        const dy = p.y - centroidY
+        return sum + Math.sqrt(dx * dx + dy * dy)
+      }, 0) / positions.length
 
     if (avgRadius < 500) {
       patterns.push({
         type: 'spatial-cluster',
         frequency: positions.length,
-        details: { nodeType: type, radius: Math.round(avgRadius) }
+        details: { nodeType: type, radius: Math.round(avgRadius) },
       })
     }
   }
@@ -215,7 +220,7 @@ function detectWorkflowChains(actions: HistoryAction[], patterns: DetectedPatter
     patterns.push({
       type: 'workflow-chain',
       frequency: chainCount,
-      details: { sequence: sequence.join(' → ') }
+      details: { sequence: sequence.join(' → ') },
     })
   }
 }
@@ -240,21 +245,23 @@ function patternToSuggestion(pattern: DetectedPattern): AutomationSuggestion | n
         trigger: {
           type: 'property-change',
           property: String(property),
-          toValue: String(fromValue)
+          toValue: String(fromValue),
         },
-        steps: [{
-          id: 'step-1',
-          type: 'update-property',
-          label: `Set ${String(property)} to ${String(toValue)}`,
-          onError: 'stop' as const,
-          config: {
-            target: 'trigger-node',
-            property: String(property),
-            value: toValue
-          }
-        }],
+        steps: [
+          {
+            id: 'step-1',
+            type: 'update-property',
+            label: `Set ${String(property)} to ${String(toValue)}`,
+            onError: 'stop' as const,
+            config: {
+              target: 'trigger-node',
+              property: String(property),
+              value: toValue,
+            },
+          },
+        ],
         confidence: Math.min(0.9, pattern.frequency / 10),
-        patternType: pattern.type
+        patternType: pattern.type,
       }
     }
 
@@ -266,22 +273,24 @@ function patternToSuggestion(pattern: DetectedPattern): AutomationSuggestion | n
         description: `Detected ${pattern.frequency} ${String(nodeType)} nodes clustered within ${String(radius)}px. Create a region to track this group.`,
         trigger: {
           type: 'node-created',
-          nodeTypeFilter: String(nodeType)
+          nodeTypeFilter: String(nodeType),
         },
-        steps: [{
-          id: 'step-1',
-          type: 'move-node',
-          label: `Move to cluster area`,
-          onError: 'continue' as const,
-          config: {
-            target: 'trigger-node',
-            position: 'relative',
-            x: 0,
-            y: 0
-          }
-        }],
+        steps: [
+          {
+            id: 'step-1',
+            type: 'move-node',
+            label: `Move to cluster area`,
+            onError: 'continue' as const,
+            config: {
+              target: 'trigger-node',
+              position: 'relative',
+              x: 0,
+              y: 0,
+            },
+          },
+        ],
         confidence: Math.min(0.7, pattern.frequency / 15),
-        patternType: pattern.type
+        patternType: pattern.type,
       }
     }
 
@@ -291,19 +300,21 @@ function patternToSuggestion(pattern: DetectedPattern): AutomationSuggestion | n
         title: 'Automate workflow chain',
         description: `Detected repeated pattern: ${String(pattern.details.sequence)}. Create an action to automate this.`,
         trigger: { type: 'manual' },
-        steps: [{
-          id: 'step-1',
-          type: 'create-node',
-          label: 'Create node',
-          onError: 'stop' as const,
-          config: {
-            nodeType: 'note',
-            title: 'Auto-created',
-            position: 'near-trigger'
-          }
-        }],
+        steps: [
+          {
+            id: 'step-1',
+            type: 'create-node',
+            label: 'Create node',
+            onError: 'stop' as const,
+            config: {
+              nodeType: 'note',
+              title: 'Auto-created',
+              position: 'near-trigger',
+            },
+          },
+        ],
         confidence: Math.min(0.6, pattern.frequency / 10),
-        patternType: pattern.type
+        patternType: pattern.type,
       }
     }
 

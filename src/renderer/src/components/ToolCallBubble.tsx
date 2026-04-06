@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useState } from 'react'
-import { Wrench, ChevronDown, ChevronUp, AlertCircle, Check } from 'lucide-react'
 import type { Message } from '@shared/types'
+import { AlertCircle, Check, ChevronDown, ChevronUp, Wrench } from 'lucide-react'
+import { memo, useState } from 'react'
 
 interface ToolCallBubbleProps {
   message: Message
@@ -13,7 +13,7 @@ interface ToolCallBubbleProps {
 
 export const ToolCallBubble = memo(function ToolCallBubble({
   message,
-  isLightMode: _isLightMode = false
+  isLightMode: _isLightMode = false,
 }: ToolCallBubbleProps) {
   const [expanded, setExpanded] = useState(false)
 
@@ -27,11 +27,7 @@ export const ToolCallBubble = memo(function ToolCallBubble({
       ? 'bg-red-500/10 border-red-500/30'
       : 'bg-emerald-500/10 border-emerald-500/30'
 
-  const textClass = isToolUse
-    ? 'text-violet-400'
-    : isError
-      ? 'text-red-400'
-      : 'text-emerald-400'
+  const textClass = isToolUse ? 'text-violet-400' : isError ? 'text-red-400' : 'text-emerald-400'
 
   const Icon = isToolUse ? Wrench : isError ? AlertCircle : Check
 
@@ -65,12 +61,8 @@ export const ToolCallBubble = memo(function ToolCallBubble({
 
         {expanded && (
           <div className="mt-2 pt-2 border-t border-current/10">
-            <pre
-              className="text-xs overflow-x-auto max-h-48 whitespace-pre-wrap break-words text-[var(--text-secondary)]"
-            >
-              {isToolUse
-                ? JSON.stringify(message.toolInput, null, 2)
-                : message.content}
+            <pre className="text-xs overflow-x-auto max-h-48 whitespace-pre-wrap break-words text-[var(--text-secondary)]">
+              {isToolUse ? JSON.stringify(message.toolInput, null, 2) : message.content}
             </pre>
           </div>
         )}

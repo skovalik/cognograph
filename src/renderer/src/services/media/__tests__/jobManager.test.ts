@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { useJobManager, type GenerationJob } from '../jobManager'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { type GenerationJob, useJobManager } from '../jobManager'
 
 describe('JobManager', () => {
   beforeEach(() => {
@@ -62,13 +62,28 @@ describe('JobManager', () => {
 
   it('filters jobs by node ID', () => {
     useJobManager.getState().addJob({
-      id: 'j1', nodeId: 'n1', toolName: 'a', provider: 'p', status: 'queued', createdAt: 0,
+      id: 'j1',
+      nodeId: 'n1',
+      toolName: 'a',
+      provider: 'p',
+      status: 'queued',
+      createdAt: 0,
     })
     useJobManager.getState().addJob({
-      id: 'j2', nodeId: 'n2', toolName: 'b', provider: 'p', status: 'queued', createdAt: 0,
+      id: 'j2',
+      nodeId: 'n2',
+      toolName: 'b',
+      provider: 'p',
+      status: 'queued',
+      createdAt: 0,
     })
     useJobManager.getState().addJob({
-      id: 'j3', nodeId: 'n1', toolName: 'c', provider: 'p', status: 'queued', createdAt: 0,
+      id: 'j3',
+      nodeId: 'n1',
+      toolName: 'c',
+      provider: 'p',
+      status: 'queued',
+      createdAt: 0,
     })
 
     expect(useJobManager.getState().getJobsForNode('n1')).toHaveLength(2)

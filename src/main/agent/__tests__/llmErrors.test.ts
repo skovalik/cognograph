@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { classifyLLMError, type LLMErrorCategory } from '../llmErrors'
 
 // ---------------------------------------------------------------------------
@@ -96,7 +96,10 @@ describe('classifyLLMError — Anthropic', () => {
   })
 
   it('classifies context length error from message', () => {
-    const err = makeSDKError({ status: 400, message: 'prompt is too long: context length exceeded' })
+    const err = makeSDKError({
+      status: 400,
+      message: 'prompt is too long: context length exceeded',
+    })
     const result = classifyLLMError(err, provider)
     expect(result.category).toBe('context_length')
     expect(result.retryable).toBe(false)
@@ -154,7 +157,8 @@ describe('classifyLLMError — OpenAI', () => {
   it('classifies context window exceeded', () => {
     const err = makeSDKError({
       status: 400,
-      message: "This model's maximum context length is 128000 tokens. However, your messages resulted in 130000 tokens."
+      message:
+        "This model's maximum context length is 128000 tokens. However, your messages resulted in 130000 tokens.",
     })
     const result = classifyLLMError(err, provider)
     expect(result.category).toBe('context_length')

@@ -11,8 +11,8 @@
 // Created as part of Phase 1: TRANSPORT-ABSTRACTION
 // =============================================================================
 
-import { ipcMain, type BrowserWindow, type IpcMainEvent } from 'electron'
 import type { AgentMessage, AgentMessageChannel, Transport } from '@shared/transport/types'
+import { type BrowserWindow, type IpcMainEvent, ipcMain } from 'electron'
 
 /**
  * All channels that the transport listens on for incoming messages from the
@@ -41,7 +41,10 @@ export class ElectronTransport implements Transport {
   private readonly window: BrowserWindow
   private messageHandlers: Array<(message: AgentMessage) => void> = []
   private disconnectHandlers: Array<() => void> = []
-  private ipcListeners: Array<{ channel: string; listener: (event: IpcMainEvent, payload: unknown) => void }> = []
+  private ipcListeners: Array<{
+    channel: string
+    listener: (event: IpcMainEvent, payload: unknown) => void
+  }> = []
   private destroyed = false
 
   constructor(window: BrowserWindow) {

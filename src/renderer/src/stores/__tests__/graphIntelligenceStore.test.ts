@@ -12,9 +12,9 @@
  * - Expiry behavior
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import type { CostSnapshot, GraphInsight } from '@shared/types/bridge'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useGraphIntelligenceStore } from '../graphIntelligenceStore'
-import type { GraphInsight, CostSnapshot } from '@shared/types/bridge'
 
 // Mock crypto.randomUUID
 Object.defineProperty(globalThis, 'crypto', {
@@ -27,9 +27,7 @@ Object.defineProperty(globalThis, 'crypto', {
 // Helpers
 // =============================================================================
 
-function createMockInsight(
-  overrides: Partial<GraphInsight> = {}
-): GraphInsight {
+function createMockInsight(overrides: Partial<GraphInsight> = {}): GraphInsight {
   return {
     id: crypto.randomUUID(),
     type: 'orphaned-cluster',
@@ -121,7 +119,7 @@ describe('GraphIntelligenceStore', () => {
             id: `insight-${i}`,
             type: 'stale-content', // Different IDs, same type but...
             affectedNodeIds: [`unique-node-${i}`], // ...different affected nodes
-          })
+          }),
         )
       }
 
@@ -187,9 +185,7 @@ describe('GraphIntelligenceStore', () => {
     it('should mark insight as viewed', () => {
       useGraphIntelligenceStore.getState().viewInsight(insightId)
 
-      const insight = useGraphIntelligenceStore
-        .getState()
-        .insights.find((i) => i.id === insightId)
+      const insight = useGraphIntelligenceStore.getState().insights.find((i) => i.id === insightId)
       expect(insight?.status).toBe('viewed')
     })
 
@@ -197,18 +193,14 @@ describe('GraphIntelligenceStore', () => {
       useGraphIntelligenceStore.getState().dismissInsight(insightId)
       useGraphIntelligenceStore.getState().viewInsight(insightId)
 
-      const insight = useGraphIntelligenceStore
-        .getState()
-        .insights.find((i) => i.id === insightId)
+      const insight = useGraphIntelligenceStore.getState().insights.find((i) => i.id === insightId)
       expect(insight?.status).toBe('dismissed')
     })
 
     it('should dismiss an insight', () => {
       useGraphIntelligenceStore.getState().dismissInsight(insightId)
 
-      const insight = useGraphIntelligenceStore
-        .getState()
-        .insights.find((i) => i.id === insightId)
+      const insight = useGraphIntelligenceStore.getState().insights.find((i) => i.id === insightId)
       expect(insight?.status).toBe('dismissed')
     })
 
@@ -226,9 +218,7 @@ describe('GraphIntelligenceStore', () => {
       useGraphIntelligenceStore.setState({ insights: [insight] })
       useGraphIntelligenceStore.getState().applyInsight(insight.id)
 
-      const updated = useGraphIntelligenceStore
-        .getState()
-        .insights.find((i) => i.id === insight.id)
+      const updated = useGraphIntelligenceStore.getState().insights.find((i) => i.id === insight.id)
       expect(updated?.status).toBe('applied')
     })
   })
@@ -261,9 +251,7 @@ describe('GraphIntelligenceStore', () => {
     })
 
     it('should return empty array for nodes without insights', () => {
-      const result = useGraphIntelligenceStore
-        .getState()
-        .getInsightsForNode('nonexistent')
+      const result = useGraphIntelligenceStore.getState().getInsightsForNode('nonexistent')
       expect(result).toEqual([])
     })
   })
@@ -280,9 +268,7 @@ describe('GraphIntelligenceStore', () => {
       useGraphIntelligenceStore.setState({ insights: [insight], insightsByNode: {} })
       useGraphIntelligenceStore.getState().expireOldInsights()
 
-      const updated = useGraphIntelligenceStore
-        .getState()
-        .insights.find((i) => i.id === insight.id)
+      const updated = useGraphIntelligenceStore.getState().insights.find((i) => i.id === insight.id)
       expect(updated?.status).toBe('expired')
     })
 
@@ -291,9 +277,7 @@ describe('GraphIntelligenceStore', () => {
       useGraphIntelligenceStore.setState({ insights: [insight], insightsByNode: {} })
       useGraphIntelligenceStore.getState().expireOldInsights()
 
-      const updated = useGraphIntelligenceStore
-        .getState()
-        .insights.find((i) => i.id === insight.id)
+      const updated = useGraphIntelligenceStore.getState().insights.find((i) => i.id === insight.id)
       expect(updated?.status).toBe('new')
     })
 
@@ -305,9 +289,7 @@ describe('GraphIntelligenceStore', () => {
       useGraphIntelligenceStore.setState({ insights: [insight], insightsByNode: {} })
       useGraphIntelligenceStore.getState().expireOldInsights()
 
-      const updated = useGraphIntelligenceStore
-        .getState()
-        .insights.find((i) => i.id === insight.id)
+      const updated = useGraphIntelligenceStore.getState().insights.find((i) => i.id === insight.id)
       expect(updated?.status).toBe('dismissed')
     })
   })
@@ -399,7 +381,11 @@ describe('GraphIntelligenceStore', () => {
         insights: [
           createMockInsight({ status: 'new', type: 'orphaned-cluster', affectedNodeIds: ['a'] }),
           createMockInsight({ status: 'viewed', type: 'stale-content', affectedNodeIds: ['b'] }),
-          createMockInsight({ status: 'dismissed', type: 'missing-connection', affectedNodeIds: ['c'] }),
+          createMockInsight({
+            status: 'dismissed',
+            type: 'missing-connection',
+            affectedNodeIds: ['c'],
+          }),
         ],
       })
 

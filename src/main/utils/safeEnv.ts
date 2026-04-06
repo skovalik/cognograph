@@ -15,15 +15,40 @@
 // ---------------------------------------------------------------------------
 
 const UNIX_ALLOWED = [
-  'PATH', 'HOME', 'SHELL', 'TERM', 'LANG', 'COLORTERM', 'TMPDIR',
-  'USER', 'LOGNAME', 'EDITOR', 'VISUAL', 'SSH_AUTH_SOCK',
-  'XDG_RUNTIME_DIR', 'XDG_CONFIG_HOME', 'DISPLAY', 'WAYLAND_DISPLAY',
+  'PATH',
+  'HOME',
+  'SHELL',
+  'TERM',
+  'LANG',
+  'COLORTERM',
+  'TMPDIR',
+  'USER',
+  'LOGNAME',
+  'EDITOR',
+  'VISUAL',
+  'SSH_AUTH_SOCK',
+  'XDG_RUNTIME_DIR',
+  'XDG_CONFIG_HOME',
+  'DISPLAY',
+  'WAYLAND_DISPLAY',
 ] as const
 
 const WINDOWS_ALLOWED = [
-  'PATH', 'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH', 'COMSPEC', 'SYSTEMROOT',
-  'APPDATA', 'LOCALAPPDATA', 'TEMP', 'TMP', 'PATHEXT', 'USERNAME',
-  'PROGRAMFILES', 'PROGRAMFILES(X86)', 'PROCESSOR_ARCHITECTURE',
+  'PATH',
+  'USERPROFILE',
+  'HOMEDRIVE',
+  'HOMEPATH',
+  'COMSPEC',
+  'SYSTEMROOT',
+  'APPDATA',
+  'LOCALAPPDATA',
+  'TEMP',
+  'TMP',
+  'PATHEXT',
+  'USERNAME',
+  'PROGRAMFILES',
+  'PROGRAMFILES(X86)',
+  'PROCESSOR_ARCHITECTURE',
 ] as const
 
 // ---------------------------------------------------------------------------
@@ -43,7 +68,7 @@ const ALWAYS_BLOCKED = [
 ] as const
 
 // Pre-compute uppercase set for O(1) lookup
-const BLOCKED_SET = new Set(ALWAYS_BLOCKED.map(k => k.toUpperCase()))
+const BLOCKED_SET = new Set(ALWAYS_BLOCKED.map((k) => k.toUpperCase()))
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -97,4 +122,4 @@ export function mergeSafeEnv(
 }
 
 // Re-export constants for testing
-export { UNIX_ALLOWED, WINDOWS_ALLOWED, ALWAYS_BLOCKED }
+export { ALWAYS_BLOCKED, UNIX_ALLOWED, WINDOWS_ALLOWED }

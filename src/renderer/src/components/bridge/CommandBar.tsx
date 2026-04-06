@@ -16,17 +16,24 @@
  * - Parsing spinner during interpretation
  */
 
-import { memo, useState, useRef, useCallback, useEffect } from 'react'
-import { Input } from '../ui/Input'
-import { Button } from '../ui/Button'
-import { Badge } from '../ui/Badge'
-import { ScrollArea } from '../ui/scroll-area'
-import {
-  Terminal, Send, Loader2, ChevronUp, Clock, Sparkles, Command as CommandIcon, ArrowRight
-} from 'lucide-react'
-import { useCommandBarStore } from '../../stores/commandBarStore'
 import type { CommandSuggestion } from '@shared/types/bridge'
+import {
+  ArrowRight,
+  ChevronUp,
+  Clock,
+  Command as CommandIcon,
+  Loader2,
+  Send,
+  Sparkles,
+  Terminal,
+} from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '../../lib/utils'
+import { useCommandBarStore } from '../../stores/commandBarStore'
+import { Badge } from '../ui/Badge'
+import { Button } from '../ui/Button'
+import { Input } from '../ui/Input'
+import { ScrollArea } from '../ui/scroll-area'
 
 // =============================================================================
 // HELPERS
@@ -40,17 +47,24 @@ function isInputFocused(): boolean {
 }
 
 function isModalOpen(): boolean {
-  return document.querySelector('[role="dialog"]') !== null ||
-         document.querySelector('[data-radix-popper-content-wrapper]') !== null
+  return (
+    document.querySelector('[role="dialog"]') !== null ||
+    document.querySelector('[data-radix-popper-content-wrapper]') !== null
+  )
 }
 
 function SuggestionIcon({ source }: { source: string }): JSX.Element {
   switch (source) {
-    case 'recent': return <Clock className="w-3 h-3" style={{ color: 'var(--text-muted)' }} />
-    case 'template': return <CommandIcon className="w-3 h-3 text-blue-400" />
-    case 'ai-completion': return <Sparkles className="w-3 h-3 text-purple-400" />
-    case 'contextual': return <ArrowRight className="w-3 h-3 text-green-400" />
-    default: return <Terminal className="w-3 h-3" style={{ color: 'var(--text-muted)' }} />
+    case 'recent':
+      return <Clock className="w-3 h-3" style={{ color: 'var(--text-muted)' }} />
+    case 'template':
+      return <CommandIcon className="w-3 h-3 text-blue-400" />
+    case 'ai-completion':
+      return <Sparkles className="w-3 h-3 text-purple-400" />
+    case 'contextual':
+      return <ArrowRight className="w-3 h-3 text-green-400" />
+    default:
+      return <Terminal className="w-3 h-3" style={{ color: 'var(--text-muted)' }} />
   }
 }
 
@@ -68,13 +82,13 @@ function CommandBarComponent({ onToggle }: CommandBarProps): JSX.Element {
   const [historyIndex, setHistoryIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const submitCommand = useCommandBarStore(s => s.submitCommand)
-  const currentStatus = useCommandBarStore(s => s.currentStatus)
-  const suggestions = useCommandBarStore(s => s.suggestions)
-  const history = useCommandBarStore(s => s.history)
-  const isVisible = useCommandBarStore(s => s.isVisible)
-  const loadSuggestions = useCommandBarStore(s => s.loadSuggestions)
-  const optimisticIntent = useCommandBarStore(s => s.optimisticIntent)
+  const submitCommand = useCommandBarStore((s) => s.submitCommand)
+  const currentStatus = useCommandBarStore((s) => s.currentStatus)
+  const suggestions = useCommandBarStore((s) => s.suggestions)
+  const history = useCommandBarStore((s) => s.history)
+  const isVisible = useCommandBarStore((s) => s.isVisible)
+  const loadSuggestions = useCommandBarStore((s) => s.loadSuggestions)
+  const optimisticIntent = useCommandBarStore((s) => s.optimisticIntent)
 
   // Keyboard shortcut: / to focus (when not already in an input)
   useEffect(() => {
@@ -100,39 +114,45 @@ function CommandBarComponent({ onToggle }: CommandBarProps): JSX.Element {
     setHistoryIndex(-1)
   }, [inputValue, currentStatus, submitCommand])
 
-  const handleInputChange = useCallback((value: string) => {
-    setInputValue(value)
-    setShowSuggestions(value.length > 0)
-    loadSuggestions(value)
-    setHistoryIndex(-1)
-  }, [loadSuggestions])
+  const handleInputChange = useCallback(
+    (value: string) => {
+      setInputValue(value)
+      setShowSuggestions(value.length > 0)
+      loadSuggestions(value)
+      setHistoryIndex(-1)
+    },
+    [loadSuggestions],
+  )
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleSubmit()
-    }
-    if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      // Navigate command history
-      if (history.length > 0) {
-        const nextIndex = Math.min(historyIndex + 1, history.length - 1)
-        setHistoryIndex(nextIndex)
-        setInputValue(history[nextIndex].raw)
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        handleSubmit()
       }
-    }
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      if (historyIndex > 0) {
-        const nextIndex = historyIndex - 1
-        setHistoryIndex(nextIndex)
-        setInputValue(history[nextIndex].raw)
-      } else if (historyIndex === 0) {
-        setHistoryIndex(-1)
-        setInputValue('')
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        // Navigate command history
+        if (history.length > 0) {
+          const nextIndex = Math.min(historyIndex + 1, history.length - 1)
+          setHistoryIndex(nextIndex)
+          setInputValue(history[nextIndex].raw)
+        }
       }
-    }
-  }, [handleSubmit, history, historyIndex])
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        if (historyIndex > 0) {
+          const nextIndex = historyIndex - 1
+          setHistoryIndex(nextIndex)
+          setInputValue(history[nextIndex].raw)
+        } else if (historyIndex === 0) {
+          setHistoryIndex(-1)
+          setInputValue('')
+        }
+      }
+    },
+    [handleSubmit, history, historyIndex],
+  )
 
   if (!isVisible) return <></>
 
@@ -203,7 +223,7 @@ function CommandBarComponent({ onToggle }: CommandBarProps): JSX.Element {
             onFocus={() => setShowSuggestions(inputValue.length > 0)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
             onKeyDown={handleKeyDown}
-            placeholder='Type a command... (press / to focus)'
+            placeholder="Type a command... (press / to focus)"
             className="border-0 bg-transparent focus-visible:ring-0 text-sm"
             style={{ color: 'var(--text-primary)' }}
             disabled={currentStatus === 'parsing'}

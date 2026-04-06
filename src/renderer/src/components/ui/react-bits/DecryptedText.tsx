@@ -12,8 +12,8 @@
  * When reduced motion is preferred, the text appears immediately without scramble.
  */
 
-import { useEffect, useState, useRef, type CSSProperties } from 'react'
 import { motion } from 'framer-motion'
+import { type CSSProperties, useEffect, useRef, useState } from 'react'
 import { useReducedMotion } from '../../../hooks/useReducedMotion'
 import { cn } from '../../../lib/utils'
 
@@ -58,16 +58,18 @@ const srOnlyStyle: CSSProperties = {
 
 const DEFAULT_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()_+'
 
-function getNextRevealIndex(revealedSet: Set<number>, textLength: number, direction: RevealDirection): number {
+function getNextRevealIndex(
+  revealedSet: Set<number>,
+  textLength: number,
+  direction: RevealDirection,
+): number {
   switch (direction) {
     case 'end':
       return textLength - 1 - revealedSet.size
     case 'center': {
       const middle = Math.floor(textLength / 2)
       const offset = Math.floor(revealedSet.size / 2)
-      const candidate = revealedSet.size % 2 === 0
-        ? middle + offset
-        : middle - offset - 1
+      const candidate = revealedSet.size % 2 === 0 ? middle + offset : middle - offset - 1
       if (candidate >= 0 && candidate < textLength && !revealedSet.has(candidate)) {
         return candidate
       }
@@ -164,7 +166,17 @@ export function DecryptedText({
     return () => {
       if (interval) clearInterval(interval)
     }
-  }, [prefersReducedMotion, isHovering, text, speed, maxIterations, sequential, revealDirection, characters, useOriginalCharsOnly])
+  }, [
+    prefersReducedMotion,
+    isHovering,
+    text,
+    speed,
+    maxIterations,
+    sequential,
+    revealDirection,
+    characters,
+    useOriginalCharsOnly,
+  ])
 
   // IntersectionObserver for 'view' / 'both' trigger
   useEffect(() => {
@@ -225,10 +237,7 @@ export function DecryptedText({
           const isRevealedOrDone = revealedIndices.has(index) || !isScrambling || !isHovering
 
           return (
-            <span
-              key={index}
-              className={cn(isRevealedOrDone ? className : encryptedClassName)}
-            >
+            <span key={index} className={cn(isRevealedOrDone ? className : encryptedClassName)}>
               {char}
             </span>
           )

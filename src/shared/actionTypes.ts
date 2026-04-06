@@ -283,18 +283,18 @@ export interface HttpRequestStep extends ActionStepBase {
 export interface RunAgentStep extends ActionStepBase {
   type: 'run-agent'
   config: {
-    agentNodeId: string   // ID of the agent-mode conversation node to run
-    prompt?: string       // Optional prompt to send to the agent
+    agentNodeId: string // ID of the agent-mode conversation node to run
+    prompt?: string // Optional prompt to send to the agent
     successCondition?: string // Optional condition to evaluate after run
-    timeout?: number      // ms, default 300000 (5 minutes)
+    timeout?: number // ms, default 300000 (5 minutes)
   }
 }
 
 export interface RunOrchestratorStep extends ActionStepBase {
   type: 'run-orchestrator'
   config: {
-    orchestratorNodeId: string  // ID of the orchestrator node to run
-    timeout?: number            // ms, default 600000 (10 minutes)
+    orchestratorNodeId: string // ID of the orchestrator node to run
+    timeout?: number // ms, default 600000 (10 minutes)
   }
 }
 
@@ -357,12 +357,12 @@ export interface SpatialRegion {
   nodes?: string[] // Node IDs contained in this region (used by spatial analysis)
 
   // PFD Phase 3B: Canvas Districts
-  isDistrict?: boolean           // true = visual grouping district, false/undefined = action trigger region
-  districtStyle?: 'tint' | 'hatching'  // Background treatment (grayscale only — hue reserved for NoteMode)
-  districtOpacity?: number       // 0.0-1.0, default 0.04
+  isDistrict?: boolean // true = visual grouping district, false/undefined = action trigger region
+  districtStyle?: 'tint' | 'hatching' // Background treatment (grayscale only — hue reserved for NoteMode)
+  districtOpacity?: number // 0.0-1.0, default 0.04
 
   // PFD Phase 5C: Presentation Mode
-  presentationOrder?: number     // Manual slide ordering (lower = earlier); fallback: sort by x-position
+  presentationOrder?: number // Manual slide ordering (lower = earlier); fallback: sort by x-position
 }
 
 // -----------------------------------------------------------------------------
@@ -413,7 +413,7 @@ export const createActionData = (): ActionNodeData => ({
   runCount: 0,
   errorCount: 0,
   createdAt: Date.now(),
-  updatedAt: Date.now()
+  updatedAt: Date.now(),
 })
 
 // =============================================================================

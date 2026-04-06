@@ -4,9 +4,9 @@
 // WPConfigBody -- Renders inside NoteNode when noteMode === 'wp-config'
 // Displays WordPress connection settings: site URL, API endpoint, auth method, environment
 
+import type { WPAuthMethod, WPConfigFields, WPEnvironment } from '@shared/types'
+import { ExternalLink, Globe, Shield } from 'lucide-react'
 import { memo, useCallback } from 'react'
-import { Globe, Shield, ExternalLink } from 'lucide-react'
-import type { WPConfigFields, WPAuthMethod, WPEnvironment } from '@shared/types'
 
 const AUTH_METHODS: { value: WPAuthMethod; label: string }[] = [
   { value: 'application-password', label: 'Application Password' },
@@ -90,7 +90,9 @@ function WPConfigBodyComponent({ wpConfig, onChange, selected }: WPConfigBodyPro
 
       {/* API endpoint */}
       <div className="flex items-center gap-1 px-1">
-        <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>API:</span>
+        <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>
+          API:
+        </span>
         {selected ? (
           <select
             value={data.graphqlEndpoint ? 'graphql' : 'rest'}
@@ -111,7 +113,9 @@ function WPConfigBodyComponent({ wpConfig, onChange, selected }: WPConfigBodyPro
           </select>
         ) : (
           <span className="text-[10px] font-mono" style={{ color: 'var(--node-text-secondary)' }}>
-            {data.graphqlEndpoint ? `GraphQL (${data.graphqlEndpoint})` : `REST (${data.restEndpoint || '/wp-json/wp/v2'})`}
+            {data.graphqlEndpoint
+              ? `GraphQL (${data.graphqlEndpoint})`
+              : `REST (${data.restEndpoint || '/wp-json/wp/v2'})`}
           </span>
         )}
       </div>
@@ -128,7 +132,9 @@ function WPConfigBodyComponent({ wpConfig, onChange, selected }: WPConfigBodyPro
             onClick={(e) => e.stopPropagation()}
           >
             {AUTH_METHODS.map((m) => (
-              <option key={m.value} value={m.value}>{m.label}</option>
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
             ))}
           </select>
         ) : (
@@ -141,7 +147,9 @@ function WPConfigBodyComponent({ wpConfig, onChange, selected }: WPConfigBodyPro
       {/* Frontend URL (when selected or if set) */}
       {(selected || data.frontendUrl) && (
         <div className="flex items-center gap-1 px-1">
-          <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>Frontend:</span>
+          <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>
+            Frontend:
+          </span>
           {selected ? (
             <input
               type="text"
@@ -153,7 +161,10 @@ function WPConfigBodyComponent({ wpConfig, onChange, selected }: WPConfigBodyPro
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
-            <span className="text-[10px] font-mono truncate" style={{ color: 'var(--node-text-secondary)' }}>
+            <span
+              className="text-[10px] font-mono truncate"
+              style={{ color: 'var(--node-text-secondary)' }}
+            >
               {data.frontendUrl}
             </span>
           )}
@@ -163,7 +174,9 @@ function WPConfigBodyComponent({ wpConfig, onChange, selected }: WPConfigBodyPro
       {/* Deploy hook URL (when selected) */}
       {selected && (
         <div className="flex items-center gap-1 px-1">
-          <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>Deploy hook:</span>
+          <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>
+            Deploy hook:
+          </span>
           <input
             type="text"
             value={data.deployHookUrl || ''}
@@ -187,7 +200,9 @@ function WPConfigBodyComponent({ wpConfig, onChange, selected }: WPConfigBodyPro
             onClick={(e) => e.stopPropagation()}
           >
             {ENVIRONMENTS.map((env) => (
-              <option key={env.value} value={env.value}>{env.label}</option>
+              <option key={env.value} value={env.value}>
+                {env.label}
+              </option>
             ))}
           </select>
         ) : (

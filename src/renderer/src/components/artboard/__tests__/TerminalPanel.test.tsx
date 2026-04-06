@@ -17,8 +17,8 @@
  * where those type augmentations aren't available at tsc time.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // ---------------------------------------------------------------------------
 // Mocks — must be before imports that use them
@@ -56,7 +56,9 @@ vi.mock('@xterm/addon-fit', () => ({
 
 // Mock Unicode11 addon
 vi.mock('@xterm/addon-unicode11', () => ({
-  Unicode11Addon: class { dispose = vi.fn() },
+  Unicode11Addon: class {
+    dispose = vi.fn()
+  },
 }))
 
 // Mock WebGL addon
@@ -74,14 +76,14 @@ vi.mock('@xterm/xterm/css/xterm.css', () => ({}))
 vi.mock('../../../stores/workspaceStore', () => ({
   useWorkspaceStore: Object.assign(
     vi.fn((selector: (state: Record<string, unknown>) => unknown) =>
-      selector({ themeSettings: { mode: 'dark' } })
+      selector({ themeSettings: { mode: 'dark' } }),
     ),
     {
       getState: vi.fn(() => ({
         updateNode: vi.fn(),
         themeSettings: { mode: 'dark' },
       })),
-    }
+    },
   ),
 }))
 
@@ -130,9 +132,7 @@ describe('TerminalPanel', () => {
   it('should render a container div with the correct aria-label', async () => {
     const { TerminalPanel } = await import('../TerminalPanel')
 
-    const { container } = render(
-      <TerminalPanel nodeId="node-abc-123" sessionId="session-xyz" />
-    )
+    const { container } = render(<TerminalPanel nodeId="node-abc-123" sessionId="session-xyz" />)
 
     const el = container.querySelector('[aria-label="Terminal for node node-abc-123"]')
     expect(el).not.toBeNull()
@@ -143,11 +143,7 @@ describe('TerminalPanel', () => {
     const { TerminalPanel } = await import('../TerminalPanel')
 
     const { container } = render(
-      <TerminalPanel
-        nodeId="node-abc-123"
-        sessionId="session-xyz"
-        className="my-custom-class"
-      />
+      <TerminalPanel nodeId="node-abc-123" sessionId="session-xyz" className="my-custom-class" />,
     )
 
     const el = container.querySelector('[aria-label="Terminal for node node-abc-123"]')
@@ -159,9 +155,7 @@ describe('TerminalPanel', () => {
   it('should render the focus escape tooltip', async () => {
     const { TerminalPanel } = await import('../TerminalPanel')
 
-    const { container } = render(
-      <TerminalPanel nodeId="node-abc-123" sessionId="session-xyz" />
-    )
+    const { container } = render(<TerminalPanel nodeId="node-abc-123" sessionId="session-xyz" />)
 
     // The tooltip text should be somewhere in the rendered output
     expect(container.textContent).toContain('Ctrl+` to return to canvas')
@@ -177,16 +171,14 @@ describe('TerminalPanel', () => {
   it('should use dark tooltip color by default', async () => {
     const { TerminalPanel } = await import('../TerminalPanel')
 
-    const { container } = render(
-      <TerminalPanel nodeId="node-abc-123" sessionId="session-xyz" />
-    )
+    const { container } = render(<TerminalPanel nodeId="node-abc-123" sessionId="session-xyz" />)
 
     // Find the tooltip by its direct text content — the innermost div whose
     // childNodes contain the text. We filter for divs with no child elements
     // (leaf nodes) to avoid matching the container parent.
     const allDivs = Array.from(container.querySelectorAll('div'))
     const tooltip = allDivs.find(
-      el => el.children.length === 0 && el.textContent?.includes('Ctrl+`')
+      (el) => el.children.length === 0 && el.textContent?.includes('Ctrl+`'),
     )
     expect(tooltip).not.toBeUndefined()
     // Dark mode tooltip should have the light-on-dark color
@@ -202,10 +194,27 @@ describe('terminalThemes constants', () => {
     )
 
     const requiredKeys = [
-      'background', 'foreground', 'cursor', 'cursorAccent', 'selectionBackground',
-      'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white',
-      'brightBlack', 'brightRed', 'brightGreen', 'brightYellow', 'brightBlue',
-      'brightMagenta', 'brightCyan', 'brightWhite',
+      'background',
+      'foreground',
+      'cursor',
+      'cursorAccent',
+      'selectionBackground',
+      'black',
+      'red',
+      'green',
+      'yellow',
+      'blue',
+      'magenta',
+      'cyan',
+      'white',
+      'brightBlack',
+      'brightRed',
+      'brightGreen',
+      'brightYellow',
+      'brightBlue',
+      'brightMagenta',
+      'brightCyan',
+      'brightWhite',
     ]
 
     for (const key of requiredKeys) {
@@ -233,9 +242,7 @@ describe('terminalThemes constants', () => {
   })
 
   it('should override cursor with accent color when provided', async () => {
-    const { getTerminalTheme } = await import(
-      '../../../constants/terminalThemes'
-    )
+    const { getTerminalTheme } = await import('../../../constants/terminalThemes')
 
     const theme = getTerminalTheme('dark', '#ff0000')
     expect(theme.cursor).toBe('#ff0000')
@@ -243,17 +250,13 @@ describe('terminalThemes constants', () => {
   })
 
   it('dark theme background should match CSS variable', async () => {
-    const { TERMINAL_THEME_DARK } = await import(
-      '../../../constants/terminalThemes'
-    )
+    const { TERMINAL_THEME_DARK } = await import('../../../constants/terminalThemes')
     // Must match nodes.css :root --terminal-bg
     expect(TERMINAL_THEME_DARK.background).toBe('#1a1a2e')
   })
 
   it('light theme background should match CSS variable', async () => {
-    const { TERMINAL_THEME_LIGHT } = await import(
-      '../../../constants/terminalThemes'
-    )
+    const { TERMINAL_THEME_LIGHT } = await import('../../../constants/terminalThemes')
     // Must match nodes.css [data-theme="light"] --terminal-bg
     expect(TERMINAL_THEME_LIGHT.background).toBe('#f1f5f9')
   })

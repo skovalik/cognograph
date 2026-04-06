@@ -11,9 +11,9 @@
  *   Y.Map('meta')    → workspace settings (name, viewport, propertySchema, etc.)
  */
 
+import type { EdgeData, NodeData, WorkspaceData } from '@shared/types'
+import type { Edge, Node } from '@xyflow/react'
 import * as Y from 'yjs'
-import type { Node, Edge } from '@xyflow/react'
-import type { NodeData, EdgeData, WorkspaceData } from '@shared/types'
 
 // -----------------------------------------------------------------------------
 // Node Conversions
@@ -74,15 +74,15 @@ export function yMapToNode(yNode: Y.Map<unknown>): Node<NodeData> {
     type: yNode.get('type') as string,
     position: {
       x: yPosition.get('x') || 0,
-      y: yPosition.get('y') || 0
+      y: yPosition.get('y') || 0,
     },
-    data: yData ? yMapToObject(yData) as NodeData : {} as NodeData
+    data: yData ? (yMapToObject(yData) as NodeData) : ({} as NodeData),
   }
 
   if (yMeasured) {
     node.measured = {
       width: yMeasured.get('width') as number | undefined,
-      height: yMeasured.get('height') as number | undefined
+      height: yMeasured.get('height') as number | undefined,
     }
   }
 
@@ -143,7 +143,7 @@ export function yMapToEdge(yEdge: Y.Map<unknown>): Edge<EdgeData> {
     source: yEdge.get('source') as string,
     target: yEdge.get('target') as string,
     type: (yEdge.get('type') as string) || 'custom',
-    data: yData ? yMapToObject(yData) as EdgeData : undefined
+    data: yData ? (yMapToObject(yData) as EdgeData) : undefined,
   }
 
   const sourceHandle = yEdge.get('sourceHandle') as string | undefined
@@ -212,32 +212,50 @@ export function yMapToWorkspaceMeta(yMeta: Y.Map<unknown>): Partial<WorkspaceDat
     version: (yMeta.get('version') as number) || 1,
     createdAt: yMeta.get('createdAt') as number,
     updatedAt: yMeta.get('updatedAt') as number,
-    viewport: yViewport ? {
-      x: yViewport.get('x') || 0,
-      y: yViewport.get('y') || 0,
-      zoom: yViewport.get('zoom') || 1
-    } : { x: 0, y: 0, zoom: 1 }
+    viewport: yViewport
+      ? {
+          x: yViewport.get('x') || 0,
+          y: yViewport.get('y') || 0,
+          zoom: yViewport.get('zoom') || 1,
+        }
+      : { x: 0, y: 0, zoom: 1 },
   }
 
   // Parse JSON-stored settings
   const propertySchemaStr = yMeta.get('propertySchema') as string | undefined
   if (propertySchemaStr) {
-    try { meta.propertySchema = JSON.parse(propertySchemaStr) } catch { /* ignore */ }
+    try {
+      meta.propertySchema = JSON.parse(propertySchemaStr)
+    } catch {
+      /* ignore */
+    }
   }
 
   const contextSettingsStr = yMeta.get('contextSettings') as string | undefined
   if (contextSettingsStr) {
-    try { meta.contextSettings = JSON.parse(contextSettingsStr) } catch { /* ignore */ }
+    try {
+      meta.contextSettings = JSON.parse(contextSettingsStr)
+    } catch {
+      /* ignore */
+    }
   }
 
   const themeSettingsStr = yMeta.get('themeSettings') as string | undefined
   if (themeSettingsStr) {
-    try { meta.themeSettings = JSON.parse(themeSettingsStr) } catch { /* ignore */ }
+    try {
+      meta.themeSettings = JSON.parse(themeSettingsStr)
+    } catch {
+      /* ignore */
+    }
   }
 
   const workspacePreferencesStr = yMeta.get('workspacePreferences') as string | undefined
   if (workspacePreferencesStr) {
-    try { meta.workspacePreferences = JSON.parse(workspacePreferencesStr) } catch { /* ignore */ }
+    try {
+      meta.workspacePreferences = JSON.parse(workspacePreferencesStr)
+    } catch {
+      /* ignore */
+    }
   }
 
   const layersSortMode = yMeta.get('layersSortMode') as string | undefined
@@ -247,12 +265,20 @@ export function yMapToWorkspaceMeta(yMeta: Y.Map<unknown>): Partial<WorkspaceDat
 
   const manualLayerOrderStr = yMeta.get('manualLayerOrder') as string | undefined
   if (manualLayerOrderStr) {
-    try { meta.manualLayerOrder = JSON.parse(manualLayerOrderStr) } catch { /* ignore */ }
+    try {
+      meta.manualLayerOrder = JSON.parse(manualLayerOrderStr)
+    } catch {
+      /* ignore */
+    }
   }
 
   const spatialRegionsStr = yMeta.get('spatialRegions') as string | undefined
   if (spatialRegionsStr) {
-    try { meta.spatialRegions = JSON.parse(spatialRegionsStr) } catch { /* ignore */ }
+    try {
+      meta.spatialRegions = JSON.parse(spatialRegionsStr)
+    } catch {
+      /* ignore */
+    }
   }
 
   return meta
@@ -406,6 +432,6 @@ export function workspaceDataFromDoc(doc: Y.Doc): WorkspaceData {
     workspacePreferences: meta.workspacePreferences,
     layersSortMode: meta.layersSortMode,
     manualLayerOrder: meta.manualLayerOrder,
-    spatialRegions: meta.spatialRegions
+    spatialRegions: meta.spatialRegions,
   }
 }

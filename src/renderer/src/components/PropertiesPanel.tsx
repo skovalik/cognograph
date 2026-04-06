@@ -1,61 +1,103 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useCallback, useState, useMemo } from 'react'
-import { X, Trash2, MessageSquare, Folder, FileText, CheckSquare, ChevronDown, ChevronRight, Tag, Plus, Code, Sparkles, Files, GripVertical, Power, Zap, Link2, Boxes, Bot, Compass, Users, Eye, EyeOff, Link2Off, HelpCircle, ExternalLink, Square, Circle, Hexagon, RectangleHorizontal, Workflow, CheckCircle, XCircle, Search, BarChart3, AlertTriangle } from 'lucide-react'
-import { useReactFlow } from '@xyflow/react'
-import { useWorkspaceStore } from '../stores/workspaceStore'
-import { PropertyInput, AddPropertyPopover, CreatePropertyModal, AIPropertyAssist } from './properties'
-import { VersionHistoryPanel } from './VersionHistoryPanel'
-import { getPropertiesForNodeType, BUILTIN_PROPERTIES } from '../constants/properties'
-import { IconPicker } from './IconPicker'
-import { MultiSelectProperties } from './MultiSelectProperties'
-import { RichTextEditor } from './RichTextEditor'
-import type {
-  NodeData,
-  ConversationNodeData,
-  ProjectNodeData,
-  NoteNodeData,
-  TaskNodeData,
-  ArtifactNodeData,
-  WorkspaceNodeData,
-  ActionNodeData,
-  OrchestratorNodeData,
-  TextNodeData,
-  WorkspaceLLMSettings,
-  WorkspaceContextRules,
-  ArtifactFile,
-  ArtifactContentType,
-  ContextMetadata,
-  PropertyDefinition,
-  NodeActivationCondition,
-  ActivationTrigger,
-  NodeShape,
-  TerminalShell
-} from '@shared/types'
-import { TERMINAL_SHELL_OPTIONS } from '@shared/types'
-import { ActionPropertiesFields } from './action/ActionPropertiesFields'
-import { AttachmentsSection as AttachmentsSectionExtracted } from './inspector/sections/AttachmentsSection'
-import { ExtractionsSection } from './inspector/sections/ExtractionsSection'
-import { AgentSection } from './inspector/sections/AgentSection'
 import {
-  DndContext,
   closestCenter,
+  DndContext,
+  type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  type DragEndEvent
 } from '@dnd-kit/core'
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
-  verticalListSortingStrategy
+  verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-
+import type {
+  ActionNodeData,
+  ActivationTrigger,
+  ArtifactContentType,
+  ArtifactFile,
+  ArtifactNodeData,
+  ContextMetadata,
+  ConversationNodeData,
+  NodeActivationCondition,
+  NodeData,
+  NodeShape,
+  NoteNodeData,
+  OrchestratorNodeData,
+  ProjectNodeData,
+  PropertyDefinition,
+  TaskNodeData,
+  TerminalShell,
+  TextNodeData,
+  WorkspaceContextRules,
+  WorkspaceLLMSettings,
+  WorkspaceNodeData,
+} from '@shared/types'
+import { TERMINAL_SHELL_OPTIONS } from '@shared/types'
+import { useReactFlow } from '@xyflow/react'
+import {
+  AlertTriangle,
+  BarChart3,
+  Bot,
+  Boxes,
+  CheckCircle,
+  CheckSquare,
+  ChevronDown,
+  ChevronRight,
+  Circle,
+  Code,
+  Compass,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Files,
+  FileText,
+  Folder,
+  GripVertical,
+  HelpCircle,
+  Hexagon,
+  Link2,
+  Link2Off,
+  MessageSquare,
+  Plus,
+  Power,
+  RectangleHorizontal,
+  Search,
+  Sparkles,
+  Square,
+  Tag,
+  Trash2,
+  Users,
+  Workflow,
+  X,
+  XCircle,
+  Zap,
+} from 'lucide-react'
+import { memo, useCallback, useMemo, useState } from 'react'
+import { BUILTIN_PROPERTIES, getPropertiesForNodeType } from '../constants/properties'
+import { useIsMobile } from '../hooks/useIsMobile'
+import { useWorkspaceStore } from '../stores/workspaceStore'
+import { ActionPropertiesFields } from './action/ActionPropertiesFields'
+import { IconPicker } from './IconPicker'
+import { AgentSection } from './inspector/sections/AgentSection'
+import { AttachmentsSection as AttachmentsSectionExtracted } from './inspector/sections/AttachmentsSection'
+import { ExtractionsSection } from './inspector/sections/ExtractionsSection'
+import { MultiSelectProperties } from './MultiSelectProperties'
+import {
+  AddPropertyPopover,
+  AIPropertyAssist,
+  CreatePropertyModal,
+  PropertyInput,
+} from './properties'
+import { RichTextEditor } from './RichTextEditor'
+import { VersionHistoryPanel } from './VersionHistoryPanel'
 
 // Help tooltip component - positioned below and to the left to stay within right-side panels
 function HelpTooltip({ text }: { text: string }): JSX.Element {
@@ -75,7 +117,11 @@ interface PropertiesPanelProps {
   nodeId?: string // Override which node to display (for pinned floating modals)
 }
 
-function PropertiesPanelComponent({ compact: _compact = false, hideHeader = false, nodeId }: PropertiesPanelProps): JSX.Element | null {
+function PropertiesPanelComponent({
+  compact = false,
+  hideHeader = false,
+  nodeId,
+}: PropertiesPanelProps): JSX.Element | null {
   const { updateNodeInternals } = useReactFlow()
   const selectedNodeIds = useWorkspaceStore((state) => state.selectedNodeIds)
   const updateNode = useWorkspaceStore((state) => state.updateNode)
@@ -91,6 +137,8 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
   const removePropertyFromNodeType = useWorkspaceStore((state) => state.removePropertyFromNodeType)
   const propertySchema = useWorkspaceStore((state) => state.propertySchema)
   const [showCreatePropertyModal, setShowCreatePropertyModal] = useState(false)
+  const [showMore, setShowMore] = useState(false)
+  const isMobile = useIsMobile()
 
   // Track multi-selection state
   const isMultiSelection = !nodeId && selectedNodeIds.length > 1
@@ -99,7 +147,7 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
   const targetNodeId = nodeId || selectedNodeIds[0]
   // Targeted selector: only re-renders when THIS node's data changes, not all nodes
   const selectedNode = useWorkspaceStore((state) =>
-    targetNodeId ? state.nodes.find((n) => n.id === targetNodeId) : undefined
+    targetNodeId ? state.nodes.find((n) => n.id === targetNodeId) : undefined,
   )
 
   const handleClose = useCallback(() => {
@@ -124,7 +172,7 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
         }
       }
     },
-    [targetNodeId, updateNode]
+    [targetNodeId, updateNode],
   )
 
   const handleTypeChange = useCallback(
@@ -137,7 +185,7 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
         })
       }
     },
-    [targetNodeId, selectedNode, changeNodeType, updateNodeInternals]
+    [targetNodeId, selectedNode, changeNodeType, updateNodeInternals],
   )
 
   // Property-specific change handler (stores in properties object)
@@ -147,7 +195,7 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
         setNodeProperty(targetNodeId, propertyId, value)
       }
     },
-    [targetNodeId, setNodeProperty]
+    [targetNodeId, setNodeProperty],
   )
 
   // Handler for adding new options to select/multi-select properties
@@ -156,7 +204,7 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
       // The store action generates the value from the label
       addPropertyOption(propertyId, option)
     },
-    [addPropertyOption]
+    [addPropertyOption],
   )
 
   // Handler for adding an existing property to the current node type
@@ -167,7 +215,7 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
         addPropertyToNodeType(nodeType, propertyId)
       }
     },
-    [selectedNode?.data.type, addPropertyToNodeType]
+    [selectedNode?.data.type, addPropertyToNodeType],
   )
 
   // Handler for creating a new custom property
@@ -181,7 +229,7 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
         addPropertyToNodeType(nodeType, propertyId)
       }
     },
-    [selectedNode?.data.type, addCustomProperty, addPropertyToNodeType]
+    [selectedNode?.data.type, addCustomProperty, addPropertyToNodeType],
   )
 
   // Handler for removing a property from the current node type
@@ -192,7 +240,7 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
         removePropertyFromNodeType(nodeType, propertyId)
       }
     },
-    [selectedNode?.data.type, removePropertyFromNodeType]
+    [selectedNode?.data.type, removePropertyFromNodeType],
   )
 
   // Handler for toggling property visibility on the node card
@@ -205,7 +253,7 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
         : [...current, propertyId]
       updateNode(targetNodeId, { hiddenProperties: updated } as Partial<NodeData>)
     },
-    [targetNodeId, selectedNode, updateNode]
+    [targetNodeId, selectedNode, updateNode],
   )
 
   const themeSettings = useWorkspaceStore((state) => state.themeSettings)
@@ -216,7 +264,9 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
   const currentPropertyIds = propertySchema.nodeTypeProperties[nodeData.type] || []
 
   return (
-    <div className={`h-full w-full ${hideHeader ? 'gui-panel' : ''} gui-z-panels flex flex-col`}>
+    <div
+      className={`h-full w-full ${hideHeader ? 'gui-panel' : ''} gui-z-panels flex flex-col ${compact ? 'min-h-0 overflow-y-auto' : ''}`}
+    >
       {/* Header - hidden when embedded in floating modal */}
       {!hideHeader && (
         <div className="gui-panel-header--minimal">
@@ -246,10 +296,7 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
                 disabled={isMultiSelection}
               />
             )}
-            <button
-              onClick={handleClose}
-              className="p-1 gui-button rounded transition-colors"
-            >
+            <button onClick={handleClose} className="p-1 gui-button rounded transition-colors">
               <X className="w-5 h-5 gui-text-secondary" />
             </button>
           </div>
@@ -277,120 +324,168 @@ function PropertiesPanelComponent({ compact: _compact = false, hideHeader = fals
           onBulkChange={isMultiSelection ? updateBulkNodes : undefined}
         />
 
-        {/* Bulk property editing for multi-selection */}
-        {isMultiSelection && (
-          <MultiSelectProperties nodeIds={selectedNodeIds} />
-        )}
+        {/* Expanded sections — hidden in compact mode until "Show more" is toggled */}
+        {(!compact || showMore || isMobile) && (
+          <>
+            {/* Bulk property editing for multi-selection */}
+            {isMultiSelection && <MultiSelectProperties nodeIds={selectedNodeIds} />}
 
-        {/* Icon - custom icon for all node types */}
-        {!isMultiSelection && (
-          <IconPicker
-            value={(nodeData as ContextMetadata).icon}
-            onChange={(iconName) => handleChange('icon', iconName)}
-            color={(nodeData as { color?: string }).color || themeSettings.nodeColors[nodeData.type]}
-          />
-        )}
-
-        {/* Shape - node border shape picker */}
-        {!isMultiSelection && (
-          <NodeShapePicker
-            nodeData={nodeData}
-            onChange={handleChange}
-          />
-        )}
-
-        {/* Enabled/Disabled Toggle */}
-        <NodeEnabledToggle
-          nodeId={selectedNode.id}
-          nodeData={nodeData}
-          onChange={handleChange}
-        />
-
-        {/* Type-specific fields */}
-        {nodeData.type === 'conversation' && (
-          <ConversationFields
-            data={nodeData}
-            onChange={handleChange}
-          />
-        )}
-        {nodeData.type === 'project' && <ProjectFields data={nodeData} onChange={handleChange} />}
-        {nodeData.type === 'note' && <NoteFields data={nodeData} onChange={handleChange} hiddenProperties={(nodeData as { hiddenProperties?: string[] }).hiddenProperties} onToggleHidden={handleToggleHidden} />}
-        {nodeData.type === 'text' && <TextFields data={nodeData as TextNodeData} onChange={handleChange} />}
-        {nodeData.type === 'task' && <TaskFields data={nodeData} onChange={handleChange} onAddOption={handleAddOption} hiddenProperties={(nodeData as { hiddenProperties?: string[] }).hiddenProperties} onToggleHidden={handleToggleHidden} />}
-        {nodeData.type === 'artifact' && <ArtifactFields nodeId={selectedNode.id} data={nodeData} onChange={handleChange} />}
-        {nodeData.type === 'workspace' && <WorkspaceFields nodeId={selectedNode.id} data={nodeData} onChange={handleChange} />}
-        {nodeData.type === 'action' && <ActionPropertiesFields nodeId={selectedNode.id} data={nodeData as ActionNodeData} onChange={handleChange} />}
-        {nodeData.type === 'orchestrator' && <OrchestratorFields data={nodeData as OrchestratorNodeData} onChange={handleChange} />}
-
-        {/* Dynamic Properties Section */}
-        <DynamicPropertiesSection
-          nodeType={nodeData.type}
-          properties={(nodeData.properties || {}) as Record<string, unknown>}
-          hiddenProperties={(nodeData as { hiddenProperties?: string[] }).hiddenProperties}
-          onPropertyChange={handlePropertyChange}
-          onAddOption={handleAddOption}
-          onRemoveProperty={handleRemovePropertyFromNode}
-          onToggleHidden={handleToggleHidden}
-        />
-
-        {/* URL Field - available for all node types, placed below tags/properties */}
-        <div className="group">
-          <label className="block text-xs font-medium mb-1 gui-text-secondary">
-            <Link2 className="w-3 h-3 inline mr-1" />
-            URL
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              type="url"
-              value={((nodeData.properties as Record<string, unknown> | undefined)?.url as string) || ''}
-              onChange={(e) => handlePropertyChange('url', e.target.value)}
-              placeholder="https://..."
-              className="flex-1 gui-input px-2 py-1.5 rounded text-sm border focus:outline-none focus:border-blue-500"
-            />
-            {((nodeData.properties as Record<string, unknown> | undefined)?.url as string) && (
-              <button
-                onClick={() => window.open((nodeData.properties as Record<string, unknown> | undefined)?.url as string, '_blank')}
-                className="p-1.5 rounded transition-colors gui-text-secondary hover:text-blue-400 gui-button"
-                title="Open URL"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </button>
+            {/* Icon - custom icon for all node types */}
+            {!isMultiSelection && (
+              <IconPicker
+                value={(nodeData as ContextMetadata).icon}
+                onChange={(iconName) => handleChange('icon', iconName)}
+                color={
+                  (nodeData as { color?: string }).color || themeSettings.nodeColors[nodeData.type]
+                }
+              />
             )}
-          </div>
-        </div>
 
-        {/* Add Property Button */}
-        <div className="pt-2">
-          <AddPropertyPopover
-            nodeType={nodeData.type}
-            currentPropertyIds={currentPropertyIds}
-            onAddProperty={handleAddPropertyToNode}
-            onCreateCustom={() => setShowCreatePropertyModal(true)}
-          />
-        </div>
+            {/* Shape - node border shape picker */}
+            {!isMultiSelection && <NodeShapePicker nodeData={nodeData} onChange={handleChange} />}
 
-        {/* Attachments Section (collapsible) */}
-        {!isMultiSelection && targetNodeId && (
-          <AttachmentsSectionExtracted nodeId={targetNodeId} />
+            {/* Enabled/Disabled Toggle */}
+            <NodeEnabledToggle
+              nodeId={selectedNode.id}
+              nodeData={nodeData}
+              onChange={handleChange}
+            />
+
+            {/* Type-specific fields */}
+            {nodeData.type === 'conversation' && (
+              <ConversationFields data={nodeData} onChange={handleChange} />
+            )}
+            {nodeData.type === 'project' && (
+              <ProjectFields data={nodeData} onChange={handleChange} />
+            )}
+            {nodeData.type === 'note' && (
+              <NoteFields
+                data={nodeData}
+                onChange={handleChange}
+                hiddenProperties={(nodeData as { hiddenProperties?: string[] }).hiddenProperties}
+                onToggleHidden={handleToggleHidden}
+              />
+            )}
+            {nodeData.type === 'text' && (
+              <TextFields data={nodeData as TextNodeData} onChange={handleChange} />
+            )}
+            {nodeData.type === 'task' && (
+              <TaskFields
+                data={nodeData}
+                onChange={handleChange}
+                onAddOption={handleAddOption}
+                hiddenProperties={(nodeData as { hiddenProperties?: string[] }).hiddenProperties}
+                onToggleHidden={handleToggleHidden}
+              />
+            )}
+            {nodeData.type === 'artifact' && (
+              <ArtifactFields nodeId={selectedNode.id} data={nodeData} onChange={handleChange} />
+            )}
+            {nodeData.type === 'workspace' && (
+              <WorkspaceFields nodeId={selectedNode.id} data={nodeData} onChange={handleChange} />
+            )}
+            {nodeData.type === 'action' && (
+              <ActionPropertiesFields
+                nodeId={selectedNode.id}
+                data={nodeData as ActionNodeData}
+                onChange={handleChange}
+              />
+            )}
+            {nodeData.type === 'orchestrator' && (
+              <OrchestratorFields data={nodeData as OrchestratorNodeData} onChange={handleChange} />
+            )}
+
+            {/* Dynamic Properties Section */}
+            <DynamicPropertiesSection
+              nodeType={nodeData.type}
+              properties={(nodeData.properties || {}) as Record<string, unknown>}
+              hiddenProperties={(nodeData as { hiddenProperties?: string[] }).hiddenProperties}
+              onPropertyChange={handlePropertyChange}
+              onAddOption={handleAddOption}
+              onRemoveProperty={handleRemovePropertyFromNode}
+              onToggleHidden={handleToggleHidden}
+            />
+
+            {/* URL Field - available for all node types, placed below tags/properties */}
+            <div className="group">
+              <label className="block text-xs font-medium mb-1 gui-text-secondary">
+                <Link2 className="w-3 h-3 inline mr-1" />
+                URL
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="url"
+                  value={
+                    ((nodeData.properties as Record<string, unknown> | undefined)?.url as string) ||
+                    ''
+                  }
+                  onChange={(e) => handlePropertyChange('url', e.target.value)}
+                  placeholder="https://..."
+                  className="flex-1 gui-input px-2 py-1.5 rounded text-sm border focus:outline-none focus:border-blue-500"
+                />
+                {((nodeData.properties as Record<string, unknown> | undefined)?.url as string) && (
+                  <button
+                    onClick={() =>
+                      window.open(
+                        (nodeData.properties as Record<string, unknown> | undefined)?.url as string,
+                        '_blank',
+                      )
+                    }
+                    className="p-1.5 rounded transition-colors gui-text-secondary hover:text-blue-400 gui-button"
+                    title="Open URL"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Add Property Button */}
+            <div className="pt-2">
+              <AddPropertyPopover
+                nodeType={nodeData.type}
+                currentPropertyIds={currentPropertyIds}
+                onAddProperty={handleAddPropertyToNode}
+                onCreateCustom={() => setShowCreatePropertyModal(true)}
+              />
+            </div>
+
+            {/* Attachments Section (collapsible) */}
+            {!isMultiSelection && targetNodeId && (
+              <AttachmentsSectionExtracted nodeId={targetNodeId} />
+            )}
+
+            {/* Node Metadata Section (collapsible) */}
+            <MetadataSection data={nodeData} onChange={handleChange} />
+
+            {/* Outgoing Edge Color Section (collapsible) */}
+            <OutgoingEdgeColorSection nodeId={selectedNode.id} data={nodeData} />
+
+            {/* Timestamps */}
+            <div className="panel-divider" />
+            <div className="pt-4">
+              <p className="text-xs gui-text-secondary">
+                Created: {new Date(nodeData.createdAt).toLocaleString()}
+              </p>
+              <p className="text-xs gui-text-secondary">
+                Updated: {new Date(nodeData.updatedAt).toLocaleString()}
+              </p>
+            </div>
+          </>
         )}
-
-        {/* Node Metadata Section (collapsible) */}
-        <MetadataSection data={nodeData} onChange={handleChange} />
-
-        {/* Outgoing Edge Color Section (collapsible) */}
-        <OutgoingEdgeColorSection nodeId={selectedNode.id} data={nodeData} />
-
-        {/* Timestamps */}
-        <div className="panel-divider" />
-        <div className="pt-4">
-          <p className="text-xs gui-text-secondary">
-            Created: {new Date(nodeData.createdAt).toLocaleString()}
-          </p>
-          <p className="text-xs gui-text-secondary">
-            Updated: {new Date(nodeData.updatedAt).toLocaleString()}
-          </p>
-        </div>
       </div>
+
+      {/* Compact mode: show more / show less toggle */}
+      {compact && !isMobile && (
+        <button
+          type="button"
+          onClick={() => setShowMore(!showMore)}
+          className="w-full text-center text-sm font-medium py-3 flex-shrink-0 border-t border-[var(--border-subtle)]"
+          style={{ color: 'var(--accent-glow, #C8963E)' }}
+        >
+          {showMore ? '― Show less' : '+ Show all properties'}
+        </button>
+      )}
 
       {/* Footer */}
       <div className="panel-divider" />
@@ -420,7 +515,7 @@ function NodeColorPicker({
   nodeData,
   onChange,
   selectedNodeIds,
-  onBulkChange
+  onBulkChange,
 }: {
   nodeData: NodeData
   onChange: (field: string, value: unknown) => void
@@ -435,8 +530,16 @@ function NodeColorPicker({
 
   // Preset colors organized by hue
   const presetColors = [
-    '#3b82f6', '#06b6d4', '#10b981', '#84cc16', '#f59e0b',
-    '#ef4444', '#ec4899', '#8b5cf6', '#6366f1', '#64748b'
+    '#3b82f6',
+    '#06b6d4',
+    '#10b981',
+    '#84cc16',
+    '#f59e0b',
+    '#ef4444',
+    '#ec4899',
+    '#8b5cf6',
+    '#6366f1',
+    '#64748b',
   ]
 
   // Get current color or default
@@ -457,17 +560,24 @@ function NodeColorPicker({
   return (
     <div className="flex items-center gap-2">
       <label className="panel-section-label shrink-0">
-        Color {isMultiSelection && <span className="text-blue-400">({selectedNodeIds.length})</span>}
+        Color{' '}
+        {isMultiSelection && <span className="text-blue-400">({selectedNodeIds.length})</span>}
       </label>
 
       {/* Current color indicator / toggle button */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className={`w-5 h-5 rounded-full border-2 transition-all shrink-0 ${
-          isExpanded ? 'gui-ring-active' : 'border-[var(--gui-border-strong)] hover:border-[var(--gui-text-secondary)]'
+          isExpanded
+            ? 'gui-ring-active'
+            : 'border-[var(--gui-border-strong)] hover:border-[var(--gui-text-secondary)]'
         }`}
         style={{ backgroundColor: isMultiSelection ? '#6b7280' : currentColor }}
-        title={isMultiSelection ? `Change color for ${selectedNodeIds.length} nodes` : 'Click to change color'}
+        title={
+          isMultiSelection
+            ? `Change color for ${selectedNodeIds.length} nodes`
+            : 'Click to change color'
+        }
       >
         {isMultiSelection && <span className="text-white text-[8px] font-bold">+</span>}
       </button>
@@ -518,7 +628,7 @@ function NodeColorPicker({
 // Node shape picker component - inline design similar to color picker
 function NodeShapePicker({
   nodeData,
-  onChange
+  onChange,
 }: {
   nodeData: NodeData
   onChange: (field: string, value: unknown) => void
@@ -530,7 +640,7 @@ function NodeShapePicker({
     { value: 'rectangle', label: 'Rectangle', icon: <Square className="w-3 h-3" /> },
     { value: 'rounded', label: 'Rounded', icon: <RectangleHorizontal className="w-3 h-3" /> },
     { value: 'pill', label: 'Pill', icon: <Circle className="w-3 h-3" /> },
-    { value: 'hexagon', label: 'Hexagon', icon: <Hexagon className="w-3 h-3" /> }
+    { value: 'hexagon', label: 'Hexagon', icon: <Hexagon className="w-3 h-3" /> },
   ]
 
   return (
@@ -557,7 +667,13 @@ function NodeShapePicker({
 }
 
 // Node icon component
-function NodeIcon({ type, nodeColors }: { type: NodeData['type']; nodeColors?: Record<string, string> }): JSX.Element {
+function NodeIcon({
+  type,
+  nodeColors,
+}: {
+  type: NodeData['type']
+  nodeColors?: Record<string, string>
+}): JSX.Element {
   // Use theme colors if provided, otherwise fallback to defaults
   const colors = nodeColors || {
     conversation: '#60a5fa',
@@ -565,7 +681,7 @@ function NodeIcon({ type, nodeColors }: { type: NodeData['type']; nodeColors?: R
     note: '#fbbf24',
     task: '#34d399',
     artifact: '#22d3ee',
-    workspace: '#8b5cf6'
+    workspace: '#8b5cf6',
   }
 
   switch (type) {
@@ -594,7 +710,7 @@ function NodeIcon({ type, nodeColors }: { type: NodeData['type']; nodeColors?: R
 function NodeEnabledToggle({
   nodeId,
   nodeData,
-  onChange
+  onChange,
 }: {
   nodeId: string
   nodeData: NodeData
@@ -610,11 +726,15 @@ function NodeEnabledToggle({
 
   // Find connected nodes for the "specific node" trigger option
   const connectedNodes = useMemo(() => {
-    const incomingEdges = edges.filter(e => e.target === nodeId)
-    return incomingEdges.map(e => {
-      const sourceNode = nodes.find(n => n.id === e.source)
-      return sourceNode ? { id: sourceNode.id, title: sourceNode.data.title, type: sourceNode.data.type } : null
-    }).filter(Boolean) as { id: string; title: string; type: string }[]
+    const incomingEdges = edges.filter((e) => e.target === nodeId)
+    return incomingEdges
+      .map((e) => {
+        const sourceNode = nodes.find((n) => n.id === e.source)
+        return sourceNode
+          ? { id: sourceNode.id, title: sourceNode.data.title, type: sourceNode.data.type }
+          : null
+      })
+      .filter(Boolean) as { id: string; title: string; type: string }[]
   }, [edges, nodes, nodeId])
 
   const handleToggleEnabled = (): void => {
@@ -633,7 +753,8 @@ function NodeEnabledToggle({
     const firstConnectedNode = connectedNodes[0]
     handleSetCondition({
       trigger,
-      sourceNodeId: trigger === 'specific-node' && firstConnectedNode ? firstConnectedNode.id : undefined
+      sourceNodeId:
+        trigger === 'specific-node' && firstConnectedNode ? firstConnectedNode.id : undefined,
     })
   }
 
@@ -664,7 +785,11 @@ function NodeEnabledToggle({
         onClick={() => setIsConditionExpanded(!isConditionExpanded)}
         className="flex items-center gap-2 text-xs gui-text-secondary w-full"
       >
-        {isConditionExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+        {isConditionExpanded ? (
+          <ChevronDown className="w-3 h-3" />
+        ) : (
+          <ChevronRight className="w-3 h-3" />
+        )}
         <Zap className="w-3 h-3" />
         Conditional Activation
         {activationCondition && (
@@ -672,7 +797,7 @@ function NodeEnabledToggle({
             className="ml-auto px-1.5 py-0.5 rounded text-[10px]"
             style={{
               backgroundColor: 'color-mix(in srgb, var(--gui-accent-primary) 30%, transparent)',
-              color: 'var(--gui-accent-primary)'
+              color: 'var(--gui-accent-primary)',
             }}
           >
             ON
@@ -708,13 +833,15 @@ function NodeEnabledToggle({
               {connectedNodes.length > 0 ? (
                 <select
                   value={activationCondition.sourceNodeId || ''}
-                  onChange={(e) => handleSetCondition({
-                    ...activationCondition,
-                    sourceNodeId: e.target.value
-                  })}
+                  onChange={(e) =>
+                    handleSetCondition({
+                      ...activationCondition,
+                      sourceNodeId: e.target.value,
+                    })
+                  }
                   className="w-full gui-input border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500"
                 >
-                  {connectedNodes.map(node => (
+                  {connectedNodes.map((node) => (
                     <option key={node.id} value={node.id}>
                       {node.title} ({node.type})
                     </option>
@@ -734,10 +861,12 @@ function NodeEnabledToggle({
                 <input
                   type="text"
                   value={activationCondition.edgeProperty || ''}
-                  onChange={(e) => handleSetCondition({
-                    ...activationCondition,
-                    edgeProperty: e.target.value
-                  })}
+                  onChange={(e) =>
+                    handleSetCondition({
+                      ...activationCondition,
+                      edgeProperty: e.target.value,
+                    })
+                  }
                   placeholder="e.g., active, completed"
                   className="w-full gui-input border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500"
                 />
@@ -747,10 +876,17 @@ function NodeEnabledToggle({
                 <input
                   type="text"
                   value={String(activationCondition.edgePropertyValue || '')}
-                  onChange={(e) => handleSetCondition({
-                    ...activationCondition,
-                    edgePropertyValue: e.target.value === 'true' ? true : e.target.value === 'false' ? false : e.target.value
-                  })}
+                  onChange={(e) =>
+                    handleSetCondition({
+                      ...activationCondition,
+                      edgePropertyValue:
+                        e.target.value === 'true'
+                          ? true
+                          : e.target.value === 'false'
+                            ? false
+                            : e.target.value,
+                    })
+                  }
                   placeholder="e.g., true, active"
                   className="w-full gui-input border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500"
                 />
@@ -765,10 +901,12 @@ function NodeEnabledToggle({
                 type="checkbox"
                 id="invert-condition"
                 checked={activationCondition.invert || false}
-                onChange={(e) => handleSetCondition({
-                  ...activationCondition,
-                  invert: e.target.checked
-                })}
+                onChange={(e) =>
+                  handleSetCondition({
+                    ...activationCondition,
+                    invert: e.target.checked,
+                  })
+                }
                 className="rounded gui-input"
                 style={{ accentColor: 'var(--gui-accent-primary)' }}
               />
@@ -796,7 +934,7 @@ function NodeEnabledToggle({
 // Conversation-specific fields
 function ConversationFields({
   data,
-  onChange
+  onChange,
 }: {
   data: ConversationNodeData
   onChange: (field: string, value: unknown) => void
@@ -829,58 +967,65 @@ function ConversationFields({
       </div>
 
       {/* Shell selector — only visible in terminal mode */}
-      {data.mode === 'terminal' && (<>
-        <div>
-          <label className="panel-section-label">
-            Shell
-            <HelpTooltip text="Choose which shell runs in this terminal. Claude Code launches an AI coding agent with project context. Other shells open plain terminals." />
-          </label>
-          <select
-            value={data.terminal?.shell || 'claude-code'}
-            onChange={(e) => {
-              const newShell = e.target.value as TerminalShell
-              onChange('terminal', {
-                ...data.terminal,
-                shell: newShell,
-              })
-            }}
-            className="w-full gui-input border rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-          >
-            {TERMINAL_SHELL_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          {data.terminal?.shell && data.terminal.shell !== 'claude-code' && (
-            <p className="text-xs gui-text-secondary mt-1">
-              Plain shell — no AI context injection.
-            </p>
-          )}
-          {data.terminal?.terminalState === 'running' && (
-            <p className="text-xs gui-text-secondary mt-1" style={{ color: 'var(--warning, #eab308)' }}>
-              Shell change takes effect after restarting the terminal.
-            </p>
-          )}
-        </div>
+      {data.mode === 'terminal' && (
+        <>
+          <div>
+            <label className="panel-section-label">
+              Shell
+              <HelpTooltip text="Choose which shell runs in this terminal. Claude Code launches an AI coding agent with project context. Other shells open plain terminals." />
+            </label>
+            <select
+              value={data.terminal?.shell || 'claude-code'}
+              onChange={(e) => {
+                const newShell = e.target.value as TerminalShell
+                onChange('terminal', {
+                  ...data.terminal,
+                  shell: newShell,
+                })
+              }}
+              className="w-full gui-input border rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+            >
+              {TERMINAL_SHELL_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            {data.terminal?.shell && data.terminal.shell !== 'claude-code' && (
+              <p className="text-xs gui-text-secondary mt-1">
+                Plain shell — no AI context injection.
+              </p>
+            )}
+            {data.terminal?.terminalState === 'running' && (
+              <p
+                className="text-xs gui-text-secondary mt-1"
+                style={{ color: 'var(--warning, #eab308)' }}
+              >
+                Shell change takes effect after restarting the terminal.
+              </p>
+            )}
+          </div>
 
-        <div>
-          <label className="panel-section-label">Working Directory</label>
-          <input
-            type="text"
-            value={data.terminal?.workingDirectory || ''}
-            placeholder="Default (project root)"
-            onChange={(e) => {
-              onChange('terminal', {
-                ...data.terminal,
-                workingDirectory: e.target.value,
-              })
-            }}
-            className="w-full gui-input border rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-          />
-          <p className="text-xs gui-text-secondary mt-1">
-            Leave empty for project root. Takes effect on next terminal spawn.
-          </p>
-        </div>
-      </>)}
+          <div>
+            <label className="panel-section-label">Working Directory</label>
+            <input
+              type="text"
+              value={data.terminal?.workingDirectory || ''}
+              placeholder="Default (project root)"
+              onChange={(e) => {
+                onChange('terminal', {
+                  ...data.terminal,
+                  workingDirectory: e.target.value,
+                })
+              }}
+              className="w-full gui-input border rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+            />
+            <p className="text-xs gui-text-secondary mt-1">
+              Leave empty for project root. Takes effect on next terminal spawn.
+            </p>
+          </div>
+        </>
+      )}
 
       <div>
         <label className="panel-section-label">
@@ -914,12 +1059,11 @@ function ConversationFields({
 // Project-specific fields
 function ProjectFields({
   data,
-  onChange
+  onChange,
 }: {
   data: ProjectNodeData
   onChange: (field: string, value: unknown) => void
 }): JSX.Element {
-
   return (
     <>
       <div>
@@ -1001,29 +1145,20 @@ function SortableAgentItem({
   agentName,
   isAgentMode,
   strategy,
-  children
+  children,
 }: SortableAgentItemProps): JSX.Element {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: agent.nodeId })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: agent.nodeId,
+  })
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1
+    opacity: isDragging ? 0.5 : 1,
   }
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="border rounded p-2 bg-gray-500/5"
-    >
+    <div ref={setNodeRef} style={style} className="border rounded p-2 bg-gray-500/5">
       {/* Agent row */}
       <div className="flex items-center gap-2">
         <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
@@ -1046,7 +1181,7 @@ function SortableAgentItem({
 
 function OrchestratorFields({
   data,
-  onChange
+  onChange,
 }: {
   data: OrchestratorNodeData
   onChange: (field: string, value: unknown) => void
@@ -1064,8 +1199,8 @@ function OrchestratorFields({
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates
-    })
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   )
 
   // Handle drag end for agent reordering
@@ -1082,7 +1217,7 @@ function OrchestratorFields({
       // Update order values to match new positions
       const updatedAgents = reordered.map((agent, index) => ({
         ...agent,
-        order: index
+        order: index,
       }))
 
       onChange('connectedAgents', updatedAgents)
@@ -1139,7 +1274,11 @@ function OrchestratorFields({
           className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium gui-text-secondary hover:bg-gray-500/10 transition-colors"
         >
           <span>Budget Limits</span>
-          {isBudgetExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+          {isBudgetExpanded ? (
+            <ChevronDown className="w-3 h-3" />
+          ) : (
+            <ChevronRight className="w-3 h-3" />
+          )}
         </button>
         {isBudgetExpanded && (
           <div className="px-3 pb-3 space-y-3 border-t">
@@ -1149,7 +1288,12 @@ function OrchestratorFields({
                 type="number"
                 min="0"
                 value={data.budget.maxTotalTokens || ''}
-                onChange={(e) => onChange('budget', { ...data.budget, maxTotalTokens: e.target.value ? parseInt(e.target.value, 10) : undefined })}
+                onChange={(e) =>
+                  onChange('budget', {
+                    ...data.budget,
+                    maxTotalTokens: e.target.value ? parseInt(e.target.value, 10) : undefined,
+                  })
+                }
                 placeholder="Unlimited"
                 className="w-full gui-input border rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
               />
@@ -1161,7 +1305,12 @@ function OrchestratorFields({
                 min="0"
                 step="0.01"
                 value={data.budget.maxTotalCostUSD || ''}
-                onChange={(e) => onChange('budget', { ...data.budget, maxTotalCostUSD: e.target.value ? parseFloat(e.target.value) : undefined })}
+                onChange={(e) =>
+                  onChange('budget', {
+                    ...data.budget,
+                    maxTotalCostUSD: e.target.value ? parseFloat(e.target.value) : undefined,
+                  })
+                }
                 placeholder="Unlimited"
                 className="w-full gui-input border rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
               />
@@ -1177,7 +1326,11 @@ function OrchestratorFields({
           className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium gui-text-secondary hover:bg-gray-500/10 transition-colors"
         >
           <span>Connected Agents ({data.connectedAgents?.length || 0})</span>
-          {isAgentsExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+          {isAgentsExpanded ? (
+            <ChevronDown className="w-3 h-3" />
+          ) : (
+            <ChevronRight className="w-3 h-3" />
+          )}
         </button>
         {isAgentsExpanded && (
           <div className="border-t px-3 pb-3">
@@ -1197,7 +1350,8 @@ function OrchestratorFields({
                       .map((agent, index) => {
                         const agentNode = nodes.find((n) => n.id === agent.nodeId)
                         const agentName = agentNode?.data.title || 'Unknown Agent'
-                        const isAgentMode = agentNode?.type === 'conversation' && agentNode.data.mode === 'agent'
+                        const isAgentMode =
+                          agentNode?.type === 'conversation' && agentNode.data.mode === 'agent'
 
                         return (
                           <SortableAgentItem
@@ -1213,7 +1367,10 @@ function OrchestratorFields({
                               <div className="mt-2 pl-5 space-y-1">
                                 {agent.conditions && agent.conditions.length > 0 ? (
                                   agent.conditions.map((cond, condIndex) => (
-                                    <div key={condIndex} className="text-[10px] gui-text-secondary flex items-start gap-1">
+                                    <div
+                                      key={condIndex}
+                                      className="text-[10px] gui-text-secondary flex items-start gap-1"
+                                    >
                                       <span className="font-semibold flex items-center gap-1">
                                         {cond.invert && 'NOT '}
                                         {cond.type === 'agent-succeeded' && (
@@ -1250,7 +1407,8 @@ function OrchestratorFields({
                                       <button
                                         onClick={() => {
                                           const updatedAgents = [...data.connectedAgents!]
-                                          updatedAgents[index].conditions = agent.conditions!.filter((_, i) => i !== condIndex)
+                                          updatedAgents[index].conditions =
+                                            agent.conditions?.filter((_, i) => i !== condIndex)
                                           onChange('connectedAgents', updatedAgents)
                                         }}
                                         className="ml-auto p-0.5 hover:bg-red-500/20 rounded"
@@ -1262,7 +1420,9 @@ function OrchestratorFields({
                                     </div>
                                   ))
                                 ) : (
-                                  <p className="text-[10px] gui-text-muted italic">No conditions — always runs</p>
+                                  <p className="text-[10px] gui-text-muted italic">
+                                    No conditions — always runs
+                                  </p>
                                 )}
 
                                 {/* Add Condition */}
@@ -1273,24 +1433,32 @@ function OrchestratorFields({
                                       onChange={(e) => setNewConditionType(e.target.value)}
                                       className="w-full gui-input border rounded px-2 py-1 text-xs"
                                     >
-                                      <option value="agent-succeeded">Previous agent succeeded</option>
+                                      <option value="agent-succeeded">
+                                        Previous agent succeeded
+                                      </option>
                                       <option value="agent-failed">Previous agent failed</option>
                                       <option value="output-contains">Output contains text</option>
                                       <option value="output-matches">Output matches regex</option>
-                                      <option value="token-count-below">Token count below threshold</option>
+                                      <option value="token-count-below">
+                                        Token count below threshold
+                                      </option>
                                     </select>
 
                                     {(newConditionType === 'output-contains' ||
                                       newConditionType === 'output-matches' ||
                                       newConditionType === 'token-count-below') && (
                                       <input
-                                        type={newConditionType === 'token-count-below' ? 'number' : 'text'}
+                                        type={
+                                          newConditionType === 'token-count-below'
+                                            ? 'number'
+                                            : 'text'
+                                        }
                                         placeholder={
                                           newConditionType === 'token-count-below'
                                             ? 'e.g., 5000'
                                             : newConditionType === 'output-matches'
-                                            ? 'e.g., error|failed'
-                                            : 'e.g., success'
+                                              ? 'e.g., error|failed'
+                                              : 'e.g., success'
                                         }
                                         value={newConditionValue}
                                         onChange={(e) => setNewConditionValue(e.target.value)}
@@ -1305,7 +1473,9 @@ function OrchestratorFields({
                                         onChange={(e) => setNewConditionInvert(e.target.checked)}
                                         className="w-3 h-3"
                                       />
-                                      <span className="gui-text-secondary">NOT (invert condition)</span>
+                                      <span className="gui-text-secondary">
+                                        NOT (invert condition)
+                                      </span>
                                     </label>
 
                                     <div className="flex gap-2">
@@ -1322,13 +1492,13 @@ function OrchestratorFields({
                                             id: crypto.randomUUID(),
                                             type: newConditionType as OrchestratorConditionType,
                                             ...(needsValue && { value: newConditionValue }),
-                                            invert: newConditionInvert
+                                            invert: newConditionInvert,
                                           }
 
                                           const updatedAgents = [...data.connectedAgents!]
                                           updatedAgents[index].conditions = [
                                             ...(updatedAgents[index].conditions || []),
-                                            newCond
+                                            newCond,
                                           ]
                                           onChange('connectedAgents', updatedAgents)
 
@@ -1379,7 +1549,8 @@ function OrchestratorFields({
               </DndContext>
             ) : (
               <p className="text-xs gui-text-muted italic mt-2">
-                No agents connected. Draw edges from this orchestrator to agent-mode conversation nodes.
+                No agents connected. Draw edges from this orchestrator to agent-mode conversation
+                nodes.
               </p>
             )}
           </div>
@@ -1391,8 +1562,8 @@ function OrchestratorFields({
         <p className="text-xs gui-text-muted italic flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
           <span>
-            Orchestrator execution engine is under active development.
-            Connected agents can be triggered individually via their own run controls.
+            Orchestrator execution engine is under active development. Connected agents can be
+            triggered individually via their own run controls.
           </span>
         </p>
       </div>
@@ -1405,17 +1576,19 @@ function NoteFields({
   data,
   onChange,
   hiddenProperties,
-  onToggleHidden
+  onToggleHidden,
 }: {
   data: NoteNodeData
   onChange: (field: string, value: unknown) => void
   hiddenProperties?: string[]
   onToggleHidden?: (propertyId: string) => void
 }): JSX.Element {
-
   // Word count - strip HTML tags first
   const wordCount = data.content
-    ? data.content.replace(/<[^>]*>/g, ' ').split(/\s+/).filter((w) => w.length > 0).length
+    ? data.content
+        .replace(/<[^>]*>/g, ' ')
+        .split(/\s+/)
+        .filter((w) => w.length > 0).length
     : 0
 
   return (
@@ -1429,7 +1602,11 @@ function NoteFields({
               className={`p-1 ${hiddenProperties?.includes('content') ? 'opacity-60' : 'opacity-0 group-hover:opacity-100'} gui-button rounded transition-all`}
               title={hiddenProperties?.includes('content') ? 'Show on node' : 'Hide from node'}
             >
-              {hiddenProperties?.includes('content') ? <EyeOff className="w-3 h-3 gui-text-secondary" /> : <Eye className="w-3 h-3 gui-text-secondary" />}
+              {hiddenProperties?.includes('content') ? (
+                <EyeOff className="w-3 h-3 gui-text-secondary" />
+              ) : (
+                <Eye className="w-3 h-3 gui-text-secondary" />
+              )}
             </button>
           )}
         </div>
@@ -1511,14 +1688,17 @@ function NoteFields({
 // Text-specific fields (minimal - just content editor)
 function TextFields({
   data,
-  onChange
+  onChange,
 }: {
   data: TextNodeData
   onChange: (field: string, value: unknown) => void
 }): JSX.Element {
   // Word count - strip HTML tags first
   const wordCount = data.content
-    ? data.content.replace(/<[^>]*>/g, ' ').split(/\s+/).filter((w) => w.length > 0).length
+    ? data.content
+        .replace(/<[^>]*>/g, ' ')
+        .split(/\s+/)
+        .filter((w) => w.length > 0).length
     : 0
 
   return (
@@ -1550,7 +1730,7 @@ function TaskFields({
   onChange,
   onAddOption,
   hiddenProperties,
-  onToggleHidden
+  onToggleHidden,
 }: {
   data: TaskNodeData
   onChange: (field: string, value: unknown) => void
@@ -1571,10 +1751,11 @@ function TaskFields({
     setIsEstimating(true)
     try {
       const result = await window.api.llm.extract({
-        systemPrompt: 'You are a task complexity estimator. Given a task description, estimate its complexity as one of: simple, moderate, complex. Respond with ONLY one of these three words, nothing else.',
+        systemPrompt:
+          'You are a task complexity estimator. Given a task description, estimate its complexity as one of: simple, moderate, complex. Respond with ONLY one of these three words, nothing else.',
         userPrompt: `Estimate the complexity of this task:\n\n${data.title || ''}\n${data.description}`,
         model: 'claude-sonnet-4-6',
-        maxTokens: 10
+        maxTokens: 10,
       })
       if (result.success && result.data) {
         const complexity = result.data.trim().toLowerCase()
@@ -1582,8 +1763,7 @@ function TaskFields({
           onChange('complexity', complexity)
         }
       }
-    } catch (err) {
-      console.error('Failed to estimate complexity:', err)
+    } catch (_err) {
     } finally {
       setIsEstimating(false)
     }
@@ -1600,7 +1780,11 @@ function TaskFields({
               className={`p-1 ${hiddenProperties?.includes('description') ? 'opacity-60' : 'opacity-0 group-hover:opacity-100'} gui-button rounded transition-all`}
               title={hiddenProperties?.includes('description') ? 'Show on node' : 'Hide from node'}
             >
-              {hiddenProperties?.includes('description') ? <EyeOff className="w-3 h-3 gui-text-secondary" /> : <Eye className="w-3 h-3 gui-text-secondary" />}
+              {hiddenProperties?.includes('description') ? (
+                <EyeOff className="w-3 h-3 gui-text-secondary" />
+              ) : (
+                <Eye className="w-3 h-3 gui-text-secondary" />
+              )}
             </button>
           )}
         </div>
@@ -1627,7 +1811,11 @@ function TaskFields({
               className={`p-1 ${hiddenProperties?.includes('status') ? 'opacity-60' : 'opacity-0 group-hover:opacity-100'} gui-button rounded transition-all`}
               title={hiddenProperties?.includes('status') ? 'Show on node' : 'Hide from node'}
             >
-              {hiddenProperties?.includes('status') ? <EyeOff className="w-3 h-3 gui-text-secondary" /> : <Eye className="w-3 h-3 gui-text-secondary" />}
+              {hiddenProperties?.includes('status') ? (
+                <EyeOff className="w-3 h-3 gui-text-secondary" />
+              ) : (
+                <Eye className="w-3 h-3 gui-text-secondary" />
+              )}
             </button>
           )}
         </div>
@@ -1649,7 +1837,11 @@ function TaskFields({
               className={`p-1 ${hiddenProperties?.includes('priority') ? 'opacity-60' : 'opacity-0 group-hover:opacity-100'} gui-button rounded transition-all`}
               title={hiddenProperties?.includes('priority') ? 'Show on node' : 'Hide from node'}
             >
-              {hiddenProperties?.includes('priority') ? <EyeOff className="w-3 h-3 gui-text-secondary" /> : <Eye className="w-3 h-3 gui-text-secondary" />}
+              {hiddenProperties?.includes('priority') ? (
+                <EyeOff className="w-3 h-3 gui-text-secondary" />
+              ) : (
+                <Eye className="w-3 h-3 gui-text-secondary" />
+              )}
             </button>
           )}
         </div>
@@ -1671,7 +1863,11 @@ function TaskFields({
               className={`p-1 ${hiddenProperties?.includes('complexity') ? 'opacity-60' : 'opacity-0 group-hover:opacity-100'} gui-button rounded transition-all`}
               title={hiddenProperties?.includes('complexity') ? 'Show on node' : 'Hide from node'}
             >
-              {hiddenProperties?.includes('complexity') ? <EyeOff className="w-3 h-3 gui-text-secondary" /> : <Eye className="w-3 h-3 gui-text-secondary" />}
+              {hiddenProperties?.includes('complexity') ? (
+                <EyeOff className="w-3 h-3 gui-text-secondary" />
+              ) : (
+                <Eye className="w-3 h-3 gui-text-secondary" />
+              )}
             </button>
           )}
         </div>
@@ -1689,9 +1885,11 @@ function TaskFields({
             onClick={handleAiEstimateComplexity}
             disabled={isEstimating || !data.description}
             className={`p-1.5 rounded transition-colors ${
-              isEstimating ? 'animate-pulse text-purple-400' :
-              !data.description ? 'opacity-30 cursor-not-allowed gui-text-secondary' :
-              'gui-button gui-text-secondary hover:text-purple-400'
+              isEstimating
+                ? 'animate-pulse text-purple-400'
+                : !data.description
+                  ? 'opacity-30 cursor-not-allowed gui-text-secondary'
+                  : 'gui-button gui-text-secondary hover:text-purple-400'
             }`}
             title={!data.description ? 'Add a description first' : 'AI estimate complexity'}
           >
@@ -1707,7 +1905,7 @@ function TaskFields({
 function ArtifactFields({
   nodeId,
   data,
-  onChange
+  onChange,
 }: {
   nodeId: string
   data: ArtifactNodeData
@@ -1720,7 +1918,7 @@ function ArtifactFields({
   const files = data.files || []
   const firstFile = files[0]
   const activeFileId = data.activeFileId || (firstFile ? firstFile.id : undefined)
-  const activeFile = files.find(f => f.id === activeFileId)
+  const activeFile = files.find((f) => f.id === activeFileId)
 
   // For single-file mode, use root content; for multi-file, use active file
   const currentContent = isMultiFile && activeFile ? activeFile.content : data.content
@@ -1753,7 +1951,7 @@ function ArtifactFields({
       contentType: data.contentType,
       customContentType: data.customContentType,
       language: data.language,
-      order: 0
+      order: 0,
     }
     onChange('files', [newFile])
     onChange('activeFileId', newFile.id)
@@ -1768,7 +1966,7 @@ function ArtifactFields({
       filename: newFileName.trim(),
       content: '',
       contentType: 'text',
-      order: files.length
+      order: files.length,
     }
 
     onChange('files', [...files, newFile])
@@ -1778,7 +1976,7 @@ function ArtifactFields({
 
   // Delete a file
   const handleDeleteFile = (fileId: string): void => {
-    const newFiles = files.filter(f => f.id !== fileId)
+    const newFiles = files.filter((f) => f.id !== fileId)
     onChange('files', newFiles)
 
     // If we deleted the active file, select another
@@ -1796,7 +1994,7 @@ function ArtifactFields({
 
   // Update a file property
   const handleUpdateFile = (fileId: string, updates: Partial<ArtifactFile>): void => {
-    const newFiles = files.map(f => f.id === fileId ? { ...f, ...updates } : f)
+    const newFiles = files.map((f) => (f.id === fileId ? { ...f, ...updates } : f))
     onChange('files', newFiles)
   }
 
@@ -1826,7 +2024,11 @@ function ArtifactFields({
           onClick={() => setIsFilesExpanded(!isFilesExpanded)}
           className="flex items-center gap-2 text-xs font-medium gui-text mb-2 w-full"
         >
-          {isFilesExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+          {isFilesExpanded ? (
+            <ChevronDown className="w-3 h-3" />
+          ) : (
+            <ChevronRight className="w-3 h-3" />
+          )}
           <Files className="w-3.5 h-3.5 text-cyan-400" />
           Files
           {isMultiFile && (
@@ -1850,32 +2052,34 @@ function ArtifactFields({
               <>
                 {/* File list */}
                 <div className="space-y-1">
-                  {files.sort((a, b) => a.order - b.order).map((file) => (
-                    <div
-                      key={file.id}
-                      className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs ${
-                        activeFileId === file.id
-                          ? 'gui-panel-secondary gui-text'
-                          : 'gui-text-secondary gui-button'
-                      }`}
-                    >
-                      <GripVertical className="w-3 h-3 gui-text-secondary cursor-grab" />
-                      <button
-                        onClick={() => onChange('activeFileId', file.id)}
-                        className="flex-1 text-left truncate"
+                  {files
+                    .sort((a, b) => a.order - b.order)
+                    .map((file) => (
+                      <div
+                        key={file.id}
+                        className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs ${
+                          activeFileId === file.id
+                            ? 'gui-panel-secondary gui-text'
+                            : 'gui-text-secondary gui-button'
+                        }`}
                       >
-                        {file.filename}
-                      </button>
-                      <span className="text-[10px] gui-text-secondary">{file.contentType}</span>
-                      <button
-                        onClick={() => handleDeleteFile(file.id)}
-                        className="p-0.5 hover:text-red-400 transition-colors"
-                        title="Delete file"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
+                        <GripVertical className="w-3 h-3 gui-text-secondary cursor-grab" />
+                        <button
+                          onClick={() => onChange('activeFileId', file.id)}
+                          className="flex-1 text-left truncate"
+                        >
+                          {file.filename}
+                        </button>
+                        <span className="text-[10px] gui-text-secondary">{file.contentType}</span>
+                        <button
+                          onClick={() => handleDeleteFile(file.id)}
+                          className="p-0.5 hover:text-red-400 transition-colors"
+                          title="Delete file"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
                 </div>
 
                 {/* Add file input */}
@@ -1900,11 +2104,15 @@ function ArtifactFields({
                 {/* Active file name editor */}
                 {activeFile && (
                   <div>
-                    <label className="block text-xs gui-text-secondary mb-1">Selected File Name</label>
+                    <label className="block text-xs gui-text-secondary mb-1">
+                      Selected File Name
+                    </label>
                     <input
                       type="text"
                       value={activeFile.filename}
-                      onChange={(e) => handleUpdateFile(activeFile.id, { filename: e.target.value })}
+                      onChange={(e) =>
+                        handleUpdateFile(activeFile.id, { filename: e.target.value })
+                      }
                       className="w-full gui-input border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500"
                     />
                   </div>
@@ -1918,7 +2126,10 @@ function ArtifactFields({
       {/* Content Type */}
       <div>
         <label className="panel-section-label">
-          Content Type {isMultiFile && activeFile && <span className="gui-text-secondary">({activeFile.filename})</span>}
+          Content Type{' '}
+          {isMultiFile && activeFile && (
+            <span className="gui-text-secondary">({activeFile.filename})</span>
+          )}
         </label>
         <select
           value={currentContentType}
@@ -1944,7 +2155,11 @@ function ArtifactFields({
           <label className="panel-section-label">Custom Type Name</label>
           <input
             type="text"
-            value={isMultiFile && activeFile ? activeFile.customContentType || '' : data.customContentType || ''}
+            value={
+              isMultiFile && activeFile
+                ? activeFile.customContentType || ''
+                : data.customContentType || ''
+            }
             onChange={(e) => {
               if (isMultiFile && activeFile) {
                 handleUpdateFile(activeFile.id, { customContentType: e.target.value })
@@ -1995,17 +2210,18 @@ function ArtifactFields({
       <div className="text-xs gui-text-secondary">
         {isMultiFile ? (
           <>
-            {files.length} files · {activeFile ? `${lineCount} lines in ${activeFile.filename}` : 'No file selected'}
+            {files.length} files ·{' '}
+            {activeFile ? `${lineCount} lines in ${activeFile.filename}` : 'No file selected'}
           </>
         ) : (
-          <>{lineCount} lines · {charCount} characters</>
+          <>
+            {lineCount} lines · {charCount} characters
+          </>
         )}
       </div>
 
       {/* Source info */}
-      <div className="text-xs gui-text-secondary">
-        Source: {getSourceDescription()}
-      </div>
+      <div className="text-xs gui-text-secondary">Source: {getSourceDescription()}</div>
 
       {/* Injection Format */}
       <div className="pt-3">
@@ -2032,7 +2248,9 @@ function ArtifactFields({
               <input
                 type="number"
                 value={data.maxInjectionTokens || 2000}
-                onChange={(e) => onChange('maxInjectionTokens', parseInt(e.target.value) || 2000)}
+                onChange={(e) =>
+                  onChange('maxInjectionTokens', parseInt(e.target.value, 10) || 2000)
+                }
                 min={100}
                 max={10000}
                 step={100}
@@ -2100,7 +2318,8 @@ function ArtifactFields({
 
           {data.versionHistory?.length > 0 && (
             <div className="text-xs gui-text-secondary">
-              {data.versionHistory.length} version{data.versionHistory.length !== 1 ? 's' : ''} in history
+              {data.versionHistory.length} version{data.versionHistory.length !== 1 ? 's' : ''} in
+              history
             </div>
           )}
         </div>
@@ -2116,7 +2335,7 @@ function ArtifactFields({
             <input
               type="number"
               value={data.previewLines}
-              onChange={(e) => onChange('previewLines', parseInt(e.target.value) || 10)}
+              onChange={(e) => onChange('previewLines', parseInt(e.target.value, 10) || 10)}
               min={1}
               max={50}
               className="w-full gui-input border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500"
@@ -2148,7 +2367,7 @@ function ArtifactFields({
 function WorkspaceFields({
   nodeId,
   data,
-  onChange
+  onChange,
 }: {
   nodeId: string
   data: WorkspaceNodeData
@@ -2166,7 +2385,9 @@ function WorkspaceFields({
   const excludeNodesFromWorkspace = useWorkspaceStore((state) => state.excludeNodesFromWorkspace)
   const includeNodesInWorkspace = useWorkspaceStore((state) => state.includeNodesInWorkspace)
   const updateWorkspaceLLMSettings = useWorkspaceStore((state) => state.updateWorkspaceLLMSettings)
-  const updateWorkspaceContextRules = useWorkspaceStore((state) => state.updateWorkspaceContextRules)
+  const updateWorkspaceContextRules = useWorkspaceStore(
+    (state) => state.updateWorkspaceContextRules,
+  )
 
   // Get member nodes (actual node objects)
   const memberNodes = useMemo(() => {
@@ -2180,9 +2401,7 @@ function WorkspaceFields({
 
   const excludedNodes = useMemo(() => {
     const excluded = data.excludedNodeIds ?? []
-    return excluded
-      .map((id) => nodes.find((n) => n.id === id))
-      .filter(Boolean)
+    return excluded.map((id) => nodes.find((n) => n.id === id)).filter(Boolean)
   }, [data.excludedNodeIds, nodes])
 
   // Get selectable nodes (not already in this workspace)
@@ -2192,7 +2411,7 @@ function WorkspaceFields({
       (id) =>
         id !== nodeId &&
         !included.includes(id) &&
-        nodes.find((n) => n.id === id)?.data.type !== 'workspace'
+        nodes.find((n) => n.id === id)?.data.type !== 'workspace',
     )
   }, [selectedNodeIds, nodeId, data.includedNodeIds, nodes])
 
@@ -2304,7 +2523,12 @@ function WorkspaceFields({
               <span className="text-xs gui-text-secondary">Link Direction</span>
               <select
                 value={data.linkDirection || 'to-members'}
-                onChange={(e) => onChange('linkDirection', e.target.value as 'to-members' | 'from-members' | 'bidirectional')}
+                onChange={(e) =>
+                  onChange(
+                    'linkDirection',
+                    e.target.value as 'to-members' | 'from-members' | 'bidirectional',
+                  )
+                }
                 className="gui-input text-xs rounded px-2 py-1 focus:ring-1 focus:ring-red-500 focus:border-red-500"
               >
                 <option value="to-members">To Members →</option>
@@ -2322,7 +2546,11 @@ function WorkspaceFields({
           onClick={() => setIsMembersExpanded(!isMembersExpanded)}
           className="flex items-center gap-2 text-xs font-medium gui-text mb-2 w-full"
         >
-          {isMembersExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+          {isMembersExpanded ? (
+            <ChevronDown className="w-3 h-3" />
+          ) : (
+            <ChevronRight className="w-3 h-3" />
+          )}
           <Users className="w-3.5 h-3.5 text-violet-400" />
           Members
           <span className="ml-auto px-1.5 py-0.5 bg-violet-600/30 text-violet-300 rounded text-[10px]">
@@ -2361,13 +2589,13 @@ function WorkspaceFields({
               <div className="max-h-32 overflow-y-auto space-y-1">
                 {memberNodes.map((node) => (
                   <div
-                    key={node!.id}
+                    key={node?.id}
                     className="flex items-center justify-between px-2 py-1 gui-panel-secondary rounded text-xs"
                   >
-                    <span className="gui-text truncate flex-1">{node!.data.title as string}</span>
-                    <span className="gui-text-secondary text-[10px] mx-2">{node!.data.type}</span>
+                    <span className="gui-text truncate flex-1">{node?.data.title as string}</span>
+                    <span className="gui-text-secondary text-[10px] mx-2">{node?.data.type}</span>
                     <button
-                      onClick={() => excludeNodesFromWorkspace(nodeId, [node!.id])}
+                      onClick={() => excludeNodesFromWorkspace(nodeId, [node?.id])}
                       className="gui-text-secondary hover:text-amber-400"
                       title="Exclude from workspace"
                     >
@@ -2377,7 +2605,9 @@ function WorkspaceFields({
                 ))}
               </div>
             ) : (
-              <p className="text-xs gui-text-secondary italic">No members yet. Select nodes and click "Add Selected".</p>
+              <p className="text-xs gui-text-secondary italic">
+                No members yet. Select nodes and click "Add Selected".
+              </p>
             )}
 
             {/* Excluded nodes */}
@@ -2387,12 +2617,14 @@ function WorkspaceFields({
                 <div className="max-h-24 overflow-y-auto space-y-1">
                   {excludedNodes.map((node) => (
                     <div
-                      key={node!.id}
+                      key={node?.id}
                       className="flex items-center justify-between px-2 py-1 gui-panel-secondary rounded text-xs opacity-60"
                     >
-                      <span className="gui-text-secondary truncate flex-1">{node!.data.title as string}</span>
+                      <span className="gui-text-secondary truncate flex-1">
+                        {node?.data.title as string}
+                      </span>
                       <button
-                        onClick={() => includeNodesInWorkspace(nodeId, [node!.id])}
+                        onClick={() => includeNodesInWorkspace(nodeId, [node?.id])}
                         className="gui-text-secondary hover:text-emerald-400"
                         title="Re-include in workspace"
                       >
@@ -2413,21 +2645,35 @@ function WorkspaceFields({
           onClick={() => setIsLLMExpanded(!isLLMExpanded)}
           className="flex items-center gap-2 text-xs font-medium gui-text mb-2 w-full"
         >
-          {isLLMExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+          {isLLMExpanded ? (
+            <ChevronDown className="w-3 h-3" />
+          ) : (
+            <ChevronRight className="w-3 h-3" />
+          )}
           <Bot className="w-3.5 h-3.5 text-violet-400" />
           LLM Defaults
-          {!isLLMExpanded && (() => {
-            const customItems: string[] = []
-            if (data.llmSettings.provider !== 'anthropic') customItems.push(data.llmSettings.provider)
-            if (data.llmSettings.model) customItems.push('model')
-            if (data.llmSettings.systemPrompt) customItems.push('prompt')
-            if (data.llmSettings.temperature !== undefined && data.llmSettings.temperature !== 0.7) customItems.push(`t=${data.llmSettings.temperature}`)
-            return customItems.length > 0 ? (
-              <span className="ml-auto px-1.5 py-0.5 bg-violet-600/30 text-violet-300 rounded text-[10px]" title={customItems.join(', ')}>
-                {customItems.slice(0, 2).join(', ')}{customItems.length > 2 ? '...' : ''}
-              </span>
-            ) : null
-          })()}
+          {!isLLMExpanded &&
+            (() => {
+              const customItems: string[] = []
+              if (data.llmSettings.provider !== 'anthropic')
+                customItems.push(data.llmSettings.provider)
+              if (data.llmSettings.model) customItems.push('model')
+              if (data.llmSettings.systemPrompt) customItems.push('prompt')
+              if (
+                data.llmSettings.temperature !== undefined &&
+                data.llmSettings.temperature !== 0.7
+              )
+                customItems.push(`t=${data.llmSettings.temperature}`)
+              return customItems.length > 0 ? (
+                <span
+                  className="ml-auto px-1.5 py-0.5 bg-violet-600/30 text-violet-300 rounded text-[10px]"
+                  title={customItems.join(', ')}
+                >
+                  {customItems.slice(0, 2).join(', ')}
+                  {customItems.length > 2 ? '...' : ''}
+                </span>
+              ) : null
+            })()}
         </button>
 
         {isLLMExpanded && (
@@ -2466,7 +2712,9 @@ function WorkspaceFields({
                 max="100"
                 step="5"
                 value={(data.llmSettings.temperature ?? 0.7) * 100}
-                onChange={(e) => handleLLMSettingsChange('temperature', parseInt(e.target.value) / 100)}
+                onChange={(e) =>
+                  handleLLMSettingsChange('temperature', parseInt(e.target.value, 10) / 100)
+                }
                 className="w-full h-1.5 gui-panel-secondary rounded-lg appearance-none cursor-pointer accent-violet-500"
               />
             </div>
@@ -2476,7 +2724,9 @@ function WorkspaceFields({
               <input
                 type="number"
                 value={data.llmSettings.maxTokens ?? 4096}
-                onChange={(e) => handleLLMSettingsChange('maxTokens', parseInt(e.target.value) || 4096)}
+                onChange={(e) =>
+                  handleLLMSettingsChange('maxTokens', parseInt(e.target.value, 10) || 4096)
+                }
                 min={256}
                 max={128000}
                 step={256}
@@ -2485,10 +2735,14 @@ function WorkspaceFields({
             </div>
 
             <div>
-              <label className="block text-xs gui-text-secondary mb-1">System Prompt (optional)</label>
+              <label className="block text-xs gui-text-secondary mb-1">
+                System Prompt (optional)
+              </label>
               <textarea
                 value={data.llmSettings.systemPrompt || ''}
-                onChange={(e) => handleLLMSettingsChange('systemPrompt', e.target.value || undefined)}
+                onChange={(e) =>
+                  handleLLMSettingsChange('systemPrompt', e.target.value || undefined)
+                }
                 rows={3}
                 placeholder="Custom system prompt for all conversations in this workspace..."
                 className="w-full gui-input border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500 resize-y min-h-[60px] max-h-[300px]"
@@ -2504,21 +2758,33 @@ function WorkspaceFields({
           onClick={() => setIsContextExpanded(!isContextExpanded)}
           className="flex items-center gap-2 text-xs font-medium gui-text mb-2 w-full"
         >
-          {isContextExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+          {isContextExpanded ? (
+            <ChevronDown className="w-3 h-3" />
+          ) : (
+            <ChevronRight className="w-3 h-3" />
+          )}
           <Compass className="w-3.5 h-3.5 text-violet-400" />
           Context Rules
-          {!isContextExpanded && (() => {
-            const customItems: string[] = []
-            if (data.contextRules.maxTokens !== 8000) customItems.push(`${Math.round(data.contextRules.maxTokens / 1000)}k tokens`)
-            if (data.contextRules.maxDepth !== 2) customItems.push(`depth ${data.contextRules.maxDepth}`)
-            if (data.contextRules.traversalMode !== 'all') customItems.push(data.contextRules.traversalMode)
-            if (data.contextRules.includeDisabledNodes) customItems.push('+disabled')
-            return customItems.length > 0 ? (
-              <span className="ml-auto px-1.5 py-0.5 bg-violet-600/30 text-violet-300 rounded text-[10px]" title={customItems.join(', ')}>
-                {customItems.slice(0, 2).join(', ')}{customItems.length > 2 ? '...' : ''}
-              </span>
-            ) : null
-          })()}
+          {!isContextExpanded &&
+            (() => {
+              const customItems: string[] = []
+              if (data.contextRules.maxTokens !== 8000)
+                customItems.push(`${Math.round(data.contextRules.maxTokens / 1000)}k tokens`)
+              if (data.contextRules.maxDepth !== 2)
+                customItems.push(`depth ${data.contextRules.maxDepth}`)
+              if (data.contextRules.traversalMode !== 'all')
+                customItems.push(data.contextRules.traversalMode)
+              if (data.contextRules.includeDisabledNodes) customItems.push('+disabled')
+              return customItems.length > 0 ? (
+                <span
+                  className="ml-auto px-1.5 py-0.5 bg-violet-600/30 text-violet-300 rounded text-[10px]"
+                  title={customItems.join(', ')}
+                >
+                  {customItems.slice(0, 2).join(', ')}
+                  {customItems.length > 2 ? '...' : ''}
+                </span>
+              ) : null
+            })()}
         </button>
 
         {isContextExpanded && (
@@ -2528,7 +2794,9 @@ function WorkspaceFields({
               <input
                 type="number"
                 value={data.contextRules.maxTokens}
-                onChange={(e) => handleContextRulesChange('maxTokens', parseInt(e.target.value) || 8000)}
+                onChange={(e) =>
+                  handleContextRulesChange('maxTokens', parseInt(e.target.value, 10) || 8000)
+                }
                 min={1000}
                 max={100000}
                 step={1000}
@@ -2541,7 +2809,9 @@ function WorkspaceFields({
               <input
                 type="number"
                 value={data.contextRules.maxDepth}
-                onChange={(e) => handleContextRulesChange('maxDepth', parseInt(e.target.value) || 2)}
+                onChange={(e) =>
+                  handleContextRulesChange('maxDepth', parseInt(e.target.value, 10) || 2)
+                }
                 min={1}
                 max={10}
                 className="w-full gui-input border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500"
@@ -2583,17 +2853,25 @@ function WorkspaceFields({
           onClick={() => setIsThemeExpanded(!isThemeExpanded)}
           className="flex items-center gap-2 text-xs font-medium gui-text mb-2 w-full"
         >
-          {isThemeExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+          {isThemeExpanded ? (
+            <ChevronDown className="w-3 h-3" />
+          ) : (
+            <ChevronRight className="w-3 h-3" />
+          )}
           <Tag className="w-3.5 h-3.5 text-violet-400" />
           Theme Defaults
-          {!isThemeExpanded && (() => {
-            const customTypes = Object.keys(data.themeDefaults || {}) as string[]
-            return customTypes.length > 0 ? (
-              <span className="ml-auto px-1.5 py-0.5 bg-violet-600/30 text-violet-300 rounded text-[10px]" title={customTypes.join(', ')}>
-                {customTypes.length} color{customTypes.length !== 1 ? 's' : ''}
-              </span>
-            ) : null
-          })()}
+          {!isThemeExpanded &&
+            (() => {
+              const customTypes = Object.keys(data.themeDefaults || {}) as string[]
+              return customTypes.length > 0 ? (
+                <span
+                  className="ml-auto px-1.5 py-0.5 bg-violet-600/30 text-violet-300 rounded text-[10px]"
+                  title={customTypes.join(', ')}
+                >
+                  {customTypes.length} color{customTypes.length !== 1 ? 's' : ''}
+                </span>
+              ) : null
+            })()}
         </button>
 
         {isThemeExpanded && (
@@ -2639,7 +2917,7 @@ function WorkspaceFields({
 // Note: Tags are now managed through the Properties system (not here)
 function MetadataSection({
   data,
-  onChange
+  onChange,
 }: {
   data: ContextMetadata & { type: string; properties?: Record<string, unknown> }
   onChange: (field: string, value: unknown) => void
@@ -2654,24 +2932,34 @@ function MetadataSection({
       >
         {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
         Node Metadata
-        {!isExpanded && (() => {
-          const customItems: string[] = []
-          if (data.summary) customItems.push('summary')
-          if (data.keyEntities && data.keyEntities.length > 0) customItems.push(`${data.keyEntities.length} key entit${data.keyEntities.length !== 1 ? 'ies' : 'y'}`)
-          if (data.relationshipType) customItems.push('rel. type')
-          return customItems.length > 0 ? (
-            <span className="ml-auto px-1.5 py-0.5 bg-blue-600/30 text-blue-300 rounded text-[10px]" title={customItems.join(', ')}>
-              {customItems.slice(0, 2).join(', ')}{customItems.length > 2 ? '...' : ''}
-            </span>
-          ) : null
-        })()}
+        {!isExpanded &&
+          (() => {
+            const customItems: string[] = []
+            if (data.summary) customItems.push('summary')
+            if (data.keyEntities && data.keyEntities.length > 0)
+              customItems.push(
+                `${data.keyEntities.length} key entit${data.keyEntities.length !== 1 ? 'ies' : 'y'}`,
+              )
+            if (data.relationshipType) customItems.push('rel. type')
+            return customItems.length > 0 ? (
+              <span
+                className="ml-auto px-1.5 py-0.5 bg-blue-600/30 text-blue-300 rounded text-[10px]"
+                title={customItems.join(', ')}
+              >
+                {customItems.slice(0, 2).join(', ')}
+                {customItems.length > 2 ? '...' : ''}
+              </span>
+            ) : null
+          })()}
       </button>
 
       {isExpanded && (
         <div className="space-y-3">
           {/* Summary */}
           <div>
-            <label className="block text-xs gui-text-secondary mb-1">Summary (for AI context)</label>
+            <label className="block text-xs gui-text-secondary mb-1">
+              Summary (for AI context)
+            </label>
             <textarea
               value={data.summary || ''}
               onChange={(e) => onChange('summary', e.target.value)}
@@ -2683,11 +2971,21 @@ function MetadataSection({
 
           {/* Key Entities */}
           <div>
-            <label className="block text-xs gui-text-secondary mb-1">Key Concepts (comma-separated)</label>
+            <label className="block text-xs gui-text-secondary mb-1">
+              Key Concepts (comma-separated)
+            </label>
             <input
               type="text"
               value={(data.keyEntities || []).join(', ')}
-              onChange={(e) => onChange('keyEntities', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
+              onChange={(e) =>
+                onChange(
+                  'keyEntities',
+                  e.target.value
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                )
+              }
               placeholder="e.g., authentication, API, database"
               className="w-full gui-input border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500"
             />
@@ -2728,7 +3026,7 @@ function MetadataSection({
 // Outgoing edge color section - allows setting color for new outgoing edges
 function OutgoingEdgeColorSection({
   nodeId,
-  data
+  data,
 }: {
   nodeId: string
   data: ContextMetadata & { type: string }
@@ -2753,7 +3051,7 @@ function OutgoingEdgeColorSection({
     '#ef4444', // red
     '#ec4899', // pink
     '#8b5cf6', // purple
-    '#6366f1'  // indigo
+    '#6366f1', // indigo
   ]
 
   const currentColor = data.outgoingEdgeColor || '#64748b'
@@ -2769,10 +3067,7 @@ function OutgoingEdgeColorSection({
         <Link2 className="w-3 h-3" />
         Outgoing Edge Color
         {hasCustomColor && (
-          <span
-            className="w-3 h-3 rounded-full ml-1"
-            style={{ backgroundColor: currentColor }}
-          />
+          <span className="w-3 h-3 rounded-full ml-1" style={{ backgroundColor: currentColor }} />
         )}
       </button>
 
@@ -2810,7 +3105,11 @@ function OutgoingEdgeColorSection({
                   ? 'gui-panel-secondary gui-text-secondary cursor-not-allowed opacity-40'
                   : 'gui-panel-secondary gui-button gui-text'
               }`}
-              title={outgoingEdgeCount === 0 ? 'No outgoing edges' : `Apply to ${outgoingEdgeCount} outgoing edge(s)`}
+              title={
+                outgoingEdgeCount === 0
+                  ? 'No outgoing edges'
+                  : `Apply to ${outgoingEdgeCount} outgoing edge(s)`
+              }
             >
               Apply to All ({outgoingEdgeCount})
             </button>
@@ -2847,7 +3146,7 @@ function DynamicPropertiesSection({
   onPropertyChange,
   onAddOption,
   onRemoveProperty,
-  onToggleHidden
+  onToggleHidden,
 }: {
   nodeType: NodeData['type']
   properties: Record<string, unknown>
@@ -2862,12 +3161,12 @@ function DynamicPropertiesSection({
   // Filter out properties that are handled by type-specific fields
   const handledByTypeFields = getHandledPropertyIds(nodeType)
   const dynamicProperties = propertyDefinitions.filter(
-    (def) => !handledByTypeFields.includes(def.id)
+    (def) => !handledByTypeFields.includes(def.id),
   )
 
   // Check if a property is custom (not built-in)
   const isCustomProperty = (propertyId: string): boolean => {
-    return propertySchema.customProperties.some(p => p.id === propertyId)
+    return propertySchema.customProperties.some((p) => p.id === propertyId)
   }
 
   if (dynamicProperties.length === 0) {

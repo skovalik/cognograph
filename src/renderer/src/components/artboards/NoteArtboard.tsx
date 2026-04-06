@@ -12,28 +12,28 @@
  * - persona/examples/background: Full TipTap with mode-specific hints
  */
 
-import { memo, useCallback, useMemo } from 'react'
+import type { NoteMode, NoteNodeData } from '@shared/types'
 import {
-  StickyNote,
-  Bot,
   BookOpen,
+  Bot,
   Code2,
-  Layers,
-  Palette,
-  FileText,
   Component,
   FileJson,
+  FileText,
+  Layers,
+  Palette,
   Settings,
+  StickyNote,
 } from 'lucide-react'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { memo, useCallback, useMemo } from 'react'
 import { useNodesStore } from '../../stores/nodesStore'
-import { RichTextEditor } from '../RichTextEditor'
-import { DesignTokenEditor } from '../nodes/DesignTokenEditor'
-import { PageNoteBody } from '../nodes/PageNoteBody'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 import { ComponentNoteBody } from '../nodes/ComponentNoteBody'
 import { ContentModelBody } from '../nodes/ContentModelBody'
+import { DesignTokenEditor } from '../nodes/DesignTokenEditor'
+import { PageNoteBody } from '../nodes/PageNoteBody'
 import { WPConfigBody } from '../nodes/WPConfigBody'
-import type { NoteNodeData, NoteMode } from '@shared/types'
+import { RichTextEditor } from '../RichTextEditor'
 
 interface NoteArtboardProps {
   nodeId: string
@@ -120,14 +120,14 @@ function NoteArtboardComponent({ nodeId }: NoteArtboardProps): JSX.Element {
     (html: string) => {
       updateNode(nodeId, { content: html })
     },
-    [nodeId, updateNode]
+    [nodeId, updateNode],
   )
 
   const handleDesignTokenChange = useCallback(
     (content: string) => {
       updateNode(nodeId, { content, contentFormat: 'plain' })
     },
-    [nodeId, updateNode]
+    [nodeId, updateNode],
   )
 
   // Word count
@@ -160,26 +160,14 @@ function NoteArtboardComponent({ nodeId }: NoteArtboardProps): JSX.Element {
         className="flex items-center gap-3 px-5 py-2.5 shrink-0"
         style={{ borderBottom: '1px solid var(--gui-border)' }}
       >
-        <ModeIcon
-          className="w-4 h-4 flex-shrink-0"
-          style={{ color: modeInfo.color }}
-        />
-        <span
-          className="text-xs font-medium"
-          style={{ color: modeInfo.color }}
-        >
+        <ModeIcon className="w-4 h-4 flex-shrink-0" style={{ color: modeInfo.color }} />
+        <span className="text-xs font-medium" style={{ color: modeInfo.color }}>
           {modeInfo.label}
         </span>
-        <span
-          className="text-[10px] flex-1"
-          style={{ color: 'var(--gui-text-muted)' }}
-        >
+        <span className="text-[10px] flex-1" style={{ color: 'var(--gui-text-muted)' }}>
           {modeInfo.hint}
         </span>
-        <span
-          className="text-[10px] flex-shrink-0"
-          style={{ color: 'var(--gui-text-muted)' }}
-        >
+        <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--gui-text-muted)' }}>
           {wordCount} words
         </span>
       </div>
@@ -206,9 +194,7 @@ function NoteArtboardComponent({ nodeId }: NoteArtboardProps): JSX.Element {
           <div className="p-5">
             <ContentModelBody
               contentModel={nodeData.contentModel}
-              onChange={(contentModel) =>
-                updateNode(nodeId, { contentModel })
-              }
+              onChange={(contentModel) => updateNode(nodeId, { contentModel })}
               selected={true}
             />
           </div>
@@ -237,15 +223,10 @@ function NoteArtboardComponent({ nodeId }: NoteArtboardProps): JSX.Element {
                 borderRight: '1px solid var(--gui-border)',
               }}
             >
-              <div
-                className="text-center"
-                style={{ color: 'var(--gui-text-muted)' }}
-              >
+              <div className="text-center" style={{ color: 'var(--gui-text-muted)' }}>
                 <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-30" />
                 <p className="text-xs">Reference iframe</p>
-                <p className="text-[10px]">
-                  Connect a URL node for live preview
-                </p>
+                <p className="text-[10px]">Connect a URL node for live preview</p>
               </div>
             </div>
             <div className="flex-1 p-5">
@@ -271,10 +252,10 @@ function NoteArtboardComponent({ nodeId }: NoteArtboardProps): JSX.Element {
                 currentMode === 'persona'
                   ? 'Define the AI persona and instructions...'
                   : currentMode === 'examples'
-                  ? 'Add code or writing style examples...'
-                  : currentMode === 'background'
-                  ? 'Add background context...'
-                  : 'Start writing...'
+                    ? 'Add code or writing style examples...'
+                    : currentMode === 'background'
+                      ? 'Add background context...'
+                      : 'Start writing...'
               }
               enableLists={true}
               enableFormatting={true}

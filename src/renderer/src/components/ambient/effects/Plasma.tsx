@@ -1,27 +1,32 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import React, { useEffect, useRef } from 'react';
-import { Renderer, Program, Mesh, Triangle } from 'ogl';
-import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
+import { Mesh, Program, Renderer, Triangle } from 'ogl'
+import type React from 'react'
+import { useEffect, useRef } from 'react'
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality'
 
 interface PlasmaProps {
-  color?: string;
-  speed?: number;
-  direction?: 'forward' | 'reverse' | 'pingpong';
-  scale?: number;
-  opacity?: number;
-  mouseInteractive?: boolean;
-  isDark?: boolean;
-  qualityRef?: React.RefObject<AdaptiveQualityState>;
-  reportFrame?: () => void;
+  color?: string
+  speed?: number
+  direction?: 'forward' | 'reverse' | 'pingpong'
+  scale?: number
+  opacity?: number
+  mouseInteractive?: boolean
+  isDark?: boolean
+  qualityRef?: React.RefObject<AdaptiveQualityState>
+  reportFrame?: () => void
 }
 
 const hexToRgb = (hex: string): [number, number, number] => {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) return [1, 0.5, 0.2];
-  return [parseInt(result[1], 16) / 255, parseInt(result[2], 16) / 255, parseInt(result[3], 16) / 255];
-};
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  if (!result) return [1, 0.5, 0.2]
+  return [
+    parseInt(result[1], 16) / 255,
+    parseInt(result[2], 16) / 255,
+    parseInt(result[3], 16) / 255,
+  ]
+}
 
 const vertex = `#version 300 es
 precision highp float;
@@ -32,7 +37,7 @@ void main() {
   vUv = uv;
   gl_Position = vec4(position, 0.0, 1.0);
 }
-`;
+`
 
 const fragment = `#version 300 es
 precision highp float;
@@ -101,7 +106,7 @@ void main() {
   vec3 finalColor = mix(rgb, customColor, step(0.5, uUseCustomColor));
 
   fragColor = vec4(finalColor * alpha, alpha);
-}`;
+}`
 
 export const Plasma: React.FC<PlasmaProps> = ({
   color = '#ffffff',
@@ -114,31 +119,31 @@ export const Plasma: React.FC<PlasmaProps> = ({
   qualityRef,
   reportFrame: reportFrameFn,
 }) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const mousePos = useRef({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const mousePos = useRef({ x: 0, y: 0 })
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) return
 
-    const useCustomColor = color ? 1.0 : 0.0;
-    const customColorRgb = color ? hexToRgb(color) : [1, 1, 1];
+    const useCustomColor = color ? 1.0 : 0.0
+    const customColorRgb = color ? hexToRgb(color) : [1, 1, 1]
 
-    const directionMultiplier = direction === 'reverse' ? -1.0 : 1.0;
+    const directionMultiplier = direction === 'reverse' ? -1.0 : 1.0
 
     const renderer = new Renderer({
       webgl: 2,
       alpha: true,
       antialias: false,
       dpr: 1.0,
-    });
-    const gl = renderer.gl;
-    const canvas = gl.canvas as HTMLCanvasElement;
-    canvas.style.display = 'block';
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    containerRef.current.appendChild(canvas);
+    })
+    const gl = renderer.gl
+    const canvas = gl.canvas as HTMLCanvasElement
+    canvas.style.display = 'block'
+    canvas.style.width = '100%'
+    canvas.style.height = '100%'
+    containerRef.current.appendChild(canvas)
 
-    const geometry = new Triangle(gl);
+    const geometry = new Triangle(gl)
 
     const program = new Program(gl, {
       vertex: vertex,
@@ -154,97 +159,97 @@ export const Plasma: React.FC<PlasmaProps> = ({
         uOpacity: { value: opacity },
         uMouse: { value: new Float32Array([0, 0]) },
         uMouseInteractive: { value: mouseInteractive ? 1.0 : 0.0 },
-        uIsDark: { value: isDark ? 1 : 0 }
-      }
-    });
+        uIsDark: { value: isDark ? 1 : 0 },
+      },
+    })
 
-    const mesh = new Mesh(gl, { geometry, program });
+    const mesh = new Mesh(gl, { geometry, program })
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!mouseInteractive) return;
-      const rect = containerRef.current!.getBoundingClientRect();
-      mousePos.current.x = e.clientX - rect.left;
-      mousePos.current.y = e.clientY - rect.top;
-      const mouseUniform = program.uniforms.uMouse.value as Float32Array;
-      mouseUniform[0] = mousePos.current.x;
-      mouseUniform[1] = mousePos.current.y;
-    };
+      if (!mouseInteractive) return
+      const rect = containerRef.current!.getBoundingClientRect()
+      mousePos.current.x = e.clientX - rect.left
+      mousePos.current.y = e.clientY - rect.top
+      const mouseUniform = program.uniforms.uMouse.value as Float32Array
+      mouseUniform[0] = mousePos.current.x
+      mouseUniform[1] = mousePos.current.y
+    }
 
     if (mouseInteractive) {
-      containerRef.current.addEventListener('mousemove', handleMouseMove);
+      containerRef.current.addEventListener('mousemove', handleMouseMove)
     }
 
     const setSize = () => {
-      const rect = containerRef.current!.getBoundingClientRect();
-      const width = Math.max(1, Math.floor(rect.width));
-      const height = Math.max(1, Math.floor(rect.height));
-      renderer.setSize(width, height);
-      const res = program.uniforms.iResolution.value as Float32Array;
-      res[0] = gl.drawingBufferWidth;
-      res[1] = gl.drawingBufferHeight;
-    };
+      const rect = containerRef.current!.getBoundingClientRect()
+      const width = Math.max(1, Math.floor(rect.width))
+      const height = Math.max(1, Math.floor(rect.height))
+      renderer.setSize(width, height)
+      const res = program.uniforms.iResolution.value as Float32Array
+      res[0] = gl.drawingBufferWidth
+      res[1] = gl.drawingBufferHeight
+    }
 
-    const ro = new ResizeObserver(setSize);
-    ro.observe(containerRef.current);
-    setSize();
+    const ro = new ResizeObserver(setSize)
+    ro.observe(containerRef.current)
+    setSize()
 
-    let raf = 0;
-    let frameCount = 0;
-    let currentScale = -1;
-    const t0 = performance.now();
+    let raf = 0
+    let frameCount = 0
+    let currentScale = -1
+    const t0 = performance.now()
     const loop = (t: number) => {
-      raf = requestAnimationFrame(loop);
-      if (qualityRef?.current && !qualityRef.current.shouldRender) return;
-      if (reportFrameFn) reportFrameFn();
-      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
+      raf = requestAnimationFrame(loop)
+      if (qualityRef?.current && !qualityRef.current.shouldRender) return
+      if (reportFrameFn) reportFrameFn()
+      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return
       if (qualityRef?.current) {
-        const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap;
+        const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap
         if (scale !== currentScale) {
-          currentScale = scale;
-          const rect = containerRef.current!.getBoundingClientRect();
-          const w = Math.max(1, Math.floor(rect.width * scale));
-          const h = Math.max(1, Math.floor(rect.height * scale));
-          renderer.setSize(w, h);
+          currentScale = scale
+          const rect = containerRef.current!.getBoundingClientRect()
+          const w = Math.max(1, Math.floor(rect.width * scale))
+          const h = Math.max(1, Math.floor(rect.height * scale))
+          renderer.setSize(w, h)
           // OGL setSize also sets canvas CSS dimensions — force back to 100% so
           // low-res content stretches to fill container (CSS upscaling, not shrinking)
-          const c = renderer.gl.canvas as HTMLCanvasElement;
-          c.style.width = '100%';
-          c.style.height = '100%';
-          const res = program.uniforms.iResolution.value as Float32Array;
-          res[0] = gl.drawingBufferWidth;
-          res[1] = gl.drawingBufferHeight;
+          const c = renderer.gl.canvas as HTMLCanvasElement
+          c.style.width = '100%'
+          c.style.height = '100%'
+          const res = program.uniforms.iResolution.value as Float32Array
+          res[0] = gl.drawingBufferWidth
+          res[1] = gl.drawingBufferHeight
         }
       }
-      let timeValue = (t - t0) * 0.001;
+      const timeValue = (t - t0) * 0.001
       if (direction === 'pingpong') {
-        const pingpongDuration = 10;
-        const segmentTime = timeValue % pingpongDuration;
-        const isForward = Math.floor(timeValue / pingpongDuration) % 2 === 0;
-        const u = segmentTime / pingpongDuration;
-        const smooth = u * u * (3 - 2 * u);
-        const pingpongTime = isForward ? smooth * pingpongDuration : (1 - smooth) * pingpongDuration;
-        (program.uniforms.uDirection as any).value = 1.0;
-        (program.uniforms.iTime as any).value = pingpongTime;
+        const pingpongDuration = 10
+        const segmentTime = timeValue % pingpongDuration
+        const isForward = Math.floor(timeValue / pingpongDuration) % 2 === 0
+        const u = segmentTime / pingpongDuration
+        const smooth = u * u * (3 - 2 * u)
+        const pingpongTime = isForward ? smooth * pingpongDuration : (1 - smooth) * pingpongDuration
+        ;(program.uniforms.uDirection as any).value = 1.0
+        ;(program.uniforms.iTime as any).value = pingpongTime
       } else {
-        (program.uniforms.iTime as any).value = timeValue;
+        ;(program.uniforms.iTime as any).value = timeValue
       }
-      renderer.render({ scene: mesh });
-    };
-    raf = requestAnimationFrame(loop);
+      renderer.render({ scene: mesh })
+    }
+    raf = requestAnimationFrame(loop)
 
     return () => {
-      cancelAnimationFrame(raf);
-      ro.disconnect();
+      cancelAnimationFrame(raf)
+      ro.disconnect()
       if (mouseInteractive && containerRef.current) {
-        containerRef.current.removeEventListener('mousemove', handleMouseMove);
+        containerRef.current.removeEventListener('mousemove', handleMouseMove)
       }
       try {
-        containerRef.current?.removeChild(canvas);
+        containerRef.current?.removeChild(canvas)
       } catch {}
-    };
-  }, [color, speed, direction, scale, opacity, mouseInteractive, isDark]);
+    }
+  }, [color, speed, direction, scale, opacity, mouseInteractive, isDark])
 
-  return <div ref={containerRef} className="w-full h-full relative overflow-hidden" />;
-};
+  return <div ref={containerRef} className="w-full h-full relative overflow-hidden" />
+}
 
-export default Plasma;
+export default Plasma

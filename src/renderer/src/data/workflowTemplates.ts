@@ -97,7 +97,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         label: 'Client Name',
         type: 'text',
         required: true,
-        placeholder: 'Acme Corp'
+        placeholder: 'Acme Corp',
       },
       {
         name: 'projectType',
@@ -105,21 +105,21 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         type: 'select',
         required: true,
         default: 'Web Development',
-        options: ['Web Development', 'Mobile App', 'Design', 'Consulting', 'Other']
+        options: ['Web Development', 'Mobile App', 'Design', 'Consulting', 'Other'],
       },
       {
         name: 'budget',
         label: 'Budget',
         type: 'text',
         required: false,
-        placeholder: '$15,000'
+        placeholder: '$15,000',
       },
       {
         name: 'deadline',
         label: 'Deadline',
         type: 'date',
-        required: false
-      }
+        required: false,
+      },
     ],
     nodes: [
       {
@@ -129,8 +129,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         data: {
           title: '{{clientName}} - {{projectType}}',
           description: 'Client project for {{clientName}}',
-          tags: ['client', '{{clientName}}']
-        }
+          tags: ['client', '{{clientName}}'],
+        },
       },
       {
         tempId: 'note-brief',
@@ -138,8 +138,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 50, y: 80 },
         data: {
           title: 'Client Brief',
-          content: '# {{clientName}} Project Brief\n\n**Type:** {{projectType}}\n**Budget:** {{budget}}\n**Deadline:** {{deadline}}\n\n## Requirements\n\n- \n\n## Deliverables\n\n- '
-        }
+          content:
+            '# {{clientName}} Project Brief\n\n**Type:** {{projectType}}\n**Budget:** {{budget}}\n**Deadline:** {{deadline}}\n\n## Requirements\n\n- \n\n## Deliverables\n\n- ',
+        },
       },
       {
         tempId: 'note-contract',
@@ -147,8 +148,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 350, y: 80 },
         data: {
           title: 'Contract & SOW',
-          content: '# Contract\n\n**Client:** {{clientName}}\n**Budget:** {{budget}}\n**Timeline:** TBD to {{deadline}}\n\n## Scope of Work\n\n- \n\n## Payment Terms\n\n- '
-        }
+          content:
+            '# Contract\n\n**Client:** {{clientName}}\n**Budget:** {{budget}}\n**Timeline:** TBD to {{deadline}}\n\n## Scope of Work\n\n- \n\n## Payment Terms\n\n- ',
+        },
       },
       {
         tempId: 'project-discovery',
@@ -156,8 +158,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 50, y: 250 },
         data: {
           title: 'Discovery Phase',
-          description: 'Research and requirements gathering'
-        }
+          description: 'Research and requirements gathering',
+        },
       },
       {
         tempId: 'project-design',
@@ -165,8 +167,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 350, y: 250 },
         data: {
           title: 'Design Phase',
-          description: 'Design and prototyping'
-        }
+          description: 'Design and prototyping',
+        },
       },
       {
         tempId: 'project-dev',
@@ -174,8 +176,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 650, y: 250 },
         data: {
           title: 'Development Phase',
-          description: 'Implementation and testing'
-        }
+          description: 'Implementation and testing',
+        },
       },
       {
         tempId: 'conv-client',
@@ -183,8 +185,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 50, y: 420 },
         data: {
           title: 'Client Communications',
-          systemPrompt: 'You are helping manage communications with {{clientName}} for a {{projectType}} project. Help draft professional emails, meeting notes, and status updates.'
-        }
+          systemPrompt:
+            'You are helping manage communications with {{clientName}} for a {{projectType}} project. Help draft professional emails, meeting notes, and status updates.',
+        },
       },
       {
         tempId: 'task-kickoff',
@@ -193,8 +196,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         data: {
           title: 'Kickoff Meeting',
           status: 'pending',
-          description: 'Initial meeting with {{clientName}} to discuss requirements'
-        }
+          description: 'Initial meeting with {{clientName}} to discuss requirements',
+        },
       },
       {
         tempId: 'task-discovery',
@@ -203,16 +206,16 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         data: {
           title: 'Complete Discovery',
           status: 'pending',
-          description: 'Finish requirements gathering and documentation'
-        }
-      }
+          description: 'Finish requirements gathering and documentation',
+        },
+      },
     ],
     edges: [
       { sourceTempId: 'note-brief', targetTempId: 'conv-client' },
-      { sourceTempId: 'note-contract', targetTempId: 'conv-client' }
+      { sourceTempId: 'note-contract', targetTempId: 'conv-client' },
     ],
     tags: ['client', 'project', 'management'],
-    builtIn: true
+    builtIn: true,
   },
 
   // ---------------------------------------------------------------------------
@@ -230,15 +233,15 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         label: 'Feature Name',
         type: 'text',
         required: true,
-        placeholder: 'User Authentication'
+        placeholder: 'User Authentication',
       },
       {
         name: 'techStack',
         label: 'Tech Stack',
         type: 'text',
         required: false,
-        placeholder: 'React, Node.js, PostgreSQL'
-      }
+        placeholder: 'React, Node.js, PostgreSQL',
+      },
     ],
     nodes: [
       {
@@ -247,8 +250,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 0, y: 0 },
         data: {
           title: '{{featureName}}',
-          description: 'Feature implementation for {{featureName}}'
-        }
+          description: 'Feature implementation for {{featureName}}',
+        },
       },
       {
         tempId: 'note-spec',
@@ -256,8 +259,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 50, y: 80 },
         data: {
           title: 'Feature Spec',
-          content: '# {{featureName}} Specification\n\n## Overview\n\n\n\n## Requirements\n\n### Functional\n- \n\n### Non-functional\n- \n\n## Technical Approach\n\nTech Stack: {{techStack}}\n\n## Acceptance Criteria\n\n- '
-        }
+          content:
+            '# {{featureName}} Specification\n\n## Overview\n\n\n\n## Requirements\n\n### Functional\n- \n\n### Non-functional\n- \n\n## Technical Approach\n\nTech Stack: {{techStack}}\n\n## Acceptance Criteria\n\n- ',
+        },
       },
       {
         tempId: 'note-tech',
@@ -265,8 +269,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 350, y: 80 },
         data: {
           title: 'Technical Notes',
-          content: '# Technical Implementation Notes\n\n## Architecture\n\n\n\n## Dependencies\n\n\n\n## Edge Cases\n\n- '
-        }
+          content:
+            '# Technical Implementation Notes\n\n## Architecture\n\n\n\n## Dependencies\n\n\n\n## Edge Cases\n\n- ',
+        },
       },
       {
         tempId: 'conv-architect',
@@ -274,8 +279,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 50, y: 300 },
         data: {
           title: 'Architecture Discussion',
-          systemPrompt: 'You are a senior software architect helping design {{featureName}}. The tech stack is {{techStack}}. Focus on scalability, maintainability, and best practices.'
-        }
+          systemPrompt:
+            'You are a senior software architect helping design {{featureName}}. The tech stack is {{techStack}}. Focus on scalability, maintainability, and best practices.',
+        },
       },
       {
         tempId: 'conv-code',
@@ -283,8 +289,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 350, y: 300 },
         data: {
           title: 'Code Review',
-          systemPrompt: 'You are a code reviewer for {{featureName}}. Review code for bugs, security issues, performance, and adherence to best practices. Tech stack: {{techStack}}.'
-        }
+          systemPrompt:
+            'You are a code reviewer for {{featureName}}. Review code for bugs, security issues, performance, and adherence to best practices. Tech stack: {{techStack}}.',
+        },
       },
       {
         tempId: 'task-design',
@@ -293,8 +300,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         data: {
           title: 'Design architecture',
           status: 'pending',
-          description: 'Design the technical architecture for {{featureName}}'
-        }
+          description: 'Design the technical architecture for {{featureName}}',
+        },
       },
       {
         tempId: 'task-implement',
@@ -303,8 +310,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         data: {
           title: 'Implement core logic',
           status: 'pending',
-          description: 'Implement the core functionality'
-        }
+          description: 'Implement the core functionality',
+        },
       },
       {
         tempId: 'task-test',
@@ -313,17 +320,17 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         data: {
           title: 'Write tests',
           status: 'pending',
-          description: 'Create unit and integration tests'
-        }
-      }
+          description: 'Create unit and integration tests',
+        },
+      },
     ],
     edges: [
       { sourceTempId: 'note-spec', targetTempId: 'conv-architect' },
       { sourceTempId: 'note-tech', targetTempId: 'conv-architect' },
-      { sourceTempId: 'note-spec', targetTempId: 'conv-code' }
+      { sourceTempId: 'note-spec', targetTempId: 'conv-code' },
     ],
     tags: ['development', 'feature', 'coding'],
-    builtIn: true
+    builtIn: true,
   },
 
   // ---------------------------------------------------------------------------
@@ -341,14 +348,14 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         label: 'Research Topic',
         type: 'text',
         required: true,
-        placeholder: 'Impact of AI on creative workflows'
+        placeholder: 'Impact of AI on creative workflows',
       },
       {
         name: 'deadline',
         label: 'Deadline',
         type: 'date',
-        required: false
-      }
+        required: false,
+      },
     ],
     nodes: [
       {
@@ -357,8 +364,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 0, y: 0 },
         data: {
           title: 'Research: {{topic}}',
-          description: 'Research project on {{topic}}'
-        }
+          description: 'Research project on {{topic}}',
+        },
       },
       {
         tempId: 'note-question',
@@ -366,8 +373,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 50, y: 80 },
         data: {
           title: 'Research Questions',
-          content: '# Research Questions\n\n## Primary Question\n\n{{topic}}\n\n## Sub-questions\n\n1. \n2. \n3. \n\n## Methodology\n\n\n\n## Scope & Limitations\n\n- '
-        }
+          content:
+            '# Research Questions\n\n## Primary Question\n\n{{topic}}\n\n## Sub-questions\n\n1. \n2. \n3. \n\n## Methodology\n\n\n\n## Scope & Limitations\n\n- ',
+        },
       },
       {
         tempId: 'project-lit-review',
@@ -375,8 +383,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 350, y: 80 },
         data: {
           title: 'Literature Review',
-          description: 'Sources and readings'
-        }
+          description: 'Sources and readings',
+        },
       },
       {
         tempId: 'note-findings',
@@ -384,8 +392,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 50, y: 280 },
         data: {
           title: 'Key Findings',
-          content: '# Key Findings\n\n## Theme 1\n\n\n\n## Theme 2\n\n\n\n## Patterns & Connections\n\n- '
-        }
+          content:
+            '# Key Findings\n\n## Theme 1\n\n\n\n## Theme 2\n\n\n\n## Patterns & Connections\n\n- ',
+        },
       },
       {
         tempId: 'conv-analysis',
@@ -393,8 +402,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 350, y: 280 },
         data: {
           title: 'Research Analysis',
-          systemPrompt: 'You are a research assistant helping analyze findings on {{topic}}. Help synthesize information, identify patterns, and suggest further areas to explore.'
-        }
+          systemPrompt:
+            'You are a research assistant helping analyze findings on {{topic}}. Help synthesize information, identify patterns, and suggest further areas to explore.',
+        },
       },
       {
         tempId: 'note-synthesis',
@@ -402,17 +412,18 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 650, y: 280 },
         data: {
           title: 'Synthesis & Conclusions',
-          content: '# Synthesis\n\n## Summary\n\n\n\n## Conclusions\n\n\n\n## Future Research\n\n- '
-        }
-      }
+          content:
+            '# Synthesis\n\n## Summary\n\n\n\n## Conclusions\n\n\n\n## Future Research\n\n- ',
+        },
+      },
     ],
     edges: [
       { sourceTempId: 'note-question', targetTempId: 'conv-analysis' },
       { sourceTempId: 'note-findings', targetTempId: 'conv-analysis' },
-      { sourceTempId: 'conv-analysis', targetTempId: 'note-synthesis', label: 'synthesize' }
+      { sourceTempId: 'conv-analysis', targetTempId: 'note-synthesis', label: 'synthesize' },
     ],
     tags: ['research', 'academic', 'analysis'],
-    builtIn: true
+    builtIn: true,
   },
 
   // ---------------------------------------------------------------------------
@@ -430,21 +441,21 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         label: 'Campaign Name',
         type: 'text',
         required: true,
-        placeholder: 'Summer Product Launch'
+        placeholder: 'Summer Product Launch',
       },
       {
         name: 'targetAudience',
         label: 'Target Audience',
         type: 'text',
         required: false,
-        placeholder: 'Tech professionals aged 25-40'
+        placeholder: 'Tech professionals aged 25-40',
       },
       {
         name: 'startDate',
         label: 'Start Date',
         type: 'date',
-        required: false
-      }
+        required: false,
+      },
     ],
     nodes: [
       {
@@ -453,8 +464,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 0, y: 0 },
         data: {
           title: '{{campaignName}}',
-          description: 'Content campaign: {{campaignName}}'
-        }
+          description: 'Content campaign: {{campaignName}}',
+        },
       },
       {
         tempId: 'note-strategy',
@@ -462,8 +473,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 50, y: 80 },
         data: {
           title: 'Campaign Strategy',
-          content: '# {{campaignName}} Strategy\n\n## Objective\n\n\n\n## Target Audience\n\n{{targetAudience}}\n\n## Key Messages\n\n1. \n2. \n3. \n\n## Channels\n\n- \n\n## Timeline\n\nStart: {{startDate}}'
-        }
+          content:
+            '# {{campaignName}} Strategy\n\n## Objective\n\n\n\n## Target Audience\n\n{{targetAudience}}\n\n## Key Messages\n\n1. \n2. \n3. \n\n## Channels\n\n- \n\n## Timeline\n\nStart: {{startDate}}',
+        },
       },
       {
         tempId: 'project-content',
@@ -471,8 +483,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 350, y: 80 },
         data: {
           title: 'Content Assets',
-          description: 'All content pieces for the campaign'
-        }
+          description: 'All content pieces for the campaign',
+        },
       },
       {
         tempId: 'conv-writer',
@@ -480,8 +492,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 50, y: 300 },
         data: {
           title: 'Content Writer',
-          systemPrompt: 'You are a content writer for {{campaignName}}. Target audience: {{targetAudience}}. Write engaging, on-brand content that resonates with the audience.'
-        }
+          systemPrompt:
+            'You are a content writer for {{campaignName}}. Target audience: {{targetAudience}}. Write engaging, on-brand content that resonates with the audience.',
+        },
       },
       {
         tempId: 'note-calendar',
@@ -489,8 +502,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 350, y: 300 },
         data: {
           title: 'Content Calendar',
-          content: '# Content Calendar\n\n## Week 1 ({{startDate}})\n\n| Day | Platform | Content | Status |\n|-----|----------|---------|--------|\n| Mon | | | Planned |\n| Wed | | | Planned |\n| Fri | | | Planned |\n\n## Week 2\n\n- '
-        }
+          content:
+            '# Content Calendar\n\n## Week 1 ({{startDate}})\n\n| Day | Platform | Content | Status |\n|-----|----------|---------|--------|\n| Mon | | | Planned |\n| Wed | | | Planned |\n| Fri | | | Planned |\n\n## Week 2\n\n- ',
+        },
       },
       {
         tempId: 'task-brief',
@@ -499,8 +513,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         data: {
           title: 'Finalize creative brief',
           status: 'pending',
-          description: 'Complete the campaign strategy and creative direction'
-        }
+          description: 'Complete the campaign strategy and creative direction',
+        },
       },
       {
         tempId: 'task-content',
@@ -509,15 +523,13 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         data: {
           title: 'Create content assets',
           status: 'pending',
-          description: 'Produce all content pieces'
-        }
-      }
+          description: 'Produce all content pieces',
+        },
+      },
     ],
-    edges: [
-      { sourceTempId: 'note-strategy', targetTempId: 'conv-writer' }
-    ],
+    edges: [{ sourceTempId: 'note-strategy', targetTempId: 'conv-writer' }],
     tags: ['marketing', 'content', 'campaign'],
-    builtIn: true
+    builtIn: true,
   },
 
   // ---------------------------------------------------------------------------
@@ -535,14 +547,14 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         label: 'Goal',
         type: 'text',
         required: true,
-        placeholder: 'Learn a new programming language'
+        placeholder: 'Learn a new programming language',
       },
       {
         name: 'targetDate',
         label: 'Target Date',
         type: 'date',
-        required: false
-      }
+        required: false,
+      },
     ],
     nodes: [
       {
@@ -551,8 +563,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 0, y: 0 },
         data: {
           title: 'Goal: {{goalName}}',
-          description: 'Tracking progress towards {{goalName}}'
-        }
+          description: 'Tracking progress towards {{goalName}}',
+        },
       },
       {
         tempId: 'note-plan',
@@ -560,8 +572,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 50, y: 80 },
         data: {
           title: 'Goal Plan',
-          content: '# {{goalName}}\n\n## Why This Goal?\n\n\n\n## Success Criteria\n\n- \n\n## Target Date\n\n{{targetDate}}\n\n## Potential Obstacles\n\n- \n\n## Resources Needed\n\n- '
-        }
+          content:
+            '# {{goalName}}\n\n## Why This Goal?\n\n\n\n## Success Criteria\n\n- \n\n## Target Date\n\n{{targetDate}}\n\n## Potential Obstacles\n\n- \n\n## Resources Needed\n\n- ',
+        },
       },
       {
         tempId: 'project-milestones',
@@ -569,8 +582,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 350, y: 80 },
         data: {
           title: 'Milestones',
-          description: 'Key checkpoints'
-        }
+          description: 'Key checkpoints',
+        },
       },
       {
         tempId: 'task-m1',
@@ -579,8 +592,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         data: {
           title: 'Milestone 1',
           status: 'pending',
-          description: 'First major checkpoint'
-        }
+          description: 'First major checkpoint',
+        },
       },
       {
         tempId: 'task-m2',
@@ -589,8 +602,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         data: {
           title: 'Milestone 2',
           status: 'pending',
-          description: 'Second major checkpoint'
-        }
+          description: 'Second major checkpoint',
+        },
       },
       {
         tempId: 'conv-coach',
@@ -598,8 +611,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 50, y: 300 },
         data: {
           title: 'Goal Coach',
-          systemPrompt: 'You are a supportive coach helping track progress on {{goalName}}. Help break down the goal into actionable steps, provide encouragement, and suggest strategies for overcoming obstacles.'
-        }
+          systemPrompt:
+            'You are a supportive coach helping track progress on {{goalName}}. Help break down the goal into actionable steps, provide encouragement, and suggest strategies for overcoming obstacles.',
+        },
       },
       {
         tempId: 'note-progress',
@@ -607,16 +621,17 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 350, y: 300 },
         data: {
           title: 'Progress Log',
-          content: '# Progress Log\n\n## Week 1\n\n**Date:** \n**Progress:** \n**Reflections:** \n\n---\n\n## Week 2\n\n- '
-        }
-      }
+          content:
+            '# Progress Log\n\n## Week 1\n\n**Date:** \n**Progress:** \n**Reflections:** \n\n---\n\n## Week 2\n\n- ',
+        },
+      },
     ],
     edges: [
       { sourceTempId: 'note-plan', targetTempId: 'conv-coach' },
-      { sourceTempId: 'note-progress', targetTempId: 'conv-coach' }
+      { sourceTempId: 'note-progress', targetTempId: 'conv-coach' },
     ],
     tags: ['personal', 'goals', 'productivity'],
-    builtIn: true
+    builtIn: true,
   },
 
   // ---------------------------------------------------------------------------
@@ -634,8 +649,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         label: 'Project Name',
         type: 'text',
         required: true,
-        placeholder: 'My Project'
-      }
+        placeholder: 'My Project',
+      },
     ],
     nodes: [
       {
@@ -644,13 +659,13 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 0, y: 0 },
         data: {
           title: '{{projectName}}',
-          description: ''
-        }
-      }
+          description: '',
+        },
+      },
     ],
     edges: [],
     tags: ['simple', 'blank', 'quick'],
-    builtIn: true
+    builtIn: true,
   },
 
   {
@@ -665,8 +680,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         label: 'Topic',
         type: 'text',
         required: true,
-        placeholder: 'API Design'
-      }
+        placeholder: 'API Design',
+      },
     ],
     nodes: [
       {
@@ -675,8 +690,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 200, y: 0 },
         data: {
           title: 'Shared Context',
-          content: '# Context for {{topic}}\n\n## Overview\n\n\n\n## Key Requirements\n\n- \n\n## Constraints\n\n- '
-        }
+          content:
+            '# Context for {{topic}}\n\n## Overview\n\n\n\n## Key Requirements\n\n- \n\n## Constraints\n\n- ',
+        },
       },
       {
         tempId: 'conv-expert',
@@ -684,8 +700,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 0, y: 150 },
         data: {
           title: 'Expert Advisor',
-          systemPrompt: 'You are a senior expert on {{topic}}. Provide deep technical insights, best practices, and industry knowledge.'
-        }
+          systemPrompt:
+            'You are a senior expert on {{topic}}. Provide deep technical insights, best practices, and industry knowledge.',
+        },
       },
       {
         tempId: 'conv-critic',
@@ -693,8 +710,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 250, y: 150 },
         data: {
           title: 'Critical Reviewer',
-          systemPrompt: 'You are a critical reviewer for {{topic}}. Challenge assumptions, identify weaknesses, and suggest improvements.'
-        }
+          systemPrompt:
+            'You are a critical reviewer for {{topic}}. Challenge assumptions, identify weaknesses, and suggest improvements.',
+        },
       },
       {
         tempId: 'conv-brainstorm',
@@ -702,8 +720,9 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 500, y: 150 },
         data: {
           title: 'Brainstorm Partner',
-          systemPrompt: 'You are a creative brainstorming partner for {{topic}}. Generate ideas, explore alternatives, and think outside the box.'
-        }
+          systemPrompt:
+            'You are a creative brainstorming partner for {{topic}}. Generate ideas, explore alternatives, and think outside the box.',
+        },
       },
       {
         tempId: 'note-synthesis',
@@ -711,18 +730,19 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         relativePosition: { x: 200, y: 350 },
         data: {
           title: 'Synthesis',
-          content: '# Synthesis\n\n## Key Insights\n\n- \n\n## Decisions Made\n\n- \n\n## Next Steps\n\n- '
-        }
-      }
+          content:
+            '# Synthesis\n\n## Key Insights\n\n- \n\n## Decisions Made\n\n- \n\n## Next Steps\n\n- ',
+        },
+      },
     ],
     edges: [
       { sourceTempId: 'note-context', targetTempId: 'conv-expert' },
       { sourceTempId: 'note-context', targetTempId: 'conv-critic' },
-      { sourceTempId: 'note-context', targetTempId: 'conv-brainstorm' }
+      { sourceTempId: 'note-context', targetTempId: 'conv-brainstorm' },
     ],
     tags: ['ai', 'conversation', 'collaboration'],
-    builtIn: true
-  }
+    builtIn: true,
+  },
 ]
 
 // -----------------------------------------------------------------------------
@@ -733,7 +753,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
  * Get templates by category
  */
 export function getTemplatesByCategory(category: TemplateCategory): WorkflowTemplate[] {
-  return WORKFLOW_TEMPLATES.filter(t => t.category === category)
+  return WORKFLOW_TEMPLATES.filter((t) => t.category === category)
 }
 
 /**
@@ -741,10 +761,11 @@ export function getTemplatesByCategory(category: TemplateCategory): WorkflowTemp
  */
 export function searchTemplates(query: string): WorkflowTemplate[] {
   const lowerQuery = query.toLowerCase()
-  return WORKFLOW_TEMPLATES.filter(t =>
-    t.name.toLowerCase().includes(lowerQuery) ||
-    t.description.toLowerCase().includes(lowerQuery) ||
-    t.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
+  return WORKFLOW_TEMPLATES.filter(
+    (t) =>
+      t.name.toLowerCase().includes(lowerQuery) ||
+      t.description.toLowerCase().includes(lowerQuery) ||
+      t.tags.some((tag) => tag.toLowerCase().includes(lowerQuery)),
   )
 }
 
@@ -753,7 +774,7 @@ export function searchTemplates(query: string): WorkflowTemplate[] {
  */
 export function interpolateVariables(
   text: string,
-  variables: Record<string, string | number | undefined>
+  variables: Record<string, string | number | undefined>,
 ): string {
   return text.replace(/\{\{(\w+)\}\}/g, (match, varName) => {
     const value = variables[varName]
@@ -767,7 +788,7 @@ export function interpolateVariables(
 export function applyTemplate(
   template: WorkflowTemplate,
   variables: Record<string, string | number | undefined>,
-  originPosition: { x: number; y: number }
+  originPosition: { x: number; y: number },
 ): {
   nodes: Array<{
     tempId: string
@@ -782,15 +803,15 @@ export function applyTemplate(
   }>
 } {
   // Interpolate variables in node data
-  const nodes = template.nodes.map(node => {
+  const nodes = template.nodes.map((node) => {
     const interpolatedData: Record<string, unknown> = {}
 
     for (const [key, value] of Object.entries(node.data)) {
       if (typeof value === 'string') {
         interpolatedData[key] = interpolateVariables(value, variables)
       } else if (Array.isArray(value)) {
-        interpolatedData[key] = value.map(v =>
-          typeof v === 'string' ? interpolateVariables(v, variables) : v
+        interpolatedData[key] = value.map((v) =>
+          typeof v === 'string' ? interpolateVariables(v, variables) : v,
         )
       } else {
         interpolatedData[key] = value
@@ -802,17 +823,17 @@ export function applyTemplate(
       type: node.type,
       position: {
         x: originPosition.x + node.relativePosition.x,
-        y: originPosition.y + node.relativePosition.y
+        y: originPosition.y + node.relativePosition.y,
       },
-      data: interpolatedData
+      data: interpolatedData,
     }
   })
 
   // Copy edges (labels may also have variables)
-  const edges = template.edges.map(edge => ({
+  const edges = template.edges.map((edge) => ({
     sourceTempId: edge.sourceTempId,
     targetTempId: edge.targetTempId,
-    label: edge.label ? interpolateVariables(edge.label, variables) : undefined
+    label: edge.label ? interpolateVariables(edge.label, variables) : undefined,
   }))
 
   return { nodes, edges }
@@ -822,7 +843,7 @@ export function applyTemplate(
  * Get all unique categories
  */
 export function getCategories(): TemplateCategory[] {
-  const categories = new Set(WORKFLOW_TEMPLATES.map(t => t.category))
+  const categories = new Set(WORKFLOW_TEMPLATES.map((t) => t.category))
   return Array.from(categories)
 }
 
@@ -831,12 +852,12 @@ export function getCategories(): TemplateCategory[] {
  */
 export const CATEGORY_LABELS: Record<TemplateCategory, string> = {
   'project-management': 'Project Management',
-  'development': 'Development',
-  'research': 'Research',
-  'creative': 'Creative',
-  'business': 'Business',
-  'personal': 'Personal',
-  'custom': 'Custom'
+  development: 'Development',
+  research: 'Research',
+  creative: 'Creative',
+  business: 'Business',
+  personal: 'Personal',
+  custom: 'Custom',
 }
 
 export default WORKFLOW_TEMPLATES

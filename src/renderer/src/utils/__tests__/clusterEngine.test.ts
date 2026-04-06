@@ -1,18 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+import type { Cluster, EdgeInfo, NodePosition } from '../clusterEngine'
 import { computeClusters } from '../clusterEngine'
-import type { NodePosition, EdgeInfo, Cluster } from '../clusterEngine'
 
 // Helper: create a node at given position
-function makeNode(
-  id: string,
-  x: number,
-  y: number,
-  type = 'note',
-  status?: string
-): NodePosition {
+function makeNode(id: string, x: number, y: number, type = 'note', status?: string): NodePosition {
   return { id, x, y, type, status }
 }
 
@@ -66,7 +60,7 @@ describe('clusterEngine', () => {
         // Group C: around (0, 2000) — 3 nodes
         makeNode('c1', 10, 2010, 'artifact'),
         makeNode('c2', 50, 2050, 'artifact'),
-        makeNode('c3', 80, 2030, 'note')
+        makeNode('c3', 80, 2030, 'note'),
       ]
       const result = computeClusters(nodes, [], 400)
 
@@ -99,7 +93,7 @@ describe('clusterEngine', () => {
         makeNode('n2', 200, 200),
         makeNode('n3', 450, 100),
         makeNode('n4', 500, 200),
-        makeNode('n5', 600, 150)
+        makeNode('n5', 600, 150),
       ]
 
       // Without edges: 2 candidate cells → 2 clusters (before PFD)
@@ -134,7 +128,7 @@ describe('clusterEngine', () => {
         makeNode('a3', 200, 120, 'note'),
         makeNode('b1', 2000, 2000, 'task'),
         makeNode('b2', 2050, 2050, 'task'),
-        makeNode('b3', 2100, 2020, 'task')
+        makeNode('b3', 2100, 2020, 'task'),
       ]
       // Full connectivity within each group so edge-merge catches boundary straddles
       const edges = [
@@ -143,7 +137,7 @@ describe('clusterEngine', () => {
         makeEdge('a1', 'a3'),
         makeEdge('b1', 'b2'),
         makeEdge('b2', 'b3'),
-        makeEdge('b1', 'b3')
+        makeEdge('b1', 'b3'),
       ]
 
       // Original
@@ -153,7 +147,7 @@ describe('clusterEngine', () => {
       const translatedNodes = baseNodes.map((n) => ({
         ...n,
         x: n.x + 200,
-        y: n.y + 200
+        y: n.y + 200,
       }))
       const result2 = computeClusters(translatedNodes, edges, 400)
 
@@ -163,7 +157,7 @@ describe('clusterEngine', () => {
       // Same node groupings (same nodes in same clusters)
       for (const cluster1 of result1) {
         const corresponding = result2.find((c2) =>
-          cluster1.nodeIds.some((id) => c2.nodeIds.includes(id))
+          cluster1.nodeIds.some((id) => c2.nodeIds.includes(id)),
         )
         expect(corresponding).toBeDefined()
         expect(corresponding!.nodeIds.sort()).toEqual(cluster1.nodeIds.sort())
@@ -208,7 +202,7 @@ describe('clusterEngine', () => {
       const nodes = [
         makeNode('n1', 10, 10, 'task', 'done'),
         makeNode('n2', 50, 50, 'task', 'in-progress'),
-        makeNode('n3', 80, 30, 'note', 'blocked')
+        makeNode('n3', 80, 30, 'note', 'blocked'),
       ]
       const result = computeClusters(nodes, [], 400)
 
@@ -223,12 +217,12 @@ describe('clusterEngine', () => {
       expect(cluster.summary.nodeCount).toBe(3)
       expect(cluster.summary.typeCounts).toEqual({
         task: 2,
-        note: 1
+        note: 1,
       })
       expect(cluster.summary.statusCounts).toEqual({
         done: 1,
         'in-progress': 1,
-        blocked: 1
+        blocked: 1,
       })
 
       // centroid should be average of positions
@@ -249,19 +243,12 @@ describe('clusterEngine', () => {
       const nodes: NodePosition[] = []
       for (let i = 0; i < 500; i++) {
         nodes.push(
-          makeNode(
-            `n${i}`,
-            Math.floor(i / 10) * 50,
-            (i % 10) * 50,
-            i % 2 === 0 ? 'note' : 'task'
-          )
+          makeNode(`n${i}`, Math.floor(i / 10) * 50, (i % 10) * 50, i % 2 === 0 ? 'note' : 'task'),
         )
       }
       const edges: EdgeInfo[] = []
       for (let i = 0; i < 800; i++) {
-        edges.push(
-          makeEdge(`n${i % 500}`, `n${(i * 7 + 13) % 500}`)
-        )
+        edges.push(makeEdge(`n${i % 500}`, `n${(i * 7 + 13) % 500}`))
       }
 
       const start = performance.now()
@@ -279,7 +266,7 @@ describe('clusterEngine', () => {
         makeNode('n1', 10, 10),
         makeNode('n2', 50, 50),
         makeNode('n3', 5000, 5000),
-        makeNode('n4', 5050, 5050)
+        makeNode('n4', 5050, 5050),
       ]
       const result = computeClusters(nodes, [])
 
@@ -320,7 +307,7 @@ describe('clusterEngine', () => {
         makeNode('n1', -100, -100),
         makeNode('n2', -50, -50),
         makeNode('n3', -3000, -3000),
-        makeNode('n4', -2950, -2950)
+        makeNode('n4', -2950, -2950),
       ]
       const result = computeClusters(nodes, [])
       expect(result).toHaveLength(2)
@@ -339,7 +326,7 @@ describe('clusterEngine', () => {
         makeNode('n1', 10, 10),
         makeNode('n2', 50, 50),
         makeNode('n3', 5000, 5000),
-        makeNode('n4', 5050, 5050)
+        makeNode('n4', 5050, 5050),
       ]
       // Edge connects n1→n3 but cells are not adjacent
       const edges = [makeEdge('n1', 'n3')]

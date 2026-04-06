@@ -11,22 +11,22 @@
  * - Accessibility: role="tablist", tabs have role="tab"
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Mock cn utility
 vi.mock('@/lib/utils', () => ({
-  cn: (...args: unknown[]) => args.filter(Boolean).join(' ')
+  cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
 }))
 
-import { ArtboardTabBar } from '../ArtboardTabBar'
 import type { ArtboardTab } from '../ArtboardTabBar'
+import { ArtboardTabBar } from '../ArtboardTabBar'
 
 const mockTabs: ArtboardTab[] = [
   { id: 'content', label: 'Content' },
   { id: 'properties', label: 'Properties' },
-  { id: 'history', label: 'History' }
+  { id: 'history', label: 'History' },
 ]
 
 describe('ArtboardTabBar', () => {
@@ -43,7 +43,7 @@ describe('ArtboardTabBar', () => {
         activeTabId="content"
         onTabChange={mockOnTabChange}
         nodeColor="#6366f1"
-      />
+      />,
     )
     expect(screen.getByText('Content')).toBeInTheDocument()
     expect(screen.getByText('Properties')).toBeInTheDocument()
@@ -57,7 +57,7 @@ describe('ArtboardTabBar', () => {
         activeTabId="properties"
         onTabChange={mockOnTabChange}
         nodeColor="#6366f1"
-      />
+      />,
     )
     const activeTab = screen.getByText('Properties').closest('button')
     expect(activeTab?.className).toContain('artboard-tab--active')
@@ -73,7 +73,7 @@ describe('ArtboardTabBar', () => {
         activeTabId="content"
         onTabChange={mockOnTabChange}
         nodeColor="#6366f1"
-      />
+      />,
     )
     fireEvent.click(screen.getByText('Properties'))
     expect(mockOnTabChange).toHaveBeenCalledWith('properties')
@@ -86,7 +86,7 @@ describe('ArtboardTabBar', () => {
         activeTabId="content"
         onTabChange={mockOnTabChange}
         nodeColor="#6366f1"
-      />
+      />,
     )
     expect(screen.getByRole('tablist')).toBeInTheDocument()
   })
@@ -98,7 +98,7 @@ describe('ArtboardTabBar', () => {
         activeTabId="content"
         onTabChange={mockOnTabChange}
         nodeColor="#6366f1"
-      />
+      />,
     )
     const tabs = screen.getAllByRole('tab')
     expect(tabs).toHaveLength(3)
@@ -111,7 +111,7 @@ describe('ArtboardTabBar', () => {
         activeTabId="history"
         onTabChange={mockOnTabChange}
         nodeColor="#6366f1"
-      />
+      />,
     )
     const tabs = screen.getAllByRole('tab')
     // Content tab
@@ -125,7 +125,7 @@ describe('ArtboardTabBar', () => {
   it('should render tab icons when provided', () => {
     const tabsWithIcons: ArtboardTab[] = [
       { id: 'content', label: 'Content', icon: <span data-testid="icon-content">C</span> },
-      { id: 'props', label: 'Props' }
+      { id: 'props', label: 'Props' },
     ]
     render(
       <ArtboardTabBar
@@ -133,7 +133,7 @@ describe('ArtboardTabBar', () => {
         activeTabId="content"
         onTabChange={mockOnTabChange}
         nodeColor="#6366f1"
-      />
+      />,
     )
     expect(screen.getByTestId('icon-content')).toBeInTheDocument()
   })

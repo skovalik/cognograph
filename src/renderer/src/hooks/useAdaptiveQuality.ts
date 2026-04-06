@@ -13,21 +13,21 @@
  * Up: >30fps for 3s → step up
  */
 
-import { useRef, useEffect } from 'react'
-import { getGPUTier } from '../utils/gpuDetection'
-import { useWorkspaceStore } from '../stores/workspaceStore'
-import { useUIStore } from '../stores/uiStore'
+import { useEffect, useRef } from 'react'
 import { useCanvasViewportStore } from '../stores/canvasViewportStore'
+import { useUIStore } from '../stores/uiStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
+import { getGPUTier } from '../utils/gpuDetection'
 
 // =============================================================================
 // Types
 // =============================================================================
 
 export interface AdaptiveQualityState {
-  resolutionScale: number    // 0.25 → 1.0
-  frameSkip: boolean         // true = render every other frame
-  shouldRender: boolean      // false when tab hidden
-  dprCap: number             // capped devicePixelRatio
+  resolutionScale: number // 0.25 → 1.0
+  frameSkip: boolean // true = render every other frame
+  shouldRender: boolean // false when tab hidden
+  dprCap: number // capped devicePixelRatio
 }
 
 export type PerformanceModeSetting = 'auto' | 'quality' | 'battery'
@@ -75,12 +75,10 @@ export function useAdaptiveQuality(opts?: {
   const initialScale = useRef(computeInitialScale()).current
 
   // Lock modes
-  const lockedScale = performanceMode === 'quality'
-    ? 1.0
-    : performanceMode === 'battery'
-      ? 0.25
-      : null
-  const lockedFrameSkip = performanceMode === 'battery' ? true : performanceMode === 'quality' ? false : null
+  const lockedScale =
+    performanceMode === 'quality' ? 1.0 : performanceMode === 'battery' ? 0.25 : null
+  const lockedFrameSkip =
+    performanceMode === 'battery' ? true : performanceMode === 'quality' ? false : null
 
   // Quality state ref — stable identity, read from rAF loops
   const qualityRef = useRef<AdaptiveQualityState>({
@@ -105,7 +103,8 @@ export function useAdaptiveQuality(opts?: {
     // Prune >2s old entries
     while (
       frameBufCount.current > 1 &&
-      buf[(frameBufHead.current - frameBufCount.current + FRAME_BUF_SIZE) % FRAME_BUF_SIZE] < now - 2000
+      buf[(frameBufHead.current - frameBufCount.current + FRAME_BUF_SIZE) % FRAME_BUF_SIZE] <
+        now - 2000
     ) {
       frameBufCount.current--
     }
@@ -143,8 +142,11 @@ export function useAdaptiveQuality(opts?: {
     let upSince = 0
     let currentStepIndex = SCALE_STEPS.indexOf(
       SCALE_STEPS.reduce((prev, step) =>
-        Math.abs(step - qualityRef.current.resolutionScale) < Math.abs(prev - qualityRef.current.resolutionScale) ? step : prev
-      )
+        Math.abs(step - qualityRef.current.resolutionScale) <
+        Math.abs(prev - qualityRef.current.resolutionScale)
+          ? step
+          : prev,
+      ),
     )
 
     const interval = setInterval(() => {
@@ -154,7 +156,8 @@ export function useAdaptiveQuality(opts?: {
 
       // Compute FPS from circular buffer
       const newest = frameBuf.current[(frameBufHead.current - 1 + FRAME_BUF_SIZE) % FRAME_BUF_SIZE]
-      const oldest = frameBuf.current[(frameBufHead.current - count + FRAME_BUF_SIZE) % FRAME_BUF_SIZE]
+      const oldest =
+        frameBuf.current[(frameBufHead.current - count + FRAME_BUF_SIZE) % FRAME_BUF_SIZE]
       const elapsed = newest - oldest
       if (elapsed <= 0) return
       const fps = ((count - 1) / elapsed) * 1000

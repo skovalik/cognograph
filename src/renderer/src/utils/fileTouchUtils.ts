@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import type { FileTouchRecord, FileTouchEdgeData, FileConflict } from './fileTouchTypes'
+import type { FileConflict, FileTouchEdgeData, FileTouchRecord } from './fileTouchTypes'
 
 /**
  * Generate visual-only file touch edge data between a session's ConversationNode
@@ -13,7 +13,7 @@ import type { FileTouchRecord, FileTouchEdgeData, FileConflict } from './fileTou
  */
 export function generateFileTouchEdges(
   touchRecords: FileTouchRecord[],
-  artifactNodeMap: Map<string, string> // filePath -> nodeId
+  artifactNodeMap: Map<string, string>, // filePath -> nodeId
 ): Array<{ source: string; target: string; data: FileTouchEdgeData }> {
   const edges: Array<{ source: string; target: string; data: FileTouchEdgeData }> = []
 
@@ -29,8 +29,8 @@ export function generateFileTouchEdges(
         sessionAccentColor: record.accentColor,
         visible: true,
         filePath: record.filePath,
-        sessionId: record.sessionId
-      }
+        sessionId: record.sessionId,
+      },
     })
   }
 
@@ -60,7 +60,7 @@ export function detectFileConflicts(touchRecords: FileTouchRecord[]): FileConfli
       sessions.push({
         sessionId: record.sessionId,
         nodeId: record.nodeId,
-        accentColor: record.accentColor
+        accentColor: record.accentColor,
       })
     }
   }
@@ -92,7 +92,7 @@ export function getFileTouchEdgeStyle(accentColor: string): {
     strokeDasharray: '5,5',
     strokeWidth: 2,
     opacity: 0.7,
-    fill: 'none'
+    fill: 'none',
   }
 }
 

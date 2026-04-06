@@ -12,9 +12,9 @@ export function requestFitView(
   nodeIds: string[],
   padding = 0.3,
   duration = 300,
-  minZoom?: number
+  minZoom?: number,
 ): void {
   layoutEvents.dispatchEvent(
-    new CustomEvent('fitView', { detail: { nodeIds, padding, duration, minZoom } })
+    new CustomEvent('fitView', { detail: { nodeIds, padding, duration, minZoom } }),
   )
 }

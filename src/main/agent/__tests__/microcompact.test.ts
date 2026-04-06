@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
-import { microcompact, type GenericMessage } from '../microcompact'
+import { describe, expect, it } from 'vitest'
+import { type GenericMessage, microcompact } from '../microcompact'
 
 // ---------------------------------------------------------------------------
 // Test Fixtures
@@ -81,10 +81,7 @@ describe('microcompact', () => {
   })
 
   it('returns messages unchanged when fewer than preserveRecent', () => {
-    const messages: GenericMessage[] = [
-      makeUserMessage('Hello'),
-      makeAssistantMessage('Hi there'),
-    ]
+    const messages: GenericMessage[] = [makeUserMessage('Hello'), makeAssistantMessage('Hi there')]
     const result = microcompact(messages, 'anthropic', 10)
     expect(result.messages).toEqual(messages)
     expect(result.removedCount).toBe(0)
@@ -142,7 +139,7 @@ describe('microcompact', () => {
       const content = (firstMsg.content as Array<Record<string, unknown>>)[0]!
       const innerContent = (content.content as Array<Record<string, unknown>>)[0]!
       expect((innerContent.text as string).length).toBeLessThan(bigContent.length)
-      expect((innerContent.text as string)).toContain('[... truncated by microcompact]')
+      expect(innerContent.text as string).toContain('[... truncated by microcompact]')
     })
 
     it('does not truncate tool results under 2KB', () => {
@@ -175,7 +172,7 @@ describe('microcompact', () => {
       const firstMsg = result.messages[0]!
       expect(typeof firstMsg.content).toBe('string')
       expect((firstMsg.content as string).length).toBeLessThan(bigContent.length)
-      expect((firstMsg.content as string)).toContain('[... truncated by microcompact]')
+      expect(firstMsg.content as string).toContain('[... truncated by microcompact]')
     })
 
     it('does not truncate small OpenAI tool results', () => {
@@ -210,7 +207,7 @@ describe('microcompact', () => {
       const fr = parts[0]!.functionResponse as Record<string, unknown>
       expect(typeof fr.response).toBe('string')
       expect((fr.response as string).length).toBeLessThan(bigContent.length)
-      expect((fr.response as string)).toContain('[... truncated by microcompact]')
+      expect(fr.response as string).toContain('[... truncated by microcompact]')
     })
 
     it('does not truncate small Gemini tool results', () => {

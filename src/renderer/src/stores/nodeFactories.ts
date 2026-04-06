@@ -11,34 +11,33 @@
  */
 
 import type {
-  NodeData,
-  ConversationNodeData,
-  ProjectNodeData,
-  NoteNodeData,
-  TaskNodeData,
-  ArtifactNodeData,
+  ActionNodeData,
   ArtifactContentType,
+  ArtifactNodeData,
   ArtifactSource,
-  WorkspaceNodeData,
+  ConversationNodeData,
+  NodeData,
+  NoteNodeData,
+  ProjectNodeData,
+  TaskNodeData,
   TextNodeData,
-  ActionNodeData
+  WorkspaceNodeData,
 } from '@shared/types'
 import {
-  DEFAULT_WORKSPACE_LLM_SETTINGS,
   DEFAULT_WORKSPACE_CONTEXT_RULES,
-  NODE_DEFAULTS
+  DEFAULT_WORKSPACE_LLM_SETTINGS,
+  NODE_DEFAULTS,
 } from '@shared/types'
 
 // Re-export NODE_DEFAULTS as DEFAULT_NODE_DIMENSIONS for backwards compatibility
 export const DEFAULT_NODE_DIMENSIONS = NODE_DEFAULTS
+
 import { createActionData } from '@shared/actionTypes'
 import { createOrchestratorData } from '@shared/types'
 
 // Re-export createActionData for convenience
-export { createActionData }
-
 // Re-export createOrchestratorData for convenience
-export { createOrchestratorData }
+export { createActionData, createOrchestratorData }
 
 /**
  * Create default conversation node data
@@ -49,7 +48,7 @@ export const createConversationData = (): ConversationNodeData => ({
   messages: [],
   provider: 'anthropic',
   createdAt: Date.now(),
-  updatedAt: Date.now()
+  updatedAt: Date.now(),
 })
 
 /**
@@ -63,7 +62,7 @@ export const createProjectData = (color?: string): ProjectNodeData => ({
   childNodeIds: [],
   color: color || '#64748b',
   createdAt: Date.now(),
-  updatedAt: Date.now()
+  updatedAt: Date.now(),
 })
 
 /**
@@ -74,7 +73,7 @@ export const createNoteData = (): NoteNodeData => ({
   title: 'New Note',
   content: '',
   createdAt: Date.now(),
-  updatedAt: Date.now()
+  updatedAt: Date.now(),
 })
 
 /**
@@ -87,7 +86,7 @@ export const createTaskData = (): TaskNodeData => ({
   status: 'todo',
   priority: 'none',
   createdAt: Date.now(),
-  updatedAt: Date.now()
+  updatedAt: Date.now(),
 })
 
 /**
@@ -95,7 +94,7 @@ export const createTaskData = (): TaskNodeData => ({
  */
 export const createArtifactData = (
   contentType: ArtifactContentType = 'text',
-  source: ArtifactSource = { type: 'created', method: 'manual' }
+  source: ArtifactSource = { type: 'created', method: 'manual' },
 ): ArtifactNodeData => ({
   type: 'artifact',
   title: 'New Artifact',
@@ -109,7 +108,7 @@ export const createArtifactData = (
   collapsed: false,
   previewLines: 10,
   createdAt: Date.now(),
-  updatedAt: Date.now()
+  updatedAt: Date.now(),
 })
 
 /**
@@ -129,7 +128,7 @@ export const createWorkspaceData = (): WorkspaceNodeData => ({
   includedNodeIds: [],
   excludedNodeIds: [],
   createdAt: Date.now(),
-  updatedAt: Date.now()
+  updatedAt: Date.now(),
 })
 
 /**
@@ -139,14 +138,16 @@ export const createTextData = (): TextNodeData => ({
   type: 'text',
   content: '',
   createdAt: Date.now(),
-  updatedAt: Date.now()
+  updatedAt: Date.now(),
 })
-
 
 /**
  * Create node data for a given type
  */
-export function createNodeData(type: NodeData['type'], options?: { projectColor?: string }): NodeData {
+export function createNodeData(
+  type: NodeData['type'],
+  options?: { projectColor?: string },
+): NodeData {
   switch (type) {
     case 'conversation':
       return createConversationData()

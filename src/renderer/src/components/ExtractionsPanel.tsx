@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useMemo, useCallback } from 'react'
-import { FileText, CheckSquare, Sparkles, Trash2, Filter, X } from 'lucide-react'
+import type { PendingExtraction } from '@shared/types'
+import { CheckSquare, FileText, Filter, Sparkles, Trash2, X } from 'lucide-react'
+import { memo, useCallback, useMemo } from 'react'
 import { useExtractionStore, useNodesStore } from '../stores'
 import { PendingExtractionCard } from './PendingExtractionCard'
-import type { PendingExtraction } from '@shared/types'
 
 interface ExtractionsPanelProps {
   sidebarWidth?: number
@@ -49,7 +49,7 @@ function ExtractionsPanelComponent({ sidebarWidth = 260 }: ExtractionsPanelProps
       const node = nodes.find((n) => n.id === sourceNodeId)
       return (node?.data.title as string) || 'Unknown'
     },
-    [nodes]
+    [nodes],
   )
 
   const handleClearFilter = useCallback(() => {

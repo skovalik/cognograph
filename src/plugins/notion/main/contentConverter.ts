@@ -50,8 +50,8 @@ interface NotionBlock {
 
 export interface ConversionResult {
   blocks: NotionBlock[]
-  contentHash: string        // SHA-256 of source HTML
-  lossyConversion: boolean   // true if tables/media/iframes were replaced with placeholders
+  contentHash: string // SHA-256 of source HTML
+  lossyConversion: boolean // true if tables/media/iframes were replaced with placeholders
   blockCount: number
 }
 
@@ -153,7 +153,7 @@ export function htmlToNotionBlocks(html: string): ConversionResult {
     blocks,
     contentHash,
     lossyConversion,
-    blockCount: blocks.length
+    blockCount: blocks.length,
   }
 }
 
@@ -165,7 +165,9 @@ export function htmlToNotionBlocks(html: string): ConversionResult {
  * Convert Notion block array back to TipTap-compatible HTML.
  * Unknown block types render as <p>[unsupported block type: {type}]</p>.
  */
-export function notionBlocksToHtml(blocks: Array<{ type: string; [key: string]: any }>): ReverseConversionResult {
+export function notionBlocksToHtml(
+  blocks: Array<{ type: string; [key: string]: any }>,
+): ReverseConversionResult {
   const htmlParts: string[] = []
 
   for (const block of blocks) {
@@ -175,7 +177,7 @@ export function notionBlocksToHtml(blocks: Array<{ type: string; [key: string]: 
   const html = htmlParts.join('\n')
   return {
     html,
-    contentHash: hashContent(html)
+    contentHash: hashContent(html),
   }
 }
 
@@ -235,30 +237,32 @@ function blockToHtml(block: { type: string; [key: string]: any }): string {
 function richTextArrayToHtml(richTexts: NotionRichText[] | undefined): string {
   if (!richTexts || richTexts.length === 0) return ''
 
-  return richTexts.map(rt => {
-    let text = escapeHtml(rt.text?.content || '')
-    const a = rt.annotations
+  return richTexts
+    .map((rt) => {
+      let text = escapeHtml(rt.text?.content || '')
+      const a = rt.annotations
 
-    // Apply annotations inside-out
-    if (a?.code) text = `<code>${text}</code>`
-    if (a?.bold) text = `<strong>${text}</strong>`
-    if (a?.italic) text = `<em>${text}</em>`
-    if (a?.strikethrough) text = `<s>${text}</s>`
-    if (a?.underline) text = `<u>${text}</u>`
+      // Apply annotations inside-out
+      if (a?.code) text = `<code>${text}</code>`
+      if (a?.bold) text = `<strong>${text}</strong>`
+      if (a?.italic) text = `<em>${text}</em>`
+      if (a?.strikethrough) text = `<s>${text}</s>`
+      if (a?.underline) text = `<u>${text}</u>`
 
-    // Links
-    if (rt.text?.link?.url) {
-      text = `<a href="${escapeHtml(rt.text.link.url)}">${text}</a>`
-    }
+      // Links
+      if (rt.text?.link?.url) {
+        text = `<a href="${escapeHtml(rt.text.link.url)}">${text}</a>`
+      }
 
-    return text
-  }).join('')
+      return text
+    })
+    .join('')
 }
 
 // Convert Notion rich_text array to plain text
 function richTextArrayToPlain(richTexts: NotionRichText[] | undefined): string {
   if (!richTexts || richTexts.length === 0) return ''
-  return richTexts.map(rt => rt.text?.content || '').join('')
+  return richTexts.map((rt) => rt.text?.content || '').join('')
 }
 
 // -----------------------------------------------------------------------------
@@ -270,8 +274,8 @@ function headingBlock(type: string, innerHTML: string): NotionBlock {
     object: 'block',
     type,
     [type]: {
-      rich_text: htmlToRichText(innerHTML)
-    }
+      rich_text: htmlToRichText(innerHTML),
+    },
   }
 }
 
@@ -280,8 +284,8 @@ function paragraphBlock(innerHTML: string): NotionBlock {
     object: 'block',
     type: 'paragraph',
     paragraph: {
-      rich_text: htmlToRichText(innerHTML)
-    }
+      rich_text: htmlToRichText(innerHTML),
+    },
   }
 }
 
@@ -290,8 +294,8 @@ function quoteBlock(innerHTML: string): NotionBlock {
     object: 'block',
     type: 'quote',
     quote: {
-      rich_text: htmlToRichText(innerHTML)
-    }
+      rich_text: htmlToRichText(innerHTML),
+    },
   }
 }
 
@@ -305,8 +309,8 @@ function codeBlock(code: string, language: string): NotionBlock {
     type: 'code',
     code: {
       rich_text: splitRichText(code),
-      language: language || 'plain text'
-    }
+      language: language || 'plain text',
+    },
   }
 }
 
@@ -316,19 +320,19 @@ function imageBlock(url: string): NotionBlock {
     type: 'image',
     image: {
       type: 'external',
-      external: { url }
-    }
+      external: { url },
+    },
   }
 }
 
 function listBlocks(type: string, listHtml: string): NotionBlock[] {
   const items = parseListItems(listHtml)
-  return items.map(itemHtml => ({
+  return items.map((itemHtml) => ({
     object: 'block' as const,
     type,
     [type]: {
-      rich_text: htmlToRichText(itemHtml)
-    }
+      rich_text: htmlToRichText(itemHtml),
+    },
   }))
 }
 
@@ -367,8 +371,8 @@ function htmlToRichText(html: string): NotionRichText[] {
         type: 'text',
         text: {
           content: segment,
-          ...(span.link && { link: { url: span.link } })
-        }
+          ...(span.link && { link: { url: span.link } }),
+        },
       }
 
       // Only add annotations if at least one is set
@@ -394,9 +398,9 @@ function htmlToRichText(html: string): NotionRichText[] {
  */
 function splitRichText(text: string): NotionRichText[] {
   const segments = splitTextAtLimit(text, RICH_TEXT_CHAR_LIMIT)
-  return segments.map(s => ({
+  return segments.map((s) => ({
     type: 'text' as const,
-    text: { content: s }
+    text: { content: s },
   }))
 }
 
@@ -460,7 +464,7 @@ function parseTopLevelElements(html: string): ParsedElement[] {
         tag,
         attrs: parseAttributes(attrStr),
         innerHTML,
-        innerText: stripHtml(innerHTML)
+        innerText: stripHtml(innerHTML),
       })
     } else if (match[4]) {
       // Self-closing tag (hr, img, br)
@@ -471,7 +475,7 @@ function parseTopLevelElements(html: string): ParsedElement[] {
         tag,
         attrs: parseAttributes(attrStr),
         innerHTML: '',
-        innerText: ''
+        innerText: '',
       })
     }
   }
@@ -482,7 +486,7 @@ function parseTopLevelElements(html: string): ParsedElement[] {
       tag: 'p',
       attrs: {},
       innerHTML: trimmed,
-      innerText: stripHtml(trimmed)
+      innerText: stripHtml(trimmed),
     })
   }
 
@@ -495,24 +499,47 @@ function parseTopLevelElements(html: string): ParsedElement[] {
  */
 function parseInlineSpans(html: string): InlineSpan[] {
   const spans: InlineSpan[] = []
-  if (!html) return [{ text: '', bold: false, italic: false, code: false, strikethrough: false, underline: false }]
+  if (!html)
+    return [
+      { text: '', bold: false, italic: false, code: false, strikethrough: false, underline: false },
+    ]
 
   // Walk through the HTML, tracking active annotations
   let pos = 0
   const stack: Array<{ tag: string; attrs: Record<string, string> }> = []
 
   const getAnnotations = () => {
-    let bold = false, italic = false, code = false, strikethrough = false, underline = false
+    let bold = false,
+      italic = false,
+      code = false,
+      strikethrough = false,
+      underline = false
     let link: string | undefined
 
     for (const frame of stack) {
       switch (frame.tag) {
-        case 'strong': case 'b': bold = true; break
-        case 'em': case 'i': italic = true; break
-        case 'code': code = true; break
-        case 's': case 'del': case 'strike': strikethrough = true; break
-        case 'u': underline = true; break
-        case 'a': link = frame.attrs.href; break
+        case 'strong':
+        case 'b':
+          bold = true
+          break
+        case 'em':
+        case 'i':
+          italic = true
+          break
+        case 'code':
+          code = true
+          break
+        case 's':
+        case 'del':
+        case 'strike':
+          strikethrough = true
+          break
+        case 'u':
+          underline = true
+          break
+        case 'a':
+          link = frame.attrs.href
+          break
       }
     }
 
@@ -526,7 +553,7 @@ function parseInlineSpans(html: string): InlineSpan[] {
       if (closeMatch) {
         // Closing tag — pop matching from stack
         const closingTag = closeMatch[1].toLowerCase()
-        const idx = findLastIndex(stack, f => f.tag === closingTag)
+        const idx = findLastIndex(stack, (f) => f.tag === closingTag)
         if (idx !== -1) stack.splice(idx, 1)
         pos += closeMatch[0].length
         continue
@@ -570,20 +597,33 @@ function parseInlineSpans(html: string): InlineSpan[] {
   const merged: InlineSpan[] = []
   for (const span of spans) {
     const last = merged[merged.length - 1]
-    if (last &&
+    if (
+      last &&
       last.bold === span.bold &&
       last.italic === span.italic &&
       last.code === span.code &&
       last.strikethrough === span.strikethrough &&
       last.underline === span.underline &&
-      last.link === span.link) {
+      last.link === span.link
+    ) {
       last.text += span.text
     } else {
       merged.push({ ...span })
     }
   }
 
-  return merged.length > 0 ? merged : [{ text: '', bold: false, italic: false, code: false, strikethrough: false, underline: false }]
+  return merged.length > 0
+    ? merged
+    : [
+        {
+          text: '',
+          bold: false,
+          italic: false,
+          code: false,
+          strikethrough: false,
+          underline: false,
+        },
+      ]
 }
 
 /**
@@ -688,4 +728,4 @@ export function chunkBlocks(blocks: NotionBlock[]): NotionBlock[][] {
 }
 
 // Re-export constants for tests
-export { RICH_TEXT_CHAR_LIMIT, MAX_BLOCKS_PER_APPEND }
+export { MAX_BLOCKS_PER_APPEND, RICH_TEXT_CHAR_LIMIT }

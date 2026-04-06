@@ -20,7 +20,7 @@ export const SessionLinkToast = memo(function SessionLinkToast({
   conversationNodeOptions,
   onLink,
   onCreateNew,
-  onDismiss
+  onDismiss,
 }: SessionLinkToastProps): JSX.Element {
   const [visible, setVisible] = useState(true)
 
@@ -41,7 +41,7 @@ export const SessionLinkToast = memo(function SessionLinkToast({
         onLink(session.sessionId, value)
       }
     },
-    [session.sessionId, onLink, onCreateNew]
+    [session.sessionId, onLink, onCreateNew],
   )
 
   if (!visible) return <></>

@@ -8,8 +8,8 @@
  * Shows graceful degradation UI in compact mode.
  */
 
-import { Component, type ReactNode } from 'react'
 import { AlertCircle } from 'lucide-react'
+import { Component, type ReactNode } from 'react'
 
 interface Props {
   children: ReactNode

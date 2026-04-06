@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useCallback, useState, useEffect, useRef } from 'react'
-import { Sparkles, X } from 'lucide-react'
-import { useReactFlow } from '@xyflow/react'
 import type { PendingExtraction } from '@shared/types'
+import { useReactFlow } from '@xyflow/react'
+import { Sparkles, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import {
   useExtractionStore,
   useNodesStore,
+  useOpenExtractionPanelNodeId,
   useSortedExtractionsForNode,
-  useOpenExtractionPanelNodeId
 } from '../../stores'
+import { EscapePriority, escapeManager } from '../../utils/EscapeManager'
 import { ScrollArea } from '../ui'
-import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 import { ExtractionGhostCard } from './ExtractionGhostCard'
 import { TetherLine } from './TetherLine'
 
@@ -67,7 +67,7 @@ function ExtractionPanelComponent(): JSX.Element | null {
 
     if (finalX + PANEL_WIDTH > window.innerWidth - PANEL_MARGIN) {
       // Position to left of node instead
-      finalX = (node.position.x) * viewport.zoom + viewport.x - PANEL_WIDTH - 20
+      finalX = node.position.x * viewport.zoom + viewport.x - PANEL_WIDTH - 20
     }
 
     if (finalY < PANEL_MARGIN) {
@@ -152,7 +152,7 @@ function ExtractionPanelComponent(): JSX.Element | null {
       // Cleanup drag image
       setTimeout(() => document.body.removeChild(dragImage), 0)
     },
-    [startExtractionDrag]
+    [startExtractionDrag],
   )
 
   const handleAcceptAll = useCallback(() => {
@@ -194,13 +194,15 @@ function ExtractionPanelComponent(): JSX.Element | null {
         className="extraction-panel"
         style={{
           left: panelPosition.x,
-          top: panelPosition.y
+          top: panelPosition.y,
         }}
       >
         <div className="extraction-panel__header">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4" style={{ color: 'var(--gui-accent-primary)' }} />
-            <span>{extractions.length} Extraction{extractions.length !== 1 ? 's' : ''}</span>
+            <span>
+              {extractions.length} Extraction{extractions.length !== 1 ? 's' : ''}
+            </span>
           </div>
           <button
             onClick={closeExtractionPanel}
@@ -221,17 +223,34 @@ function ExtractionPanelComponent(): JSX.Element | null {
           ))}
 
           {!showAll && hiddenCount > 0 && (
-            <div className="extraction-panel__more" onClick={() => setShowAll(true)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowAll(true) } }}>
+            <div
+              className="extraction-panel__more"
+              onClick={() => setShowAll(true)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setShowAll(true)
+                }
+              }}
+            >
               +{hiddenCount} more
             </div>
           )}
         </ScrollArea>
 
         <div className="extraction-panel__footer">
-          <button className="extraction-panel__btn extraction-panel__btn--accept" onClick={handleAcceptAll}>
+          <button
+            className="extraction-panel__btn extraction-panel__btn--accept"
+            onClick={handleAcceptAll}
+          >
             Accept All
           </button>
-          <button className="extraction-panel__btn extraction-panel__btn--clear" onClick={handleClearAll}>
+          <button
+            className="extraction-panel__btn extraction-panel__btn--clear"
+            onClick={handleClearAll}
+          >
             Clear
           </button>
         </div>

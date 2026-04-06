@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useEffect, useRef } from 'react'
-import type { Node } from '@xyflow/react'
-import type { NodeData } from '@shared/types'
 import type { ActionEvent } from '@shared/actionTypes'
-import { useWorkspaceStore } from '../stores/workspaceStore'
+import type { NodeData } from '@shared/types'
+import type { Node } from '@xyflow/react'
+import { useEffect, useRef } from 'react'
 import { useActionStore } from '../stores/actionStore'
 import { useSpatialRegionStore } from '../stores/spatialRegionStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 /**
  * Hook that subscribes to workspace store changes and emits events to the action store.
@@ -49,7 +49,10 @@ export function useActionSubscription(): void {
           let hasDataChange = false
           for (const node of nodes) {
             const prev = prevMap.get(node.id)
-            if (!prev || prev.data !== node.data) { hasDataChange = true; break }
+            if (!prev || prev.data !== node.data) {
+              hasDataChange = true
+              break
+            }
           }
           if (!hasDataChange) {
             // Rebuild map with new references but skip expensive event processing
@@ -72,7 +75,7 @@ export function useActionSubscription(): void {
               type: 'node-created',
               nodeId: node.id,
               timestamp: Date.now(),
-              data: { nodeType: node.data.type }
+              data: { nodeType: node.data.type },
             }
             actionStore.handleEvent(event)
 
@@ -102,8 +105,8 @@ export function useActionSubscription(): void {
                     property: key,
                     oldValue: oldData[key],
                     newValue: newData[key],
-                    nodeType: node.data.type
-                  }
+                    nodeType: node.data.type,
+                  },
                 }
                 actionStore.handleEvent(event)
               }
@@ -130,7 +133,7 @@ export function useActionSubscription(): void {
 
         prevNodesRef.current = currentMap
       },
-      { equalityFn: Object.is }
+      { equalityFn: Object.is },
     )
 
     // Subscribe to edge changes
@@ -140,15 +143,15 @@ export function useActionSubscription(): void {
         const actionStore = useActionStore.getState()
 
         // Detect new edges
-        const prevEdgeIds = new Set(prevEdges.map(e => e.id))
-        const currentEdgeIds = new Set(edges.map(e => e.id))
+        const prevEdgeIds = new Set(prevEdges.map((e) => e.id))
+        const currentEdgeIds = new Set(edges.map((e) => e.id))
 
         for (const edge of edges) {
           if (!prevEdgeIds.has(edge.id)) {
             // New connection made
             const nodes = useWorkspaceStore.getState().nodes
-            const sourceNode = nodes.find(n => n.id === edge.source)
-            const targetNode = nodes.find(n => n.id === edge.target)
+            const sourceNode = nodes.find((n) => n.id === edge.source)
+            const targetNode = nodes.find((n) => n.id === edge.target)
 
             // Emit for source node
             if (sourceNode) {
@@ -160,8 +163,10 @@ export function useActionSubscription(): void {
                   direction: 'outgoing',
                   connectedNodeId: edge.target,
                   connectedNodeType: targetNode?.data.type,
-                  connectionCount: edges.filter(e => e.source === edge.source || e.target === edge.source).length
-                }
+                  connectionCount: edges.filter(
+                    (e) => e.source === edge.source || e.target === edge.source,
+                  ).length,
+                },
               }
               actionStore.handleEvent(event)
             }
@@ -176,8 +181,10 @@ export function useActionSubscription(): void {
                   direction: 'incoming',
                   connectedNodeId: edge.source,
                   connectedNodeType: sourceNode?.data.type,
-                  connectionCount: edges.filter(e => e.source === edge.target || e.target === edge.target).length
-                }
+                  connectionCount: edges.filter(
+                    (e) => e.source === edge.target || e.target === edge.target,
+                  ).length,
+                },
               }
               actionStore.handleEvent(event)
             }
@@ -188,14 +195,18 @@ export function useActionSubscription(): void {
         for (const prevEdge of prevEdges) {
           if (!currentEdgeIds.has(prevEdge.id)) {
             // Connection removed - emit for both nodes
-            const connectionCountSource = edges.filter(e => e.source === prevEdge.source || e.target === prevEdge.source).length
-            const connectionCountTarget = edges.filter(e => e.source === prevEdge.target || e.target === prevEdge.target).length
+            const connectionCountSource = edges.filter(
+              (e) => e.source === prevEdge.source || e.target === prevEdge.source,
+            ).length
+            const connectionCountTarget = edges.filter(
+              (e) => e.source === prevEdge.target || e.target === prevEdge.target,
+            ).length
 
             const eventSource: ActionEvent = {
               type: 'connection-removed',
               nodeId: prevEdge.source,
               timestamp: Date.now(),
-              data: { connectionCount: connectionCountSource }
+              data: { connectionCount: connectionCountSource },
             }
             actionStore.handleEvent(eventSource)
 
@@ -203,7 +214,7 @@ export function useActionSubscription(): void {
               type: 'connection-removed',
               nodeId: prevEdge.target,
               timestamp: Date.now(),
-              data: { connectionCount: connectionCountTarget }
+              data: { connectionCount: connectionCountTarget },
             }
             actionStore.handleEvent(eventTarget)
           }
@@ -217,7 +228,7 @@ export function useActionSubscription(): void {
         }
         prevEdgeCountRef.current = newCounts
       },
-      { equalityFn: Object.is }
+      { equalityFn: Object.is },
     )
 
     // Subscribe to node position changes for spatial triggers (regions + proximity)
@@ -246,7 +257,7 @@ export function useActionSubscription(): void {
             type: 'node-position-change',
             nodeId: node.id,
             timestamp: Date.now(),
-            data: { nodeType: node.data.type }
+            data: { nodeType: node.data.type },
           }
           actionStore.handleEvent(positionEvent)
 
@@ -255,7 +266,11 @@ export function useActionSubscription(): void {
             const nodeWidth = (node.width as number) || node.measured?.width || 280
             const nodeHeight = (node.height as number) || node.measured?.height || 140
             const { entered, exited } = spatialStore.checkNodePosition(
-              node.id, currPos.x, currPos.y, nodeWidth, nodeHeight
+              node.id,
+              currPos.x,
+              currPos.y,
+              nodeWidth,
+              nodeHeight,
             )
 
             // Emit region-enter events
@@ -264,7 +279,7 @@ export function useActionSubscription(): void {
                 type: 'node-position-change',
                 nodeId: node.id,
                 timestamp: Date.now(),
-                data: { enteredRegion: regionId, nodeType: node.data.type }
+                data: { enteredRegion: regionId, nodeType: node.data.type },
               }
               actionStore.handleEvent(event)
             }
@@ -275,7 +290,7 @@ export function useActionSubscription(): void {
                 type: 'node-position-change',
                 nodeId: node.id,
                 timestamp: Date.now(),
-                data: { exitedRegion: regionId, nodeType: node.data.type }
+                data: { exitedRegion: regionId, nodeType: node.data.type },
               }
               actionStore.handleEvent(event)
             }
@@ -283,14 +298,14 @@ export function useActionSubscription(): void {
         }
 
         // Prune entries for deleted nodes
-        const currentNodeIds = new Set(nodes.map(n => n.id))
+        const currentNodeIds = new Set(nodes.map((n) => n.id))
         for (const nodeId of prevPositionsRef.keys()) {
           if (!currentNodeIds.has(nodeId)) {
             prevPositionsRef.delete(nodeId)
           }
         }
       },
-      { equalityFn: Object.is }
+      { equalityFn: Object.is },
     )
 
     return () => {

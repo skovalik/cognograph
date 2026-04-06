@@ -4,12 +4,12 @@
 // Notion Plugin (Main Process)
 // Wraps existing Notion services with the plugin interface
 
-import type { PluginMain, PluginContext } from '../../types'
-import type { NotionMethods } from '../contract'
+import { execLogWriter } from '../../../main/services/notionExecLog'
 // Import existing singleton services (will be refactored to constructor injection in future)
 import { notionService } from '../../../main/services/notionService'
 import { workflowSync } from '../../../main/services/notionSync'
-import { execLogWriter } from '../../../main/services/notionExecLog'
+import type { PluginContext, PluginMain } from '../../types'
+import type { NotionMethods } from '../contract'
 import { nodeSyncEngine } from './nodeSyncEngine'
 
 export default function createNotionPlugin(): PluginMain<NotionMethods> {
@@ -32,14 +32,14 @@ export default function createNotionPlugin(): PluginMain<NotionMethods> {
 
       isConnected: async () => ({
         connected: notionService.isConnected(),
-        config: notionService.getConfig()
+        config: notionService.getConfig(),
       }),
 
       health: async () => ({
         circuitState: notionService.getCircuitBreakerState(),
         syncEnabled: notionService.isSyncEnabled(),
         hasToken: notionService.hasToken(),
-        hasConfig: notionService.hasConfig()
+        hasConfig: notionService.hasConfig(),
       }),
 
       getApiKey: async () => notionService.getToken(),
@@ -54,7 +54,7 @@ export default function createNotionPlugin(): PluginMain<NotionMethods> {
         return {
           workflowsDbId: config?.workflowsDbId ?? '',
           execLogDbId: config?.execLogDbId ?? '',
-          syncEnabled: notionService.isSyncEnabled()
+          syncEnabled: notionService.isSyncEnabled(),
         }
       },
 
@@ -79,26 +79,24 @@ export default function createNotionPlugin(): PluginMain<NotionMethods> {
 
     eventHandlers: {
       'workspace:loaded': (data) => {
-        nodeSyncEngine.onWorkspaceLoaded(data).catch(err =>
-          console.error('[notion] node sync load error:', err)
-        )
+        nodeSyncEngine
+          .onWorkspaceLoaded(data)
+          .catch((err) => console.error('[notion] node sync load error:', err))
       },
       'workspace:saved': (data) => {
         workflowSync.onWorkspaceSaved(data)
-        nodeSyncEngine.onWorkspaceSaved(data).catch(err =>
-          console.error('[notion] node sync save error:', err)
-        )
+        nodeSyncEngine
+          .onWorkspaceSaved(data)
+          .catch((err) => console.error('[notion] node sync save error:', err))
       },
       'orchestrator:run-complete': (data) => {
-        execLogWriter.log(data).catch(err =>
-          console.error('[notion] exec log error:', err)
-        )
+        execLogWriter.log(data).catch((err) => console.error('[notion] exec log error:', err))
       },
       'app:quit': () => {
-        nodeSyncEngine.onAppQuit().catch(err =>
-          console.error('[notion] node sync quit error:', err)
-        )
-      }
-    }
+        nodeSyncEngine
+          .onAppQuit()
+          .catch((err) => console.error('[notion] node sync quit error:', err))
+      },
+    },
   }
 }

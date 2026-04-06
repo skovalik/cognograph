@@ -24,7 +24,7 @@ interface SelectionIndicatorProps {
  * Should be placed as the outermost wrapper inside a node component.
  */
 export const SelectionIndicator = memo(function SelectionIndicator({
-  selectors
+  selectors,
 }: SelectionIndicatorProps) {
   if (selectors.length === 0) return null
 
@@ -40,7 +40,7 @@ export const SelectionIndicator = memo(function SelectionIndicator({
         style={{
           border: `2px solid ${primaryColor}`,
           boxShadow: `0 0 8px ${primaryColor}40`,
-          opacity: 0.8
+          opacity: 0.8,
         }}
       />
 

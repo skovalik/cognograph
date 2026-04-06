@@ -15,28 +15,28 @@ export const TOOL_DEFINITIONS = [
         status: {
           type: 'string',
           enum: ['todo', 'in-progress', 'done'],
-          description: 'Filter by task status'
+          description: 'Filter by task status',
         },
         priority: {
           type: 'string',
           enum: ['none', 'low', 'medium', 'high'],
-          description: 'Filter by priority level'
+          description: 'Filter by priority level',
         },
         tags: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Filter by tags (any match)'
+          description: 'Filter by tags (any match)',
         },
         projectId: {
           type: 'string',
-          description: 'Filter by parent project node ID'
+          description: 'Filter by parent project node ID',
         },
         limit: {
           type: 'number',
-          description: 'Max results to return (default: 50)'
-        }
-      }
-    }
+          description: 'Max results to return (default: 50)',
+        },
+      },
+    },
   },
   {
     name: 'get_node',
@@ -44,37 +44,45 @@ export const TOOL_DEFINITIONS = [
     inputSchema: {
       type: 'object',
       properties: {
-        id: { type: 'string', description: 'The node ID' }
+        id: { type: 'string', description: 'The node ID' },
       },
-      required: ['id']
-    }
+      required: ['id'],
+    },
   },
   {
     name: 'search_nodes',
-    description:
-      'Search for nodes by title or content text. Case-insensitive substring match.',
+    description: 'Search for nodes by title or content text. Case-insensitive substring match.',
     inputSchema: {
       type: 'object',
       properties: {
         query: {
           type: 'string',
-          description: 'Search text to match against title and content'
+          description: 'Search text to match against title and content',
         },
         types: {
           type: 'array',
           items: {
             type: 'string',
-            enum: ['conversation', 'project', 'note', 'task', 'artifact', 'text', 'workspace', 'orchestrator']
+            enum: [
+              'conversation',
+              'project',
+              'note',
+              'task',
+              'artifact',
+              'text',
+              'workspace',
+              'orchestrator',
+            ],
           },
-          description: 'Filter to specific node types'
+          description: 'Filter to specific node types',
         },
         limit: {
           type: 'number',
-          description: 'Max results (default: 20)'
-        }
+          description: 'Max results (default: 20)',
+        },
       },
-      required: ['query']
-    }
+      required: ['query'],
+    },
   },
   {
     name: 'get_context_chain',
@@ -86,11 +94,11 @@ export const TOOL_DEFINITIONS = [
         nodeId: { type: 'string', description: 'Starting node ID' },
         depth: {
           type: 'number',
-          description: 'Max traversal depth (default: 2)'
-        }
+          description: 'Max traversal depth (default: 2)',
+        },
       },
-      required: ['nodeId']
-    }
+      required: ['nodeId'],
+    },
   },
   {
     name: 'update_node',
@@ -112,67 +120,72 @@ export const TOOL_DEFINITIONS = [
             priority: { type: 'string', enum: ['none', 'low', 'medium', 'high'] },
             complexity: {
               type: 'string',
-              enum: ['trivial', 'simple', 'moderate', 'complex', 'very-complex']
+              enum: ['trivial', 'simple', 'moderate', 'complex', 'very-complex'],
             },
             tags: { type: 'array', items: { type: 'string' } },
             color: { type: 'string' },
-            folderPath: { type: 'string', description: 'Absolute path to linked folder (project/artifact nodes)' },
-            fileFilter: { type: 'string', description: 'Comma-separated extensions to filter, e.g. ".ts,.tsx,.js"' }
-          }
-        }
+            folderPath: {
+              type: 'string',
+              description: 'Absolute path to linked folder (project/artifact nodes)',
+            },
+            fileFilter: {
+              type: 'string',
+              description: 'Comma-separated extensions to filter, e.g. ".ts,.tsx,.js"',
+            },
+          },
+        },
       },
-      required: ['id', 'changes']
-    }
+      required: ['id', 'changes'],
+    },
   },
   {
     name: 'create_node',
-    description:
-      'Create a new node in the workspace. Optionally link it to an existing node.',
+    description: 'Create a new node in the workspace. Optionally link it to an existing node.',
     inputSchema: {
       type: 'object',
       properties: {
         type: {
           type: 'string',
           enum: ['task', 'note', 'conversation', 'text', 'project', 'artifact', 'orchestrator'],
-          description: 'Node type to create'
+          description: 'Node type to create',
         },
         data: {
           type: 'object',
           description:
-            'Node data. Task: title, description, status, priority, tags. Note: title, content, tags. Conversation: title. Text: content. Project: title, description, folderPath, fileFilter. Artifact: title, content, contentType (use "html" for HTML markup to render as live preview; "code" for source code; "text" for plain text — default is "text"), folderPath, fileFilter.'
+            'Node data. Task: title, description, status, priority, tags. Note: title, content, tags. Conversation: title. Text: content. Project: title, description, folderPath, fileFilter. Artifact: title, content, contentType (use "html" for HTML markup to render as live preview; "code" for source code; "text" for plain text — default is "text"), folderPath, fileFilter.',
         },
         position: {
           type: 'object',
           properties: {
             x: { type: 'number' },
-            y: { type: 'number' }
+            y: { type: 'number' },
           },
-          description: 'Canvas position (default: {x: 0, y: 0})'
+          description: 'Canvas position (default: {x: 0, y: 0})',
         },
         linkFrom: {
           type: 'string',
-          description: 'Node ID to create an edge FROM (source→new node)'
+          description: 'Node ID to create an edge FROM (source→new node)',
         },
         parentId: {
           type: 'string',
-          description: 'Project node ID to set as parent'
-        }
+          description: 'Project node ID to set as parent',
+        },
       },
-      required: ['type', 'data']
-    }
+      required: ['type', 'data'],
+    },
   },
   {
     name: 'add_comment',
     description:
-      'Append a timestamped comment to a node\'s description (tasks) or content (notes). Creates a clearly delimited comment block.',
+      "Append a timestamped comment to a node's description (tasks) or content (notes). Creates a clearly delimited comment block.",
     inputSchema: {
       type: 'object',
       properties: {
         id: { type: 'string', description: 'Node ID to comment on' },
-        text: { type: 'string', description: 'Comment text to append' }
+        text: { type: 'string', description: 'Comment text to append' },
       },
-      required: ['id', 'text']
-    }
+      required: ['id', 'text'],
+    },
   },
   {
     name: 'link_nodes',
@@ -185,11 +198,11 @@ export const TOOL_DEFINITIONS = [
         label: { type: 'string', description: 'Optional edge label' },
         weight: {
           type: 'number',
-          description: 'Edge weight 1-10 (default: 5)'
-        }
+          description: 'Edge weight 1-10 (default: 5)',
+        },
       },
-      required: ['source', 'target']
-    }
+      required: ['source', 'target'],
+    },
   },
   {
     name: 'unlink_nodes',
@@ -199,10 +212,10 @@ export const TOOL_DEFINITIONS = [
       type: 'object',
       properties: {
         source: { type: 'string', description: 'Source node ID' },
-        target: { type: 'string', description: 'Target node ID' }
+        target: { type: 'string', description: 'Target node ID' },
       },
-      required: ['source', 'target']
-    }
+      required: ['source', 'target'],
+    },
   },
   {
     name: 'cognograph_tokens_get',
@@ -213,20 +226,21 @@ export const TOOL_DEFINITIONS = [
       properties: {
         nodeId: {
           type: 'string',
-          description: 'Specific node ID to get tokens from. If omitted, discovers all token nodes.'
+          description:
+            'Specific node ID to get tokens from. If omitted, discovers all token nodes.',
         },
         tag: {
           type: 'string',
-          description: 'Filter token nodes by tag.'
+          description: 'Filter token nodes by tag.',
         },
         format: {
           type: 'string',
           enum: ['raw', 'css', 'tailwind'],
           description:
-            'Output format. "raw" returns the DesignTokenSet JSON (default). "css" returns CSS custom properties. "tailwind" returns Tailwind config extend format.'
-        }
-      }
-    }
+            'Output format. "raw" returns the DesignTokenSet JSON (default). "css" returns CSS custom properties. "tailwind" returns Tailwind config extend format.',
+        },
+      },
+    },
   },
   {
     name: 'cognograph_site_get_pages',
@@ -237,27 +251,28 @@ export const TOOL_DEFINITIONS = [
       properties: {
         includeComponents: {
           type: 'boolean',
-          description: 'Include component lists for each page (default: true)'
+          description: 'Include component lists for each page (default: true)',
         },
         includeProps: {
           type: 'boolean',
-          description: 'Include prop definitions for each component (default: false)'
+          description: 'Include prop definitions for each component (default: false)',
         },
         status: {
           type: 'string',
           enum: ['all', 'planned', 'wireframed', 'designed', 'built', 'live'],
-          description: 'Filter by page status (default: all)'
+          description: 'Filter by page status (default: all)',
         },
         limit: {
           type: 'number',
-          description: 'Maximum number of pages to return. Returns all if omitted.'
+          description: 'Maximum number of pages to return. Returns all if omitted.',
         },
         offset: {
           type: 'number',
-          description: 'Skip this many pages before returning results. Use with limit for pagination.'
-        }
-      }
-    }
+          description:
+            'Skip this many pages before returning results. Use with limit for pagination.',
+        },
+      },
+    },
   },
   {
     name: 'cognograph_site_get_components',
@@ -268,14 +283,14 @@ export const TOOL_DEFINITIONS = [
       properties: {
         route: {
           type: 'string',
-          description: 'Page route to look up, e.g. "/about"'
+          description: 'Page route to look up, e.g. "/about"',
         },
         nodeId: {
           type: 'string',
-          description: 'Or specify by node ID'
-        }
-      }
-    }
+          description: 'Or specify by node ID',
+        },
+      },
+    },
   },
   {
     name: 'cognograph_site_get_sitemap',
@@ -286,16 +301,16 @@ export const TOOL_DEFINITIONS = [
       properties: {
         nodeId: {
           type: 'string',
-          description: 'Page node ID to update'
+          description: 'Page node ID to update',
         },
         status: {
           type: 'string',
           enum: ['planned', 'wireframed', 'designed', 'built', 'live'],
-          description: 'New build status for the page'
-        }
+          description: 'New build status for the page',
+        },
       },
-      required: ['nodeId', 'status']
-    }
+      required: ['nodeId', 'status'],
+    },
   },
   {
     name: 'cognograph_web_get_content_models',
@@ -306,10 +321,10 @@ export const TOOL_DEFINITIONS = [
       properties: {
         postType: {
           type: 'string',
-          description: 'Filter by specific post type slug (e.g., "project", "testimonial")'
-        }
-      }
-    }
+          description: 'Filter by specific post type slug (e.g., "project", "testimonial")',
+        },
+      },
+    },
   },
   {
     name: 'cognograph_web_get_wp_config',
@@ -317,8 +332,8 @@ export const TOOL_DEFINITIONS = [
       'Returns WordPress connection configuration from the workspace. Returns site URL, endpoints, auth method, and environment. NEVER returns credential values.',
     inputSchema: {
       type: 'object',
-      properties: {}
-    }
+      properties: {},
+    },
   },
   {
     name: 'get_initial_context',
@@ -330,9 +345,9 @@ export const TOOL_DEFINITIONS = [
         nodeId: {
           type: 'string',
           description:
-            'The node ID to get context for. If not provided, uses the COGNOGRAPH_NODE_ID env var.'
-        }
-      }
-    }
-  }
+            'The node ID to get context for. If not provided, uses the COGNOGRAPH_NODE_ID env var.',
+        },
+      },
+    },
+  },
 ]

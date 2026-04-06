@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { ipcMain } from 'electron'
-import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import Anthropic from '@anthropic-ai/sdk'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
+import { ipcMain } from 'electron'
 import OpenAI from 'openai'
 
 interface ConnectorTestRequest {
@@ -41,12 +41,16 @@ async function testAnthropic(apiKey: string, model: string): Promise<ConnectorTe
     await client.messages.create({
       model: model || 'claude-sonnet-4-6',
       max_tokens: 1,
-      messages: [{ role: 'user', content: 'Hi' }]
+      messages: [{ role: 'user', content: 'Hi' }],
     })
     return { success: true }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    if (message.includes('401') || message.includes('authentication') || message.includes('invalid')) {
+    if (
+      message.includes('401') ||
+      message.includes('authentication') ||
+      message.includes('invalid')
+    ) {
       return { success: false, error: 'Invalid API key' }
     }
     return { success: false, error: message }
@@ -75,11 +79,11 @@ function validateBaseUrl(url: string): { valid: boolean; error?: string } {
 
     // Block internal/private IP ranges
     const internalPatterns = [
-      /^10\./,                    // 10.0.0.0/8
+      /^10\./, // 10.0.0.0/8
       /^172\.(1[6-9]|2\d|3[01])\./, // 172.16.0.0/12
-      /^192\.168\./,             // 192.168.0.0/16
-      /^169\.254\./,             // Link-local
-      /^0\./,                    // Current network
+      /^192\.168\./, // 192.168.0.0/16
+      /^169\.254\./, // Link-local
+      /^0\./, // Current network
       /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // Shared address space
     ]
 
@@ -95,7 +99,11 @@ function validateBaseUrl(url: string): { valid: boolean; error?: string } {
   }
 }
 
-async function testOpenAI(apiKey: string, model: string, baseUrl?: string): Promise<ConnectorTestResponse> {
+async function testOpenAI(
+  apiKey: string,
+  model: string,
+  baseUrl?: string,
+): Promise<ConnectorTestResponse> {
   try {
     if (baseUrl) {
       const urlCheck = validateBaseUrl(baseUrl)
@@ -103,12 +111,12 @@ async function testOpenAI(apiKey: string, model: string, baseUrl?: string): Prom
     }
     const client = new OpenAI({
       apiKey,
-      ...(baseUrl ? { baseURL: baseUrl } : {})
+      ...(baseUrl ? { baseURL: baseUrl } : {}),
     })
     await client.chat.completions.create({
       model: model || 'gpt-4-turbo-preview',
       max_tokens: 1,
-      messages: [{ role: 'user', content: 'Hi' }]
+      messages: [{ role: 'user', content: 'Hi' }],
     })
     return { success: true }
   } catch (error) {
@@ -142,12 +150,12 @@ async function testOllama(baseUrl: string, model: string): Promise<ConnectorTest
     if (!urlCheck.valid) return { success: false, error: urlCheck.error }
     const client = new OpenAI({
       apiKey: 'ollama',
-      baseURL: `${effectiveUrl}/v1`
+      baseURL: `${effectiveUrl}/v1`,
     })
     await client.chat.completions.create({
       model: model || 'llama3',
       max_tokens: 1,
-      messages: [{ role: 'user', content: 'Hi' }]
+      messages: [{ role: 'user', content: 'Hi' }],
     })
     return { success: true }
   } catch (error) {
@@ -159,7 +167,11 @@ async function testOllama(baseUrl: string, model: string): Promise<ConnectorTest
   }
 }
 
-async function testCustom(apiKey: string, model: string, baseUrl?: string): Promise<ConnectorTestResponse> {
+async function testCustom(
+  apiKey: string,
+  model: string,
+  baseUrl?: string,
+): Promise<ConnectorTestResponse> {
   if (!baseUrl) {
     return { success: false, error: 'Base URL is required for custom providers' }
   }
@@ -174,7 +186,10 @@ async function testMCPServer(request: MCPTestRequest): Promise<MCPTestResponse> 
     const shellMetachars = /[;&|`$(){}!<>]/
     for (const arg of request.args) {
       if (shellMetachars.test(arg)) {
-        return { success: false, error: `Shell metacharacters not allowed in MCP server args: "${arg}"` }
+        return {
+          success: false,
+          error: `Shell metacharacters not allowed in MCP server args: "${arg}"`,
+        }
       }
     }
   }
@@ -186,24 +201,24 @@ async function testMCPServer(request: MCPTestRequest): Promise<MCPTestResponse> 
     // Merge user-provided env vars with default inherited environment
     const env = {
       ...process.env,
-      ...(request.env || {})
+      ...(request.env || {}),
     } as Record<string, string>
 
     transport = new StdioClientTransport({
       command: request.command,
       args: request.args,
-      env
+      env,
     })
 
     client = new Client({
       name: 'cognograph-test',
-      version: '1.0.0'
+      version: '1.0.0',
     })
 
     // Connect with a 15s timeout
     const connectPromise = client.connect(transport)
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Connection timed out after 15 seconds')), 15000)
+      setTimeout(() => reject(new Error('Connection timed out after 15 seconds')), 15000),
     )
     await Promise.race([connectPromise, timeoutPromise])
 
@@ -232,7 +247,7 @@ async function testMCPServer(request: MCPTestRequest): Promise<MCPTestResponse> 
       toolCount,
       resourceCount,
       serverName: serverInfo?.name,
-      serverVersion: serverInfo?.version
+      serverVersion: serverInfo?.version,
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
@@ -259,33 +274,39 @@ async function testMCPServer(request: MCPTestRequest): Promise<MCPTestResponse> 
 }
 
 export function registerConnectorHandlers(): void {
-  ipcMain.handle('connector:test', async (_event, request: ConnectorTestRequest): Promise<ConnectorTestResponse> => {
-    const { provider, apiKey, model, baseUrl } = request
+  ipcMain.handle(
+    'connector:test',
+    async (_event, request: ConnectorTestRequest): Promise<ConnectorTestResponse> => {
+      const { provider, apiKey, model, baseUrl } = request
 
-    try {
-      switch (provider) {
-        case 'anthropic':
-          return await testAnthropic(apiKey, model)
-        case 'openai':
-          return await testOpenAI(apiKey, model, baseUrl)
-        case 'gemini':
-          return await testGemini(apiKey, model)
-        case 'ollama':
-          return await testOllama(baseUrl || 'http://localhost:11434', model)
-        case 'custom':
-          return await testCustom(apiKey, model, baseUrl)
-        default:
-          return { success: false, error: `Unknown provider: ${provider}` }
+      try {
+        switch (provider) {
+          case 'anthropic':
+            return await testAnthropic(apiKey, model)
+          case 'openai':
+            return await testOpenAI(apiKey, model, baseUrl)
+          case 'gemini':
+            return await testGemini(apiKey, model)
+          case 'ollama':
+            return await testOllama(baseUrl || 'http://localhost:11434', model)
+          case 'custom':
+            return await testCustom(apiKey, model, baseUrl)
+          default:
+            return { success: false, error: `Unknown provider: ${provider}` }
+        }
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Connection test failed',
+        }
       }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Connection test failed'
-      }
-    }
-  })
+    },
+  )
 
-  ipcMain.handle('connector:testMCP', async (_event, request: MCPTestRequest): Promise<MCPTestResponse> => {
-    return testMCPServer(request)
-  })
+  ipcMain.handle(
+    'connector:testMCP',
+    async (_event, request: MCPTestRequest): Promise<MCPTestResponse> => {
+      return testMCPServer(request)
+    },
+  )
 }

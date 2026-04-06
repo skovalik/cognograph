@@ -12,8 +12,8 @@
  * PFD Phase 5B: Canvas Interaction Patterns
  */
 
-import { useEffect, useRef, useCallback } from 'react'
 import { useReactFlow } from '@xyflow/react'
+import { useCallback, useEffect, useRef } from 'react'
 
 const PAN_STEP = 50 // px per single key press
 const PAN_SPEED = 200 // px per second when held
@@ -43,10 +43,10 @@ export function useSpacebarPan(): void {
       setViewport({
         x: vp.x + dx,
         y: vp.y + dy,
-        zoom: vp.zoom
+        zoom: vp.zoom,
       })
     },
-    [getViewport, setViewport]
+    [getViewport, setViewport],
   )
 
   // Continuous panning loop when keys are held
@@ -112,7 +112,8 @@ export function useSpacebarPan(): void {
 
         if (!arrowsHeld.current.has(e.key)) {
           // First press of this arrow: immediate step
-          let dx = 0, dy = 0
+          let dx = 0,
+            dy = 0
           if (e.key === 'ArrowLeft') dx = PAN_STEP
           if (e.key === 'ArrowRight') dx = -PAN_STEP
           if (e.key === 'ArrowUp') dy = PAN_STEP

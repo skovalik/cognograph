@@ -12,34 +12,33 @@
  * Status updates are sent to the renderer via the 'orchestrator:status' IPC channel.
  */
 
-import { BrowserWindow } from 'electron'
-import { execLogWriter } from './notionExecLog'
 import { emitPluginEvent } from '@plugins/registry'
+import { app, BrowserWindow } from 'electron'
+import * as fs from 'fs/promises'
+import * as path from 'path'
+import type { AgentEdgeResult } from '../../shared/types/edges'
+import { AGENT_RESULT_SUMMARY_MAX_CHARS } from '../../shared/types/edges'
+import type {
+  ConnectedAgent,
+  FailurePolicy,
+  OrchestratorAgentResult,
+  OrchestratorBudget,
+  OrchestratorConditionType,
+  OrchestratorNodeData,
+  OrchestratorRun,
+  OrchestratorRunStatus,
+  OrchestratorStrategy,
+} from '../../shared/types/nodes'
 import { runAgentForOrchestrator } from '../agent/claudeAgent'
-import { buildTool } from '../tools/buildTool'
 import { assembleToolPool } from '../tools/assembleToolPool'
+import { buildTool } from '../tools/buildTool'
 import {
-  SpawnWorkerSchema,
   GetWorkerResultSchema,
+  SpawnWorkerSchema,
   SynthesizeResultsSchema,
 } from '../tools/canonicalSchemas'
 import type { Tool, ToolResult } from '../tools/types'
-import { AGENT_RESULT_SUMMARY_MAX_CHARS } from '../../shared/types/edges'
-import type { AgentEdgeResult } from '../../shared/types/edges'
-import type {
-  OrchestratorNodeData,
-  OrchestratorRun,
-  OrchestratorStrategy,
-  OrchestratorBudget,
-  FailurePolicy,
-  ConnectedAgent,
-  OrchestratorAgentResult,
-  OrchestratorRunStatus,
-  OrchestratorConditionType,
-} from '../../shared/types/nodes'
-import * as fs from 'fs/promises'
-import * as path from 'path'
-import { app } from 'electron'
+import { execLogWriter } from './notionExecLog'
 
 // Unique run ID generator
 let runIdCounter = 0
@@ -102,7 +101,7 @@ function emitStatus(update: OrchestratorStatusUpdate): void {
 // Cycle detection
 export function detectCycle(
   orchestratorId: string,
-  parentOrchestrationId: string | undefined
+  parentOrchestrationId: string | undefined,
 ): { hasCycle: boolean; chain: string[] } {
   const chain: string[] = [orchestratorId]
   let currentParentId = parentOrchestrationId
@@ -126,7 +125,7 @@ export function detectCycle(
 // Budget check — can we run another agent?
 export function canRunAgent(
   budget: OrchestratorBudget,
-  run: OrchestratorRun
+  run: OrchestratorRun,
 ): { allowed: boolean; reason?: string } {
   if (budget.maxTotalTokens) {
     const used = run.totalInputTokens + run.totalOutputTokens
@@ -153,7 +152,7 @@ export function canRunAgent(
 // Parallel budget reservation
 export function validateParallelBudget(
   budget: OrchestratorBudget,
-  agentCount: number
+  agentCount: number,
 ): { allowed: boolean; reason?: string; effectiveConcurrency?: number } {
   if (!budget.maxTotalTokens && !budget.maxTotalCostUSD) {
     return { allowed: true, effectiveConcurrency: agentCount }
@@ -191,8 +190,8 @@ export function validateParallelBudget(
     const impliedPerAgent = Math.floor(budget.maxTotalTokens / agentCount)
     console.warn(
       `[Orchestrator] Parallel budget advisory: no per-agent token limit set. ` +
-      `Total budget ${budget.maxTotalTokens} / ${agentCount} agents = ~${impliedPerAgent} tokens each. ` +
-      `Budget may be exceeded.`
+        `Total budget ${budget.maxTotalTokens} / ${agentCount} agents = ~${impliedPerAgent} tokens each. ` +
+        `Budget may be exceeded.`,
     )
   }
 
@@ -205,7 +204,7 @@ export function evaluateCondition(
   conditionValue: string | undefined,
   conditionThreshold: number | undefined,
   lastResult: OrchestratorAgentResult | undefined,
-  cumulativeTokens: number
+  cumulativeTokens: number,
 ): boolean {
   switch (conditionType) {
     case 'agent-succeeded':
@@ -216,7 +215,9 @@ export function evaluateCondition(
 
     case 'output-contains': {
       if (!conditionValue) {
-        console.warn('[Orchestrator] Warning: output-contains condition has empty value - will always match')
+        console.warn(
+          '[Orchestrator] Warning: output-contains condition has empty value - will always match',
+        )
       }
       const output = lastResult?.output ?? ''
       return output.toLowerCase().includes((conditionValue ?? '').toLowerCase())
@@ -229,7 +230,7 @@ export function evaluateCondition(
         return regex.test(lastResult?.output ?? '')
       } catch (err) {
         console.error(
-          `[Orchestrator] Invalid regex in output-matches condition: ${conditionValue} - ${(err as Error).message}`
+          `[Orchestrator] Invalid regex in output-matches condition: ${conditionValue} - ${(err as Error).message}`,
         )
         return false
       }
@@ -241,7 +242,7 @@ export function evaluateCondition(
     case 'custom-expression':
       throw new Error(
         'custom-expression conditions are not yet implemented. ' +
-        'This condition type requires a safe expression parser (Phase 2+).'
+          'This condition type requires a safe expression parser (Phase 2+).',
       )
 
     default:
@@ -251,7 +252,7 @@ export function evaluateCondition(
 
 // Crash recovery: resets interrupted runs on workspace load
 export function recoverOrchestrators(
-  nodes: Array<{ data: { type: string; [key: string]: unknown } }>
+  nodes: Array<{ data: { type: string; [key: string]: unknown } }>,
 ): void {
   for (const node of nodes) {
     if (node.data.type !== 'orchestrator') continue
@@ -260,8 +261,8 @@ export function recoverOrchestrators(
     if (
       nodeData.currentRun &&
       (nodeData.currentRun.status === 'running' ||
-       nodeData.currentRun.status === 'paused' ||
-       nodeData.currentRun.status === 'planning')
+        nodeData.currentRun.status === 'paused' ||
+        nodeData.currentRun.status === 'planning')
     ) {
       nodeData.currentRun.status = 'failed'
       nodeData.currentRun.error = 'Orchestration interrupted by app restart'
@@ -274,7 +275,11 @@ export function recoverOrchestrators(
       nodeData.currentRun = undefined
 
       for (const agent of nodeData.connectedAgents) {
-        if (agent.status === 'running' || agent.status === 'queued' || agent.status === 'retrying') {
+        if (
+          agent.status === 'running' ||
+          agent.status === 'queued' ||
+          agent.status === 'retrying'
+        ) {
           agent.status = 'idle'
         }
       }
@@ -285,7 +290,7 @@ export function recoverOrchestrators(
 // Determine final run status based on agent results
 export function determineFinalStatus(
   agentResults: OrchestratorAgentResult[],
-  failurePolicy: FailurePolicy
+  failurePolicy: FailurePolicy,
 ): OrchestratorRunStatus {
   if (agentResults.length === 0) return 'failed'
 
@@ -305,7 +310,7 @@ export function determineFinalStatus(
 export async function startOrchestration(
   orchestratorId: string,
   nodeData: OrchestratorNodeData,
-  parentOrchestrationId?: string
+  parentOrchestrationId?: string,
 ): Promise<{ success: boolean; error?: string }> {
   // Check for cycles
   const cycleCheck = detectCycle(orchestratorId, parentOrchestrationId)
@@ -468,7 +473,8 @@ async function executeSequential(state: ActiveRunState): Promise<void> {
       // Truncate output for sequential context propagation (10K chars max)
       const maxChars = 10000
       if (result.output.length > maxChars) {
-        previousOutput = result.output.slice(0, maxChars) +
+        previousOutput =
+          result.output.slice(0, maxChars) +
           `\n[Truncated - ${result.output.length} total characters]`
       } else {
         previousOutput = result.output
@@ -588,7 +594,7 @@ async function executeConditional(state: ActiveRunState): Promise<void> {
           condition.value,
           condition.threshold,
           lastResult,
-          cumulativeTokens
+          cumulativeTokens,
         )
         if (condition.invert) condResult = !condResult
         if (!condResult) {
@@ -689,7 +695,9 @@ function buildCoordinatorTools(state: ActiveRunState, tempDir: string): Tool[] {
       const agent = state.agents.find((a) => a.nodeId === agentNodeId)
       if (!agent) {
         return {
-          content: [{ type: 'text', text: `Error: No connected agent with nodeId "${agentNodeId}"` }],
+          content: [
+            { type: 'text', text: `Error: No connected agent with nodeId "${agentNodeId}"` },
+          ],
           isError: true,
         }
       }
@@ -698,10 +706,12 @@ function buildCoordinatorTools(state: ActiveRunState, tempDir: string): Tool[] {
       const budgetCheck = canRunAgent(state.budget, state.run)
       if (!budgetCheck.allowed) {
         return {
-          content: [{
-            type: 'text',
-            text: `Budget exceeded: ${budgetCheck.reason}`,
-          }],
+          content: [
+            {
+              type: 'text',
+              text: `Budget exceeded: ${budgetCheck.reason}`,
+            },
+          ],
           isError: true,
         }
       }
@@ -721,11 +731,7 @@ function buildCoordinatorTools(state: ActiveRunState, tempDir: string): Tool[] {
       workerResults.set(agentNodeId, result)
 
       // Build edge result and store on run for edge annotation
-      const edgeResult = await buildEdgeResult(
-        result.output || '',
-        tempDir,
-        agentNodeId,
-      )
+      const edgeResult = await buildEdgeResult(result.output || '', tempDir, agentNodeId)
 
       // Store edge results on the run's agentResults for downstream edge annotation
       if (!state.run.edgeResults) {
@@ -738,10 +744,12 @@ function buildCoordinatorTools(state: ActiveRunState, tempDir: string): Tool[] {
 
       const summary = edgeResult.summary
       return {
-        content: [{
-          type: 'text',
-          text: `Worker "${agentNodeId}" completed with status: ${result.status}\n\n${summary}`,
-        }],
+        content: [
+          {
+            type: 'text',
+            text: `Worker "${agentNodeId}" completed with status: ${result.status}\n\n${summary}`,
+          },
+        ],
       }
     },
   })
@@ -762,43 +770,49 @@ function buildCoordinatorTools(state: ActiveRunState, tempDir: string): Tool[] {
         const fromRun = state.run.agentResults.find((r) => r.agentNodeId === agentNodeId)
         if (fromRun) {
           return {
-            content: [{
-              type: 'text',
-              text: JSON.stringify({
-                agentNodeId: fromRun.agentNodeId,
-                status: fromRun.status,
-                output: fromRun.output?.slice(0, AGENT_RESULT_SUMMARY_MAX_CHARS),
-                inputTokens: fromRun.inputTokens,
-                outputTokens: fromRun.outputTokens,
-                durationMs: fromRun.durationMs,
-              }),
-            }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  agentNodeId: fromRun.agentNodeId,
+                  status: fromRun.status,
+                  output: fromRun.output?.slice(0, AGENT_RESULT_SUMMARY_MAX_CHARS),
+                  inputTokens: fromRun.inputTokens,
+                  outputTokens: fromRun.outputTokens,
+                  durationMs: fromRun.durationMs,
+                }),
+              },
+            ],
           }
         }
 
         return {
-          content: [{
-            type: 'text',
-            text: `No result found for worker "${agentNodeId}". Has it been spawned yet?`,
-          }],
+          content: [
+            {
+              type: 'text',
+              text: `No result found for worker "${agentNodeId}". Has it been spawned yet?`,
+            },
+          ],
           isError: true,
         }
       }
 
       return {
-        content: [{
-          type: 'text',
-          text: JSON.stringify({
-            agentNodeId: result.agentNodeId,
-            status: result.status,
-            output: result.output?.slice(0, AGENT_RESULT_SUMMARY_MAX_CHARS),
-            error: result.error,
-            inputTokens: result.inputTokens,
-            outputTokens: result.outputTokens,
-            durationMs: result.durationMs,
-            toolCallCount: result.toolCallCount,
-          }),
-        }],
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              agentNodeId: result.agentNodeId,
+              status: result.status,
+              output: result.output?.slice(0, AGENT_RESULT_SUMMARY_MAX_CHARS),
+              error: result.error,
+              inputTokens: result.inputTokens,
+              outputTokens: result.outputTokens,
+              durationMs: result.durationMs,
+              toolCallCount: result.toolCallCount,
+            }),
+          },
+        ],
       }
     },
   })
@@ -821,10 +835,12 @@ function buildCoordinatorTools(state: ActiveRunState, tempDir: string): Tool[] {
       const targetIds = agentNodeIds || [...workerResults.keys()]
       if (targetIds.length === 0) {
         return {
-          content: [{
-            type: 'text',
-            text: 'No worker results available to synthesize.',
-          }],
+          content: [
+            {
+              type: 'text',
+              text: 'No worker results available to synthesize.',
+            },
+          ],
           isError: true,
         }
       }
@@ -835,9 +851,7 @@ function buildCoordinatorTools(state: ActiveRunState, tempDir: string): Tool[] {
         const result = workerResults.get(nodeId)
         if (result) {
           const outputTruncated = (result.output || '').slice(0, AGENT_RESULT_SUMMARY_MAX_CHARS)
-          parts.push(
-            `## Worker: ${nodeId} (${result.status})\n${outputTruncated}`
-          )
+          parts.push(`## Worker: ${nodeId} (${result.status})\n${outputTruncated}`)
         } else {
           parts.push(`## Worker: ${nodeId}\n[No result available]`)
         }
@@ -850,10 +864,12 @@ function buildCoordinatorTools(state: ActiveRunState, tempDir: string): Tool[] {
       const combined = header + parts.join('\n\n---\n\n')
 
       return {
-        content: [{
-          type: 'text',
-          text: combined,
-        }],
+        content: [
+          {
+            type: 'text',
+            text: combined,
+          },
+        ],
       }
     },
   })
@@ -898,9 +914,7 @@ async function executeCoordinator(state: ActiveRunState): Promise<void> {
 
   // Build the graph topology description for the coordinator
   const agentDescriptions = state.agents.map((a) => {
-    const desc = [
-      `- Agent "${a.nodeId}" (order: ${a.order})`,
-    ]
+    const desc = [`- Agent "${a.nodeId}" (order: ${a.order})`]
     if (a.promptOverride) {
       desc.push(`  Prompt: ${a.promptOverride.slice(0, 200)}...`)
     }
@@ -983,7 +997,7 @@ async function executeCoordinator(state: ActiveRunState): Promise<void> {
 async function runAgent(
   state: ActiveRunState,
   agent: ConnectedAgent,
-  previousOutput: string | undefined
+  previousOutput: string | undefined,
 ): Promise<OrchestratorAgentResult> {
   const startTime = Date.now()
 
@@ -1002,8 +1016,10 @@ async function runAgent(
   // Call the real agent via claudeAgent bridge
   const agentResult = await runAgentForOrchestrator({
     agentNodeId: agent.nodeId,
-    context: '',  // Context is injected by the agent system prompt builder
-    prompt: agent.promptOverride || `You are agent "${agent.nodeId}" in an orchestrated pipeline. Complete your assigned task.`,
+    context: '', // Context is injected by the agent system prompt builder
+    prompt:
+      agent.promptOverride ||
+      `You are agent "${agent.nodeId}" in an orchestrated pipeline. Complete your assigned task.`,
     model: state.run.model,
     maxTokens: state.budget?.maxTokensPerAgent,
     previousOutput,
@@ -1033,8 +1049,10 @@ async function runAgent(
   state.run.agentResults.push(result)
   state.run.totalInputTokens += result.inputTokens
   state.run.totalOutputTokens += result.outputTokens
-  state.run.totalCacheCreationTokens = (state.run.totalCacheCreationTokens || 0) + (result.cacheCreationTokens || 0)
-  state.run.totalCacheReadTokens = (state.run.totalCacheReadTokens || 0) + (result.cacheReadTokens || 0)
+  state.run.totalCacheCreationTokens =
+    (state.run.totalCacheCreationTokens || 0) + (result.cacheCreationTokens || 0)
+  state.run.totalCacheReadTokens =
+    (state.run.totalCacheReadTokens || 0) + (result.cacheReadTokens || 0)
   state.run.totalCostUSD += result.costUSD
 
   agent.status = result.status === 'completed' ? 'completed' : 'failed'
@@ -1056,7 +1074,7 @@ async function runAgent(
 async function applyFailurePolicy(
   state: ActiveRunState,
   agent: ConnectedAgent,
-  _result: OrchestratorAgentResult
+  _result: OrchestratorAgentResult,
 ): Promise<boolean> {
   const policy = state.failurePolicy
 
@@ -1137,13 +1155,14 @@ function finishRun(state: ActiveRunState): void {
   run.completedAt = Date.now()
   run.totalDurationMs = run.completedAt - run.startedAt
 
-  const statusType = run.status === 'completed'
-    ? 'run-completed' as const
-    : run.status === 'completed-with-errors'
-    ? 'run-completed-with-errors' as const
-    : run.status === 'aborted'
-    ? 'run-aborted' as const
-    : 'run-failed' as const
+  const statusType =
+    run.status === 'completed'
+      ? ('run-completed' as const)
+      : run.status === 'completed-with-errors'
+        ? ('run-completed-with-errors' as const)
+        : run.status === 'aborted'
+          ? ('run-aborted' as const)
+          : ('run-failed' as const)
 
   emitStatus({
     orchestratorId,

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useMemo, memo } from 'react'
-import { calculateTokenUsage, getUsageLevel } from '../utils/tokenEstimation'
 import type { Message } from '@shared/types'
+import { memo, useMemo } from 'react'
+import { calculateTokenUsage, getUsageLevel } from '../utils/tokenEstimation'
 
 interface TokenMeterProps {
   /** Context text from connected nodes */
@@ -32,11 +32,11 @@ function TokenMeterComponent({
   messages,
   systemPrompt = '',
   model,
-  compact = false
+  compact = false,
 }: TokenMeterProps): JSX.Element {
   const usage = useMemo(
     () => calculateTokenUsage(contextText, messages, systemPrompt, model),
-    [contextText, messages, systemPrompt, model]
+    [contextText, messages, systemPrompt, model],
   )
 
   const level = getUsageLevel(usage.percentage)

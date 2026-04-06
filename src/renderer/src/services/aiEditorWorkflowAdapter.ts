@@ -8,10 +8,10 @@
  * executed with progress tracking, approval handling, and undo support.
  */
 
-import type { MutationPlan, MutationOp, NodeData } from '@shared/types'
-import { createStep, type StepDefinition, type ExecutionContext } from './workflowExecutor'
+import type { MutationOp, MutationPlan, NodeData } from '@shared/types'
+import { type TrustLevel, useWorkflowStore } from '../stores/workflowStore'
 import { executeMutationPlan } from '../utils/mutationExecutor'
-import { useWorkflowStore, type TrustLevel } from '../stores/workflowStore'
+import { createStep, type ExecutionContext, type StepDefinition } from './workflowExecutor'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -49,7 +49,7 @@ const OPERATION_TRUST_LEVELS: Record<MutationOp['op'], TrustLevel> = {
   'move-node': 'auto',
   'create-edge': 'auto',
   'update-edge': 'auto',
-  'delete-edge': 'auto'
+  'delete-edge': 'auto',
 }
 
 // Operation type display names
@@ -60,7 +60,7 @@ const OPERATION_NAMES: Record<MutationOp['op'], string> = {
   'move-node': 'Move node',
   'create-edge': 'Connect nodes',
   'update-edge': 'Update connection',
-  'delete-edge': 'Remove connection'
+  'delete-edge': 'Remove connection',
 }
 
 // -----------------------------------------------------------------------------
@@ -76,7 +76,7 @@ const OPERATION_NAMES: Record<MutationOp['op'], string> = {
  */
 export function convertPlanToWorkflow(
   plan: MutationPlan,
-  options: AdapterOptions = {}
+  options: AdapterOptions = {},
 ): { name: string; description: string; steps: StepDefinition[] } {
   const { requireApprovalFor = [] } = options
 
@@ -86,7 +86,7 @@ export function convertPlanToWorkflow(
   return {
     name: plan.reasoning ? plan.reasoning.slice(0, 50) : 'AI Editor Operation',
     description: `${plan.operations.length} operations`,
-    steps
+    steps,
   }
 }
 
@@ -95,13 +95,13 @@ export function convertPlanToWorkflow(
  */
 function createOperationSteps(
   plan: MutationPlan,
-  requireApprovalFor: MutationOp['op'][]
+  requireApprovalFor: MutationOp['op'][],
 ): StepDefinition[] {
   // For simple plans (≤5 ops), show each operation as a step
   // For larger plans, group by operation type
   if (plan.operations.length <= 5) {
     return plan.operations.map((op, index) =>
-      createOperationStep(op, index, plan, requireApprovalFor)
+      createOperationStep(op, index, plan, requireApprovalFor),
     )
   }
 
@@ -114,20 +114,23 @@ function createOperationSteps(
 
     const trustLevel = determineGroupTrustLevel(ops, requireApprovalFor)
 
-    steps.push(createStep(
-      `${OPERATION_NAMES[opType as MutationOp['op']]} (${ops.length})`,
-      async () => {
-        // Execute entire plan - this step is just for progress tracking
-        return { success: true, data: { count: ops.length } }
-      },
-      {
-        description: `${ops.length} ${opType} operations`,
-        trustLevel,
-        approvalReason: trustLevel === 'always_approve'
-          ? `This will ${opType.replace('-', ' ')} ${ops.length} items`
-          : undefined
-      }
-    ))
+    steps.push(
+      createStep(
+        `${OPERATION_NAMES[opType as MutationOp['op']]} (${ops.length})`,
+        async () => {
+          // Execute entire plan - this step is just for progress tracking
+          return { success: true, data: { count: ops.length } }
+        },
+        {
+          description: `${ops.length} ${opType} operations`,
+          trustLevel,
+          approvalReason:
+            trustLevel === 'always_approve'
+              ? `This will ${opType.replace('-', ' ')} ${ops.length} items`
+              : undefined,
+        },
+      ),
+    )
   }
 
   return steps
@@ -140,7 +143,7 @@ function createOperationStep(
   op: MutationOp,
   index: number,
   _plan: MutationPlan,
-  requireApprovalFor: MutationOp['op'][]
+  requireApprovalFor: MutationOp['op'][],
 ): StepDefinition {
   const description = getOperationDescription(op)
 
@@ -160,13 +163,12 @@ function createOperationStep(
     {
       description,
       trustLevel,
-      approvalReason: trustLevel === 'always_approve'
-        ? `This operation will ${op.op.replace('-', ' ')}`
-        : undefined,
-      approvalPreview: trustLevel === 'always_approve'
-        ? () => getOperationPreview(op)
-        : undefined
-    }
+      approvalReason:
+        trustLevel === 'always_approve'
+          ? `This operation will ${op.op.replace('-', ' ')}`
+          : undefined,
+      approvalPreview: trustLevel === 'always_approve' ? () => getOperationPreview(op) : undefined,
+    },
   )
 }
 
@@ -175,7 +177,7 @@ function createOperationStep(
  */
 export async function executePlanAsWorkflow(
   plan: MutationPlan,
-  options: AdapterOptions = {}
+  options: AdapterOptions = {},
 ): Promise<boolean> {
   const { onComplete, onError, onCancel: _onCancel } = options
   const results: OperationResult[] = []
@@ -188,11 +190,11 @@ export async function executePlanAsWorkflow(
   store.startWorkflow(
     workflow.name,
     workflow.description,
-    workflow.steps.map(s => ({
+    workflow.steps.map((s) => ({
       name: s.name,
       description: s.description,
-      trustLevel: s.trustLevel
-    }))
+      trustLevel: s.trustLevel,
+    })),
   )
 
   try {
@@ -207,7 +209,7 @@ export async function executePlanAsWorkflow(
       store.startStep(step.id)
 
       // Small delay for visual feedback
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       store.completeStep(step.id)
     }
@@ -221,7 +223,7 @@ export async function executePlanAsWorkflow(
         results.push({
           operation: op,
           success: true,
-          nodeId: op.op === 'create-node' ? result.createdNodeIds[i] : undefined
+          nodeId: op.op === 'create-node' ? result.createdNodeIds[i] : undefined,
         })
       })
 
@@ -233,7 +235,7 @@ export async function executePlanAsWorkflow(
     }
   } catch (error) {
     const errorMessage = (error as Error).message
-    onError?.(errorMessage, results.filter(r => r.success).length)
+    onError?.(errorMessage, results.filter((r) => r.success).length)
     store.cancelWorkflow()
     return false
   }
@@ -259,7 +261,7 @@ function groupOperationsByType(operations: MutationOp[]): Record<string, Mutatio
 
 function determineGroupTrustLevel(
   operations: MutationOp[],
-  requireApprovalFor: MutationOp['op'][]
+  requireApprovalFor: MutationOp['op'][],
 ): TrustLevel {
   // If any operation requires approval, the group does too
   for (const op of operations) {
@@ -322,8 +324,10 @@ function getOperationPreview(op: MutationOp): string {
       return [
         `Type: ${op.type}`,
         `Title: ${data?.title ?? 'Untitled'}`,
-        data?.content ? `Content preview: ${data.content.slice(0, 100)}...` : ''
-      ].filter(Boolean).join('\n')
+        data?.content ? `Content preview: ${data.content.slice(0, 100)}...` : '',
+      ]
+        .filter(Boolean)
+        .join('\n')
     }
     case 'delete-node':
       return `This node will be permanently deleted.${op.reason ? `\nReason: ${op.reason}` : ''}`
@@ -348,7 +352,7 @@ export function createNodeCreationWorkflow(
     content?: string
     position: { x: number; y: number }
   }>,
-  workflowName: string = 'Create Nodes'
+  workflowName: string = 'Create Nodes',
 ): { name: string; description: string; steps: StepDefinition[] } {
   return {
     name: workflowName,
@@ -363,10 +367,10 @@ export function createNodeCreationWorkflow(
         },
         {
           description: `Create a ${node.type} node titled "${node.title}"`,
-          trustLevel: 'auto'
-        }
-      )
-    )
+          trustLevel: 'auto',
+        },
+      ),
+    ),
   }
 }
 
@@ -376,7 +380,7 @@ export function createNodeCreationWorkflow(
 export function createOrganizeWorkflow(
   nodeIds: string[],
   projectTitle: string,
-  _projectPosition: { x: number; y: number }
+  _projectPosition: { x: number; y: number },
 ): { name: string; description: string; steps: StepDefinition[] } {
   return {
     name: `Organize into "${projectTitle}"`,
@@ -389,8 +393,8 @@ export function createOrganizeWorkflow(
         },
         {
           description: `Create a new project container`,
-          trustLevel: 'auto'
-        }
+          trustLevel: 'auto',
+        },
       ),
       createStep(
         `Move ${nodeIds.length} nodes into project`,
@@ -399,10 +403,10 @@ export function createOrganizeWorkflow(
         },
         {
           description: `Move selected nodes into the new project`,
-          trustLevel: 'auto'
-        }
-      )
-    ]
+          trustLevel: 'auto',
+        },
+      ),
+    ],
   }
 }
 
@@ -414,5 +418,5 @@ export default {
   convertPlanToWorkflow,
   executePlanAsWorkflow,
   createNodeCreationWorkflow,
-  createOrganizeWorkflow
+  createOrganizeWorkflow,
 }

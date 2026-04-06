@@ -55,7 +55,7 @@ export class CircuitBreaker {
     this.state = {
       failures: [],
       state: 'closed',
-      lastProbeTime: 0
+      lastProbeTime: 0,
     }
   }
 
@@ -83,9 +83,7 @@ export class CircuitBreaker {
     this.state.failures.push({ timestamp: now })
 
     // Remove failures outside the sliding window
-    this.state.failures = this.state.failures.filter(
-      f => now - f.timestamp < this.windowMs
-    )
+    this.state.failures = this.state.failures.filter((f) => now - f.timestamp < this.windowMs)
 
     // Trip if threshold exceeded
     if (this.state.failures.length >= this.failureThreshold) {

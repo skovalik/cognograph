@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { classifyIntent, parseCommand, type WorkspaceContext } from '../bridgeCommandParser'
 
 // =============================================================================
@@ -116,7 +116,7 @@ describe('bridgeCommandParser', () => {
       const result = await parseCommand('Set budget limit to $5.50', DEFAULT_CONTEXT)
 
       expect(result.parsed!.intent).toBe('set-policy')
-      expect(result.parsed!.parameters.budget).toBe(5.50)
+      expect(result.parsed!.parameters.budget).toBe(5.5)
       expect(result.changes).toHaveLength(0) // Policy changes don't create nodes
     })
 

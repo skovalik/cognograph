@@ -12,7 +12,7 @@
  * Used for node descriptions and other multiline content.
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 
 interface EditableTextProps {
   value: string
@@ -27,7 +27,7 @@ function EditableTextComponent({
   onChange,
   className = '',
   placeholder = 'No description',
-  maxRows: _maxRows = 4
+  maxRows: _maxRows = 4,
 }: EditableTextProps): JSX.Element {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(value)
@@ -60,12 +60,15 @@ function EditableTextComponent({
   }, [])
 
   // Enter edit mode on double-click
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    setIsEditing(true)
-    setEditValue(value)
-  }, [value])
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      e.preventDefault()
+      setIsEditing(true)
+      setEditValue(value)
+    },
+    [value],
+  )
 
   // Save changes
   const handleSave = useCallback(() => {
@@ -83,20 +86,26 @@ function EditableTextComponent({
   }, [value])
 
   // Handle key events
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      e.preventDefault()
-      handleCancel()
-    }
-    // Note: Enter creates new line in textarea, so we don't save on Enter
-    // User saves by clicking outside (blur)
-  }, [handleCancel])
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        handleCancel()
+      }
+      // Note: Enter creates new line in textarea, so we don't save on Enter
+      // User saves by clicking outside (blur)
+    },
+    [handleCancel],
+  )
 
   // Handle input change
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setEditValue(e.target.value)
-    autoResize()
-  }, [autoResize])
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setEditValue(e.target.value)
+      autoResize()
+    },
+    [autoResize],
+  )
 
   // Handle blur - save changes
   const handleBlur = useCallback(() => {
@@ -104,17 +113,23 @@ function EditableTextComponent({
   }, [handleSave])
 
   // Stop propagation when editing to prevent node selection changes
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    if (isEditing) {
-      e.stopPropagation()
-    }
-  }, [isEditing])
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (isEditing) {
+        e.stopPropagation()
+      }
+    },
+    [isEditing],
+  )
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (isEditing) {
-      e.stopPropagation()
-    }
-  }, [isEditing])
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (isEditing) {
+        e.stopPropagation()
+      }
+    },
+    [isEditing],
+  )
 
   if (isEditing) {
     return (
@@ -132,7 +147,7 @@ function EditableTextComponent({
           color: 'inherit',
           font: 'inherit',
           width: '100%',
-          minHeight: '1.5em'
+          minHeight: '1.5em',
         }}
         placeholder={placeholder}
         aria-label="Node description"

@@ -13,23 +13,15 @@
  * - Progressive mode: badge count only (no glow) when node count > 250
  */
 
-import { memo, useState, useCallback } from 'react'
-import {
-  Lightbulb,
-  Link2,
-  AlertTriangle,
-  BarChart3,
-  TrendingUp,
-  Check,
-  X,
-} from 'lucide-react'
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
-import { Button } from '../ui/Button'
-import { Badge } from '../ui/Badge'
-import { Separator } from '../ui/separator'
+import type { GraphInsight, InsightType } from '@shared/types/bridge'
+import { AlertTriangle, BarChart3, Check, Lightbulb, Link2, TrendingUp, X } from 'lucide-react'
+import { memo, useCallback, useState } from 'react'
 import { useGraphIntelligenceStore } from '../../stores/graphIntelligenceStore'
 import { emitInsightApplied, emitInsightDismissed } from '../../utils/auditHooks'
-import type { GraphInsight, InsightType } from '@shared/types/bridge'
+import { Badge } from '../ui/Badge'
+import { Button } from '../ui/Button'
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
+import { Separator } from '../ui/separator'
 
 // =============================================================================
 // Icon and Color Maps
@@ -78,9 +70,7 @@ function InsightIndicatorComponent({
   const viewInsight = useGraphIntelligenceStore((s) => s.viewInsight)
 
   // Filter to only active insights
-  const activeInsights = insights.filter(
-    (i) => i.status === 'new' || i.status === 'viewed'
-  )
+  const activeInsights = insights.filter((i) => i.status === 'new' || i.status === 'viewed')
 
   if (activeInsights.length === 0) return null
 
@@ -94,7 +84,7 @@ function InsightIndicatorComponent({
       emitInsightApplied(insightId)
       if (activeInsights.length <= 1) setIsOpen(false)
     },
-    [applyInsight, activeInsights.length]
+    [applyInsight, activeInsights.length],
   )
 
   const handleDismiss = useCallback(
@@ -103,7 +93,7 @@ function InsightIndicatorComponent({
       emitInsightDismissed(insightId)
       if (activeInsights.length <= 1) setIsOpen(false)
     },
-    [dismissInsight, activeInsights.length]
+    [dismissInsight, activeInsights.length],
   )
 
   const handleOpenChange = useCallback(
@@ -118,7 +108,7 @@ function InsightIndicatorComponent({
         }
       }
     },
-    [activeInsights, viewInsight]
+    [activeInsights, viewInsight],
   )
 
   // Progressive mode: just show a badge count, no glow
@@ -216,7 +206,7 @@ function InsightIndicatorComponent({
 function renderInsightList(
   insights: GraphInsight[],
   onApply: (id: string) => void,
-  onDismiss: (id: string) => void
+  onDismiss: (id: string) => void,
 ): JSX.Element {
   return (
     <div className="space-y-0">
@@ -229,21 +219,12 @@ function renderInsightList(
             {i > 0 && <Separator className="my-2" />}
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5">
-                <InsightIcon
-                  className="w-3.5 h-3.5 shrink-0"
-                  style={{ color }}
-                />
-                <span
-                  className="text-xs font-medium"
-                  style={{ color: 'var(--text-primary)' }}
-                >
+                <InsightIcon className="w-3.5 h-3.5 shrink-0" style={{ color }} />
+                <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>
                   {insight.title}
                 </span>
               </div>
-              <p
-                className="text-[10px] leading-relaxed"
-                style={{ color: 'var(--text-muted)' }}
-              >
+              <p className="text-[10px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
                 {insight.description}
               </p>
               <div className="flex items-center gap-1.5">
@@ -259,22 +240,21 @@ function renderInsightList(
                 </Badge>
               </div>
               <div className="flex items-center gap-1 pt-1">
-                {insight.suggestedChanges &&
-                  insight.suggestedChanges.length > 0 && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-6 text-[10px] px-2"
-                      style={{
-                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                        color: 'var(--color-success, #22c55e)',
-                      }}
-                      onClick={() => onApply(insight.id)}
-                    >
-                      <Check className="w-3 h-3 mr-0.5" />
-                      Apply
-                    </Button>
-                  )}
+                {insight.suggestedChanges && insight.suggestedChanges.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 text-[10px] px-2"
+                    style={{
+                      backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                      color: 'var(--color-success, #22c55e)',
+                    }}
+                    onClick={() => onApply(insight.id)}
+                  >
+                    <Check className="w-3 h-3 mr-0.5" />
+                    Apply
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="ghost"

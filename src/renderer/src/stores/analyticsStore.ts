@@ -85,12 +85,12 @@ const DEFAULT_METRICS: OnboardingMetrics = {
   templateLoadedAt: null,
   templatesExplored: 0,
   ahaAchieved: false,
-  ahaAchievedAt: null
+  ahaAchievedAt: null,
 }
 
 const initialState: AnalyticsState = {
   metrics: DEFAULT_METRICS,
-  sessionStartTime: Date.now()
+  sessionStartTime: Date.now(),
 }
 
 // =============================================================================
@@ -109,9 +109,9 @@ export const useAnalyticsStore = create<AnalyticsStore>()(
           set({
             metrics: {
               ...state.metrics,
-              appFirstLaunched: Date.now()
+              appFirstLaunched: Date.now(),
             },
-            sessionStartTime: Date.now()
+            sessionStartTime: Date.now(),
           })
         } else {
           // Update session start on subsequent launches
@@ -127,8 +127,8 @@ export const useAnalyticsStore = create<AnalyticsStore>()(
         set({
           metrics: {
             ...state.metrics,
-            timeToFirstNode: elapsed
-          }
+            timeToFirstNode: elapsed,
+          },
         })
       },
 
@@ -140,8 +140,8 @@ export const useAnalyticsStore = create<AnalyticsStore>()(
         set({
           metrics: {
             ...state.metrics,
-            timeToFirstConnection: elapsed
-          }
+            timeToFirstConnection: elapsed,
+          },
         })
       },
 
@@ -153,8 +153,8 @@ export const useAnalyticsStore = create<AnalyticsStore>()(
         set({
           metrics: {
             ...state.metrics,
-            timeToFirstChat: elapsed
-          }
+            timeToFirstChat: elapsed,
+          },
         })
       },
 
@@ -162,8 +162,8 @@ export const useAnalyticsStore = create<AnalyticsStore>()(
         set((state) => ({
           metrics: {
             ...state.metrics,
-            tutorialStarted: true
-          }
+            tutorialStarted: true,
+          },
         }))
       },
 
@@ -175,8 +175,8 @@ export const useAnalyticsStore = create<AnalyticsStore>()(
           return {
             metrics: {
               ...state.metrics,
-              tutorialStepsCompleted: [...steps, stepId]
-            }
+              tutorialStepsCompleted: [...steps, stepId],
+            },
           }
         })
       },
@@ -185,8 +185,8 @@ export const useAnalyticsStore = create<AnalyticsStore>()(
         set((state) => ({
           metrics: {
             ...state.metrics,
-            tutorialCompleted: true
-          }
+            tutorialCompleted: true,
+          },
         }))
       },
 
@@ -199,8 +199,8 @@ export const useAnalyticsStore = create<AnalyticsStore>()(
             ...state.metrics,
             templateUsed: isFirstTemplate ? templateId : state.metrics.templateUsed,
             templateLoadedAt: isFirstTemplate ? Date.now() : state.metrics.templateLoadedAt,
-            templatesExplored: state.metrics.templatesExplored + 1
-          }
+            templatesExplored: state.metrics.templatesExplored + 1,
+          },
         })
       },
 
@@ -212,15 +212,15 @@ export const useAnalyticsStore = create<AnalyticsStore>()(
           metrics: {
             ...state.metrics,
             ahaAchieved: true,
-            ahaAchievedAt: Date.now()
-          }
+            ahaAchievedAt: Date.now(),
+          },
         })
       },
 
       resetMetrics: () => {
         set({
           metrics: DEFAULT_METRICS,
-          sessionStartTime: Date.now()
+          sessionStartTime: Date.now(),
         })
       },
 
@@ -251,17 +251,17 @@ export const useAnalyticsStore = create<AnalyticsStore>()(
         if (m.ahaAchieved) score += 10
 
         return score
-      }
+      },
     }),
     {
       name: 'cognograph-analytics',
       version: 1,
       partialize: (state) => ({
-        metrics: state.metrics
+        metrics: state.metrics,
         // sessionStartTime is transient, not persisted
-      })
-    }
-  )
+      }),
+    },
+  ),
 )
 
 // =============================================================================
@@ -271,7 +271,8 @@ export const useAnalyticsStore = create<AnalyticsStore>()(
 export const selectMetrics = (state: AnalyticsStore) => state.metrics
 export const selectActivationScore = (state: AnalyticsStore) => state.getActivationScore()
 export const selectTimeToFirstNode = (state: AnalyticsStore) => state.metrics.timeToFirstNode
-export const selectTimeToFirstConnection = (state: AnalyticsStore) => state.metrics.timeToFirstConnection
+export const selectTimeToFirstConnection = (state: AnalyticsStore) =>
+  state.metrics.timeToFirstConnection
 export const selectTimeToFirstChat = (state: AnalyticsStore) => state.metrics.timeToFirstChat
 export const selectTutorialCompleted = (state: AnalyticsStore) => state.metrics.tutorialCompleted
 export const selectTemplateUsed = (state: AnalyticsStore) => state.metrics.templateUsed

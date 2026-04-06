@@ -6,12 +6,12 @@
 // =============================================================================
 // Dropdown for selecting description templates
 
-import { memo, useState, useMemo, useCallback } from 'react'
-import { ChevronRight, Search, Lightbulb, Star } from 'lucide-react'
-import { DESCRIPTION_TEMPLATES } from '../../services/actionAIService'
-import { aiConfigLearning } from '../../services/aiConfigLearning'
-import { aiConfigAnalytics } from '../../services/aiConfigAnalytics'
 import type { AIDescriptionTemplate } from '@shared/actionTypes'
+import { ChevronRight, Lightbulb, Search, Star } from 'lucide-react'
+import { memo, useCallback, useMemo, useState } from 'react'
+import { DESCRIPTION_TEMPLATES } from '../../services/actionAIService'
+import { aiConfigAnalytics } from '../../services/aiConfigAnalytics'
+import { aiConfigLearning } from '../../services/aiConfigLearning'
 
 interface TemplateSelectorProps {
   onSelect: (template: string) => void
@@ -39,7 +39,11 @@ function saveFavorites(favorites: Set<string>): void {
   }
 }
 
-function TemplateSelectorComponent({ onSelect, isOpen, onToggle }: TemplateSelectorProps): JSX.Element {
+function TemplateSelectorComponent({
+  onSelect,
+  isOpen,
+  onToggle,
+}: TemplateSelectorProps): JSX.Element {
   const [search, setSearch] = useState('')
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [favorites, setFavorites] = useState<Set<string>>(() => loadFavorites())
@@ -49,20 +53,20 @@ function TemplateSelectorComponent({ onSelect, isOpen, onToggle }: TemplateSelec
     // Get learned patterns
     const patterns = aiConfigLearning.getTopPatterns(3)
     const learnedTemplates: AIDescriptionTemplate[] = patterns
-      .filter(p => p.successRate > 0.5)
+      .filter((p) => p.successRate > 0.5)
       .map((p, i) => ({
         id: `learned-${i}`,
         label: `Pattern: ${p.triggerType}`,
         template: generateTemplateFromPattern(p),
-        category: 'triggers' as const
+        category: 'triggers' as const,
       }))
 
     return {
       recent: learnedTemplates,
-      favorites: DESCRIPTION_TEMPLATES.filter(t => favorites.has(t.id)),
-      triggers: DESCRIPTION_TEMPLATES.filter(t => t.category === 'triggers'),
-      actions: DESCRIPTION_TEMPLATES.filter(t => t.category === 'actions'),
-      complete: DESCRIPTION_TEMPLATES.filter(t => t.category === 'complete')
+      favorites: DESCRIPTION_TEMPLATES.filter((t) => favorites.has(t.id)),
+      triggers: DESCRIPTION_TEMPLATES.filter((t) => t.category === 'triggers'),
+      actions: DESCRIPTION_TEMPLATES.filter((t) => t.category === 'actions'),
+      complete: DESCRIPTION_TEMPLATES.filter((t) => t.category === 'complete'),
     }
   }, [favorites])
 
@@ -72,19 +76,22 @@ function TemplateSelectorComponent({ onSelect, isOpen, onToggle }: TemplateSelec
 
     const lower = search.toLowerCase()
     return DESCRIPTION_TEMPLATES.filter(
-      t => t.label.toLowerCase().includes(lower) || t.template.toLowerCase().includes(lower)
+      (t) => t.label.toLowerCase().includes(lower) || t.template.toLowerCase().includes(lower),
     )
   }, [search])
 
-  const handleSelect = useCallback((template: AIDescriptionTemplate) => {
-    onSelect(template.template)
-    aiConfigAnalytics.trackTemplateUsed(template.id, template.category)
-    onToggle()
-  }, [onSelect, onToggle])
+  const handleSelect = useCallback(
+    (template: AIDescriptionTemplate) => {
+      onSelect(template.template)
+      aiConfigAnalytics.trackTemplateUsed(template.id, template.category)
+      onToggle()
+    },
+    [onSelect, onToggle],
+  )
 
   const toggleFavorite = useCallback((templateId: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    setFavorites(prev => {
+    setFavorites((prev) => {
       const next = new Set(prev)
       if (next.has(templateId)) {
         next.delete(templateId)
@@ -130,10 +137,12 @@ function TemplateSelectorComponent({ onSelect, isOpen, onToggle }: TemplateSelec
         {filteredTemplates ? (
           // Search results
           filteredTemplates.length === 0 ? (
-            <div className="p-3 text-xs text-[var(--text-muted)] text-center">No matching templates</div>
+            <div className="p-3 text-xs text-[var(--text-muted)] text-center">
+              No matching templates
+            </div>
           ) : (
             <div className="p-1">
-              {filteredTemplates.map(t => (
+              {filteredTemplates.map((t) => (
                 <TemplateItem
                   key={t.id}
                   template={t}
@@ -155,7 +164,9 @@ function TemplateSelectorComponent({ onSelect, isOpen, onToggle }: TemplateSelec
                 templates={allTemplates.favorites}
                 favorites={favorites}
                 expanded={expandedCategory === 'favorites'}
-                onToggle={() => setExpandedCategory(expandedCategory === 'favorites' ? null : 'favorites')}
+                onToggle={() =>
+                  setExpandedCategory(expandedCategory === 'favorites' ? null : 'favorites')
+                }
                 onSelect={handleSelect}
                 onToggleFavorite={toggleFavorite}
               />
@@ -169,7 +180,9 @@ function TemplateSelectorComponent({ onSelect, isOpen, onToggle }: TemplateSelec
                 templates={allTemplates.recent}
                 favorites={favorites}
                 expanded={expandedCategory === 'recent'}
-                onToggle={() => setExpandedCategory(expandedCategory === 'recent' ? null : 'recent')}
+                onToggle={() =>
+                  setExpandedCategory(expandedCategory === 'recent' ? null : 'recent')
+                }
                 onSelect={handleSelect}
                 onToggleFavorite={toggleFavorite}
               />
@@ -182,7 +195,9 @@ function TemplateSelectorComponent({ onSelect, isOpen, onToggle }: TemplateSelec
               templates={allTemplates.complete}
               favorites={favorites}
               expanded={expandedCategory === 'complete' || expandedCategory === null}
-              onToggle={() => setExpandedCategory(expandedCategory === 'complete' ? null : 'complete')}
+              onToggle={() =>
+                setExpandedCategory(expandedCategory === 'complete' ? null : 'complete')
+              }
               onSelect={handleSelect}
               onToggleFavorite={toggleFavorite}
             />
@@ -194,7 +209,9 @@ function TemplateSelectorComponent({ onSelect, isOpen, onToggle }: TemplateSelec
               templates={allTemplates.triggers}
               favorites={favorites}
               expanded={expandedCategory === 'triggers'}
-              onToggle={() => setExpandedCategory(expandedCategory === 'triggers' ? null : 'triggers')}
+              onToggle={() =>
+                setExpandedCategory(expandedCategory === 'triggers' ? null : 'triggers')
+              }
               onSelect={handleSelect}
               onToggleFavorite={toggleFavorite}
             />
@@ -206,7 +223,9 @@ function TemplateSelectorComponent({ onSelect, isOpen, onToggle }: TemplateSelec
               templates={allTemplates.actions}
               favorites={favorites}
               expanded={expandedCategory === 'actions'}
-              onToggle={() => setExpandedCategory(expandedCategory === 'actions' ? null : 'actions')}
+              onToggle={() =>
+                setExpandedCategory(expandedCategory === 'actions' ? null : 'actions')
+              }
               onSelect={handleSelect}
               onToggleFavorite={toggleFavorite}
             />
@@ -242,7 +261,7 @@ function CategorySection({
   expanded,
   onToggle,
   onSelect,
-  onToggleFavorite
+  onToggleFavorite,
 }: CategorySectionProps): JSX.Element {
   return (
     <div>
@@ -258,7 +277,7 @@ function CategorySection({
 
       {expanded && (
         <div className="pl-2 space-y-0.5">
-          {templates.map(t => (
+          {templates.map((t) => (
             <TemplateItem
               key={`${name}-${t.id}`}
               template={t}
@@ -281,7 +300,12 @@ interface TemplateItemProps {
   onToggleFavorite: (id: string, e: React.MouseEvent) => void
 }
 
-function TemplateItem({ template, isFavorite, onSelect, onToggleFavorite }: TemplateItemProps): JSX.Element {
+function TemplateItem({
+  template,
+  isFavorite,
+  onSelect,
+  onToggleFavorite,
+}: TemplateItemProps): JSX.Element {
   return (
     <button
       onClick={() => onSelect(template)}
@@ -304,14 +328,17 @@ function TemplateItem({ template, isFavorite, onSelect, onToggleFavorite }: Temp
 }
 
 // Helper to generate template from learned pattern
-function generateTemplateFromPattern(pattern: { triggerType: string; stepTypes: string[] }): string {
+function generateTemplateFromPattern(pattern: {
+  triggerType: string
+  stepTypes: string[]
+}): string {
   const triggerPhrases: Record<string, string> = {
     'property-change': 'When a [property] changes',
     'node-created': 'When a new [node type] is created',
     'connection-made': 'When nodes are connected',
-    'schedule': 'On a schedule',
-    'manual': 'When I click the button',
-    'children-complete': 'When child tasks are complete'
+    schedule: 'On a schedule',
+    manual: 'When I click the button',
+    'children-complete': 'When child tasks are complete',
   }
 
   const stepPhrases: Record<string, string> = {
@@ -320,13 +347,13 @@ function generateTemplateFromPattern(pattern: { triggerType: string; stepTypes: 
     'llm-call': 'use AI to analyze',
     'link-nodes': 'connect nodes',
     'delete-node': 'delete the node',
-    'http-request': 'send a webhook'
+    'http-request': 'send a webhook',
   }
 
   const trigger = triggerPhrases[pattern.triggerType] || 'When something happens'
   const actions = pattern.stepTypes
     .slice(0, 2)
-    .map(s => stepPhrases[s] || s)
+    .map((s) => stepPhrases[s] || s)
     .join(', then ')
 
   return `${trigger}, ${actions}`

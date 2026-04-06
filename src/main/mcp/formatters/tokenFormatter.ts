@@ -4,7 +4,7 @@
 // Token format converters for the cognograph_tokens_get MCP tool
 // Converts DesignTokenSet JSON to various output formats
 
-import type { DesignTokenSet, DesignToken } from '../../../shared/types/common'
+import type { DesignToken, DesignTokenSet } from '../../../shared/types/common'
 
 export type TokenFormat = 'raw' | 'css' | 'tailwind'
 

@@ -37,7 +37,7 @@ const CACHE_TTL_MS = 10000
 export function computeGraphHash(
   nodeCount: number,
   edgeCount: number,
-  lastModifiedAt: number
+  lastModifiedAt: number,
 ): string {
   return `${nodeCount}:${edgeCount}:${lastModifiedAt}`
 }
@@ -49,12 +49,12 @@ export function computeGraphHash(
 export function getCachedContext(
   nodeId: string,
   graphHash: string,
-  computeFn: () => string
+  computeFn: () => string,
 ): string {
   const cached = contextCache.get(nodeId)
 
   // Cache hit: same graph hash and not expired
-  if (cached && cached.graphHash === graphHash && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
+  if (cached && cached.graphHash === graphHash && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     return cached.result
   }
 
@@ -121,11 +121,11 @@ const traversalCache = new Map<string, TraversalCacheEntry>()
 export function getCachedTraversal(
   nodeId: string,
   graphHash: string,
-  computeFn: () => ContextTraversalResult
+  computeFn: () => ContextTraversalResult,
 ): ContextTraversalResult {
   const cached = traversalCache.get(nodeId)
 
-  if (cached && cached.graphHash === graphHash && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
+  if (cached && cached.graphHash === graphHash && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     return cached.result
   }
 

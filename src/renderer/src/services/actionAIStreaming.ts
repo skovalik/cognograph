@@ -7,11 +7,11 @@
 // Handles streaming responses for real-time configuration preview
 
 import type {
-  AIStreamingState,
+  AIActionContext,
   AIConfigResponse,
   AIGeneratedConfig,
-  AIActionContext,
-  AIStreamingPhase
+  AIStreamingPhase,
+  AIStreamingState,
 } from '@shared/actionTypes'
 import { buildPrompt, parseAIResponse } from './actionAIService'
 import { aiConfigAnalytics } from './aiConfigAnalytics'
@@ -63,7 +63,7 @@ class LineDelimitedJSONParser {
       }
     }
 
-    const complete = newItems.some(item => item.phase === 'complete')
+    const complete = newItems.some((item) => item.phase === 'complete')
     return { newItems, complete }
   }
 
@@ -84,17 +84,17 @@ class LineDelimitedJSONParser {
   }
 
   getConfig(): AIConfigResponse {
-    const trigger = this.parsedLines.find(l => l.phase === 'trigger')?.trigger
-    const conditions = this.parsedLines.find(l => l.phase === 'conditions')?.conditions || []
-    const steps = this.parsedLines.filter(l => l.phase === 'steps').map(l => l.step)
-    const complete = this.parsedLines.find(l => l.phase === 'complete')
-    const questions = this.parsedLines.find(l => l.phase === 'questions')?.questions
+    const trigger = this.parsedLines.find((l) => l.phase === 'trigger')?.trigger
+    const conditions = this.parsedLines.find((l) => l.phase === 'conditions')?.conditions || []
+    const steps = this.parsedLines.filter((l) => l.phase === 'steps').map((l) => l.step)
+    const complete = this.parsedLines.find((l) => l.phase === 'complete')
+    const questions = this.parsedLines.find((l) => l.phase === 'questions')?.questions
 
     if (questions && Array.isArray(questions)) {
       return {
         confidence: 'low',
         questions: questions as AIConfigResponse['questions'],
-        reasoning: complete?.reasoning || ''
+        reasoning: complete?.reasoning || '',
       }
     }
 
@@ -104,10 +104,10 @@ class LineDelimitedJSONParser {
         trigger: trigger as AIGeneratedConfig['trigger'],
         conditions: conditions as AIGeneratedConfig['conditions'],
         actions: steps as AIGeneratedConfig['actions'],
-        explanation: ''
+        explanation: '',
       },
       suggestedTitle: complete?.suggestedTitle,
-      reasoning: complete?.reasoning || ''
+      reasoning: complete?.reasoning || '',
     }
   }
 
@@ -151,7 +151,7 @@ class ActionAIStreamingService {
       onUpdate: StreamingCallback
       onError: ErrorCallback
       onComplete: CompleteCallback
-    }
+    },
   ): Promise<void> {
     // Cancel any existing session
     this.cancel()
@@ -161,7 +161,7 @@ class ActionAIStreamingService {
       abortController: new AbortController(),
       parser: new LineDelimitedJSONParser(),
       phaseStartTime: Date.now(),
-      currentPhase: 'analyzing'
+      currentPhase: 'analyzing',
     }
 
     const { onUpdate, onError, onComplete } = callbacks
@@ -170,7 +170,7 @@ class ActionAIStreamingService {
     onUpdate({
       phase: 'analyzing',
       partialConfig: {},
-      message: 'Analyzing your description...'
+      message: 'Analyzing your description...',
     })
 
     try {
@@ -181,21 +181,9 @@ class ActionAIStreamingService {
       const supportsStreaming = await this.checkStreamingSupport(connectorId)
 
       if (supportsStreaming) {
-        await this.doStreamingCall(
-          systemPrompt,
-          userPrompt,
-          connectorId,
-          onUpdate,
-          onComplete
-        )
+        await this.doStreamingCall(systemPrompt, userPrompt, connectorId, onUpdate, onComplete)
       } else {
-        await this.doSimulatedStreaming(
-          systemPrompt,
-          userPrompt,
-          connectorId,
-          onUpdate,
-          onComplete
-        )
+        await this.doSimulatedStreaming(systemPrompt, userPrompt, connectorId, onUpdate, onComplete)
       }
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
@@ -217,7 +205,7 @@ class ActionAIStreamingService {
     userPrompt: string,
     connectorId: string | undefined,
     onUpdate: StreamingCallback,
-    onComplete: CompleteCallback
+    onComplete: CompleteCallback,
   ): Promise<void> {
     if (!this.activeSession) return
 
@@ -229,7 +217,7 @@ class ActionAIStreamingService {
       systemPrompt,
       userPrompt,
       connectorId,
-      signal: session.abortController.signal
+      signal: session.abortController.signal,
     })
 
     if (!streamResponse) {
@@ -278,7 +266,7 @@ class ActionAIStreamingService {
     userPrompt: string,
     connectorId: string | undefined,
     onUpdate: StreamingCallback,
-    onComplete: CompleteCallback
+    onComplete: CompleteCallback,
   ): Promise<void> {
     if (!this.activeSession) return
 
@@ -288,7 +276,7 @@ class ActionAIStreamingService {
     onUpdate({
       phase: 'analyzing',
       partialConfig: {},
-      message: 'Analyzing your description...'
+      message: 'Analyzing your description...',
     })
 
     await this.delay(500)
@@ -300,7 +288,7 @@ class ActionAIStreamingService {
     const response = await window.api.llm.extract({
       systemPrompt,
       userPrompt,
-      maxTokens: 2048
+      maxTokens: 2048,
     })
 
     if (session.abortController.signal.aborted) {
@@ -337,7 +325,7 @@ class ActionAIStreamingService {
       onUpdate({
         phase: 'trigger',
         partialConfig: { trigger: parsed.config.trigger },
-        message: 'Detected trigger...'
+        message: 'Detected trigger...',
       })
       aiConfigAnalytics.trackStreamingPhase('trigger')
 
@@ -352,9 +340,9 @@ class ActionAIStreamingService {
           phase: 'conditions',
           partialConfig: {
             trigger: parsed.config.trigger,
-            conditions: parsed.config.conditions
+            conditions: parsed.config.conditions,
           },
-          message: 'Checking conditions...'
+          message: 'Checking conditions...',
         })
         aiConfigAnalytics.trackStreamingPhase('conditions')
 
@@ -372,10 +360,10 @@ class ActionAIStreamingService {
           partialConfig: {
             trigger: parsed.config.trigger,
             conditions: parsed.config.conditions,
-            actions: parsed.config.actions.slice(0, i + 1)
+            actions: parsed.config.actions.slice(0, i + 1),
           },
           currentStep: i + 1,
-          message: `Building step ${i + 1}...`
+          message: `Building step ${i + 1}...`,
         })
 
         await this.delay(200)
@@ -386,7 +374,7 @@ class ActionAIStreamingService {
       onUpdate({
         phase: 'complete',
         partialConfig: parsed.config,
-        message: 'Configuration ready!'
+        message: 'Configuration ready!',
       })
       aiConfigAnalytics.trackStreamingPhase('complete')
     }
@@ -400,7 +388,7 @@ class ActionAIStreamingService {
 
   private buildStreamingState(
     parser: LineDelimitedJSONParser,
-    phase: AIStreamingPhase
+    phase: AIStreamingPhase,
   ): AIStreamingState {
     const config = parser.getConfig()
 
@@ -409,14 +397,14 @@ class ActionAIStreamingService {
       trigger: 'Detected trigger...',
       conditions: 'Checking conditions...',
       steps: 'Building action steps...',
-      complete: 'Configuration ready!'
+      complete: 'Configuration ready!',
     }
 
     return {
       phase,
       partialConfig: config.config || {},
       currentStep: config.config?.actions?.length,
-      message: messages[phase]
+      message: messages[phase],
     }
   }
 
@@ -427,7 +415,7 @@ class ActionAIStreamingService {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
+    return new Promise((resolve) => setTimeout(resolve, ms))
   }
 
   // -------------------------------------------------------------------------
@@ -485,45 +473,44 @@ export function useAIConfigStreaming(): UseStreamingResult {
     }
   }, [])
 
-  const start = useCallback((
-    description: string,
-    context: AIActionContext,
-    connectorId?: string
-  ) => {
-    setError(null)
-    setResponse(null)
-    setState(null)
-    setIsStreaming(true)
+  const start = useCallback(
+    (description: string, context: AIActionContext, connectorId?: string) => {
+      setError(null)
+      setResponse(null)
+      setState(null)
+      setIsStreaming(true)
 
-    actionAIStreaming.startStreaming(description, context, connectorId, {
-      onUpdate: (newState) => {
-        throttledSetState(newState)
-        // Flush pending state on phase change or complete
-        if (newState.phase === 'complete' && pendingStateRef.current) {
-          setState(pendingStateRef.current)
-          pendingStateRef.current = null
-        }
-      },
-      onError: (err) => {
-        setError(err)
-        setIsStreaming(false)
-        // Flush any pending state
-        if (pendingStateRef.current) {
-          setState(pendingStateRef.current)
-          pendingStateRef.current = null
-        }
-      },
-      onComplete: (resp) => {
-        setResponse(resp)
-        setIsStreaming(false)
-        // Final state update
-        if (pendingStateRef.current) {
-          setState(pendingStateRef.current)
-          pendingStateRef.current = null
-        }
-      }
-    })
-  }, [throttledSetState])
+      actionAIStreaming.startStreaming(description, context, connectorId, {
+        onUpdate: (newState) => {
+          throttledSetState(newState)
+          // Flush pending state on phase change or complete
+          if (newState.phase === 'complete' && pendingStateRef.current) {
+            setState(pendingStateRef.current)
+            pendingStateRef.current = null
+          }
+        },
+        onError: (err) => {
+          setError(err)
+          setIsStreaming(false)
+          // Flush any pending state
+          if (pendingStateRef.current) {
+            setState(pendingStateRef.current)
+            pendingStateRef.current = null
+          }
+        },
+        onComplete: (resp) => {
+          setResponse(resp)
+          setIsStreaming(false)
+          // Final state update
+          if (pendingStateRef.current) {
+            setState(pendingStateRef.current)
+            pendingStateRef.current = null
+          }
+        },
+      })
+    },
+    [throttledSetState],
+  )
 
   const cancel = useCallback(() => {
     actionAIStreaming.cancel()
@@ -536,6 +523,6 @@ export function useAIConfigStreaming(): UseStreamingResult {
     response,
     isStreaming,
     start,
-    cancel
+    cancel,
   }
 }

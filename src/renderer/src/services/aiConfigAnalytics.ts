@@ -6,7 +6,7 @@
 // =============================================================================
 // Tracks usage patterns for the AI configuration feature
 
-import type { AIGeneratedConfig, AIStreamingPhase, AIClarifyingQuestion } from '@shared/actionTypes'
+import type { AIClarifyingQuestion, AIGeneratedConfig, AIStreamingPhase } from '@shared/actionTypes'
 
 // Analytics event types
 interface AIConfigAnalyticsEvents {
@@ -110,7 +110,7 @@ class AIConfigAnalytics {
     // In the future, this could read from user settings
     return {
       analyticsEnabled: true,
-      shareAnonymousUsage: false
+      shareAnonymousUsage: false,
     }
   }
 
@@ -123,7 +123,7 @@ class AIConfigAnalytics {
         // Replace with length/hash instead of content
         sanitized[key] = {
           length: (sanitized[key] as string).length,
-          hash: this.hashString(sanitized[key] as string)
+          hash: this.hashString(sanitized[key] as string),
         }
       }
     }
@@ -134,7 +134,7 @@ class AIConfigAnalytics {
   private hashString(str: string): string {
     let hash = 0
     for (let i = 0; i < str.length; i++) {
-      hash = ((hash << 5) - hash) + str.charCodeAt(i)
+      hash = (hash << 5) - hash + str.charCodeAt(i)
       hash |= 0
     }
     return hash.toString(16)
@@ -181,7 +181,7 @@ class AIConfigAnalytics {
     this.localEvents.push({
       event,
       properties: sanitized,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     })
     this.saveLocalEvents()
 
@@ -204,7 +204,7 @@ class AIConfigAnalytics {
       sessionId: this.currentSessionId,
       nodeId,
       hasExistingConfig,
-      descriptionLength
+      descriptionLength,
     })
 
     return this.currentSessionId
@@ -224,7 +224,7 @@ class AIConfigAnalytics {
     this.phaseStart = Date.now()
     this.track('ai_config.streaming_started', {
       sessionId: this.currentSessionId,
-      nodeId
+      nodeId,
     })
   }
 
@@ -235,7 +235,7 @@ class AIConfigAnalytics {
     this.track('ai_config.streaming_phase', {
       sessionId: this.currentSessionId,
       phase,
-      durationMs: now - this.phaseStart
+      durationMs: now - this.phaseStart,
     })
     this.phaseStart = now
   }
@@ -251,7 +251,7 @@ class AIConfigAnalytics {
       sessionId: this.currentSessionId,
       round,
       questionCount: questions.length,
-      questionTypes: questions.map(q => q.type)
+      questionTypes: questions.map((q) => q.type),
     })
   }
 
@@ -262,7 +262,7 @@ class AIConfigAnalytics {
       sessionId: this.currentSessionId,
       round,
       answerCount,
-      skippedCount
+      skippedCount,
     })
   }
 
@@ -274,7 +274,7 @@ class AIConfigAnalytics {
     confidence: 'high' | 'medium' | 'low',
     triggerType: string,
     stepCount: number,
-    hasWarnings: boolean
+    hasWarnings: boolean,
   ): void {
     if (!this.currentSessionId) return
 
@@ -283,7 +283,7 @@ class AIConfigAnalytics {
       confidence,
       triggerType,
       stepCount,
-      hasWarnings
+      hasWarnings,
     })
   }
 
@@ -299,7 +299,7 @@ class AIConfigAnalytics {
       triggerType: config.trigger.type,
       stepCount: config.actions.length,
       totalDurationMs: Date.now() - this.sessionStart,
-      questionRounds
+      questionRounds,
     })
 
     // Session complete
@@ -312,19 +312,22 @@ class AIConfigAnalytics {
     this.track('ai_config.cancelled', {
       sessionId: this.currentSessionId,
       stage,
-      reason
+      reason,
     })
 
     this.currentSessionId = null
   }
 
-  trackError(errorType: 'timeout' | 'parse' | 'validation' | 'connector', errorMessage: string): void {
+  trackError(
+    errorType: 'timeout' | 'parse' | 'validation' | 'connector',
+    errorMessage: string,
+  ): void {
     if (!this.currentSessionId) return
 
     this.track('ai_config.error', {
       sessionId: this.currentSessionId,
       errorType,
-      errorMessage
+      errorMessage,
     })
   }
 
@@ -338,7 +341,7 @@ class AIConfigAnalytics {
     this.track('ai_config.feedback', {
       sessionId: this.currentSessionId,
       rating,
-      hadModifications
+      hadModifications,
     })
   }
 
@@ -352,7 +355,7 @@ class AIConfigAnalytics {
     this.track('ai_config.template_used', {
       sessionId: this.currentSessionId,
       templateId,
-      category
+      category,
     })
   }
 
@@ -370,25 +373,25 @@ class AIConfigAnalytics {
     avgDurationMs: number
   } {
     const cutoff = Date.now() - periodDays * 24 * 60 * 60 * 1000
-    const recentEvents = this.localEvents.filter(e => e.timestamp > cutoff)
+    const recentEvents = this.localEvents.filter((e) => e.timestamp > cutoff)
 
-    const sessions = recentEvents.filter(e => e.event === 'ai_config.session_start')
-    const completed = recentEvents.filter(e => e.event === 'ai_config.applied')
-    const cancelled = recentEvents.filter(e => e.event === 'ai_config.cancelled')
-    const errors = recentEvents.filter(e => e.event === 'ai_config.error')
+    const sessions = recentEvents.filter((e) => e.event === 'ai_config.session_start')
+    const completed = recentEvents.filter((e) => e.event === 'ai_config.applied')
+    const cancelled = recentEvents.filter((e) => e.event === 'ai_config.cancelled')
+    const errors = recentEvents.filter((e) => e.event === 'ai_config.error')
 
     const totalRounds = completed.reduce(
       (sum, e) => sum + ((e.properties as { questionRounds?: number }).questionRounds || 0),
-      0
+      0,
     )
     const totalDuration = completed.reduce(
       (sum, e) => sum + ((e.properties as { totalDurationMs?: number }).totalDurationMs || 0),
-      0
+      0,
     )
 
     // Count trigger types
     const triggerCounts: Record<string, number> = {}
-    completed.forEach(e => {
+    completed.forEach((e) => {
       const triggerType = (e.properties as { triggerType?: string }).triggerType
       if (triggerType) {
         triggerCounts[triggerType] = (triggerCounts[triggerType] || 0) + 1
@@ -402,7 +405,7 @@ class AIConfigAnalytics {
       avgQuestionRounds: completed.length > 0 ? totalRounds / completed.length : 0,
       triggerTypeDistribution: triggerCounts,
       errorRate: sessions.length > 0 ? errors.length / sessions.length : 0,
-      avgDurationMs: completed.length > 0 ? totalDuration / completed.length : 0
+      avgDurationMs: completed.length > 0 ? totalDuration / completed.length : 0,
     }
   }
 

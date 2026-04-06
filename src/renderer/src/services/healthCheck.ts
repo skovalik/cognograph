@@ -8,8 +8,8 @@
  * Triggers reconnection attempts when server becomes available.
  */
 
-import { addBreadcrumb, captureMessage } from './sentry'
 import { logger } from '../utils/logger'
+import { addBreadcrumb, captureMessage } from './sentry'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -106,8 +106,8 @@ class HealthCheckManager {
       const response = await fetch(`${this.serverUrl}/health/ready`, {
         signal: controller.signal,
         headers: {
-          'Accept': 'application/json'
-        }
+          Accept: 'application/json',
+        },
       })
 
       clearTimeout(timeoutId)
@@ -118,7 +118,6 @@ class HealthCheckManager {
 
       const data: HealthResponse = await response.json()
       this.handleHealthResponse(data)
-
     } catch (error) {
       this.handleHealthError(error)
     } finally {
@@ -174,7 +173,7 @@ class HealthCheckManager {
       addBreadcrumb('health', `Server status: ${this.currentStatus}`, 'info', {
         previous: previousStatus,
         serverVersion: response.version,
-        uptime: response.uptime
+        uptime: response.uptime,
       })
 
       this.onStatusChange?.(this.currentStatus, response)
@@ -202,7 +201,7 @@ class HealthCheckManager {
 
       addBreadcrumb('health', 'Server unreachable', 'warning', {
         error: errorMessage,
-        failures: this.consecutiveFailures
+        failures: this.consecutiveFailures,
       })
 
       console.warn('[HealthCheck] Server unreachable', { error: errorMessage })
@@ -223,7 +222,7 @@ export const healthCheckManager = new HealthCheckManager()
 // React Hooks
 // -----------------------------------------------------------------------------
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 /**
  * Hook to track server health status.
@@ -235,7 +234,9 @@ export function useServerHealth(serverUrl?: string): {
   checkNow: () => Promise<HealthStatus>
 } {
   const [status, setStatus] = useState<HealthStatus>(healthCheckManager.getStatus())
-  const [response, setResponse] = useState<HealthResponse | null>(healthCheckManager.getLastResponse())
+  const [response, setResponse] = useState<HealthResponse | null>(
+    healthCheckManager.getLastResponse(),
+  )
 
   useEffect(() => {
     if (serverUrl) {
@@ -246,7 +247,7 @@ export function useServerHealth(serverUrl?: string): {
           if (newResponse) {
             setResponse(newResponse)
           }
-        }
+        },
       })
 
       return () => {
@@ -259,7 +260,7 @@ export function useServerHealth(serverUrl?: string): {
     status,
     response,
     isReachable: status !== 'unreachable',
-    checkNow: () => healthCheckManager.check()
+    checkNow: () => healthCheckManager.check(),
   }
 }
 

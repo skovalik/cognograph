@@ -85,11 +85,19 @@ const CIRCUIT_BREAKER_THRESHOLD = 10
 // Allowlist of known-safe MCP server commands.
 // Users can run Node/Python/npx scripts but not arbitrary shell commands.
 const ALLOWED_MCP_COMMANDS = new Set([
-  'node', 'npx', 'python', 'python3', 'uvx',
-  'deno', 'bun',
+  'node',
+  'npx',
+  'python',
+  'python3',
+  'uvx',
+  'deno',
+  'bun',
   // Common MCP server binaries
-  'mcp-server-filesystem', 'mcp-server-github', 'mcp-server-slack',
-  'mcp-server-sqlite', 'mcp-server-brave-search',
+  'mcp-server-filesystem',
+  'mcp-server-github',
+  'mcp-server-slack',
+  'mcp-server-sqlite',
+  'mcp-server-brave-search',
 ])
 
 /**
@@ -99,15 +107,17 @@ const ALLOWED_MCP_COMMANDS = new Set([
  */
 function validateMCPCommand(command: string, args?: string[]): { valid: boolean; error?: string } {
   // Extract basename for allowlist check
-  const basename = command.includes('/') || command.includes('\\')
-    ? command.split(/[\\/]/).pop() || ''
-    : command
+  const basename =
+    command.includes('/') || command.includes('\\') ? command.split(/[\\/]/).pop() || '' : command
 
   if (!ALLOWED_MCP_COMMANDS.has(basename) && !ALLOWED_MCP_COMMANDS.has(command)) {
     // Allow absolute paths (user-installed binaries) but log a warning
     const isAbsolutePath = command.startsWith('/') || /^[A-Z]:\\/i.test(command)
     if (!isAbsolutePath) {
-      return { valid: false, error: `MCP command "${command}" is not in the allowed list. Allowed: ${[...ALLOWED_MCP_COMMANDS].join(', ')}` }
+      return {
+        valid: false,
+        error: `MCP command "${command}" is not in the allowed list. Allowed: ${[...ALLOWED_MCP_COMMANDS].join(', ')}`,
+      }
     }
     console.warn(`[MCPClient] Running non-allowlisted absolute path: ${command}`)
   }
@@ -117,7 +127,10 @@ function validateMCPCommand(command: string, args?: string[]): { valid: boolean;
     const shellMetachars = /[;&|`$(){}!<>]/
     for (const arg of args) {
       if (shellMetachars.test(arg)) {
-        return { valid: false, error: `Shell metacharacters not allowed in MCP server args: "${arg}"` }
+        return {
+          valid: false,
+          error: `Shell metacharacters not allowed in MCP server args: "${arg}"`,
+        }
       }
     }
   }
@@ -179,16 +192,20 @@ async function attemptReconnect(config: MCPServerConfig): Promise<boolean> {
 
   try {
     for (let attempt = 0; attempt < RECONNECT_MAX_RETRIES; attempt++) {
-      const delayMs = RECONNECT_BACKOFF_BASE_MS * Math.pow(RECONNECT_BACKOFF_MULTIPLIER, attempt)
-      console.log(`[MCPClient] Reconnect attempt ${attempt + 1}/${RECONNECT_MAX_RETRIES} for "${config.name}" (waiting ${delayMs}ms)`)
-      await new Promise<void>(resolve => setTimeout(resolve, delayMs))
+      const delayMs = RECONNECT_BACKOFF_BASE_MS * RECONNECT_BACKOFF_MULTIPLIER ** attempt
+      console.log(
+        `[MCPClient] Reconnect attempt ${attempt + 1}/${RECONNECT_MAX_RETRIES} for "${config.name}" (waiting ${delayMs}ms)`,
+      )
+      await new Promise<void>((resolve) => setTimeout(resolve, delayMs))
 
       // Clean up stale connection entry before reconnecting
       connections.delete(serverId)
 
       const result = await connectMCPServer(config)
       if (result.success) {
-        console.log(`[MCPClient] Reconnected to "${config.name}" — ${result.tools?.length ?? 0} tools re-registered`)
+        console.log(
+          `[MCPClient] Reconnected to "${config.name}" — ${result.tools?.length ?? 0} tools re-registered`,
+        )
         // Reset failure count on success
         reconnectFailures.set(serverId, 0)
         emitMCPEvent('mcp:reconnected', { serverId, name: config.name, tools: result.tools })
@@ -202,18 +219,22 @@ async function attemptReconnect(config: MCPServerConfig): Promise<boolean> {
       // Check circuit breaker
       if (failures >= CIRCUIT_BREAKER_THRESHOLD) {
         circuitBrokenServers.add(serverId)
-        console.error(`[MCPClient] Circuit breaker tripped for "${config.name}" after ${failures} failures — no more reconnection attempts`)
+        console.error(
+          `[MCPClient] Circuit breaker tripped for "${config.name}" after ${failures} failures — no more reconnection attempts`,
+        )
         emitMCPEvent('mcp:circuitBroken', {
           serverId,
           name: config.name,
           failures,
-          message: `MCP server "${config.name}" failed to reconnect after ${failures} attempts. Automatic reconnection disabled.`
+          message: `MCP server "${config.name}" failed to reconnect after ${failures} attempts. Automatic reconnection disabled.`,
         })
         return false
       }
     }
 
-    console.warn(`[MCPClient] All ${RECONNECT_MAX_RETRIES} reconnect attempts failed for "${config.name}"`)
+    console.warn(
+      `[MCPClient] All ${RECONNECT_MAX_RETRIES} reconnect attempts failed for "${config.name}"`,
+    )
     emitMCPEvent('mcp:reconnectFailed', { serverId, name: config.name })
     return false
   } finally {
@@ -241,7 +262,7 @@ function installReconnectHandlers(connection: MCPConnection): void {
       // Remove stale connection
       connections.delete(config.id)
       // Fire-and-forget reconnect — errors are handled internally
-      attemptReconnect(config).catch(err => {
+      attemptReconnect(config).catch((err) => {
         console.error(`[MCPClient] Reconnect error for "${config.name}":`, err)
       })
     }
@@ -302,18 +323,21 @@ export async function connectMCPServer(config: MCPServerConfig): Promise<{
     transport = new StdioClientTransport({
       command: config.command,
       args: config.args,
-      env
+      env,
     })
 
     client = new Client({
       name: 'cognograph-agent',
-      version: '1.0.0'
+      version: '1.0.0',
     })
 
     // Connect with timeout
     const connectPromise = client.connect(transport)
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Connection timed out after ${CONNECT_TIMEOUT_MS / 1000} seconds`)), CONNECT_TIMEOUT_MS)
+      setTimeout(
+        () => reject(new Error(`Connection timed out after ${CONNECT_TIMEOUT_MS / 1000} seconds`)),
+        CONNECT_TIMEOUT_MS,
+      ),
     )
     await Promise.race([connectPromise, timeoutPromise])
 
@@ -435,7 +459,7 @@ export function getMCPToolsForServers(serverIds: string[]): MCPToolDefinition[] 
 export async function callMCPTool(
   serverId: string,
   toolName: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
 ): Promise<MCPToolCallResult> {
   const connection = connections.get(serverId)
   if (!connection) {
@@ -445,7 +469,10 @@ export async function callMCPTool(
   try {
     const callPromise = connection.client.callTool({ name: toolName, arguments: args })
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Tool call timed out after ${TOOL_CALL_TIMEOUT_MS / 1000} seconds`)), TOOL_CALL_TIMEOUT_MS)
+      setTimeout(
+        () => reject(new Error(`Tool call timed out after ${TOOL_CALL_TIMEOUT_MS / 1000} seconds`)),
+        TOOL_CALL_TIMEOUT_MS,
+      ),
     )
 
     const result = await Promise.race([callPromise, timeoutPromise])
@@ -457,7 +484,9 @@ export async function callMCPTool(
     if (textContent.length > MAX_RESULT_SIZE) {
       return {
         success: true,
-        result: textContent.slice(0, MAX_RESULT_SIZE) + `\n... [result truncated, ${textContent.length} bytes total]`
+        result:
+          textContent.slice(0, MAX_RESULT_SIZE) +
+          `\n... [result truncated, ${textContent.length} bytes total]`,
       }
     }
 
@@ -478,11 +507,11 @@ export function listMCPConnections(): Array<{
   toolCount: number
   connectedAt: number
 }> {
-  return [...connections.values()].map(conn => ({
+  return [...connections.values()].map((conn) => ({
     id: conn.id,
     name: conn.name,
     toolCount: conn.tools.length,
-    connectedAt: conn.connectedAt
+    connectedAt: conn.connectedAt,
   }))
 }
 
@@ -500,16 +529,19 @@ export function isMCPServerConnected(serverId: string): boolean {
 async function discoverToolsFromClient(
   client: Client,
   serverId: string,
-  serverName: string
+  serverName: string,
 ): Promise<MCPToolDefinition[]> {
   try {
     const result = await client.listTools()
-    return (result.tools ?? []).map(tool => ({
+    return (result.tools ?? []).map((tool) => ({
       name: tool.name,
       description: tool.description ?? '',
-      inputSchema: (tool.inputSchema as Record<string, unknown>) ?? { type: 'object', properties: {} },
+      inputSchema: (tool.inputSchema as Record<string, unknown>) ?? {
+        type: 'object',
+        properties: {},
+      },
       serverId,
-      serverName
+      serverName,
     }))
   } catch {
     // Server may not support tools listing — return empty
@@ -526,7 +558,7 @@ function extractTextFromResult(result: unknown): string {
     const content = (result as { content: unknown[] }).content
     if (Array.isArray(content)) {
       return content
-        .map(block => {
+        .map((block) => {
           if (typeof block === 'object' && block !== null && 'text' in block) {
             return String((block as { text: unknown }).text)
           }
@@ -558,9 +590,12 @@ export function registerMCPClientHandlers(): void {
     return { success: true, tools }
   })
 
-  ipcMain.handle('mcp:callTool', async (_event, serverId: string, toolName: string, args: Record<string, unknown>) => {
-    return callMCPTool(serverId, toolName, args)
-  })
+  ipcMain.handle(
+    'mcp:callTool',
+    async (_event, serverId: string, toolName: string, args: Record<string, unknown>) => {
+      return callMCPTool(serverId, toolName, args)
+    },
+  )
 
   ipcMain.handle('mcp:listConnections', async () => {
     return { success: true, connections: listMCPConnections() }

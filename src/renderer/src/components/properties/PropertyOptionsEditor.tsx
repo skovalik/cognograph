@@ -14,18 +14,29 @@
  * Works with select, multi-select, status, and priority property types.
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react'
-import {
-  X, Plus, Trash2,
-  // Common icons for quick selection
-  Circle, Star, Flag, Tag, Check, AlertTriangle, Zap, Target, Clock, Calendar,
-  type LucideIcon
-} from 'lucide-react'
 import type { PropertyDefinition, PropertyOption } from '@shared/types'
-import { getMergedPropertyOptions, BUILTIN_PROPERTIES } from '../../constants/properties'
+import {
+  AlertTriangle,
+  Calendar,
+  Check,
+  // Common icons for quick selection
+  Circle,
+  Clock,
+  Flag,
+  type LucideIcon,
+  Plus,
+  Star,
+  Tag,
+  Target,
+  Trash2,
+  X,
+  Zap,
+} from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { BUILTIN_PROPERTIES, getMergedPropertyOptions } from '../../constants/properties'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { EscapePriority, escapeManager } from '../../utils/EscapeManager'
 import { ICON_MAP } from '../IconPicker'
-import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
 
 // Quick icon selection - most commonly used for property options
 const QUICK_ICONS: { name: string; icon: LucideIcon }[] = [
@@ -68,7 +79,7 @@ interface PropertyOptionsEditorProps {
 
 function PropertyOptionsEditorComponent({
   definition,
-  onClose
+  onClose,
 }: PropertyOptionsEditorProps): JSX.Element {
   const propertySchema = useWorkspaceStore((state) => state.propertySchema)
   const addPropertyOption = useWorkspaceStore((state) => state.addPropertyOption)
@@ -108,9 +119,12 @@ function PropertyOptionsEditorComponent({
   }, [onClose])
 
   // Check if an option is built-in (can't be deleted, but can be hidden/customized)
-  const isBuiltinOption = useCallback((value: string): boolean => {
-    return builtinOptions.some((o) => o.value === value)
-  }, [builtinOptions])
+  const isBuiltinOption = useCallback(
+    (value: string): boolean => {
+      return builtinOptions.some((o) => o.value === value)
+    },
+    [builtinOptions],
+  )
 
   // Handle adding new option
   const handleAddOption = useCallback(() => {
@@ -118,7 +132,7 @@ function PropertyOptionsEditorComponent({
     addPropertyOption(definition.id, {
       label: newOptionLabel.trim(),
       color: newOptionColor,
-      icon: newOptionIcon
+      icon: newOptionIcon,
     })
     setNewOptionLabel('')
     setNewOptionColor(PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)])
@@ -139,7 +153,7 @@ function PropertyOptionsEditorComponent({
     updatePropertyOption(definition.id, editingOption, {
       label: editLabel.trim(),
       color: editColor,
-      icon: editIcon
+      icon: editIcon,
     })
     setEditingOption(null)
     setEditLabel('')
@@ -148,9 +162,12 @@ function PropertyOptionsEditorComponent({
   }, [definition.id, editingOption, editLabel, editColor, editIcon, updatePropertyOption])
 
   // Handle delete option
-  const handleDeleteOption = useCallback((value: string) => {
-    deletePropertyOption(definition.id, value)
-  }, [definition.id, deletePropertyOption])
+  const handleDeleteOption = useCallback(
+    (value: string) => {
+      deletePropertyOption(definition.id, value)
+    },
+    [definition.id, deletePropertyOption],
+  )
 
   return (
     <div
@@ -159,13 +176,8 @@ function PropertyOptionsEditorComponent({
     >
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b gui-border">
-        <span className="text-sm font-medium gui-text">
-          Edit {definition.name} Options
-        </span>
-        <button
-          onClick={onClose}
-          className="p-1 rounded gui-text-secondary hover:brightness-110"
-        >
+        <span className="text-sm font-medium gui-text">Edit {definition.name} Options</span>
+        <button onClick={onClose} className="p-1 rounded gui-text-secondary hover:brightness-110">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -189,7 +201,9 @@ function PropertyOptionsEditorComponent({
                   >
                     {(() => {
                       const IconComponent = editIcon ? ICON_MAP[editIcon] : null
-                      return IconComponent ? <IconComponent className="w-2.5 h-2.5 text-white" /> : null
+                      return IconComponent ? (
+                        <IconComponent className="w-2.5 h-2.5 text-white" />
+                      ) : null
                     })()}
                   </span>
                   <input
@@ -203,10 +217,7 @@ function PropertyOptionsEditorComponent({
                     className="flex-1 px-2 py-1 text-sm gui-input border rounded focus:outline-none focus:gui-border-active"
                     autoFocus
                   />
-                  <button
-                    onClick={handleSaveEdit}
-                    className="px-2 py-1 text-xs rounded gui-accent"
-                  >
+                  <button onClick={handleSaveEdit} className="px-2 py-1 text-xs rounded gui-accent">
                     Save
                   </button>
                 </div>
@@ -219,7 +230,8 @@ function PropertyOptionsEditorComponent({
                       className="w-5 h-5 rounded-full transition-all hover:scale-110"
                       style={{
                         backgroundColor: color,
-                        boxShadow: editColor === color ? '0 0 0 2px var(--gui-accent-primary)' : undefined
+                        boxShadow:
+                          editColor === color ? '0 0 0 2px var(--gui-accent-primary)' : undefined,
                       }}
                     />
                   ))}
@@ -230,7 +242,7 @@ function PropertyOptionsEditorComponent({
                     onClick={() => setEditIcon(undefined)}
                     className="w-5 h-5 rounded flex items-center justify-center transition-all gui-input border hover:scale-110"
                     style={{
-                      borderColor: !editIcon ? 'var(--gui-accent-primary)' : undefined
+                      borderColor: !editIcon ? 'var(--gui-accent-primary)' : undefined,
                     }}
                     title="No icon"
                   >
@@ -242,7 +254,7 @@ function PropertyOptionsEditorComponent({
                       onClick={() => setEditIcon(name)}
                       className="w-5 h-5 rounded flex items-center justify-center transition-all gui-input border hover:scale-110"
                       style={{
-                        borderColor: editIcon === name ? 'var(--gui-accent-primary)' : undefined
+                        borderColor: editIcon === name ? 'var(--gui-accent-primary)' : undefined,
                       }}
                       title={name}
                     >
@@ -262,7 +274,9 @@ function PropertyOptionsEditorComponent({
                 >
                   {(() => {
                     const IconComponent = option.icon ? ICON_MAP[option.icon] : null
-                    return IconComponent ? <IconComponent className="w-2.5 h-2.5 text-white" /> : null
+                    return IconComponent ? (
+                      <IconComponent className="w-2.5 h-2.5 text-white" />
+                    ) : null
                   })()}
                 </span>
                 <span
@@ -290,9 +304,7 @@ function PropertyOptionsEditorComponent({
         ))}
 
         {allOptions.length === 0 && (
-          <div className="text-center py-4 gui-text-secondary text-sm">
-            No options defined
-          </div>
+          <div className="text-center py-4 gui-text-secondary text-sm">No options defined</div>
         )}
       </div>
 
@@ -336,7 +348,8 @@ function PropertyOptionsEditorComponent({
               className="w-5 h-5 rounded-full transition-all hover:scale-110"
               style={{
                 backgroundColor: color,
-                boxShadow: newOptionColor === color ? '0 0 0 2px var(--gui-accent-primary)' : undefined
+                boxShadow:
+                  newOptionColor === color ? '0 0 0 2px var(--gui-accent-primary)' : undefined,
               }}
             />
           ))}
@@ -347,7 +360,7 @@ function PropertyOptionsEditorComponent({
             onClick={() => setNewOptionIcon(undefined)}
             className="w-5 h-5 rounded flex items-center justify-center transition-all gui-input border hover:scale-110"
             style={{
-              borderColor: !newOptionIcon ? 'var(--gui-accent-primary)' : undefined
+              borderColor: !newOptionIcon ? 'var(--gui-accent-primary)' : undefined,
             }}
             title="No icon"
           >
@@ -359,7 +372,7 @@ function PropertyOptionsEditorComponent({
               onClick={() => setNewOptionIcon(name)}
               className="w-5 h-5 rounded flex items-center justify-center transition-all gui-input border hover:scale-110"
               style={{
-                borderColor: newOptionIcon === name ? 'var(--gui-accent-primary)' : undefined
+                borderColor: newOptionIcon === name ? 'var(--gui-accent-primary)' : undefined,
               }}
               title={name}
             >

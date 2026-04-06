@@ -18,13 +18,13 @@ import { join } from 'path'
 export interface NodeSyncQueueEntry {
   nodeId: string
   workspaceId: string
-  queuedAt: number        // Unix ms
-  failureReason: string   // Human-readable error
-  retryCount: number      // Incremented on each drain attempt
+  queuedAt: number // Unix ms
+  failureReason: string // Human-readable error
+  retryCount: number // Incremented on each drain attempt
 }
 
 interface StoredEntry extends NodeSyncQueueEntry {
-  _filePath?: string      // Internal: path for cleanup
+  _filePath?: string // Internal: path for cleanup
 }
 
 // -----------------------------------------------------------------------------
@@ -32,7 +32,7 @@ interface StoredEntry extends NodeSyncQueueEntry {
 // -----------------------------------------------------------------------------
 
 const MAX_QUEUE_SIZE = 1000
-const TTL_MS = 7 * 24 * 60 * 60 * 1000  // 7 days
+const TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 const MAX_RETRY_COUNT = 10
 
 export class NodeSyncQueue {
@@ -80,7 +80,7 @@ export class NodeSyncQueue {
     const allEntries = await this.readAll()
 
     // Filter to requested workspace
-    return allEntries.filter(e => e.workspaceId === workspaceId)
+    return allEntries.filter((e) => e.workspaceId === workspaceId)
   }
 
   /**
@@ -184,9 +184,9 @@ export class NodeSyncQueue {
     await this.enqueue({
       nodeId: entry.nodeId,
       workspaceId: entry.workspaceId,
-      queuedAt: entry.queuedAt,  // Keep original queue time for TTL
+      queuedAt: entry.queuedAt, // Keep original queue time for TTL
       failureReason: entry.failureReason,
-      retryCount: newCount
+      retryCount: newCount,
     })
 
     return { dropped: false }
@@ -199,7 +199,7 @@ export class NodeSyncQueue {
     try {
       await this.ensureDir()
       const files = await fs.readdir(this.queueDir)
-      const diskCount = files.filter(f => f.endsWith('.json')).length
+      const diskCount = files.filter((f) => f.endsWith('.json')).length
       return diskCount + this.inMemoryFallback.size
     } catch {
       return this.inMemoryFallback.size
@@ -223,4 +223,4 @@ export class NodeSyncQueue {
 }
 
 // Export constants for tests
-export { MAX_QUEUE_SIZE, TTL_MS, MAX_RETRY_COUNT }
+export { MAX_QUEUE_SIZE, MAX_RETRY_COUNT, TTL_MS }

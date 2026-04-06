@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { join } from 'path'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // ---------------------------------------------------------------------------
 // Mock electron before importing the module under test
@@ -45,6 +45,7 @@ vi.mock('fs', () => ({
       unlink: (...args: unknown[]) => mockUnlink(...args),
       access: (...args: unknown[]) => mockAccess(...args),
     },
+    existsSync: () => true,
   },
   promises: {
     readFile: (...args: unknown[]) => mockReadFile(...args),
@@ -52,10 +53,11 @@ vi.mock('fs', () => ({
     unlink: (...args: unknown[]) => mockUnlink(...args),
     access: (...args: unknown[]) => mockAccess(...args),
   },
+  existsSync: () => true,
 }))
 
 // Import after mocking
-import { writeClaudeConfig, cleanupClaudeConfig, recoverClaudeMd } from '../claudeConfigWriter'
+import { cleanupClaudeConfig, recoverClaudeMd, writeClaudeConfig } from '../claudeConfigWriter'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -86,7 +88,12 @@ describe('claudeConfigWriter', () => {
     mockReadFile.mockRejectedValue(new Error('ENOENT'))
     mockWriteFile.mockResolvedValue(undefined)
     mockUnlink.mockResolvedValue(undefined)
-    mockAccess.mockRejectedValue(new Error('ENOENT'))
+    // Default: access fails (ENOENT) except for workspace files
+    mockAccess.mockImplementation(async (path: unknown) => {
+      const p = String(path)
+      if (p.includes('workspaces/') || p.includes('workspaces\\')) return undefined
+      throw new Error('ENOENT')
+    })
     mockGetWorkspaceFilePath.mockResolvedValue('/mock/userData/workspaces/ws-123.json')
   })
 
@@ -97,6 +104,7 @@ describe('claudeConfigWriter', () => {
         cwd: '/test/project',
         nodeTitle: 'My Terminal',
         contextMarkdown: '## Connected Nodes\n\nSome context here',
+        workspaceId: 'ws-123',
       })
 
       expect(result.success).toBe(true)
@@ -105,15 +113,15 @@ describe('claudeConfigWriter', () => {
       expect(result.claudeMdPath).toBe(join('/test/project', 'CLAUDE.md'))
 
       // Verify .mcp.json was written
-      const mcpCall = mockWriteFile.mock.calls.find(
-        (call: unknown[]) => String(call[0]).endsWith('.mcp.json'),
+      const mcpCall = mockWriteFile.mock.calls.find((call: unknown[]) =>
+        String(call[0]).endsWith('.mcp.json'),
       )
       expect(mcpCall).toBeDefined()
       expect(mcpCall![1]).toContain('"cognograph"')
 
       // Verify CLAUDE.md was written with markers
-      const claudeCall = mockWriteFile.mock.calls.find(
-        (call: unknown[]) => String(call[0]).endsWith('CLAUDE.md'),
+      const claudeCall = mockWriteFile.mock.calls.find((call: unknown[]) =>
+        String(call[0]).endsWith('CLAUDE.md'),
       )
       expect(claudeCall).toBeDefined()
       const content = claudeCall![1] as string
@@ -127,10 +135,11 @@ describe('claudeConfigWriter', () => {
         nodeId: 'node-xyz',
         cwd: '/test/project',
         nodeTitle: 'Research Hub',
+        workspaceId: 'ws-123',
       })
 
-      const claudeCall = mockWriteFile.mock.calls.find(
-        (call: unknown[]) => String(call[0]).endsWith('CLAUDE.md'),
+      const claudeCall = mockWriteFile.mock.calls.find((call: unknown[]) =>
+        String(call[0]).endsWith('CLAUDE.md'),
       )
       expect(claudeCall).toBeDefined()
       const content = claudeCall![1] as string
@@ -155,6 +164,7 @@ describe('claudeConfigWriter', () => {
       const result = await writeClaudeConfig({
         nodeId: 'node-append',
         cwd: '/test/project',
+        workspaceId: 'ws-123',
       })
 
       expect(result.success).toBe(true)
@@ -162,15 +172,15 @@ describe('claudeConfigWriter', () => {
       expect(result.backupPath).toBe(join('/test/project', BACKUP_NAME))
 
       // Should have written backup
-      const backupCall = mockWriteFile.mock.calls.find(
-        (call: unknown[]) => String(call[0]).endsWith(BACKUP_NAME),
+      const backupCall = mockWriteFile.mock.calls.find((call: unknown[]) =>
+        String(call[0]).endsWith(BACKUP_NAME),
       )
       expect(backupCall).toBeDefined()
       expect(backupCall![1]).toBe(userContent)
 
       // Should have written CLAUDE.md with user content + appended section
-      const claudeCall = mockWriteFile.mock.calls.find(
-        (call: unknown[]) => String(call[0]).endsWith('CLAUDE.md'),
+      const claudeCall = mockWriteFile.mock.calls.find((call: unknown[]) =>
+        String(call[0]).endsWith('CLAUDE.md'),
       )
       expect(claudeCall).toBeDefined()
       const written = claudeCall![1] as string
@@ -182,7 +192,8 @@ describe('claudeConfigWriter', () => {
 
     it('replaces existing Cognograph section on re-spawn', async () => {
       const originalUser = '# My Project\nMy instructions.'
-      const existingWithMarkers = originalUser + '\n\n' + SECTION_START + '\nOLD CONTENT\n' + SECTION_END
+      const existingWithMarkers =
+        originalUser + '\n\n' + SECTION_START + '\nOLD CONTENT\n' + SECTION_END
 
       mockReadFile.mockImplementation(async (path: unknown) => {
         const p = String(path)
@@ -195,14 +206,15 @@ describe('claudeConfigWriter', () => {
       const result = await writeClaudeConfig({
         nodeId: 'node-respawn',
         cwd: '/test/project',
+        workspaceId: 'ws-123',
       })
 
       expect(result.success).toBe(true)
       expect(result.appendedToExisting).toBe(true)
 
       // Verify CLAUDE.md was written with NEW cognograph section
-      const claudeCall = mockWriteFile.mock.calls.find(
-        (call: unknown[]) => String(call[0]).endsWith('CLAUDE.md'),
+      const claudeCall = mockWriteFile.mock.calls.find((call: unknown[]) =>
+        String(call[0]).endsWith('CLAUDE.md'),
       )
       expect(claudeCall).toBeDefined()
       const written = claudeCall![1] as string
@@ -238,10 +250,11 @@ describe('claudeConfigWriter', () => {
       await writeClaudeConfig({
         nodeId: 'node-merge',
         cwd: '/test/project',
+        workspaceId: 'ws-123',
       })
 
-      const mcpCall = mockWriteFile.mock.calls.find(
-        (call: unknown[]) => String(call[0]).endsWith('.mcp.json'),
+      const mcpCall = mockWriteFile.mock.calls.find((call: unknown[]) =>
+        String(call[0]).endsWith('.mcp.json'),
       )
       const config = JSON.parse(mcpCall![1] as string)
       expect(config.mcpServers['other-server']).toBeDefined()
@@ -262,8 +275,8 @@ describe('claudeConfigWriter', () => {
       await cleanupClaudeConfig('/test/project')
 
       // CLAUDE.md should be written back with user content only
-      const claudeCall = mockWriteFile.mock.calls.find(
-        (call: unknown[]) => String(call[0]).endsWith('CLAUDE.md'),
+      const claudeCall = mockWriteFile.mock.calls.find((call: unknown[]) =>
+        String(call[0]).endsWith('CLAUDE.md'),
       )
       expect(claudeCall).toBeDefined()
       const restored = claudeCall![1] as string
@@ -304,8 +317,8 @@ describe('claudeConfigWriter', () => {
       await cleanupClaudeConfig('/test/project')
 
       // Should not write or delete CLAUDE.md
-      const claudeWrites = mockWriteFile.mock.calls.filter(
-        (call: unknown[]) => String(call[0]).endsWith('CLAUDE.md'),
+      const claudeWrites = mockWriteFile.mock.calls.filter((call: unknown[]) =>
+        String(call[0]).endsWith('CLAUDE.md'),
       )
       expect(claudeWrites).toHaveLength(0)
       expect(mockUnlink).not.toHaveBeenCalledWith(join('/test/project', 'CLAUDE.md'))
@@ -330,8 +343,8 @@ describe('claudeConfigWriter', () => {
 
       await cleanupClaudeConfig('/test/project')
 
-      const mcpCall = mockWriteFile.mock.calls.find(
-        (call: unknown[]) => String(call[0]).endsWith('.mcp.json'),
+      const mcpCall = mockWriteFile.mock.calls.find((call: unknown[]) =>
+        String(call[0]).endsWith('.mcp.json'),
       )
       expect(mcpCall).toBeDefined()
       expect(mcpCall![1]).not.toContain('cognograph')
@@ -378,8 +391,12 @@ describe('claudeConfigWriter', () => {
     })
 
     it('does NOT strip markers when no backup exists (another terminal may be active)', async () => {
-      const contentWithMarkers = '# My Project\n\nInstructions.' +
-        '\n\n' + SECTION_START + '\nActive Cognograph section\n' + SECTION_END
+      const contentWithMarkers =
+        '# My Project\n\nInstructions.' +
+        '\n\n' +
+        SECTION_START +
+        '\nActive Cognograph section\n' +
+        SECTION_END
 
       mockFileSystem({
         'CLAUDE.md': contentWithMarkers,

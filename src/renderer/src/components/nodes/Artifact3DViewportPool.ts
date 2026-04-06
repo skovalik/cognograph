@@ -49,20 +49,20 @@ class ViewportPool {
 
   release(nodeId: string): void {
     this.activeViewports.delete(nodeId)
-    this.lruQueue = this.lruQueue.filter(id => id !== nodeId)
+    this.lruQueue = this.lruQueue.filter((id) => id !== nodeId)
   }
 
   touch(nodeId: string): void {
     const state = this.activeViewports.get(nodeId)
     if (state) {
       state.lastInteraction = Date.now()
-      this.lruQueue = this.lruQueue.filter(id => id !== nodeId)
+      this.lruQueue = this.lruQueue.filter((id) => id !== nodeId)
       this.lruQueue.push(nodeId)
     }
   }
 
   getActive(): ViewportState[] {
-    return Array.from(this.activeViewports.values()).filter(v => !v.frozen)
+    return Array.from(this.activeViewports.values()).filter((v) => !v.frozen)
   }
 
   get size(): number {

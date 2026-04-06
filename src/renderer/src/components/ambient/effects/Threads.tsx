@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import React, { useEffect, useRef } from 'react';
-import { Renderer, Program, Mesh, Triangle, Color } from 'ogl';
-import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
+import { Color, Mesh, Program, Renderer, Triangle } from 'ogl'
+import type React from 'react'
+import { useEffect, useRef } from 'react'
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality'
 
 interface ThreadsProps {
-  color?: [number, number, number];
-  amplitude?: number;
-  distance?: number;
-  enableMouseInteraction?: boolean;
-  isDark?: boolean;
-  opacity?: number;
-  qualityRef?: React.RefObject<AdaptiveQualityState>;
-  reportFrame?: () => void;
+  color?: [number, number, number]
+  amplitude?: number
+  distance?: number
+  enableMouseInteraction?: boolean
+  isDark?: boolean
+  opacity?: number
+  qualityRef?: React.RefObject<AdaptiveQualityState>
+  reportFrame?: () => void
 }
 
 const vertexShader = `
@@ -24,7 +25,7 @@ void main() {
   vUv = uv;
   gl_Position = vec4(position, 0.0, 1.0);
 }
-`;
+`
 
 const fragmentShader = `
 precision highp float;
@@ -131,7 +132,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 void main() {
     mainImage(gl_FragColor, gl_FragCoord.xy);
 }
-`;
+`
 
 const Threads: React.FC<ThreadsProps> = ({
   color = [1, 1, 1],
@@ -144,137 +145,139 @@ const Threads: React.FC<ThreadsProps> = ({
   reportFrame,
   ...rest
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const animationFrameId = useRef<number>(0);
-  const colorRef = useRef(color);
+  const containerRef = useRef<HTMLDivElement>(null)
+  const animationFrameId = useRef<number>(0)
+  const colorRef = useRef(color)
 
   // Update color ref without recreating WebGL context
-  useEffect(() => { colorRef.current = color; }, [color]);
+  useEffect(() => {
+    colorRef.current = color
+  }, [color])
 
   useEffect(() => {
-    if (!containerRef.current) return;
-    const container = containerRef.current;
+    if (!containerRef.current) return
+    const container = containerRef.current
 
-    const renderer = new Renderer({ alpha: true, dpr: 1.0 });
-    const gl = renderer.gl;
-    gl.clearColor(0, 0, 0, 0);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    container.appendChild(gl.canvas);
+    const renderer = new Renderer({ alpha: true, dpr: 1.0 })
+    const gl = renderer.gl
+    gl.clearColor(0, 0, 0, 0)
+    gl.enable(gl.BLEND)
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+    container.appendChild(gl.canvas)
 
-    const geometry = new Triangle(gl);
+    const geometry = new Triangle(gl)
     const program = new Program(gl, {
       vertex: vertexShader,
       fragment: fragmentShader,
       uniforms: {
         iTime: { value: 0 },
         iResolution: {
-          value: new Color(gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height)
+          value: new Color(gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height),
         },
         uColor: { value: new Color(...colorRef.current) },
         uAmplitude: { value: amplitude },
         uDistance: { value: distance },
         uMouse: { value: new Float32Array([0.5, 0.5]) },
-      }
-    });
+      },
+    })
 
-    const mesh = new Mesh(gl, { geometry, program });
+    const mesh = new Mesh(gl, { geometry, program })
 
     function resize() {
-      const { clientWidth, clientHeight } = container;
-      renderer.setSize(clientWidth, clientHeight);
-      program.uniforms.iResolution.value.r = clientWidth;
-      program.uniforms.iResolution.value.g = clientHeight;
-      program.uniforms.iResolution.value.b = clientWidth / clientHeight;
+      const { clientWidth, clientHeight } = container
+      renderer.setSize(clientWidth, clientHeight)
+      program.uniforms.iResolution.value.r = clientWidth
+      program.uniforms.iResolution.value.g = clientHeight
+      program.uniforms.iResolution.value.b = clientWidth / clientHeight
     }
-    window.addEventListener('resize', resize);
-    resize();
+    window.addEventListener('resize', resize)
+    resize()
 
-    let currentMouse = [0.5, 0.5];
-    let targetMouse = [0.5, 0.5];
+    const currentMouse = [0.5, 0.5]
+    let targetMouse = [0.5, 0.5]
 
     function handleMouseMove(e: MouseEvent) {
-      const rect = container.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = 1.0 - (e.clientY - rect.top) / rect.height;
-      targetMouse = [x, y];
+      const rect = container.getBoundingClientRect()
+      const x = (e.clientX - rect.left) / rect.width
+      const y = 1.0 - (e.clientY - rect.top) / rect.height
+      targetMouse = [x, y]
     }
     function handleMouseLeave() {
-      targetMouse = [0.5, 0.5];
+      targetMouse = [0.5, 0.5]
     }
     if (enableMouseInteraction) {
-      container.addEventListener('mousemove', handleMouseMove);
-      container.addEventListener('mouseleave', handleMouseLeave);
+      container.addEventListener('mousemove', handleMouseMove)
+      container.addEventListener('mouseleave', handleMouseLeave)
     }
 
-    let frameCount = 0;
-    let currentScale = -1;
+    let frameCount = 0
+    let currentScale = -1
     function update(t: number) {
       if (qualityRef?.current && !qualityRef.current.shouldRender) {
-        animationFrameId.current = requestAnimationFrame(update);
-        return;
+        animationFrameId.current = requestAnimationFrame(update)
+        return
       }
-      if (reportFrame) reportFrame();
+      if (reportFrame) reportFrame()
       if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) {
-        animationFrameId.current = requestAnimationFrame(update);
-        return;
+        animationFrameId.current = requestAnimationFrame(update)
+        return
       }
       if (qualityRef?.current) {
-        const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap;
+        const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap
         if (scale !== currentScale) {
-          currentScale = scale;
-          const { clientWidth, clientHeight } = container;
-          renderer.setSize(clientWidth * scale, clientHeight * scale);
+          currentScale = scale
+          const { clientWidth, clientHeight } = container
+          renderer.setSize(clientWidth * scale, clientHeight * scale)
           // OGL setSize also sets canvas CSS dimensions — force back to 100% so
           // low-res content stretches to fill container (CSS upscaling, not shrinking)
-          const c = renderer.gl.canvas as HTMLCanvasElement;
-          c.style.width = '100%';
-          c.style.height = '100%';
-          program.uniforms.iResolution.value.r = clientWidth * scale;
-          program.uniforms.iResolution.value.g = clientHeight * scale;
-          program.uniforms.iResolution.value.b = (clientWidth * scale) / (clientHeight * scale);
+          const c = renderer.gl.canvas as HTMLCanvasElement
+          c.style.width = '100%'
+          c.style.height = '100%'
+          program.uniforms.iResolution.value.r = clientWidth * scale
+          program.uniforms.iResolution.value.g = clientHeight * scale
+          program.uniforms.iResolution.value.b = (clientWidth * scale) / (clientHeight * scale)
         }
       }
       if (enableMouseInteraction) {
-        const smoothing = 0.05;
-        currentMouse[0] += smoothing * (targetMouse[0] - currentMouse[0]);
-        currentMouse[1] += smoothing * (targetMouse[1] - currentMouse[1]);
-        program.uniforms.uMouse.value[0] = currentMouse[0];
-        program.uniforms.uMouse.value[1] = currentMouse[1];
+        const smoothing = 0.05
+        currentMouse[0] += smoothing * (targetMouse[0] - currentMouse[0])
+        currentMouse[1] += smoothing * (targetMouse[1] - currentMouse[1])
+        program.uniforms.uMouse.value[0] = currentMouse[0]
+        program.uniforms.uMouse.value[1] = currentMouse[1]
       } else {
-        program.uniforms.uMouse.value[0] = 0.5;
-        program.uniforms.uMouse.value[1] = 0.5;
+        program.uniforms.uMouse.value[0] = 0.5
+        program.uniforms.uMouse.value[1] = 0.5
       }
 
       // Smoothly lerp shader color toward target (avoids flash from instant jump)
-      const target = colorRef.current;
-      const u = program.uniforms.uColor.value;
-      const k = 0.08;
-      u.r += (target[0] - u.r) * k;
-      u.g += (target[1] - u.g) * k;
-      u.b += (target[2] - u.b) * k;
+      const target = colorRef.current
+      const u = program.uniforms.uColor.value
+      const k = 0.08
+      u.r += (target[0] - u.r) * k
+      u.g += (target[1] - u.g) * k
+      u.b += (target[2] - u.b) * k
 
-      program.uniforms.iTime.value = t * 0.001;
+      program.uniforms.iTime.value = t * 0.001
 
-      renderer.render({ scene: mesh });
-      animationFrameId.current = requestAnimationFrame(update);
+      renderer.render({ scene: mesh })
+      animationFrameId.current = requestAnimationFrame(update)
     }
-    animationFrameId.current = requestAnimationFrame(update);
+    animationFrameId.current = requestAnimationFrame(update)
 
     return () => {
-      if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
-      window.removeEventListener('resize', resize);
+      if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current)
+      window.removeEventListener('resize', resize)
 
       if (enableMouseInteraction) {
-        container.removeEventListener('mousemove', handleMouseMove);
-        container.removeEventListener('mouseleave', handleMouseLeave);
+        container.removeEventListener('mousemove', handleMouseMove)
+        container.removeEventListener('mouseleave', handleMouseLeave)
       }
-      if (container.contains(gl.canvas)) container.removeChild(gl.canvas);
-      gl.getExtension('WEBGL_lose_context')?.loseContext();
-    };
-  }, [amplitude, distance, enableMouseInteraction]);
+      if (container.contains(gl.canvas)) container.removeChild(gl.canvas)
+      gl.getExtension('WEBGL_lose_context')?.loseContext()
+    }
+  }, [amplitude, distance, enableMouseInteraction])
 
-  return <div ref={containerRef} className="w-full h-full relative" style={{ opacity }} {...rest} />;
-};
+  return <div ref={containerRef} className="w-full h-full relative" style={{ opacity }} {...rest} />
+}
 
-export default Threads;
+export default Threads

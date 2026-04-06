@@ -69,17 +69,14 @@ export const CreateNodeSchema = z.object({
   content: z.string().optional().describe('Node content (text, HTML, code)'),
   description: z.string().optional().describe('Node description'),
   contentType: ContentTypeEnum.optional().describe(
-    'Content type for artifact nodes. Use "html" for rendered HTML.'
+    'Content type for artifact nodes. Use "html" for rendered HTML.',
   ),
   status: TaskStatusEnum.optional().describe('Status for task nodes'),
   priority: TaskPriorityEnum.optional().describe('Priority for task nodes'),
   position: PositionSchema.optional().describe(
-    'Position in workspace. If omitted, positions near the agent conversation.'
+    'Position in workspace. If omitted, positions near the agent conversation.',
   ),
-  connectTo: z
-    .string()
-    .optional()
-    .describe('Node ID to connect to after creation'),
+  connectTo: z.string().optional().describe('Node ID to connect to after creation'),
 })
 
 /** batch_create — create multiple nodes and edges in one call */
@@ -87,19 +84,15 @@ export const BatchCreateSchema = z.object({
   nodes: z
     .array(
       z.object({
-        temp_id: z
-          .string()
-          .describe('Temporary ID to reference in edges (e.g. "phase1", "task1")'),
+        temp_id: z.string().describe('Temporary ID to reference in edges (e.g. "phase1", "task1")'),
         type: NodeTypeEnum.describe('Node type'),
         title: z.string().describe('Node title'),
         content: z.string().optional().describe('Content for notes/artifacts'),
         description: z.string().optional().describe('Description for projects/tasks'),
-        contentType: ContentTypeEnum.optional().describe(
-          'Content type for artifact nodes'
-        ),
+        contentType: ContentTypeEnum.optional().describe('Content type for artifact nodes'),
         status: TaskStatusEnum.optional().describe('Status for tasks'),
         priority: TaskPriorityEnum.optional().describe('Priority for tasks'),
-      })
+      }),
     )
     .describe('Array of nodes to create'),
   edges: z
@@ -108,7 +101,7 @@ export const BatchCreateSchema = z.object({
         source: z.string().describe('Source temp_id or real node ID'),
         target: z.string().describe('Target temp_id or real node ID'),
         label: z.string().optional().describe('Optional edge label'),
-      })
+      }),
     )
     .optional()
     .describe('Array of edges to create'),
@@ -119,19 +112,11 @@ export const UpdateNodeSchema = z.object({
   nodeId: z.string().describe('Node ID to update'),
   title: z.string().optional().describe('New title'),
   content: z.string().optional().describe('New content (for notes/artifacts)'),
-  description: z
-    .string()
-    .optional()
-    .describe('New description (for projects/tasks)'),
-  contentType: ContentTypeEnum.optional().describe(
-    'Content type for artifact nodes'
-  ),
+  description: z.string().optional().describe('New description (for projects/tasks)'),
+  contentType: ContentTypeEnum.optional().describe('Content type for artifact nodes'),
   status: TaskStatusEnum.optional().describe('New status (for tasks)'),
   priority: TaskPriorityEnum.optional().describe('New priority (for tasks)'),
-  tags: z
-    .array(z.string())
-    .optional()
-    .describe('New tags array'),
+  tags: z.array(z.string()).optional().describe('New tags array'),
 })
 
 /** delete_node — remove a node from the canvas */
@@ -154,15 +139,9 @@ export const UnlinkNodesSchema = z.object({
 
 /** search_nodes — search for nodes by type, title, or tags */
 export const SearchNodesSchema = z.object({
-  query: z
-    .string()
-    .optional()
-    .describe('Search query (substring match on title/content)'),
+  query: z.string().optional().describe('Search query (substring match on title/content)'),
   type: NodeTypeEnum.optional().describe('Filter by node type'),
-  titleContains: z
-    .string()
-    .optional()
-    .describe('Filter by title substring (case-insensitive)'),
+  titleContains: z.string().optional().describe('Filter by title substring (case-insensitive)'),
   hasTag: z.string().optional().describe('Filter by tag'),
   limit: z.number().optional().describe('Max results (default: 10)'),
 })
@@ -251,10 +230,7 @@ export const ListDirectorySchema = z.object({
 export const SearchFilesSchema = z.object({
   path: z.string().describe('Directory to search in'),
   pattern: z.string().describe('Regex pattern to search for'),
-  fileGlob: z
-    .string()
-    .optional()
-    .describe('Optional file name filter (e.g., "*.ts")'),
+  fileGlob: z.string().optional().describe('Optional file name filter (e.g., "*.ts")'),
 })
 
 // ---------------------------------------------------------------------------
@@ -280,12 +256,9 @@ export const AddMemorySchema = z.object({
     .string()
     .max(100)
     .describe(
-      'A descriptive key for this memory (e.g., "project_root", "test_command"). Max 100 characters.'
+      'A descriptive key for this memory (e.g., "project_root", "test_command"). Max 100 characters.',
     ),
-  value: z
-    .string()
-    .max(10000)
-    .describe('The information to remember. Max 10000 characters.'),
+  value: z.string().max(10000).describe('The information to remember. Max 10000 characters.'),
 })
 
 /** get_memory — retrieve a specific memory entry by key */
@@ -309,7 +282,10 @@ export const DeleteMemorySchema = z.object({
 export const SpawnWorkerSchema = z.object({
   agentNodeId: z.string().describe('Node ID of the connected conversation/agent node to run'),
   prompt: z.string().describe('Prompt to send to the worker agent'),
-  edgeId: z.string().optional().describe('Edge ID linking the orchestrator to the agent (for result storage)'),
+  edgeId: z
+    .string()
+    .optional()
+    .describe('Edge ID linking the orchestrator to the agent (for result storage)'),
 })
 
 /** get_worker_result — read the result from a completed worker */
@@ -319,12 +295,16 @@ export const GetWorkerResultSchema = z.object({
 
 /** synthesize_results — combine multiple worker results into a final output */
 export const SynthesizeResultsSchema = z.object({
-  agentNodeIds: z.array(z.string()).optional().describe(
-    'Node IDs of workers to synthesize. If omitted, uses all completed workers.'
-  ),
-  synthesisPrompt: z.string().optional().describe(
-    'Optional instructions for how to combine the results. Defaults to comprehensive synthesis.'
-  ),
+  agentNodeIds: z
+    .array(z.string())
+    .optional()
+    .describe('Node IDs of workers to synthesize. If omitted, uses all completed workers.'),
+  synthesisPrompt: z
+    .string()
+    .optional()
+    .describe(
+      'Optional instructions for how to combine the results. Defaults to comprehensive synthesis.',
+    ),
 })
 
 // ---------------------------------------------------------------------------

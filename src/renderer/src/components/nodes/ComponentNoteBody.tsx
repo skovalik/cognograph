@@ -4,16 +4,16 @@
 // ComponentNoteBody — Renders inside NoteNode when noteMode === 'component'
 // Displays component name, props list (collapsed by default), library badge, and status
 
-import { memo, useCallback, useState } from 'react'
-import { Component, Plus, X, ChevronDown, ChevronRight } from 'lucide-react'
 import type {
+  ComponentLibrary,
   ComponentNoteFields,
   ComponentStatus,
   ComponentType,
-  ComponentLibrary,
   PropDefinition,
   PropType,
 } from '@shared/types'
+import { ChevronDown, ChevronRight, Component, Plus, X } from 'lucide-react'
+import { memo, useCallback, useState } from 'react'
 
 const COMPONENT_STATUS_COLORS: Record<ComponentStatus, string> = {
   planned: '#6b7280',
@@ -22,7 +22,15 @@ const COMPONENT_STATUS_COLORS: Record<ComponentStatus, string> = {
   tested: '#3b82f6',
 }
 
-const COMPONENT_TYPES: ComponentType[] = ['section', 'layout', 'ui', 'form', 'nav', 'footer', 'utility']
+const COMPONENT_TYPES: ComponentType[] = [
+  'section',
+  'layout',
+  'ui',
+  'form',
+  'nav',
+  'footer',
+  'utility',
+]
 const LIBRARY_OPTIONS: ComponentLibrary[] = ['custom', 'shadcn', 'reactbits', 'reactbits-pro']
 const PROP_TYPES: PropType[] = ['string', 'number', 'boolean', 'image', 'richtext', 'array', 'enum']
 
@@ -41,7 +49,11 @@ function getDefaultComponent(): ComponentNoteFields {
   }
 }
 
-function ComponentNoteBodyComponent({ component, onChange, selected }: ComponentNoteBodyProps): JSX.Element {
+function ComponentNoteBodyComponent({
+  component,
+  onChange,
+  selected,
+}: ComponentNoteBodyProps): JSX.Element {
   const data = component || getDefaultComponent()
   const [propsExpanded, setPropsExpanded] = useState(false)
   const [showAddProp, setShowAddProp] = useState(false)
@@ -52,7 +64,7 @@ function ComponentNoteBodyComponent({ component, onChange, selected }: Component
     <K extends keyof ComponentNoteFields>(field: K, value: ComponentNoteFields[K]) => {
       onChange({ ...data, [field]: value })
     },
-    [data, onChange]
+    [data, onChange],
   )
 
   const handleAddProp = useCallback(() => {
@@ -70,19 +82,20 @@ function ComponentNoteBodyComponent({ component, onChange, selected }: Component
 
   const handleRemoveProp = useCallback(
     (index: number) => {
-      updateField('props', data.props.filter((_, i) => i !== index))
+      updateField(
+        'props',
+        data.props.filter((_, i) => i !== index),
+      )
     },
-    [data.props, updateField]
+    [data.props, updateField],
   )
 
   const handleTogglePropRequired = useCallback(
     (index: number) => {
-      const updated = data.props.map((p, i) =>
-        i === index ? { ...p, required: !p.required } : p
-      )
+      const updated = data.props.map((p, i) => (i === index ? { ...p, required: !p.required } : p))
       updateField('props', updated)
     },
-    [data.props, updateField]
+    [data.props, updateField],
   )
 
   const statusColor = COMPONENT_STATUS_COLORS[data.status]
@@ -91,7 +104,10 @@ function ComponentNoteBodyComponent({ component, onChange, selected }: Component
     <div className="flex flex-col gap-1.5 w-full nodrag nowheel" data-focusable="true">
       {/* Component name with JSX-style display */}
       <div className="flex items-center gap-1 px-1">
-        <Component className="w-3 h-3 flex-shrink-0" style={{ color: 'var(--node-text-secondary)' }} />
+        <Component
+          className="w-3 h-3 flex-shrink-0"
+          style={{ color: 'var(--node-text-secondary)' }}
+        />
         {selected ? (
           <input
             type="text"
@@ -107,7 +123,9 @@ function ComponentNoteBodyComponent({ component, onChange, selected }: Component
             className="flex-1 text-[11px] font-mono truncate"
             style={{ color: 'var(--node-text-primary)' }}
           >
-            {'<'}{data.name}{' />'}
+            {'<'}
+            {data.name}
+            {' />'}
           </span>
         )}
       </div>
@@ -116,7 +134,9 @@ function ComponentNoteBodyComponent({ component, onChange, selected }: Component
       {selected && (
         <div className="flex items-center gap-2 px-1">
           <div className="flex items-center gap-1">
-            <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>Type:</span>
+            <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>
+              Type:
+            </span>
             <select
               value={data.type}
               onChange={(e) => updateField('type', e.target.value as ComponentType)}
@@ -125,12 +145,16 @@ function ComponentNoteBodyComponent({ component, onChange, selected }: Component
               onClick={(e) => e.stopPropagation()}
             >
               {COMPONENT_TYPES.map((t) => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t} value={t}>
+                  {t}
+                </option>
               ))}
             </select>
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>Lib:</span>
+            <span className="text-[10px]" style={{ color: 'var(--node-text-muted)' }}>
+              Lib:
+            </span>
             <select
               value={data.library || 'custom'}
               onChange={(e) => updateField('library', e.target.value as ComponentLibrary)}
@@ -139,7 +163,9 @@ function ComponentNoteBodyComponent({ component, onChange, selected }: Component
               onClick={(e) => e.stopPropagation()}
             >
               {LIBRARY_OPTIONS.map((l) => (
-                <option key={l} value={l}>{l}</option>
+                <option key={l} value={l}>
+                  {l}
+                </option>
               ))}
             </select>
           </div>
@@ -157,7 +183,10 @@ function ComponentNoteBodyComponent({ component, onChange, selected }: Component
           </div>
         ) : !propsExpanded && data.props.length > 0 ? (
           <button
-            onClick={(e) => { e.stopPropagation(); setPropsExpanded(true) }}
+            onClick={(e) => {
+              e.stopPropagation()
+              setPropsExpanded(true)
+            }}
             className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium hover:opacity-80 transition-opacity"
             style={{
               backgroundColor: 'rgba(139, 92, 246, 0.12)',
@@ -171,7 +200,10 @@ function ComponentNoteBodyComponent({ component, onChange, selected }: Component
           <div className="flex flex-col gap-0.5">
             {data.props.length > 0 && (
               <button
-                onClick={(e) => { e.stopPropagation(); setPropsExpanded(false) }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setPropsExpanded(false)
+                }}
                 className="flex items-center gap-1 text-[10px] opacity-60 hover:opacity-80 transition-opacity mb-0.5"
                 style={{ color: 'var(--node-text-muted)' }}
               >
@@ -187,14 +219,15 @@ function ComponentNoteBodyComponent({ component, onChange, selected }: Component
               >
                 <span className="font-mono truncate flex-1" title={prop.name}>
                   {prop.name}: <span className="opacity-60">{prop.type}</span>
-                  {prop.required && (
-                    <span style={{ color: '#ef4444' }}> *</span>
-                  )}
+                  {prop.required && <span style={{ color: '#ef4444' }}> *</span>}
                 </span>
                 {selected && (
                   <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-60">
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleTogglePropRequired(index) }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleTogglePropRequired(index)
+                      }}
                       className="text-[8px] px-0.5 rounded hover:opacity-100"
                       title={prop.required ? 'Make optional' : 'Make required'}
                       style={{
@@ -204,7 +237,10 @@ function ComponentNoteBodyComponent({ component, onChange, selected }: Component
                       req
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleRemoveProp(index) }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleRemoveProp(index)
+                      }}
                       className="hover:opacity-100"
                       title="Remove prop"
                     >
@@ -248,11 +284,16 @@ function ComponentNoteBodyComponent({ component, onChange, selected }: Component
                 onClick={(e) => e.stopPropagation()}
               >
                 {PROP_TYPES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
                 ))}
               </select>
               <button
-                onClick={(e) => { e.stopPropagation(); handleAddProp() }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleAddProp()
+                }}
                 className="text-[10px] px-1 py-0.5 rounded"
                 style={{ backgroundColor: 'rgba(139, 92, 246, 0.2)', color: '#8b5cf6' }}
               >
@@ -261,7 +302,10 @@ function ComponentNoteBodyComponent({ component, onChange, selected }: Component
             </div>
           ) : (
             <button
-              onClick={(e) => { e.stopPropagation(); setShowAddProp(true) }}
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowAddProp(true)
+              }}
               className="flex items-center gap-0.5 text-[10px] opacity-50 hover:opacity-80 transition-opacity"
               style={{ color: 'var(--node-text-muted)' }}
             >
@@ -275,7 +319,9 @@ function ComponentNoteBodyComponent({ component, onChange, selected }: Component
       {/* Slots (read-only summary) */}
       {data.slots && data.slots.length > 0 && (
         <div className="flex items-center gap-1 px-1 flex-wrap">
-          <span className="text-[9px]" style={{ color: 'var(--node-text-muted)' }}>Slots:</span>
+          <span className="text-[9px]" style={{ color: 'var(--node-text-muted)' }}>
+            Slots:
+          </span>
           {data.slots.map((slot) => (
             <span
               key={slot}
@@ -322,7 +368,9 @@ function ComponentNoteBodyComponent({ component, onChange, selected }: Component
             onClick={(e) => e.stopPropagation()}
           >
             {Object.keys(COMPONENT_STATUS_COLORS).map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
           </select>
         )}

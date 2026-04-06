@@ -10,7 +10,7 @@
  * - All 3 states render (verified via import + type checking)
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 describe('SessionStatusIndicator', () => {
   it('should be importable without errors', async () => {
@@ -27,7 +27,10 @@ describe('SessionStatusIndicator', () => {
   it('should have a display name containing SessionStatusIndicator', async () => {
     const mod = await import('../SessionStatusIndicator')
     // memo() with named function preserves the name (may have suffix from transform)
-    const component = mod.SessionStatusIndicator as { displayName?: string; type?: { name?: string } }
+    const component = mod.SessionStatusIndicator as {
+      displayName?: string
+      type?: { name?: string }
+    }
     // React.memo stores the inner component on .type
     const innerName = component.type?.name ?? component.displayName ?? ''
     expect(innerName).toContain('SessionStatusIndicator')

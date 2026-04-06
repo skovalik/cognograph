@@ -8,17 +8,17 @@
  * Design: Clickable badge → dropdown with radio group
  */
 
-import { memo, useCallback, useRef, useEffect, useState } from 'react'
+import { useReactFlow } from '@xyflow/react'
 import { Check, ChevronDown, type LucideIcon } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { cn } from '../../lib/utils'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
-import { useReactFlow } from '@xyflow/react'
-import { cn } from '../../lib/utils'
 
 export interface ModeOption {
   value: string
@@ -46,7 +46,7 @@ function NodeModeDropdownComponent({
   nodeColor,
   compact = false,
   disabled = false,
-  'aria-label': ariaLabel
+  'aria-label': ariaLabel,
 }: NodeModeDropdownProps): JSX.Element {
   const { getViewport } = useReactFlow()
 
@@ -88,10 +88,10 @@ function NodeModeDropdownComponent({
         }
       }, 5000)
     },
-    [getViewport]
+    [getViewport],
   )
 
-  const currentOption = options.find(opt => opt.value === value)
+  const currentOption = options.find((opt) => opt.value === value)
   const CurrentIcon = currentOption?.icon
   const currentLabel = currentOption?.label || value
 
@@ -120,7 +120,7 @@ function NodeModeDropdownComponent({
           style={{
             background: nodeColor ? `${nodeColor}15` : 'var(--surface-subtle)',
             border: `1px solid ${nodeColor ? `${nodeColor}40` : 'var(--border-subtle)'}`,
-            color: nodeColor || 'var(--text-primary)'
+            color: nodeColor || 'var(--text-primary)',
           }}
           aria-label={ariaLabel || `Select mode: ${currentLabel}`}
         >
@@ -132,19 +132,15 @@ function NodeModeDropdownComponent({
 
       <DropdownMenuContent
         align="start"
-        className={cn(
-          useTwoColumns ? "w-[720px]" : "w-80"
-        )}
+        className={cn(useTwoColumns ? 'w-[720px]' : 'w-80')}
         collisionPadding={8}
       >
         <DropdownMenuRadioGroup
           value={value}
           onValueChange={onChange}
-          className={cn(
-            useTwoColumns && "grid grid-cols-2 gap-x-2"
-          )}
+          className={cn(useTwoColumns && 'grid grid-cols-2 gap-x-2')}
         >
-          {options.map(option => {
+          {options.map((option) => {
             const OptionIcon = option.icon
             return (
               <DropdownMenuRadioItem
@@ -154,10 +150,7 @@ function NodeModeDropdownComponent({
               >
                 <div className="flex items-center gap-2 w-full">
                   {OptionIcon && (
-                    <OptionIcon
-                      className="w-4 h-4"
-                      style={{ color: option.color || nodeColor }}
-                    />
+                    <OptionIcon className="w-4 h-4" style={{ color: option.color || nodeColor }} />
                   )}
                   <div className="flex-1">
                     <div className="text-sm font-medium">{option.label}</div>

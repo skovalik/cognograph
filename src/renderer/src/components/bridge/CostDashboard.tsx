@@ -12,23 +12,18 @@
  * - Export and budget configuration
  */
 
+import type { CostSnapshot } from '@shared/types/bridge'
+import { AlertTriangle, DollarSign, TrendingUp } from 'lucide-react'
 import { memo, useMemo } from 'react'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '../ui/sheet'
-import { Progress } from '../ui/progress'
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
-import { Badge } from '../ui/Badge'
-import { Button } from '../ui/Button'
-import { ScrollArea } from '../ui/scroll-area'
-import { Separator } from '../ui/separator'
-import { DollarSign, TrendingUp, AlertTriangle } from 'lucide-react'
 import { useGraphIntelligenceStore } from '../../stores/graphIntelligenceStore'
 import { useSessionStatsStore } from '../../stores/sessionStatsStore'
-import type { CostSnapshot } from '@shared/types/bridge'
+import { Badge } from '../ui/Badge'
+import { Button } from '../ui/Button'
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { Progress } from '../ui/progress'
+import { ScrollArea } from '../ui/scroll-area'
+import { Separator } from '../ui/separator'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet'
 
 // =============================================================================
 // Sub-components
@@ -49,10 +44,7 @@ function CostBar({
 
   return (
     <div className="flex items-center gap-2">
-      <span
-        className="text-xs w-[120px] truncate"
-        style={{ color: 'var(--text-muted)' }}
-      >
+      <span className="text-xs w-[120px] truncate" style={{ color: 'var(--text-muted)' }}>
         {label}
       </span>
       <div
@@ -77,27 +69,19 @@ function CostBar({
   )
 }
 
-function RecentCostEntry({
-  snapshot,
-}: {
-  snapshot: CostSnapshot
-}): JSX.Element {
+function RecentCostEntry({ snapshot }: { snapshot: CostSnapshot }): JSX.Element {
   const time = new Date(snapshot.timestamp).toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
   })
 
-  const totalCost =
-    snapshot.orchestrationCostUSD + snapshot.ambientCostUSD
+  const totalCost = snapshot.orchestrationCostUSD + snapshot.ambientCostUSD
 
   return (
     <div className="flex items-center justify-between py-1">
       <div className="flex items-center gap-2">
-        <span
-          className="text-[10px] font-mono"
-          style={{ color: 'var(--text-muted)' }}
-        >
+        <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>
           {time}
         </span>
         <span className="text-xs" style={{ color: 'var(--text-primary)' }}>
@@ -109,17 +93,11 @@ function RecentCostEntry({
         </span>
       </div>
       <div className="text-right">
-        <span
-          className="text-xs font-mono"
-          style={{ color: 'var(--text-primary)' }}
-        >
+        <span className="text-xs font-mono" style={{ color: 'var(--text-primary)' }}>
           ${totalCost.toFixed(4)}
         </span>
         {snapshot.sessionTokens > 0 && (
-          <span
-            className="text-[10px] ml-1"
-            style={{ color: 'var(--text-muted)' }}
-          >
+          <span className="text-[10px] ml-1" style={{ color: 'var(--text-muted)' }}>
             ({snapshot.sessionTokens.toLocaleString()} tokens)
           </span>
         )}
@@ -137,16 +115,11 @@ interface CostDashboardProps {
   onOpenChange: (open: boolean) => void
 }
 
-function CostDashboardComponent({
-  open,
-  onOpenChange,
-}: CostDashboardProps): JSX.Element {
+function CostDashboardComponent({ open, onOpenChange }: CostDashboardProps): JSX.Element {
   const costHistory = useGraphIntelligenceStore((s) => s.costHistory)
   const dailyBudgetUsed = useGraphIntelligenceStore((s) => s.dailyBudgetUsed)
   const dailyBudgetLimit = useGraphIntelligenceStore((s) => s.dailyBudgetLimit)
-  const currentSessionCost = useGraphIntelligenceStore(
-    (s) => s.currentSessionCost
-  )
+  const currentSessionCost = useGraphIntelligenceStore((s) => s.currentSessionCost)
   const sessionStats = useSessionStatsStore((s) => ({
     totalCostUSD: s.totalCostUSD,
     totalInputTokens: s.totalInputTokens,
@@ -157,19 +130,10 @@ function CostDashboardComponent({
 
   // Compute cost categories
   const costCategories = useMemo(() => {
-    const orchestrationCost = costHistory.reduce(
-      (sum, s) => sum + s.orchestrationCostUSD,
-      0
-    )
-    const ambientCost = costHistory.reduce(
-      (sum, s) => sum + s.ambientCostUSD,
-      0
-    )
+    const orchestrationCost = costHistory.reduce((sum, s) => sum + s.orchestrationCostUSD, 0)
+    const ambientCost = costHistory.reduce((sum, s) => sum + s.ambientCostUSD, 0)
     const sessionCost = sessionStats.totalCostUSD
-    const otherCost = Math.max(
-      0,
-      sessionCost - orchestrationCost - ambientCost
-    )
+    const otherCost = Math.max(0, sessionCost - orchestrationCost - ambientCost)
 
     return [
       {
@@ -190,16 +154,11 @@ function CostDashboardComponent({
     ]
   }, [costHistory, sessionStats.totalCostUSD])
 
-  const maxCategoryAmount = Math.max(
-    ...costCategories.map((c) => c.amount),
-    0.001
-  )
+  const maxCategoryAmount = Math.max(...costCategories.map((c) => c.amount), 0.001)
 
   // Budget percentage
   const budgetPercentage =
-    dailyBudgetLimit > 0
-      ? Math.min(100, (dailyBudgetUsed / dailyBudgetLimit) * 100)
-      : 0
+    dailyBudgetLimit > 0 ? Math.min(100, (dailyBudgetUsed / dailyBudgetLimit) * 100) : 0
 
   const budgetRemaining = Math.max(0, dailyBudgetLimit - dailyBudgetUsed)
 
@@ -235,20 +194,13 @@ function CostDashboardComponent({
                   >
                     ${sessionStats.totalCostUSD.toFixed(4)}
                   </span>
-                  <span
-                    className="text-xs"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     {sessionStats.totalRequests} requests
                   </span>
                 </div>
-                <div
-                  className="text-xs mt-1"
-                  style={{ color: 'var(--text-muted)' }}
-                >
+                <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                   {(
-                    sessionStats.totalInputTokens +
-                    sessionStats.totalOutputTokens
+                    sessionStats.totalInputTokens + sessionStats.totalOutputTokens
                   ).toLocaleString()}{' '}
                   total tokens
                 </div>
@@ -279,10 +231,7 @@ function CostDashboardComponent({
                 <CardTitle className="text-sm flex items-center gap-2">
                   Budget Status
                   {isBudgetExceeded && (
-                    <Badge
-                      variant="destructive"
-                      className="text-[9px] px-1 h-4"
-                    >
+                    <Badge variant="destructive" className="text-[9px] px-1 h-4">
                       <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />
                       Exceeded
                     </Badge>
@@ -300,20 +249,13 @@ function CostDashboardComponent({
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-xs">
-                  <span style={{ color: 'var(--text-muted)' }}>
-                    Daily limit:
-                  </span>
-                  <span
-                    className="font-mono"
-                    style={{ color: 'var(--text-primary)' }}
-                  >
+                  <span style={{ color: 'var(--text-muted)' }}>Daily limit:</span>
+                  <span className="font-mono" style={{ color: 'var(--text-primary)' }}>
                     ${dailyBudgetLimit.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span style={{ color: 'var(--text-muted)' }}>
-                    Used today:
-                  </span>
+                  <span style={{ color: 'var(--text-muted)' }}>Used today:</span>
                   <span
                     className="font-mono"
                     style={{
@@ -327,25 +269,14 @@ function CostDashboardComponent({
                     ${dailyBudgetUsed.toFixed(4)}
                   </span>
                 </div>
-                <Progress
-                  value={budgetPercentage}
-                  className="h-2"
-                />
+                <Progress value={budgetPercentage} className="h-2" />
                 <div className="flex justify-between text-xs">
-                  <span style={{ color: 'var(--text-muted)' }}>
-                    Remaining:
-                  </span>
-                  <span
-                    className="font-mono"
-                    style={{ color: 'var(--color-success, #22c55e)' }}
-                  >
+                  <span style={{ color: 'var(--text-muted)' }}>Remaining:</span>
+                  <span className="font-mono" style={{ color: 'var(--color-success, #22c55e)' }}>
                     ${budgetRemaining.toFixed(4)}
                   </span>
                 </div>
-                <span
-                  className="text-[10px] block"
-                  style={{ color: 'var(--text-muted)' }}
-                >
+                <span className="text-[10px] block" style={{ color: 'var(--text-muted)' }}>
                   {Math.round(budgetPercentage)}% of daily budget used
                 </span>
               </CardContent>
@@ -361,24 +292,14 @@ function CostDashboardComponent({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-1">
-                  {Object.entries(sessionStats.byModel).map(
-                    ([key, stats]) => (
-                      <div
-                        key={key}
-                        className="flex items-center justify-between text-xs"
-                      >
-                        <span style={{ color: 'var(--text-muted)' }}>
-                          {stats.model}
-                        </span>
-                        <span
-                          className="font-mono"
-                          style={{ color: 'var(--text-primary)' }}
-                        >
-                          ${stats.costUSD.toFixed(4)} ({stats.requestCount}x)
-                        </span>
-                      </div>
-                    )
-                  )}
+                  {Object.entries(sessionStats.byModel).map(([key, stats]) => (
+                    <div key={key} className="flex items-center justify-between text-xs">
+                      <span style={{ color: 'var(--text-muted)' }}>{stats.model}</span>
+                      <span className="font-mono" style={{ color: 'var(--text-primary)' }}>
+                        ${stats.costUSD.toFixed(4)} ({stats.requestCount}x)
+                      </span>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             )}

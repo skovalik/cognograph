@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import { buildTool } from '../buildTool'
 import type { ToolConfig, ToolResult } from '../types'
@@ -55,7 +55,7 @@ describe('buildTool — valid config', () => {
         interruptBehavior: 'block',
         errorCascade: true,
         prompt: 'Extra context for LLM',
-      })
+      }),
     )
 
     expect(tool.isReadOnly).toBe(true)
@@ -92,11 +92,9 @@ describe('buildTool — valid config', () => {
     const tool = buildTool(
       validConfig({
         call: async (input) => ({
-          content: [
-            { type: 'text', text: `Received: ${JSON.stringify(input)}` },
-          ],
+          content: [{ type: 'text', text: `Received: ${JSON.stringify(input)}` }],
         }),
-      })
+      }),
     )
 
     const result = await tool.call({ query: 'hello' })
@@ -113,44 +111,36 @@ describe('buildTool — valid config', () => {
 
 describe('buildTool — validation', () => {
   it('throws on missing name', () => {
-    expect(() =>
-      buildTool(validConfig({ name: '' }))
-    ).toThrow('non-empty "name"')
+    expect(() => buildTool(validConfig({ name: '' }))).toThrow('non-empty "name"')
   })
 
   it('throws on invalid name characters', () => {
-    expect(() =>
-      buildTool(validConfig({ name: 'my tool!' }))
-    ).toThrow('invalid characters')
+    expect(() => buildTool(validConfig({ name: 'my tool!' }))).toThrow('invalid characters')
   })
 
   it('throws on name exceeding 64 chars', () => {
-    expect(() =>
-      buildTool(validConfig({ name: 'a'.repeat(65) }))
-    ).toThrow('exceeds 64 characters')
+    expect(() => buildTool(validConfig({ name: 'a'.repeat(65) }))).toThrow('exceeds 64 characters')
   })
 
   it('throws on missing description', () => {
-    expect(() =>
-      buildTool(validConfig({ description: '' }))
-    ).toThrow('"description" is required')
+    expect(() => buildTool(validConfig({ description: '' }))).toThrow('"description" is required')
   })
 
   it('throws on missing inputSchema', () => {
     expect(() =>
-      buildTool(validConfig({ inputSchema: undefined as unknown as z.ZodSchema }))
+      buildTool(validConfig({ inputSchema: undefined as unknown as z.ZodSchema })),
     ).toThrow('"inputSchema"')
   })
 
   it('throws on non-Zod inputSchema', () => {
     expect(() =>
-      buildTool(validConfig({ inputSchema: { type: 'object' } as unknown as z.ZodSchema }))
+      buildTool(validConfig({ inputSchema: { type: 'object' } as unknown as z.ZodSchema })),
     ).toThrow('Zod schema')
   })
 
   it('throws on missing call', () => {
     expect(() =>
-      buildTool(validConfig({ call: undefined as unknown as ToolConfig['call'] }))
+      buildTool(validConfig({ call: undefined as unknown as ToolConfig['call'] })),
     ).toThrow('"call" must be a function')
   })
 

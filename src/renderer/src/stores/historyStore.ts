@@ -8,11 +8,11 @@
  * Extracted from workspaceStore as part of Week 2 Stream B Track 2 Phase 2.2a.
  */
 
-import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
-import { subscribeWithSelector } from 'zustand/middleware'
-import { enableMapSet } from 'immer'
 import type { HistoryAction } from '@shared/types'
+import { enableMapSet } from 'immer'
+import { create } from 'zustand'
+import { subscribeWithSelector } from 'zustand/middleware'
+import { immer } from 'zustand/middleware/immer'
 
 // Enable Immer support for Map
 enableMapSet()
@@ -73,7 +73,7 @@ const initialState: HistoryState = {
   history: [],
   historyIndex: -1,
   dragStartPositions: new Map(),
-  resizeStartDimensions: new Map()
+  resizeStartDimensions: new Map(),
 }
 
 // =============================================================================
@@ -260,7 +260,7 @@ export const useHistoryStore = create<HistoryStore>()(
             type: 'RESIZE_NODE',
             nodeId,
             before: startDimensions,
-            after: finalDimensions
+            after: finalDimensions,
           } as HistoryAction)
         }
 
@@ -305,9 +305,9 @@ export const useHistoryStore = create<HistoryStore>()(
 
       getCurrentHistoryIndex: () => {
         return get().historyIndex
-      }
-    }))
-  )
+      },
+    })),
+  ),
 )
 
 // =============================================================================

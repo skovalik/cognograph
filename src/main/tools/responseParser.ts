@@ -13,7 +13,7 @@
  */
 
 import { randomUUID } from 'node:crypto'
-import type { NormalizedToolCall, LLMProvider } from './types'
+import type { LLMProvider, NormalizedToolCall } from './types'
 
 // ---------------------------------------------------------------------------
 // Anthropic parser
@@ -44,9 +44,10 @@ function parseAnthropic(message: unknown): NormalizedToolCall[] {
       calls.push({
         id: typeof b.id === 'string' && b.id.length > 0 ? b.id : randomUUID(),
         name: String(b.name ?? ''),
-        input: (typeof b.input === 'object' && b.input !== null
-          ? b.input
-          : {}) as Record<string, unknown>,
+        input: (typeof b.input === 'object' && b.input !== null ? b.input : {}) as Record<
+          string,
+          unknown
+        >,
       })
     }
   }
@@ -116,9 +117,7 @@ function parseOpenAI(message: unknown): NormalizedToolCall[] {
       try {
         const parsed: unknown = JSON.parse(argsStr)
         input =
-          typeof parsed === 'object' && parsed !== null
-            ? (parsed as Record<string, unknown>)
-            : {}
+          typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : {}
       } catch {
         // Return a tool call with error info — never silently skip
         input = {
@@ -135,10 +134,7 @@ function parseOpenAI(message: unknown): NormalizedToolCall[] {
     }
 
     calls.push({
-      id:
-        typeof call.id === 'string' && call.id.length > 0
-          ? call.id
-          : randomUUID(),
+      id: typeof call.id === 'string' && call.id.length > 0 ? call.id : randomUUID(),
       name,
       input,
     })
@@ -209,9 +205,10 @@ function parseGemini(message: unknown): NormalizedToolCall[] {
       // Gemini does not provide call IDs — always generate UUID
       id: randomUUID(),
       name: String(fnCall.name ?? ''),
-      input: (typeof fnCall.args === 'object' && fnCall.args !== null
-        ? fnCall.args
-        : {}) as Record<string, unknown>,
+      input: (typeof fnCall.args === 'object' && fnCall.args !== null ? fnCall.args : {}) as Record<
+        string,
+        unknown
+      >,
     })
   }
 
@@ -247,10 +244,7 @@ function deduplicateIds(calls: NormalizedToolCall[]): NormalizedToolCall[] {
  * @param provider - Which provider format to parse ('anthropic' | 'openai' | 'gemini')
  * @returns Normalized tool calls with guaranteed unique IDs
  */
-export function parseToolCalls(
-  message: unknown,
-  provider: LLMProvider
-): NormalizedToolCall[] {
+export function parseToolCalls(message: unknown, provider: LLMProvider): NormalizedToolCall[] {
   let calls: NormalizedToolCall[]
 
   switch (provider) {

@@ -8,11 +8,11 @@
  * No header, no footer, no metadata. The overlay provides the frame.
  */
 
-import { memo, useCallback } from 'react'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { useNodesStore } from '../../stores/nodesStore'
-import { RichTextEditor } from '../RichTextEditor'
 import type { TextNodeData } from '@shared/types'
+import { memo, useCallback } from 'react'
+import { useNodesStore } from '../../stores/nodesStore'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { RichTextEditor } from '../RichTextEditor'
 
 interface TextArtboardProps {
   nodeId: string
@@ -29,7 +29,7 @@ function TextArtboardComponent({ nodeId }: TextArtboardProps): JSX.Element {
     (html: string) => {
       updateNode(nodeId, { content: html })
     },
-    [nodeId, updateNode]
+    [nodeId, updateNode],
   )
 
   if (!nodeData) {

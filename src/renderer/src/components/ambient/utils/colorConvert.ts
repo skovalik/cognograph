@@ -14,16 +14,15 @@ export function hexToRgbFloat(hex: string): [number, number, number] {
   const r = parseInt(h.slice(0, 2), 16) / 255
   const g = parseInt(h.slice(2, 4), 16) / 255
   const b = parseInt(h.slice(4, 6), 16) / 255
-  return [
-    isNaN(r) ? 0.3 : r,
-    isNaN(g) ? 0.3 : g,
-    isNaN(b) ? 0.3 : b
-  ]
+  return [isNaN(r) ? 0.3 : r, isNaN(g) ? 0.3 : g, isNaN(b) ? 0.3 : b]
 }
 
 /** Convert [0-1, 0-1, 0-1] floats back to hex string */
 export function rgbFloatToHex(rgb: [number, number, number]): string {
-  const toHex = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0')
+  const toHex = (v: number) =>
+    Math.round(Math.max(0, Math.min(1, v)) * 255)
+      .toString(16)
+      .padStart(2, '0')
   return `#${toHex(rgb[0])}${toHex(rgb[1])}${toHex(rgb[2])}`
 }
 
@@ -35,7 +34,7 @@ export function rgbFloatToHex(rgb: [number, number, number]): string {
 export function generatePaletteFromAccents(
   primary: string,
   secondary: string | undefined,
-  count: number
+  count: number,
 ): string[] {
   if (count <= 0) return []
   if (count === 1) return [primary]
@@ -69,7 +68,7 @@ function lerpHue(h1: number, h2: number, t: number): number {
   let diff = h2 - h1
   if (diff > 0.5) diff -= 1
   if (diff < -0.5) diff += 1
-  return ((h1 + diff * t) % 1 + 1) % 1
+  return (((h1 + diff * t) % 1) + 1) % 1
 }
 
 function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
@@ -139,21 +138,21 @@ export function deriveColor(
     hueShift?: number
     lightMode?: { lighten?: number; desaturate?: number; hueShift?: number }
   },
-  isDark = true
+  isDark = true,
 ): string {
   const [r, g, b] = hexToRgbFloat(sourceHex)
   const { h, s, l } = rgbToHsl(r, g, b)
 
   if (!isDark && opts.lightMode) {
     const lm = opts.lightMode
-    const newH = ((h + (lm.hueShift ?? 0)) % 1 + 1) % 1
+    const newH = (((h + (lm.hueShift ?? 0)) % 1) + 1) % 1
     const newS = Math.max(0, Math.min(1, s * (1 - (lm.desaturate ?? 0))))
     // Lighten: push luminance toward 1.0 (white)
     const newL = Math.max(0, Math.min(1, l + (1 - l) * (lm.lighten ?? 0)))
     return hslToHex(newH, newS, newL)
   }
 
-  const newH = ((h + (opts.hueShift ?? 0)) % 1 + 1) % 1
+  const newH = (((h + (opts.hueShift ?? 0)) % 1) + 1) % 1
   const newS = Math.max(0, Math.min(1, s * (1 - (opts.desaturate ?? 0))))
   const newL = Math.max(0, Math.min(1, l * (1 - (opts.darken ?? 0))))
 
@@ -181,6 +180,9 @@ function hslToHex(h: number, s: number, l: number): string {
     b = hue2rgb(p, q, h - 1 / 3)
   }
 
-  const toHex = (v: number) => Math.round(v * 255).toString(16).padStart(2, '0')
+  const toHex = (v: number) =>
+    Math.round(v * 255)
+      .toString(16)
+      .padStart(2, '0')
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`
 }

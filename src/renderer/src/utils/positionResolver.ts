@@ -8,13 +8,9 @@
  * Handles topological sorting of operations for dependency-aware execution.
  */
 
-import type { Node } from '@xyflow/react'
-import type {
-  RelativePosition,
-  NodeData,
-  MutationOp
-} from '@shared/types'
+import type { MutationOp, NodeData, RelativePosition } from '@shared/types'
 import { NODE_DEFAULTS } from '@shared/types'
+import type { Node } from '@xyflow/react'
 
 // Re-export constants for use
 export const NODE_SPACING = 50
@@ -54,7 +50,7 @@ export interface PositionResolutionContext {
  */
 export function resolvePosition(
   position: RelativePosition,
-  context: PositionResolutionContext
+  context: PositionResolutionContext,
 ): { x: number; y: number } {
   // Defensive check: if position has x/y but no type, treat as absolute
   // This handles malformed positions from templates or AI that forgot the type field
@@ -97,7 +93,7 @@ export function resolvePosition(
 
 function resolveRelativeTo(
   position: Extract<RelativePosition, { type: 'relative-to' }>,
-  context: PositionResolutionContext
+  context: PositionResolutionContext,
 ): { x: number; y: number } {
   const offset = position.offset ?? NODE_SPACING
 
@@ -114,7 +110,6 @@ function resolveRelativeTo(
 
   // Fallback to center of view if anchor not found
   if (!anchorPos) {
-    console.warn(`[PositionResolver] Anchor not found: ${position.anchor}, using center of view`)
     return resolveCenterOfView(context)
   }
 
@@ -154,7 +149,7 @@ function resolveCenterOfSelection(context: PositionResolutionContext): { x: numb
 
   return {
     x: sumX / selectedNodes.length,
-    y: sumY / selectedNodes.length
+    y: sumY / selectedNodes.length,
   }
 }
 
@@ -165,13 +160,13 @@ function resolveCenterOfView(context: PositionResolutionContext): { x: number; y
 
   return {
     x: (viewCenterX - context.viewport.x) / context.viewport.zoom,
-    y: (viewCenterY - context.viewport.y) / context.viewport.zoom
+    y: (viewCenterY - context.viewport.y) / context.viewport.zoom,
   }
 }
 
 function resolveBelowSelection(
   position: Extract<RelativePosition, { type: 'below-selection' }>,
-  context: PositionResolutionContext
+  context: PositionResolutionContext,
 ): { x: number; y: number } {
   if (!context.selectionBounds) {
     return resolveCenterOfView(context)
@@ -186,7 +181,7 @@ function resolveBelowSelection(
 
 function resolveGrid(
   position: Extract<RelativePosition, { type: 'grid' }>,
-  context: PositionResolutionContext
+  context: PositionResolutionContext,
 ): { x: number; y: number } {
   const spacing = position.spacing ?? GRID_SPACING
 
@@ -206,13 +201,13 @@ function resolveGrid(
 
   return {
     x: basePos.x + position.col * spacing,
-    y: basePos.y + position.row * spacing
+    y: basePos.y + position.row * spacing,
   }
 }
 
 function resolveCluster(
   position: Extract<RelativePosition, { type: 'cluster' }>,
-  context: PositionResolutionContext
+  context: PositionResolutionContext,
 ): { x: number; y: number } {
   const spread = position.spread ?? CLUSTER_SPREAD
 
@@ -236,7 +231,7 @@ function resolveCluster(
 
   return {
     x: nearPos.x + Math.cos(angle) * distance,
-    y: nearPos.y + Math.sin(angle) * distance
+    y: nearPos.y + Math.sin(angle) * distance,
   }
 }
 
@@ -311,7 +306,6 @@ export function sortOperationsByPositionDependency(operations: MutationOp[]): Mu
   function visit(opId: string): void {
     if (visited.has(opId)) return
     if (visiting.has(opId)) {
-      console.warn(`[PositionResolver] Circular dependency detected involving: ${opId}`)
       return
     }
 
@@ -348,8 +342,11 @@ export function sortOperationsByPositionDependency(operations: MutationOp[]): Mu
 
 export function calculateSelectionBounds(
   nodes: Node<NodeData>[],
-  selectedIds: string[]
-): { center: { x: number; y: number }; bounds: { minX: number; minY: number; maxX: number; maxY: number } } | null {
+  selectedIds: string[],
+): {
+  center: { x: number; y: number }
+  bounds: { minX: number; minY: number; maxX: number; maxY: number }
+} | null {
   const selectedNodes = nodes.filter((n) => selectedIds.includes(n.id))
 
   if (selectedNodes.length === 0) {
@@ -374,9 +371,9 @@ export function calculateSelectionBounds(
   return {
     center: {
       x: (minX + maxX) / 2,
-      y: (minY + maxY) / 2
+      y: (minY + maxY) / 2,
     },
-    bounds: { minX, minY, maxX, maxY }
+    bounds: { minX, minY, maxX, maxY },
   }
 }
 
@@ -392,7 +389,7 @@ export function calculateOptimalHandles(
   sourcePos: { x: number; y: number },
   sourceDim: { width: number; height: number },
   targetPos: { x: number; y: number },
-  targetDim: { width: number; height: number }
+  targetDim: { width: number; height: number },
 ): { sourceHandle: string; targetHandle: string } {
   // Calculate center points
   const sourceCenterX = sourcePos.x + sourceDim.width / 2
@@ -439,12 +436,57 @@ export function calculateOptimalHandles(
 // Must match SpreadHandles.tsx
 const SPREAD_POSITIONS = [15, 35, 65, 85]
 
-const SLOT_TABLES: Record<number, (number | 'c')[]> = {
-  1: ['c'],
-  2: [1, 4],
-  3: [1, 'c', 4],
-  4: [1, 2, 3, 4],
-  5: [1, 2, 'c', 3, 4],
+/** Must match SpreadHandles.tsx getSpreadCount */
+function getSpreadCount(dimension: number): number {
+  if (dimension >= 600) return 4
+  if (dimension >= 400) return 3
+  if (dimension >= 200) return 2
+  return 0
+}
+
+/** Must match SpreadHandles.tsx VISIBLE_INDICES (0-based) */
+const VISIBLE_INDICES: Record<number, number[]> = {
+  0: [], // <200px: center only
+  2: [1, 2], // 200-400px: 35%, 65%
+  3: [0, 2, 3], // 400-600px: 15%, 65%, 85%
+  4: [0, 1, 2, 3], // 600+: all
+}
+
+/**
+ * Build a slot table for `edgeCount` edges using only visible handle indices.
+ * Returns an array of handle IDs (1-based) or 'c' for center.
+ * Always includes center for odd counts; uses visible handles for spread.
+ */
+export function buildVisibleSlots(edgeCount: number, visibleCount: number): (number | 'c')[] {
+  if (edgeCount <= 1) return ['c']
+  const visible = VISIBLE_INDICES[visibleCount] || []
+  // Convert 0-based indices to 1-based handle IDs
+  const handleIds = visible.map((idx) => idx + 1)
+  if (handleIds.length === 0) {
+    // No spread handles visible — all edges go to center
+    return Array(edgeCount).fill('c') as 'c'[]
+  }
+  if (edgeCount <= handleIds.length) {
+    // Enough visible handles — spread evenly across them
+    if (edgeCount === 2 && handleIds.length >= 2) {
+      return [handleIds[0]!, handleIds[handleIds.length - 1]!]
+    }
+    if (edgeCount === 3 && handleIds.length >= 3) {
+      return [handleIds[0]!, 'c', handleIds[handleIds.length - 1]!]
+    }
+    return handleIds.slice(0, edgeCount)
+  }
+  // More edges than visible handles — fill with center for overflow
+  const slots: (number | 'c')[] = [...handleIds]
+  if (!slots.includes('c' as unknown as number)) {
+    // Insert center in the middle
+    const mid = Math.floor(slots.length / 2)
+    slots.splice(mid, 0, 'c')
+  }
+  while (slots.length < edgeCount) {
+    slots.push('c')
+  }
+  return slots.slice(0, edgeCount)
 }
 
 /**
@@ -453,19 +495,32 @@ const SLOT_TABLES: Record<number, (number | 'c')[]> = {
  * and assigns slot indices so edges fan out instead of stacking.
  */
 export function assignSpreadHandles(
-  edges: Array<{ id: string; source: string; target: string; sourceHandle?: string | null; targetHandle?: string | null; data?: Record<string, unknown> }>,
-  nodePositions: Map<string, { x: number; y: number; width: number; height: number }>
+  edges: Array<{
+    id: string
+    source: string
+    target: string
+    sourceHandle?: string | null
+    targetHandle?: string | null
+    data?: Record<string, unknown>
+  }>,
+  nodePositions: Map<string, { x: number; y: number; width: number; height: number }>,
 ): Map<string, { sourceHandle: string; targetHandle: string }> {
   const result = new Map<string, { sourceHandle: string; targetHandle: string }>()
 
   // Step 1: Calculate optimal sides per edge, skip user-assigned handles
-  const edgeSides: Array<{ id: string; source: string; target: string; sourceSide: string; targetSide: string }> = []
+  const edgeSides: Array<{
+    id: string
+    source: string
+    target: string
+    sourceSide: string
+    targetSide: string
+  }> = []
   for (const edge of edges) {
     if (edge.data?.userAssignedHandle) {
       // Preserve user-assigned handles
       result.set(edge.id, {
         sourceHandle: edge.sourceHandle || 'bottom-source',
-        targetHandle: edge.targetHandle || 'top-target'
+        targetHandle: edge.targetHandle || 'top-target',
       })
       continue
     }
@@ -474,12 +529,21 @@ export function assignSpreadHandles(
     if (!sourcePos || !targetPos) continue
 
     const { sourceHandle, targetHandle } = calculateOptimalHandles(
-      sourcePos, sourcePos, targetPos, targetPos
+      sourcePos,
+      sourcePos,
+      targetPos,
+      targetPos,
     )
     // Extract side from handle ID: "bottom-source" → "bottom"
     const sourceSide = sourceHandle.split('-')[0]!
     const targetSide = targetHandle.split('-')[0]!
-    edgeSides.push({ id: edge.id, source: edge.source, target: edge.target, sourceSide, targetSide })
+    edgeSides.push({
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      sourceSide,
+      targetSide,
+    })
   }
 
   // Step 2: Group into buckets keyed by "nodeId:side:type"
@@ -495,26 +559,34 @@ export function assignSpreadHandles(
 
     // Source bucket: sort key depends on side orientation
     const sourceKey = `${es.source}:${es.sourceSide}:source`
-    const sourceFarEnd = (es.sourceSide === 'top' || es.sourceSide === 'bottom') ? targetCx : targetCy
+    const sourceFarEnd = es.sourceSide === 'top' || es.sourceSide === 'bottom' ? targetCx : targetCy
     if (!buckets.has(sourceKey)) buckets.set(sourceKey, [])
-    buckets.get(sourceKey)!.push({ edgeId: es.id, farEndCenter: sourceFarEnd })
+    buckets.get(sourceKey)?.push({ edgeId: es.id, farEndCenter: sourceFarEnd })
 
     // Target bucket
     const targetKey = `${es.target}:${es.targetSide}:target`
-    const targetFarEnd = (es.targetSide === 'top' || es.targetSide === 'bottom') ? sourceCx : sourceCy
+    const targetFarEnd = es.targetSide === 'top' || es.targetSide === 'bottom' ? sourceCx : sourceCy
     if (!buckets.has(targetKey)) buckets.set(targetKey, [])
-    buckets.get(targetKey)!.push({ edgeId: es.id, farEndCenter: targetFarEnd })
+    buckets.get(targetKey)?.push({ edgeId: es.id, farEndCenter: targetFarEnd })
   }
 
-  // Step 3: Sort each bucket and assign slots
+  // Step 3: Sort each bucket and assign visibility-aware slots
   for (const [key, entries] of buckets) {
     entries.sort((a, b) => a.farEndCenter - b.farEndCenter)
     const parts = key.split(':')
+    const nodeId = parts[0]!
     const side = parts[1]!
     const type = parts[2]! // 'source' or 'target'
 
-    const slotCount = Math.min(entries.length, 5)
-    const slots = SLOT_TABLES[slotCount] || SLOT_TABLES[5]!
+    // Determine how many spread handles are visible for this node+side
+    const nodeDim = nodePositions.get(nodeId)
+    const edgeDim = nodeDim
+      ? side === 'top' || side === 'bottom'
+        ? nodeDim.width
+        : nodeDim.height
+      : 0
+    const visibleCount = getSpreadCount(edgeDim)
+    const slots = buildVisibleSlots(entries.length, visibleCount)
 
     for (let i = 0; i < entries.length; i++) {
       const slot = slots[i % slots.length]!
@@ -522,9 +594,15 @@ export function assignSpreadHandles(
       const entry = entries[i]!
       const existing = result.get(entry.edgeId)
       if (type === 'source') {
-        result.set(entry.edgeId, { sourceHandle: handleId, targetHandle: existing?.targetHandle || `${side}-target` })
+        result.set(entry.edgeId, {
+          sourceHandle: handleId,
+          targetHandle: existing?.targetHandle || `${side}-target`,
+        })
       } else {
-        result.set(entry.edgeId, { sourceHandle: existing?.sourceHandle || `${side}-source`, targetHandle: handleId })
+        result.set(entry.edgeId, {
+          sourceHandle: existing?.sourceHandle || `${side}-source`,
+          targetHandle: handleId,
+        })
       }
     }
   }
@@ -540,12 +618,12 @@ export function assignSpreadHandles(
 export function getHandlePosition(
   nodePos: { x: number; y: number },
   nodeDim: { width: number; height: number },
-  handleId: string
+  handleId: string,
 ): { x: number; y: number } {
   // Parse spread index: "bottom-source-2" → index 2 → SPREAD_POSITIONS[1] = 35%
   const spreadMatch = handleId.match(/-(\d+)$/)
   const spreadPct = spreadMatch
-    ? (SPREAD_POSITIONS[parseInt(spreadMatch[1]!) - 1] ?? 50) / 100
+    ? (SPREAD_POSITIONS[parseInt(spreadMatch[1]!, 10) - 1] ?? 50) / 100
     : 0.5
 
   if (handleId.includes('top')) {

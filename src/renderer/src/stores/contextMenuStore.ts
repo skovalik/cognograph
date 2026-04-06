@@ -52,25 +52,24 @@ export const useContextMenuStore = create<ContextMenuStore>()(
       set({
         isOpen: true,
         screenPosition,
-        target
+        target,
       })
     },
 
     close: () => {
       set({
         isOpen: false,
-        target: null
+        target: null,
       })
-    }
-  }))
+    },
+  })),
 )
 
 // -----------------------------------------------------------------------------
 // Selectors
 // -----------------------------------------------------------------------------
 
-export const useIsContextMenuOpen = (): boolean =>
-  useContextMenuStore((s) => s.isOpen)
+export const useIsContextMenuOpen = (): boolean => useContextMenuStore((s) => s.isOpen)
 
 export const useContextMenuTarget = (): ContextMenuTarget | null =>
   useContextMenuStore((s) => s.target)

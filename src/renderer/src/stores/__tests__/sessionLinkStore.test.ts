@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  useSessionLinkStore,
   getLinkedNodeId,
   getLinkedSessionId,
-  getPendingUnlinkedSessions
+  getPendingUnlinkedSessions,
+  useSessionLinkStore,
 } from '../sessionLinkStore'
 
 describe('sessionLinkStore', () => {
@@ -15,7 +15,7 @@ describe('sessionLinkStore', () => {
     useSessionLinkStore.setState({
       links: [],
       autoCreateEnabled: false,
-      pendingUnlinked: []
+      pendingUnlinked: [],
     })
   })
 

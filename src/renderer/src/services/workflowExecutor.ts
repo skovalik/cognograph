@@ -8,7 +8,7 @@
  * and undo support. Integrates with the workflow store for state management.
  */
 
-import { useWorkflowStore, type TrustLevel, type WorkflowStep } from '../stores/workflowStore'
+import { type TrustLevel, useWorkflowStore, type WorkflowStep } from '../stores/workflowStore'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 
 // -----------------------------------------------------------------------------
@@ -72,10 +72,7 @@ class WorkflowExecutorService {
   /**
    * Execute a workflow definition
    */
-  async execute(
-    workflow: WorkflowDefinition,
-    options: ExecutionOptions = {}
-  ): Promise<boolean> {
+  async execute(workflow: WorkflowDefinition, options: ExecutionOptions = {}): Promise<boolean> {
     // Cancel any existing workflow
     if (this.abortController) {
       this.abortController.abort()
@@ -93,8 +90,8 @@ class WorkflowExecutorService {
       workflow.steps.map((s) => ({
         name: s.name,
         description: s.description,
-        trustLevel: s.trustLevel
-      }))
+        trustLevel: s.trustLevel,
+      })),
     )
 
     // Execute steps sequentially
@@ -115,10 +112,7 @@ class WorkflowExecutorService {
   /**
    * Execute steps sequentially
    */
-  private async executeSteps(
-    steps: StepDefinition[],
-    options: ExecutionOptions
-  ): Promise<void> {
+  private async executeSteps(steps: StepDefinition[], options: ExecutionOptions): Promise<void> {
     const store = useWorkflowStore.getState()
 
     for (let i = 0; i < steps.length; i++) {
@@ -194,7 +188,6 @@ class WorkflowExecutorService {
           }
           // Retry
           i--
-          continue
         }
       } catch (error) {
         if ((error as Error).name === 'AbortError') {
@@ -215,7 +208,6 @@ class WorkflowExecutorService {
         }
         // Retry
         i--
-        continue
       }
     }
 
@@ -231,7 +223,7 @@ class WorkflowExecutorService {
       const unsubscribe = useWorkflowStore.subscribe(
         (state) => ({
           status: state.currentWorkflow?.status,
-          stepStatus: state.currentWorkflow?.steps.find((s) => s.id === step.id)?.status
+          stepStatus: state.currentWorkflow?.steps.find((s) => s.id === step.id)?.status,
         }),
         (current, previous) => {
           // Resolve when:
@@ -249,7 +241,7 @@ class WorkflowExecutorService {
             unsubscribe()
             resolve()
           }
-        }
+        },
       )
     })
   }
@@ -262,7 +254,7 @@ class WorkflowExecutorService {
       workflowId: this.currentWorkflowId!,
       stepIndex,
       previousResults: [...this.previousResults],
-      abortSignal: this.abortController!.signal
+      abortSignal: this.abortController!.signal,
     }
   }
 
@@ -301,7 +293,7 @@ export const workflowExecutor = new WorkflowExecutorService()
 export function createStep(
   name: string,
   execute: (context: ExecutionContext) => Promise<StepResult>,
-  options: Partial<Omit<StepDefinition, 'name' | 'execute'>> = {}
+  options: Partial<Omit<StepDefinition, 'name' | 'execute'>> = {},
 ): StepDefinition {
   return {
     name,
@@ -311,7 +303,7 @@ export function createStep(
     undo: options.undo,
     validate: options.validate,
     approvalReason: options.approvalReason,
-    approvalPreview: options.approvalPreview
+    approvalPreview: options.approvalPreview,
   }
 }
 
@@ -320,13 +312,21 @@ export function createStep(
  */
 export function createNodeStep(
   nodeData: {
-    type: 'conversation' | 'note' | 'task' | 'project' | 'artifact' | 'text' | 'action' | 'workspace'
+    type:
+      | 'conversation'
+      | 'note'
+      | 'task'
+      | 'project'
+      | 'artifact'
+      | 'text'
+      | 'action'
+      | 'workspace'
     title: string
     content?: string
     position?: { x: number; y: number }
     parentId?: string
   },
-  options: Partial<Omit<StepDefinition, 'name' | 'execute'>> = {}
+  options: Partial<Omit<StepDefinition, 'name' | 'execute'>> = {},
 ): StepDefinition {
   return createStep(
     `Create ${nodeData.type}: ${nodeData.title}`,
@@ -341,7 +341,7 @@ export function createNodeStep(
       updateNode(nodeId, {
         title: nodeData.title,
         content: nodeData.content ?? '',
-        parentId: nodeData.parentId
+        parentId: nodeData.parentId,
       })
 
       return { success: true, data: { nodeId } }
@@ -349,8 +349,8 @@ export function createNodeStep(
     {
       description: `Create a new ${nodeData.type} node titled "${nodeData.title}"`,
       trustLevel: 'auto',
-      ...options
-    }
+      ...options,
+    },
   )
 }
 
@@ -360,7 +360,7 @@ export function createNodeStep(
 export function createEdgeStep(
   sourceId: string,
   targetId: string,
-  options: Partial<Omit<StepDefinition, 'name' | 'execute'>> = {}
+  options: Partial<Omit<StepDefinition, 'name' | 'execute'>> = {},
 ): StepDefinition {
   return createStep(
     `Connect nodes`,
@@ -372,7 +372,7 @@ export function createEdgeStep(
         source: sourceId,
         target: targetId,
         sourceHandle: null,
-        targetHandle: null
+        targetHandle: null,
       })
 
       return { success: true, data: { sourceId, targetId } }
@@ -380,8 +380,8 @@ export function createEdgeStep(
     {
       description: 'Create a connection between nodes',
       trustLevel: 'auto',
-      ...options
-    }
+      ...options,
+    },
   )
 }
 
@@ -390,13 +390,21 @@ export function createEdgeStep(
  */
 export function createBatchNodesStep(
   nodes: Array<{
-    type: 'conversation' | 'note' | 'task' | 'project' | 'artifact' | 'text' | 'action' | 'workspace'
+    type:
+      | 'conversation'
+      | 'note'
+      | 'task'
+      | 'project'
+      | 'artifact'
+      | 'text'
+      | 'action'
+      | 'workspace'
     title: string
     content?: string
     position?: { x: number; y: number }
     parentId?: string
   }>,
-  options: Partial<Omit<StepDefinition, 'name' | 'execute'>> = {}
+  options: Partial<Omit<StepDefinition, 'name' | 'execute'>> = {},
 ): StepDefinition {
   return createStep(
     `Create ${nodes.length} nodes`,
@@ -413,7 +421,7 @@ export function createBatchNodesStep(
         updateNode(nodeId, {
           title: nodeData.title,
           content: nodeData.content ?? '',
-          parentId: nodeData.parentId
+          parentId: nodeData.parentId,
         })
       }
 
@@ -422,8 +430,8 @@ export function createBatchNodesStep(
     {
       description: `Create ${nodes.length} nodes in batch`,
       trustLevel: 'auto',
-      ...options
-    }
+      ...options,
+    },
   )
 }
 

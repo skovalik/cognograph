@@ -8,14 +8,14 @@
 // LOD system from useSemanticZoom.
 
 import { useMemo } from 'react'
-import type { ZoomLevel } from './useSemanticZoom'
 import {
-  useCalmModeStore,
+  type CalmLevel,
   getCalmOffset,
-  shouldSuppressAnimations,
   isTextOnlyMode,
-  type CalmLevel
+  shouldSuppressAnimations,
+  useCalmModeStore,
 } from '../stores/calmModeStore'
+import type { ZoomLevel } from './useSemanticZoom'
 
 // --- Types -----------------------------------------------------------------
 
@@ -37,7 +37,7 @@ const ZOOM_LEVEL_ORDER: readonly ZoomLevel[] = [
   'far',
   'mid',
   'close',
-  'ultra-close'
+  'ultra-close',
 ] as const
 
 // --- Pure function (exported for testing) ----------------------------------
@@ -54,7 +54,7 @@ const ZOOM_LEVEL_ORDER: readonly ZoomLevel[] = [
  */
 export function computeEffectiveZoomWithCalm(
   baseZoomLevel: ZoomLevel,
-  calmOffset: number
+  calmOffset: number,
 ): ZoomLevel {
   const currentIndex = ZOOM_LEVEL_ORDER.indexOf(baseZoomLevel)
   if (currentIndex === -1) {
@@ -79,8 +79,8 @@ export function useCalmMode(): CalmModeResult {
       calmLevel,
       calmOffset: getCalmOffset(calmLevel),
       suppressAnimations: shouldSuppressAnimations(calmLevel),
-      textOnlyMode: isTextOnlyMode(calmLevel)
+      textOnlyMode: isTextOnlyMode(calmLevel),
     }),
-    [calmLevel]
+    [calmLevel],
   )
 }

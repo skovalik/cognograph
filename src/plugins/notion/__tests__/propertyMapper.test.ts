@@ -4,21 +4,21 @@
 // PropertyMapper Unit Tests
 // Covers: all exported functions + status/priority mappings + truncation
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-  taskToNotion,
-  taskFromNotion,
-  projectToNotion,
-  projectFromNotion,
-  noteToNotionPageProperties,
   artifactToNotionPageProperties,
+  getFieldAuthority,
   getPageIcon,
   getTargetDbId,
   nodeToNotionProperties,
+  noteToNotionPageProperties,
   notionToNodeFields,
-  getFieldAuthority,
+  projectFromNotion,
+  projectToNotion,
   RICH_TEXT_MAX,
-  TRUNCATION_SUFFIX
+  TRUNCATION_SUFFIX,
+  taskFromNotion,
+  taskToNotion,
 } from '../main/propertyMapper'
 
 // ---------------------------------------------------------------------------
@@ -32,26 +32,26 @@ describe('taskToNotion', () => {
       description: 'Users cannot login with SSO',
       status: 'in-progress',
       priority: 'high',
-      dueDate: 1708300800000 // 2024-02-19
+      dueDate: 1708300800000, // 2024-02-19
     })
 
     expect(result.properties['Name']).toEqual({
-      title: [{ text: { content: 'Fix login bug' } }]
+      title: [{ text: { content: 'Fix login bug' } }],
     })
     expect(result.properties['Notes']).toEqual({
-      rich_text: [{ text: { content: 'Users cannot login with SSO' } }]
+      rich_text: [{ text: { content: 'Users cannot login with SSO' } }],
     })
     expect(result.properties['Status']).toEqual({
-      select: { name: 'In Progress' }
+      select: { name: 'In Progress' },
     })
     expect(result.properties['Priority']).toEqual({
-      select: { name: 'High' }
+      select: { name: 'High' },
     })
     expect(result.properties['Due Date']).toEqual({
-      date: { start: '2024-02-19' }
+      date: { start: '2024-02-19' },
     })
     expect(result.properties['Cognograph Node ID']).toEqual({
-      rich_text: [{ text: { content: 'node-1' } }]
+      rich_text: [{ text: { content: 'node-1' } }],
     })
   })
 
@@ -69,9 +69,9 @@ describe('taskToNotion', () => {
 
   it('maps all status values correctly', () => {
     const statuses: Record<string, string> = {
-      'todo': 'To Do',
+      todo: 'To Do',
       'in-progress': 'In Progress',
-      'done': 'Done'
+      done: 'Done',
     }
 
     for (const [cg, notion] of Object.entries(statuses)) {
@@ -87,9 +87,9 @@ describe('taskToNotion', () => {
 
   it('maps all priority values correctly', () => {
     const priorities: Record<string, string> = {
-      'high': 'High',
-      'medium': 'Medium',
-      'low': 'Low'
+      high: 'High',
+      medium: 'Medium',
+      low: 'Low',
     }
 
     for (const [cg, notion] of Object.entries(priorities)) {
@@ -130,11 +130,11 @@ describe('taskToNotion', () => {
 describe('taskFromNotion', () => {
   it('extracts all fields from Notion properties', () => {
     const result = taskFromNotion({
-      'Name': { title: [{ plain_text: 'Deploy v2' }] },
-      'Status': { select: { name: 'In Progress' } },
-      'Priority': { select: { name: 'High' } },
+      Name: { title: [{ plain_text: 'Deploy v2' }] },
+      Status: { select: { name: 'In Progress' } },
+      Priority: { select: { name: 'High' } },
       'Due Date': { date: { start: '2024-03-01' } },
-      'Notes': { rich_text: [{ plain_text: 'Production deploy' }] }
+      Notes: { rich_text: [{ plain_text: 'Production deploy' }] },
     })
 
     expect(result.title).toBe('Deploy v2')
@@ -146,7 +146,7 @@ describe('taskFromNotion', () => {
 
   it('maps Blocked status to todo + notion_blocked extra', () => {
     const result = taskFromNotion({
-      'Status': { select: { name: 'Blocked' } }
+      Status: { select: { name: 'Blocked' } },
     })
 
     expect(result.status).toBe('todo')
@@ -155,7 +155,7 @@ describe('taskFromNotion', () => {
 
   it('maps In Review status to in-progress', () => {
     const result = taskFromNotion({
-      'Status': { select: { name: 'In Review' } }
+      Status: { select: { name: 'In Review' } },
     })
 
     expect(result.status).toBe('in-progress')
@@ -163,7 +163,7 @@ describe('taskFromNotion', () => {
 
   it('defaults unknown status to todo', () => {
     const result = taskFromNotion({
-      'Status': { select: { name: 'Custom Status' } }
+      Status: { select: { name: 'Custom Status' } },
     })
 
     expect(result.status).toBe('todo')
@@ -171,8 +171,8 @@ describe('taskFromNotion', () => {
 
   it('extracts Category and Actual Hours as notionExtras', () => {
     const result = taskFromNotion({
-      'Category': { select: { name: 'Engineering' } },
-      'Actual Hours': { rollup: { number: 12.5 } }
+      Category: { select: { name: 'Engineering' } },
+      'Actual Hours': { rollup: { number: 12.5 } },
     })
 
     expect(result.notionExtras['notion_category']).toBe('Engineering')
@@ -190,12 +190,9 @@ describe('taskFromNotion', () => {
 
   it('concatenates multi-segment rich_text', () => {
     const result = taskFromNotion({
-      'Name': {
-        title: [
-          { plain_text: 'Part 1 ' },
-          { plain_text: 'Part 2' }
-        ]
-      }
+      Name: {
+        title: [{ plain_text: 'Part 1 ' }, { plain_text: 'Part 2' }],
+      },
     })
 
     expect(result.title).toBe('Part 1 Part 2')
@@ -210,17 +207,17 @@ describe('projectToNotion', () => {
   it('maps title and description', () => {
     const result = projectToNotion('proj-1', {
       title: 'Website Redesign',
-      description: 'Complete overhaul'
+      description: 'Complete overhaul',
     })
 
     expect(result.properties['Name']).toEqual({
-      title: [{ text: { content: 'Website Redesign' } }]
+      title: [{ text: { content: 'Website Redesign' } }],
     })
     expect(result.properties['Notes']).toEqual({
-      rich_text: [{ text: { content: 'Complete overhaul' } }]
+      rich_text: [{ text: { content: 'Complete overhaul' } }],
     })
     expect(result.properties['Cognograph Node ID']).toEqual({
-      rich_text: [{ text: { content: 'proj-1' } }]
+      rich_text: [{ text: { content: 'proj-1' } }],
     })
   })
 
@@ -242,12 +239,12 @@ describe('projectToNotion', () => {
 describe('projectFromNotion', () => {
   it('extracts title, description, and read-only extras', () => {
     const result = projectFromNotion({
-      'Name': { title: [{ plain_text: 'API v3' }] },
-      'Notes': { rich_text: [{ plain_text: 'REST to GraphQL migration' }] },
-      'Status': { select: { name: 'Active' } },
-      'Priority': { select: { name: 'High' } },
-      'Type': { select: { name: 'Build' } },
-      'Value': { number: 5000 }
+      Name: { title: [{ plain_text: 'API v3' }] },
+      Notes: { rich_text: [{ plain_text: 'REST to GraphQL migration' }] },
+      Status: { select: { name: 'Active' } },
+      Priority: { select: { name: 'High' } },
+      Type: { select: { name: 'Build' } },
+      Value: { number: 5000 },
     })
 
     expect(result.title).toBe('API v3')
@@ -260,7 +257,7 @@ describe('projectFromNotion', () => {
 
   it('handles missing optional fields', () => {
     const result = projectFromNotion({
-      'Name': { title: [{ plain_text: 'Minimal' }] }
+      Name: { title: [{ plain_text: 'Minimal' }] },
     })
 
     expect(result.title).toBe('Minimal')
@@ -277,25 +274,21 @@ describe('noteToNotionPageProperties', () => {
   it('maps title and tags', () => {
     const result = noteToNotionPageProperties('note-1', {
       title: 'Research Notes',
-      tags: ['design', 'ux', 'research']
+      tags: ['design', 'ux', 'research'],
     })
 
     expect(result['title']).toEqual({
-      title: [{ text: { content: 'Research Notes' } }]
+      title: [{ text: { content: 'Research Notes' } }],
     })
     expect(result['Tags']).toEqual({
-      multi_select: [
-        { name: 'design' },
-        { name: 'ux' },
-        { name: 'research' }
-      ]
+      multi_select: [{ name: 'design' }, { name: 'ux' }, { name: 'research' }],
     })
   })
 
   it('omits Tags when array is empty', () => {
     const result = noteToNotionPageProperties('note-2', {
       title: 'No tags',
-      tags: []
+      tags: [],
     })
 
     expect(result['Tags']).toBeUndefined()
@@ -303,7 +296,7 @@ describe('noteToNotionPageProperties', () => {
 
   it('omits Tags when not provided', () => {
     const result = noteToNotionPageProperties('note-3', {
-      title: 'Plain note'
+      title: 'Plain note',
     })
 
     expect(result['Tags']).toBeUndefined()
@@ -317,11 +310,11 @@ describe('noteToNotionPageProperties', () => {
 describe('artifactToNotionPageProperties', () => {
   it('maps title only', () => {
     const result = artifactToNotionPageProperties('art-1', {
-      title: 'login.tsx'
+      title: 'login.tsx',
     })
 
     expect(result['title']).toEqual({
-      title: [{ text: { content: 'login.tsx' } }]
+      title: [{ text: { content: 'login.tsx' } }],
     })
   })
 })
@@ -410,8 +403,8 @@ describe('nodeToNotionProperties', () => {
 describe('notionToNodeFields', () => {
   it('dispatches to taskFromNotion for task type', () => {
     const result = notionToNodeFields('task', {
-      'Name': { title: [{ plain_text: 'Task' }] },
-      'Status': { select: { name: 'Done' } }
+      Name: { title: [{ plain_text: 'Task' }] },
+      Status: { select: { name: 'Done' } },
     })
 
     expect(result).not.toBeNull()
@@ -421,7 +414,7 @@ describe('notionToNodeFields', () => {
 
   it('dispatches to projectFromNotion for project type', () => {
     const result = notionToNodeFields('project', {
-      'Name': { title: [{ plain_text: 'Project' }] }
+      Name: { title: [{ plain_text: 'Project' }] },
     })
 
     expect(result).not.toBeNull()

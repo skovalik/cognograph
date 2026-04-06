@@ -1,18 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useState, useEffect, useRef } from 'react'
 import type { Editor } from '@tiptap/react'
 import {
-  Bold, Italic, Strikethrough,
-  List, ListOrdered,
-  Heading1, Heading2, Heading3,
-  Indent, Outdent, RemoveFormatting,
-  AlignLeft, AlignCenter, AlignRight, AlignJustify,
-  MoreHorizontal
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
+  Bold,
+  Heading1,
+  Heading2,
+  Heading3,
+  Indent,
+  Italic,
+  List,
+  ListOrdered,
+  MoreHorizontal,
+  Outdent,
+  RemoveFormatting,
+  Strikethrough,
 } from 'lucide-react'
+import { memo, useEffect, useRef, useState } from 'react'
 
-import { escapeManager, EscapePriority } from '../utils/EscapeManager'
+import { EscapePriority, escapeManager } from '../utils/EscapeManager'
 
 interface RichTextToolbarProps {
   editor: Editor
@@ -30,7 +40,7 @@ function ToolbarButton({
   isActive,
   icon: Icon,
   title,
-  disabled
+  disabled,
 }: {
   onClick: () => void
   isActive?: boolean
@@ -59,8 +69,8 @@ function ToolbarButton({
 // - Lists (4 btns): show on most cards
 // - Alignment (4 btns): show on wider cards/panels
 // - Headings (3 btns): show on wide panels only
-const SHOW_HEADINGS_THRESHOLD = 280  // Headings only on wide containers
-const SHOW_LISTS_THRESHOLD = 180     // Lists on most node cards
+const SHOW_HEADINGS_THRESHOLD = 280 // Headings only on wide containers
+const SHOW_LISTS_THRESHOLD = 180 // Lists on most node cards
 const SHOW_ALIGNMENT_THRESHOLD = 220 // Alignment on medium+ containers
 
 function RichTextToolbarComponent({
@@ -71,7 +81,7 @@ function RichTextToolbarComponent({
   enableAlignment = true,
   className = '',
   floating = false,
-  onBeforeAction
+  onBeforeAction,
 }: RichTextToolbarProps): JSX.Element {
   const [containerWidth, setContainerWidth] = useState<number>(Infinity)
   const [isOverflowOpen, setIsOverflowOpen] = useState(false)
@@ -221,7 +231,9 @@ function RichTextToolbarComponent({
     <div
       ref={containerRef}
       className={`flex items-center gap-0.5 p-1 ${
-        floating ? 'absolute -top-9 left-0 bg-[var(--surface-panel)] rounded-lg shadow-lg z-50 border border-[var(--border-subtle)]' : 'border-b border-white/10'
+        floating
+          ? 'absolute -top-9 left-0 bg-[var(--surface-panel)] rounded-lg shadow-lg z-50 border border-[var(--border-subtle)]'
+          : 'border-b border-white/10'
       } ${className}`}
       onMouseDown={(e) => e.preventDefault()}
     >
@@ -261,9 +273,7 @@ function RichTextToolbarComponent({
       {enableHeadings && showHeadingsInline && (
         <>
           {renderHeadings()}
-          {(enableLists || enableAlignment) && (
-            <div className="w-px h-4 bg-white/20 mx-0.5" />
-          )}
+          {(enableLists || enableAlignment) && <div className="w-px h-4 bg-white/20 mx-0.5" />}
         </>
       )}
 
@@ -296,21 +306,15 @@ function RichTextToolbarComponent({
             >
               {/* Overflow headings */}
               {enableHeadings && !showHeadingsInline && (
-                <div className="flex items-center gap-0.5 p-0.5">
-                  {renderHeadings()}
-                </div>
+                <div className="flex items-center gap-0.5 p-0.5">{renderHeadings()}</div>
               )}
               {/* Overflow lists */}
               {enableLists && !showListsInline && (
-                <div className="flex items-center gap-0.5 p-0.5">
-                  {renderLists()}
-                </div>
+                <div className="flex items-center gap-0.5 p-0.5">{renderLists()}</div>
               )}
               {/* Overflow alignment */}
               {enableAlignment && !showAlignmentInline && (
-                <div className="flex items-center gap-0.5 p-0.5">
-                  {renderAlignment()}
-                </div>
+                <div className="flex items-center gap-0.5 p-0.5">{renderAlignment()}</div>
               )}
             </div>
           )}

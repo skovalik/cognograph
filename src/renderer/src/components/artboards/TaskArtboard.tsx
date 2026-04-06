@@ -8,12 +8,12 @@
  * due date, and checklist — everything from L3 but with room to breathe.
  */
 
-import { memo, useCallback, useMemo } from 'react'
-import { CheckSquare, Calendar, Flag, Layers, AlertCircle } from 'lucide-react'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { useNodesStore } from '../../stores/nodesStore'
-import { RichTextEditor } from '../RichTextEditor'
 import type { TaskNodeData } from '@shared/types'
+import { AlertCircle, Calendar, CheckSquare, Flag, Layers } from 'lucide-react'
+import { memo, useCallback, useMemo } from 'react'
+import { useNodesStore } from '../../stores/nodesStore'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { RichTextEditor } from '../RichTextEditor'
 
 interface TaskArtboardProps {
   nodeId: string
@@ -54,28 +54,28 @@ function TaskArtboardComponent({ nodeId }: TaskArtboardProps): JSX.Element {
     (html: string) => {
       updateNode(nodeId, { description: html })
     },
-    [nodeId, updateNode]
+    [nodeId, updateNode],
   )
 
   const handleStatusChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       updateNode(nodeId, { status: e.target.value as TaskNodeData['status'] })
     },
-    [nodeId, updateNode]
+    [nodeId, updateNode],
   )
 
   const handlePriorityChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       updateNode(nodeId, { priority: e.target.value as TaskNodeData['priority'] })
     },
-    [nodeId, updateNode]
+    [nodeId, updateNode],
   )
 
   const handleComplexityChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       updateNode(nodeId, { complexity: e.target.value as TaskNodeData['complexity'] })
     },
-    [nodeId, updateNode]
+    [nodeId, updateNode],
   )
 
   const handleDueDateChange = useCallback(
@@ -83,7 +83,7 @@ function TaskArtboardComponent({ nodeId }: TaskArtboardProps): JSX.Element {
       const value = e.target.value
       updateNode(nodeId, { dueDate: value ? new Date(value).getTime() : undefined })
     },
-    [nodeId, updateNode]
+    [nodeId, updateNode],
   )
 
   // Format due date for input
@@ -93,15 +93,26 @@ function TaskArtboardComponent({ nodeId }: TaskArtboardProps): JSX.Element {
     return d.toISOString().split('T')[0]
   }, [nodeData?.dueDate])
 
-  const isOverdue = nodeData?.dueDate ? nodeData.dueDate < Date.now() && nodeData.status !== 'done' : false
+  const isOverdue = nodeData?.dueDate
+    ? nodeData.dueDate < Date.now() && nodeData.status !== 'done'
+    : false
 
   // Status color for progress bar
-  const statusColor = nodeData?.status === 'done' ? '#22c55e' : nodeData?.status === 'in-progress' ? '#f59e0b' : '#6b7280'
-  const progressPct = nodeData?.status === 'done' ? 100 : nodeData?.status === 'in-progress' ? 50 : 0
+  const statusColor =
+    nodeData?.status === 'done'
+      ? '#22c55e'
+      : nodeData?.status === 'in-progress'
+        ? '#f59e0b'
+        : '#6b7280'
+  const progressPct =
+    nodeData?.status === 'done' ? 100 : nodeData?.status === 'in-progress' ? 50 : 0
 
   if (!nodeData) {
     return (
-      <div className="flex items-center justify-center h-full text-sm" style={{ color: 'var(--gui-text-muted)' }}>
+      <div
+        className="flex items-center justify-center h-full text-sm"
+        style={{ color: 'var(--gui-text-muted)' }}
+      >
         Node not found
       </div>
     )
@@ -125,7 +136,7 @@ function TaskArtboardComponent({ nodeId }: TaskArtboardProps): JSX.Element {
             style={{
               backgroundColor: 'var(--gui-bg-secondary)',
               color: 'var(--gui-text-primary)',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             {STATUS_OPTIONS.map((opt) => (
@@ -147,7 +158,7 @@ function TaskArtboardComponent({ nodeId }: TaskArtboardProps): JSX.Element {
             style={{
               backgroundColor: 'var(--gui-bg-secondary)',
               color: 'var(--gui-text-primary)',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             {PRIORITY_OPTIONS.map((opt) => (
@@ -169,7 +180,7 @@ function TaskArtboardComponent({ nodeId }: TaskArtboardProps): JSX.Element {
             style={{
               backgroundColor: 'var(--gui-bg-secondary)',
               color: 'var(--gui-text-primary)',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             {COMPLEXITY_OPTIONS.map((opt) => (
@@ -182,7 +193,10 @@ function TaskArtboardComponent({ nodeId }: TaskArtboardProps): JSX.Element {
 
         {/* Due Date */}
         <label className="flex items-center gap-1.5 text-xs">
-          <Calendar className="w-3.5 h-3.5" style={{ color: isOverdue ? '#ef4444' : 'var(--gui-text-muted)' }} />
+          <Calendar
+            className="w-3.5 h-3.5"
+            style={{ color: isOverdue ? '#ef4444' : 'var(--gui-text-muted)' }}
+          />
           <span style={{ color: isOverdue ? '#ef4444' : 'var(--gui-text-muted)' }}>Due</span>
           <input
             type="date"
@@ -192,12 +206,10 @@ function TaskArtboardComponent({ nodeId }: TaskArtboardProps): JSX.Element {
             style={{
               backgroundColor: 'var(--gui-bg-secondary)',
               color: isOverdue ? '#ef4444' : 'var(--gui-text-primary)',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           />
-          {isOverdue && (
-            <AlertCircle className="w-3.5 h-3.5" style={{ color: '#ef4444' }} />
-          )}
+          {isOverdue && <AlertCircle className="w-3.5 h-3.5" style={{ color: '#ef4444' }} />}
         </label>
       </div>
 

@@ -8,11 +8,11 @@
  * Supports multiple instances for pinned modals.
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react'
-import { X, GripHorizontal, Minimize2, Maximize2, Pin, PinOff } from 'lucide-react'
+import { GripHorizontal, Maximize2, Minimize2, Pin, PinOff, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import { PropertiesPanel } from './PropertiesPanel'
 import { createFocusTrap } from '../utils/accessibility'
+import { PropertiesPanel } from './PropertiesPanel'
 
 interface Position {
   x: number
@@ -28,7 +28,10 @@ interface FloatingPropertiesModalProps {
 const modalPositions = new Map<string, Position>()
 const modalSizes = new Map<string, { width: number; height: number }>()
 
-function FloatingPropertiesModalComponent({ nodeId, index }: FloatingPropertiesModalProps): JSX.Element | null {
+function FloatingPropertiesModalComponent({
+  nodeId,
+  index,
+}: FloatingPropertiesModalProps): JSX.Element | null {
   const closeFloatingProperties = useWorkspaceStore((state) => state.closeFloatingProperties)
   const nodes = useWorkspaceStore((state) => state.nodes)
   const setSelectedNodes = useWorkspaceStore((state) => state.setSelectedNodes)
@@ -47,7 +50,7 @@ function FloatingPropertiesModalComponent({ nodeId, index }: FloatingPropertiesM
     const offsetY = index * 30
     return {
       x: Math.max(50, (window.innerWidth - 320) / 2 + offsetX),
-      y: Math.max(50, (window.innerHeight - 600) / 2 + offsetY)
+      y: Math.max(50, (window.innerHeight - 600) / 2 + offsetY),
     }
   })
   const [isDragging, setIsDragging] = useState(false)
@@ -108,22 +111,31 @@ function FloatingPropertiesModalComponent({ nodeId, index }: FloatingPropertiesM
   }, [selectedNodeIds, nodeId, closeFloatingProperties, isPinned])
 
   // Handle drag start
-  const handleDragStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-    dragStartPos.current = {
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
-    }
-  }, [position])
+  const handleDragStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      setIsDragging(true)
+      dragStartPos.current = {
+        x: e.clientX - position.x,
+        y: e.clientY - position.y,
+      }
+    },
+    [position],
+  )
 
   // Handle drag move
   useEffect(() => {
     if (!isDragging) return
 
     const handleMouseMove = (e: MouseEvent): void => {
-      const newX = Math.max(0, Math.min(window.innerWidth - 100, e.clientX - dragStartPos.current.x))
-      const newY = Math.max(0, Math.min(window.innerHeight - 50, e.clientY - dragStartPos.current.y))
+      const newX = Math.max(
+        0,
+        Math.min(window.innerWidth - 100, e.clientX - dragStartPos.current.x),
+      )
+      const newY = Math.max(
+        0,
+        Math.min(window.innerHeight - 50, e.clientY - dragStartPos.current.y),
+      )
       setPosition({ x: newX, y: newY })
     }
 
@@ -172,28 +184,24 @@ function FloatingPropertiesModalComponent({ nodeId, index }: FloatingPropertiesM
         top: position.y,
         width: size.width,
         height: isMinimized ? 44 : size.height,
-        transition: isDragging || isResizing ? 'none' : 'height 0.2s ease-out'
+        transition: isDragging || isResizing ? 'none' : 'height 0.2s ease-out',
       }}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
     >
       {/* Title Bar */}
-      <div
-        className="flex items-center justify-between px-3 py-2 bg-[var(--surface-panel-secondary)] border-b border-[var(--border-subtle)] select-none"
-      >
+      <div className="flex items-center justify-between px-3 py-2 bg-[var(--surface-panel-secondary)] border-b border-[var(--border-subtle)] select-none">
         {/* Draggable area - only the left portion */}
-        <div
-          className="flex items-center gap-2 flex-1 cursor-move"
-          onMouseDown={handleDragStart}
-        >
+        <div className="flex items-center gap-2 flex-1 cursor-move" onMouseDown={handleDragStart}>
           <GripHorizontal className="w-4 h-4 text-[var(--text-muted)]" />
-          <span id={titleId} className="text-sm font-medium text-[var(--text-primary)] truncate max-w-[180px]">
+          <span
+            id={titleId}
+            className="text-sm font-medium text-[var(--text-primary)] truncate max-w-[180px]"
+          >
             {node.data.title as string}
           </span>
-          <span className="text-xs text-[var(--text-muted)] capitalize">
-            ({node.data.type})
-          </span>
+          <span className="text-xs text-[var(--text-muted)] capitalize">({node.data.type})</span>
         </div>
         {/* Buttons - separate from drag area */}
         <div className="flex items-center gap-1 flex-shrink-0">
@@ -201,7 +209,9 @@ function FloatingPropertiesModalComponent({ nodeId, index }: FloatingPropertiesM
             type="button"
             onClick={togglePin}
             className={`p-1.5 hover:bg-[var(--surface-panel)] rounded transition-colors ${isPinned ? 'bg-[var(--surface-panel)]' : ''}`}
-            title={isPinned ? 'Unpin (will close when deselected)' : 'Pin (keep open when deselected)'}
+            title={
+              isPinned ? 'Unpin (will close when deselected)' : 'Pin (keep open when deselected)'
+            }
           >
             {isPinned ? (
               <Pin className="w-3.5 h-3.5 text-blue-400" />

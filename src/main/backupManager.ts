@@ -98,7 +98,7 @@ class BackupManager {
           .map(async (f) => {
             const stat = await fs.stat(join(this.backupDir, f))
             return { name: f, mtime: stat.mtimeMs, age: now - stat.mtimeMs }
-          })
+          }),
       )
 
       // Sort newest first
@@ -117,8 +117,6 @@ class BackupManager {
 
       for (const backup of backups) {
         if (backup.age < ONE_HOUR_MS) {
-          // Last hour: keep all
-          continue
         } else if (backup.age < ONE_DAY_MS) {
           // 1-24 hours: bucket by hour
           const hourKey = Math.floor(backup.age / ONE_HOUR_MS)
@@ -179,7 +177,7 @@ class BackupManager {
           .map(async (f) => {
             const stat = await fs.stat(join(this.backupDir, f))
             return { name: f, timestamp: stat.mtimeMs, size: stat.size }
-          })
+          }),
       )
 
       return backups.sort((a, b) => b.timestamp - a.timestamp)

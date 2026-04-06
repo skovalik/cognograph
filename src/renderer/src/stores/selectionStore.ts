@@ -9,8 +9,8 @@
  */
 
 import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
 import { subscribeWithSelector } from 'zustand/middleware'
+import { immer } from 'zustand/middleware/immer'
 
 // =============================================================================
 // Store State
@@ -71,7 +71,7 @@ const initialState: SelectionState = {
   selectedNodeIds: [],
   selectedEdgeIds: [],
   boxSelectRect: null,
-  lastCreatedNodeId: null
+  lastCreatedNodeId: null,
 }
 
 // =============================================================================
@@ -223,9 +223,9 @@ export const useSelectionStore = create<SelectionStore>()(
         set((state) => {
           state.lastCreatedNodeId = null
         })
-      }
-    }))
-  )
+      },
+    })),
+  ),
 )
 
 // =============================================================================

@@ -5,7 +5,7 @@
 // BUILT-IN PROPERTY DEFINITIONS
 // =============================================================================
 
-import type { PropertyDefinition, PropertySchema, NodeData } from '@shared/types'
+import type { NodeData, PropertyDefinition, PropertySchema } from '@shared/types'
 
 // -----------------------------------------------------------------------------
 // Built-in Property Definitions
@@ -20,7 +20,7 @@ export const BUILTIN_PROPERTIES: Record<string, PropertyDefinition> = {
     options: [], // User adds options as they use it
     icon: 'Tag',
     showInCard: true,
-    showInList: true
+    showInList: true,
   },
 
   // Priority - commonly used
@@ -32,12 +32,12 @@ export const BUILTIN_PROPERTIES: Record<string, PropertyDefinition> = {
       { value: 'none', label: 'None', color: '#475569' },
       { value: 'low', label: 'Low', color: '#6b7280' },
       { value: 'medium', label: 'Medium', color: '#f59e0b' },
-      { value: 'high', label: 'High', color: '#ef4444' }
+      { value: 'high', label: 'High', color: '#ef4444' },
     ],
     defaultValue: 'none',
     icon: 'Flag',
     showInCard: true,
-    showInList: true
+    showInList: true,
   },
 
   // Status - for tasks and workflows
@@ -48,12 +48,12 @@ export const BUILTIN_PROPERTIES: Record<string, PropertyDefinition> = {
     options: [
       { value: 'todo', label: 'To Do', color: '#6b7280' },
       { value: 'in-progress', label: 'In Progress', color: '#3b82f6' },
-      { value: 'done', label: 'Done', color: '#22c55e' }
+      { value: 'done', label: 'Done', color: '#22c55e' },
     ],
     defaultValue: 'todo',
     icon: 'Circle',
     showInCard: true,
-    showInList: true
+    showInList: true,
   },
 
   // Complexity - for tasks
@@ -66,12 +66,12 @@ export const BUILTIN_PROPERTIES: Record<string, PropertyDefinition> = {
       { value: 'simple', label: 'Simple', color: '#84cc16' },
       { value: 'moderate', label: 'Moderate', color: '#f59e0b' },
       { value: 'complex', label: 'Complex', color: '#f97316' },
-      { value: 'very-complex', label: 'Very Complex', color: '#ef4444' }
+      { value: 'very-complex', label: 'Very Complex', color: '#ef4444' },
     ],
     defaultValue: 'moderate',
     icon: 'Gauge',
     showInCard: true,
-    showInList: true
+    showInList: true,
   },
 
   // Due date
@@ -81,7 +81,7 @@ export const BUILTIN_PROPERTIES: Record<string, PropertyDefinition> = {
     type: 'date',
     icon: 'Calendar',
     showInCard: true,
-    showInList: false
+    showInList: false,
   },
 
   // Assignee (future: actual user system)
@@ -91,7 +91,7 @@ export const BUILTIN_PROPERTIES: Record<string, PropertyDefinition> = {
     type: 'text',
     icon: 'User',
     showInCard: false,
-    showInList: false
+    showInList: false,
   },
 
   // URL reference
@@ -101,7 +101,7 @@ export const BUILTIN_PROPERTIES: Record<string, PropertyDefinition> = {
     type: 'url',
     icon: 'Link',
     showInCard: false,
-    showInList: false
+    showInList: false,
   },
 
   // Context injection settings (from ContextMetadata)
@@ -114,12 +114,12 @@ export const BUILTIN_PROPERTIES: Record<string, PropertyDefinition> = {
       { value: 'instruction', label: 'Instruction' },
       { value: 'example', label: 'Example' },
       { value: 'background', label: 'Background' },
-      { value: 'scope', label: 'Scope' }
+      { value: 'scope', label: 'Scope' },
     ],
     defaultValue: 'reference',
     icon: 'MessageCircle',
     showInCard: false,
-    showInList: false
+    showInList: false,
   },
 
   contextPriority: {
@@ -129,13 +129,13 @@ export const BUILTIN_PROPERTIES: Record<string, PropertyDefinition> = {
     options: [
       { value: 'low', label: 'Low' },
       { value: 'medium', label: 'Medium' },
-      { value: 'high', label: 'High' }
+      { value: 'high', label: 'High' },
     ],
     defaultValue: 'medium',
     icon: 'Zap',
     showInCard: false,
-    showInList: false
-  }
+    showInList: false,
+  },
 }
 
 // -----------------------------------------------------------------------------
@@ -151,7 +151,7 @@ export const NODE_DEFAULT_PROPERTIES: Record<NodeData['type'], string[]> = {
   action: ['tags'],
   text: ['tags'],
   workspace: ['tags'],
-  orchestrator: ['tags']
+  orchestrator: ['tags'],
 }
 
 // -----------------------------------------------------------------------------
@@ -165,8 +165,8 @@ export const DEFAULT_PROPERTY_SCHEMA: PropertySchema = {
     conversation: ['tags', 'contextPriority'],
     project: ['tags', 'status'],
     note: ['tags', 'contextRole', 'contextPriority'],
-    task: ['status', 'priority', 'complexity', 'dueDate', 'tags']
-  }
+    task: ['status', 'priority', 'complexity', 'dueDate', 'tags'],
+  },
 }
 
 // -----------------------------------------------------------------------------
@@ -186,7 +186,7 @@ export const PROPERTY_TYPE_ICONS: Record<string, string> = {
   email: 'Mail',
   status: 'Circle',
   priority: 'Flag',
-  relation: 'Link2'
+  relation: 'Link2',
 }
 
 export const PROPERTY_TYPE_LABELS: Record<string, string> = {
@@ -202,7 +202,7 @@ export const PROPERTY_TYPE_LABELS: Record<string, string> = {
   email: 'Email',
   status: 'Status',
   priority: 'Priority',
-  relation: 'Relation'
+  relation: 'Relation',
 }
 
 // -----------------------------------------------------------------------------
@@ -214,7 +214,7 @@ export const PROPERTY_TYPE_LABELS: Record<string, string> = {
  */
 export function getPropertyDefinition(
   propertyId: string,
-  customProperties: PropertyDefinition[] = []
+  customProperties: PropertyDefinition[] = [],
 ): PropertyDefinition | undefined {
   // Check built-in first
   if (propertyId in BUILTIN_PROPERTIES) {
@@ -229,7 +229,7 @@ export function getPropertyDefinition(
  */
 export function getPropertiesForNodeType(
   nodeType: NodeData['type'],
-  schema: PropertySchema
+  schema: PropertySchema,
 ): PropertyDefinition[] {
   const propertyIds = schema.nodeTypeProperties[nodeType] || NODE_DEFAULT_PROPERTIES[nodeType] || []
 
@@ -244,7 +244,7 @@ export function getPropertiesForNodeType(
  */
 export function getMergedPropertyOptions(
   propertyId: string,
-  schema: PropertySchema
+  schema: PropertySchema,
 ): PropertyDefinition['options'] {
   const builtinDef = BUILTIN_PROPERTIES[propertyId]
   const builtinOptions = builtinDef?.options || []

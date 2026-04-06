@@ -11,25 +11,25 @@
  * - Edge cases and error conditions
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { useWorkspaceStore } from '../workspaceStore'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  resetWorkspaceStore,
-  getWorkspaceState,
+  clearHistory,
   getHistoryState,
+  getWorkspaceState,
+  resetWorkspaceStore,
+  seedEdge,
   seedNode,
   seedNodes,
-  seedEdge,
-  clearHistory
 } from '../../../../test/storeUtils'
 import {
-  createNoteNode,
-  createTaskNode,
   createConversationNode,
+  createNoteNode,
   createProjectNode,
+  createTaskNode,
   createTestEdge,
-  resetTestCounters
+  resetTestCounters,
 } from '../../../../test/utils'
+import { useWorkspaceStore } from '../workspaceStore'
 
 describe('Workspace History Integration', () => {
   beforeEach(() => {
@@ -341,7 +341,8 @@ describe('Workspace History Integration', () => {
       note.data.height = 150
       seedNode(note)
 
-      const { startNodeResize, updateNode, commitNodeResize, undo, redo } = useWorkspaceStore.getState()
+      const { startNodeResize, updateNode, commitNodeResize, undo, redo } =
+        useWorkspaceStore.getState()
       startNodeResize('note-1')
       updateNode('note-1', { width: 500, height: 300 })
       commitNodeResize('note-1')
@@ -403,9 +404,9 @@ describe('Workspace History Integration', () => {
       const conv = createConversationNode(
         [
           { role: 'user', content: 'Hello' },
-          { role: 'assistant', content: 'Hi!' }
+          { role: 'assistant', content: 'Hi!' },
         ],
-        { id: 'conv-1' }
+        { id: 'conv-1' },
       )
       seedNode(conv)
       clearHistory()
@@ -433,9 +434,9 @@ describe('Workspace History Integration', () => {
       redo()
       redo()
       expect(getWorkspaceState().nodes).toHaveLength(3)
-      expect(getWorkspaceState().nodes.map(n => n.id)).toContain(noteId)
-      expect(getWorkspaceState().nodes.map(n => n.id)).toContain(taskId)
-      expect(getWorkspaceState().nodes.map(n => n.id)).toContain(convId)
+      expect(getWorkspaceState().nodes.map((n) => n.id)).toContain(noteId)
+      expect(getWorkspaceState().nodes.map((n) => n.id)).toContain(taskId)
+      expect(getWorkspaceState().nodes.map((n) => n.id)).toContain(convId)
     })
   })
 
@@ -568,14 +569,16 @@ describe('Workspace History Integration', () => {
       const note1 = createNoteNode('Note 1', { id: 'note-1' })
       const note2 = createNoteNode('Note 2', { id: 'note-2' })
       seedNodes([note1, note2])
-      seedEdge(createTestEdge('note-1', 'note-2', {
-        id: 'edge-1',
-        data: {
-          label: 'connection',
-          strength: 'strong',
-          direction: 'bidirectional'
-        }
-      }))
+      seedEdge(
+        createTestEdge('note-1', 'note-2', {
+          id: 'edge-1',
+          data: {
+            label: 'connection',
+            strength: 'strong',
+            direction: 'bidirectional',
+          },
+        }),
+      )
       clearHistory()
 
       const { deleteEdges, undo, redo } = useWorkspaceStore.getState()
@@ -651,7 +654,7 @@ describe('Workspace History Integration', () => {
         createNoteNode('N2', { id: 'n2' }),
         createNoteNode('N3', { id: 'n3' }),
         createNoteNode('N4', { id: 'n4' }),
-        createNoteNode('N5', { id: 'n5' })
+        createNoteNode('N5', { id: 'n5' }),
       ]
       seedNodes(notes)
       clearHistory()
@@ -932,7 +935,12 @@ describe('Workspace History Integration', () => {
 
       for (let i = 0; i < 30; i++) {
         if (ids[i + 1]) {
-          onConnect({ source: ids[i]!, target: ids[i + 1]!, sourceHandle: null, targetHandle: null })
+          onConnect({
+            source: ids[i]!,
+            target: ids[i + 1]!,
+            sourceHandle: null,
+            targetHandle: null,
+          })
         }
       }
 
@@ -1105,8 +1113,8 @@ describe('Workspace History Integration', () => {
 
       const edge = getWorkspaceState().edges[0]!
       const nodes = getWorkspaceState().nodes
-      expect(nodes.some(n => n.id === edge.source)).toBe(true)
-      expect(nodes.some(n => n.id === edge.target)).toBe(true)
+      expect(nodes.some((n) => n.id === edge.source)).toBe(true)
+      expect(nodes.some((n) => n.id === edge.target)).toBe(true)
     })
 
     it('should handle undo with project hierarchies', () => {
@@ -1121,8 +1129,11 @@ describe('Workspace History Integration', () => {
       undo()
 
       expect(getWorkspaceState().nodes).toHaveLength(3)
-      const restoredProject = getWorkspaceState().nodes.find(n => n.id === 'proj-1')!
-      expect((restoredProject.data as { childNodeIds: string[] }).childNodeIds).toEqual(['child-1', 'child-2'])
+      const restoredProject = getWorkspaceState().nodes.find((n) => n.id === 'proj-1')!
+      expect((restoredProject.data as { childNodeIds: string[] }).childNodeIds).toEqual([
+        'child-1',
+        'child-2',
+      ])
     })
 
     it('should handle empty action objects', () => {

@@ -8,7 +8,7 @@ import { mockElectronApi } from './mocks/electronApi'
 // Mock window.api globally for all tests
 Object.defineProperty(window, 'api', {
   value: mockElectronApi,
-  writable: true
+  writable: true,
 })
 
 // Mock ResizeObserver (not available in jsdom)
@@ -42,8 +42,8 @@ Object.defineProperty(window, 'matchMedia', {
     removeListener: vi.fn(),
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn()
-  }))
+    dispatchEvent: vi.fn(),
+  })),
 })
 
 // Mock scrollTo (not available in jsdom)

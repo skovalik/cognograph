@@ -2,12 +2,12 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import type { AgentToolDefinition } from '@shared/types'
-import { generateImageTool } from './tools/generateImage'
-import { editImageTool } from './tools/editImage'
-import { generateAudioTool } from './tools/generateAudio'
 import { analyzeMediaTool } from './tools/analyzeMedia'
-import { generateVideoTool } from './tools/generateVideo'
+import { editImageTool } from './tools/editImage'
 import { generate3DTool } from './tools/generate3D'
+import { generateAudioTool } from './tools/generateAudio'
+import { generateImageTool } from './tools/generateImage'
+import { generateVideoTool } from './tools/generateVideo'
 
 export interface MediaToolDefinition extends AgentToolDefinition {
   requiredProviders: string[]
@@ -26,8 +26,11 @@ export function getAvailableMediaTools(): AgentToolDefinition[] {
   // Check which providers have keys configured
   // Try apiKeyStore (web/cloud mode) or localStorage fallback (Electron)
   let providers: Set<string>
-  {
-    // Check localStorage for provider keys (open-source build)
+  try {
+    // Cloud features disabled in open-source build
+    throw new Error('No cloud key store in open-source build')
+  } catch {
+    // Electron / open-source mode — check localStorage for provider keys
     providers = new Set<string>()
     const providerNames = ['stability', 'openai', 'google', 'replicate', 'runway', 'elevenlabs']
     for (const p of providerNames) {
@@ -35,7 +38,5 @@ export function getAvailableMediaTools(): AgentToolDefinition[] {
     }
   }
 
-  return MEDIA_TOOLS.filter(tool =>
-    tool.requiredProviders.some(p => providers.has(p))
-  )
+  return MEDIA_TOOLS.filter((tool) => tool.requiredProviders.some((p) => providers.has(p)))
 }

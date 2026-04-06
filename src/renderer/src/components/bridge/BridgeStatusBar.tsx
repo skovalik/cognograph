@@ -11,16 +11,16 @@
  * Accessibility: role="status", aria-live="polite", debounced announcements
  */
 
-import { memo, useRef, useState, useEffect, useCallback, useMemo } from 'react'
-import { Activity, Hash, Coins, Settings, ScrollText, X, Zap } from 'lucide-react'
-import { Badge } from '../ui/Badge'
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
-import { Button } from '../ui/Button'
-import { Separator } from '../ui/separator'
-import { useBridgeStore } from '../../stores/bridgeStore'
+import { Activity, Coins, Hash, ScrollText, Settings, X, Zap } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { usePerformanceMode } from '../../hooks/usePerformanceMode'
 import { cn } from '../../lib/utils'
+import { useBridgeStore } from '../../stores/bridgeStore'
+import { Badge } from '../ui/Badge'
+import { Button } from '../ui/Button'
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
+import { Separator } from '../ui/separator'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 
 interface BridgeStatusBarProps {
   onOpenLog?: () => void
@@ -38,15 +38,18 @@ function formatCostDisplay(cost: number): string {
   return `$${cost.toFixed(3)}`
 }
 
-function BridgeStatusBarComponent({ onOpenLog, onOpenSettings }: BridgeStatusBarProps): JSX.Element | null {
-  const isVisible = useBridgeStore(s => s.isBridgeStatusBarVisible)
-  const totalActiveAgents = useBridgeStore(s => s.totalActiveAgents)
-  const totalTokensUsed = useBridgeStore(s => s.totalTokensUsed)
-  const totalCostUSD = useBridgeStore(s => s.totalCostUSD)
-  const totalActiveRuns = useBridgeStore(s => s.totalActiveRuns)
-  const activeOrchestrators = useBridgeStore(s => s.activeOrchestrators)
-  const activeAgents = useBridgeStore(s => s.activeAgents)
-  const toggleStatusBar = useBridgeStore(s => s.toggleStatusBar)
+function BridgeStatusBarComponent({
+  onOpenLog,
+  onOpenSettings,
+}: BridgeStatusBarProps): JSX.Element | null {
+  const isVisible = useBridgeStore((s) => s.isBridgeStatusBarVisible)
+  const totalActiveAgents = useBridgeStore((s) => s.totalActiveAgents)
+  const totalTokensUsed = useBridgeStore((s) => s.totalTokensUsed)
+  const totalCostUSD = useBridgeStore((s) => s.totalCostUSD)
+  const totalActiveRuns = useBridgeStore((s) => s.totalActiveRuns)
+  const activeOrchestrators = useBridgeStore((s) => s.activeOrchestrators)
+  const activeAgents = useBridgeStore((s) => s.activeAgents)
+  const toggleStatusBar = useBridgeStore((s) => s.toggleStatusBar)
   const performanceMode = usePerformanceMode()
 
   // Popover state
@@ -66,9 +69,9 @@ function BridgeStatusBarComponent({ onOpenLog, onOpenSettings }: BridgeStatusBar
       const messages = announcementQueue.current
       announcementQueue.current = []
 
-      const starts = messages.filter(m => m.includes('started')).length
-      const completes = messages.filter(m => m.includes('completed')).length
-      const errors = messages.filter(m => m.includes('failed')).length
+      const starts = messages.filter((m) => m.includes('started')).length
+      const completes = messages.filter((m) => m.includes('completed')).length
+      const errors = messages.filter((m) => m.includes('failed')).length
 
       const parts: string[] = []
       if (starts > 0) parts.push(`${starts} agent${starts > 1 ? 's' : ''} started`)
@@ -145,7 +148,7 @@ function BridgeStatusBarComponent({ onOpenLog, onOpenSettings }: BridgeStatusBar
           <div
             className={cn(
               'w-2 h-2 rounded-full',
-              hasActivity ? 'bg-green-500 bridge-badge-pulse' : 'bg-gray-500'
+              hasActivity ? 'bg-green-500 bridge-badge-pulse' : 'bg-gray-500',
             )}
           />
           <span style={{ color: 'var(--text-muted)' }} className="text-xs font-medium">
@@ -161,18 +164,21 @@ function BridgeStatusBarComponent({ onOpenLog, onOpenSettings }: BridgeStatusBar
             <div className="flex items-center gap-1 cursor-default">
               <Activity
                 className="w-3.5 h-3.5"
-                style={{ color: totalActiveAgents > 0 ? 'var(--color-info, #3b82f6)' : 'var(--text-muted)' }}
+                style={{
+                  color: totalActiveAgents > 0 ? 'var(--color-info, #3b82f6)' : 'var(--text-muted)',
+                }}
               />
               <span style={{ color: 'var(--text-primary)' }}>
-                {totalActiveAgents > 0 ? `${totalActiveAgents} agent${totalActiveAgents > 1 ? 's' : ''}` : 'No agents'}
+                {totalActiveAgents > 0
+                  ? `${totalActiveAgents} agent${totalActiveAgents > 1 ? 's' : ''}`
+                  : 'No agents'}
               </span>
             </div>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="text-xs">
             {runningAgentNames.length > 0
-              ? runningAgentNames.map(name => <div key={name}>{name}</div>)
-              : 'No agents currently running'
-            }
+              ? runningAgentNames.map((name) => <div key={name}>{name}</div>)
+              : 'No agents currently running'}
           </TooltipContent>
         </Tooltip>
 
@@ -197,7 +203,10 @@ function BridgeStatusBarComponent({ onOpenLog, onOpenSettings }: BridgeStatusBar
             <div className="flex items-center gap-1 cursor-default">
               <Coins
                 className="w-3.5 h-3.5"
-                style={{ color: totalCostUSD > 0.10 ? 'var(--color-warning, #f59e0b)' : 'var(--text-primary)' }}
+                style={{
+                  color:
+                    totalCostUSD > 0.1 ? 'var(--color-warning, #f59e0b)' : 'var(--text-primary)',
+                }}
               />
               <span style={{ color: 'var(--text-primary)' }}>
                 {formatCostDisplay(totalCostUSD)}
@@ -236,10 +245,13 @@ function BridgeStatusBarComponent({ onOpenLog, onOpenSettings }: BridgeStatusBar
                   Active Orchestrators
                 </div>
                 <Separator />
-                {orchestratorBreakdown.map(orch => (
+                {orchestratorBreakdown.map((orch) => (
                   <div key={orch.id} className="text-xs space-y-0.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono truncate max-w-[140px]" style={{ color: 'var(--text-primary)' }}>
+                      <span
+                        className="font-mono truncate max-w-[140px]"
+                        style={{ color: 'var(--text-primary)' }}
+                      >
                         {orch.id.slice(0, 8)}...
                       </span>
                       <Badge
@@ -250,7 +262,9 @@ function BridgeStatusBarComponent({ onOpenLog, onOpenSettings }: BridgeStatusBar
                       </Badge>
                     </div>
                     <div className="flex gap-3" style={{ color: 'var(--text-muted)' }}>
-                      <span>{orch.completedCount}/{orch.agentCount} agents</span>
+                      <span>
+                        {orch.completedCount}/{orch.agentCount} agents
+                      </span>
                       <span>{orch.tokens.toLocaleString()} tokens</span>
                       <span>${orch.cost.toFixed(4)}</span>
                     </div>
@@ -265,12 +279,7 @@ function BridgeStatusBarComponent({ onOpenLog, onOpenSettings }: BridgeStatusBar
         {onOpenLog && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0"
-                onClick={onOpenLog}
-              >
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onOpenLog}>
                 <ScrollText className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
               </Button>
             </TooltipTrigger>
@@ -282,12 +291,7 @@ function BridgeStatusBarComponent({ onOpenLog, onOpenSettings }: BridgeStatusBar
         {onOpenSettings && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0"
-                onClick={onOpenSettings}
-              >
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onOpenSettings}>
                 <Settings className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
               </Button>
             </TooltipTrigger>
@@ -298,12 +302,7 @@ function BridgeStatusBarComponent({ onOpenLog, onOpenSettings }: BridgeStatusBar
         {/* Close button */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={toggleStatusBar}
-            >
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={toggleStatusBar}>
               <X className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
             </Button>
           </TooltipTrigger>

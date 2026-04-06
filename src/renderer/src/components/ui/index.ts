@@ -1,153 +1,144 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-// Pre-existing custom components
-export { Button } from './Button'
-export { Input } from './Input'
-export { Badge } from './Badge'
-export { SciFiToast, useToastStore, sciFiToast } from './SciFiToast'
-
-// shadcn/ui components (Radix UI primitives) — existing from C-S1
 export {
-  Dialog,
-  DialogPortal,
-  DialogOverlay,
-  DialogTrigger,
-  DialogClose,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogDescription,
-} from './dialog'
-
-export {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuCheckboxItem,
-  DropdownMenuRadioItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuGroup,
-  DropdownMenuPortal,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuRadioGroup,
-} from './dropdown-menu'
-
-export {
-  Command,
-  CommandDialog,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandSeparator,
-  CommandShortcut,
-} from './command'
-
-export {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from './tooltip'
-
-export {
-  Select,
-  SelectGroup,
-  SelectValue,
-  SelectTrigger,
-  SelectContent,
-  SelectLabel,
-  SelectItem,
-  SelectSeparator,
-  SelectScrollUpButton,
-  SelectScrollDownButton,
-} from './select'
-
-// Phase 0 — Additional Primitives
-export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'
-export { Switch } from './switch'
-export { Slider } from './slider'
-export { ScrollArea, ScrollBar } from './scroll-area'
-export { Separator } from './separator'
-export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from './popover'
-
-// Phase 1 — Form Inputs
-export { Textarea } from './textarea'
-export { Label } from './label'
-export { Checkbox } from './checkbox'
-export { RadioGroup, RadioGroupItem } from './radio-group'
-
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from './accordion'
 // Phase 2 — Feedback Components
-export { Alert, AlertTitle, AlertDescription } from './alert'
-export { Progress } from './progress'
-export { Skeleton } from './skeleton'
-export { Avatar, AvatarImage, AvatarFallback } from './avatar'
+export { Alert, AlertDescription, AlertTitle } from './alert'
 export {
   AlertDialog,
-  AlertDialogPortal,
-  AlertDialogOverlay,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogFooter,
-  AlertDialogTitle,
-  AlertDialogDescription,
   AlertDialogAction,
   AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
+  AlertDialogPortal,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from './alert-dialog'
-
+export { AspectRatio } from './aspect-ratio'
+export { Avatar, AvatarFallback, AvatarImage } from './avatar'
+export { Badge } from './Badge'
+// Pre-existing custom components
+export { Button } from './Button'
 // Phase 3 — Layout Components
 export {
   Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardDescription,
   CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
 } from './card'
+export { Checkbox } from './checkbox'
+export { Collapsible, CollapsibleContent, CollapsibleTrigger } from './collapsible'
 export {
-  Sheet,
-  SheetPortal,
-  SheetOverlay,
-  SheetTrigger,
-  SheetClose,
-  SheetContent,
-  SheetHeader,
-  SheetFooter,
-  SheetTitle,
-  SheetDescription,
-} from './sheet'
-export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './collapsible'
-export { AspectRatio } from './aspect-ratio'
-export {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from './accordion'
-export { ToggleGroup, ToggleGroupItem } from './toggle-group'
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+  CommandShortcut,
+} from './command'
 export {
   ContextMenu,
-  ContextMenuTrigger,
-  ContextMenuContent,
-  ContextMenuItem,
   ContextMenuCheckboxItem,
-  ContextMenuRadioItem,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
   ContextMenuLabel,
+  ContextMenuPortal,
+  ContextMenuRadioGroup,
+  ContextMenuRadioItem,
   ContextMenuSeparator,
   ContextMenuShortcut,
-  ContextMenuGroup,
-  ContextMenuPortal,
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
-  ContextMenuRadioGroup,
+  ContextMenuTrigger,
 } from './context-menu'
+// shadcn/ui components (Radix UI primitives) — existing from C-S1
+export {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+  DialogTrigger,
+} from './dialog'
+export {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from './dropdown-menu'
+export { Input } from './Input'
+export { Label } from './label'
+export { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from './popover'
+export { Progress } from './progress'
+export { RadioGroup, RadioGroupItem } from './radio-group'
+export { SciFiToast, sciFiToast, useToastStore } from './SciFiToast'
+export { ScrollArea, ScrollBar } from './scroll-area'
+export {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectScrollDownButton,
+  SelectScrollUpButton,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from './select'
+export { Separator } from './separator'
+export {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetOverlay,
+  SheetPortal,
+  SheetTitle,
+  SheetTrigger,
+} from './sheet'
+export { Skeleton } from './skeleton'
+export { Slider } from './slider'
+export { Switch } from './switch'
+// Phase 0 — Additional Primitives
+export { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs'
+// Phase 1 — Form Inputs
+export { Textarea } from './textarea'
+export { ToggleGroup, ToggleGroupItem } from './toggle-group'
+export {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './tooltip'

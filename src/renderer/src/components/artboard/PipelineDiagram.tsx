@@ -14,7 +14,8 @@
  * Phase 3B artboard panel.
  */
 
-import React, { memo } from 'react'
+import type React from 'react'
+import { memo } from 'react'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,15 +38,13 @@ export interface PipelineDiagramProps {
 // Status config
 // ---------------------------------------------------------------------------
 
-const STATUS_CONFIG: Record<
-  AgentPipelineStatus,
-  { fill: string; stroke: string; label: string }
-> = {
-  pending:  { fill: 'none',    stroke: '#6b7280', label: 'Pending' },
-  running:  { fill: '#22c55e', stroke: '#22c55e', label: 'Running' },
-  complete: { fill: '#22c55e', stroke: '#22c55e', label: 'Complete' },
-  error:    { fill: '#ef4444', stroke: '#ef4444', label: 'Error' },
-}
+const STATUS_CONFIG: Record<AgentPipelineStatus, { fill: string; stroke: string; label: string }> =
+  {
+    pending: { fill: 'none', stroke: '#6b7280', label: 'Pending' },
+    running: { fill: '#22c55e', stroke: '#22c55e', label: 'Running' },
+    complete: { fill: '#22c55e', stroke: '#22c55e', label: 'Complete' },
+    error: { fill: '#ef4444', stroke: '#ef4444', label: 'Error' },
+  }
 
 const CIRCLE_R = 14
 const SPACING = 80
@@ -79,7 +78,12 @@ function RunningShape({ cx, cy }: { cx: number; cy: number }): JSX.Element {
       </circle>
       {/* Pulse ring */}
       <circle cx={cx} cy={cy} r={CIRCLE_R} fill="none" stroke="#22c55e" strokeWidth={1}>
-        <animate attributeName="r" values={`${CIRCLE_R};${CIRCLE_R + 6}`} dur="1.5s" repeatCount="indefinite" />
+        <animate
+          attributeName="r"
+          values={`${CIRCLE_R};${CIRCLE_R + 6}`}
+          dur="1.5s"
+          repeatCount="indefinite"
+        />
         <animate attributeName="opacity" values="0.6;0" dur="1.5s" repeatCount="indefinite" />
       </circle>
     </>
@@ -116,7 +120,15 @@ function ErrorShape({ cx, cy }: { cx: number; cy: number }): JSX.Element {
         strokeLinejoin="round"
       />
       {/* Exclamation mark */}
-      <line x1={cx} y1={cy - 5} x2={cx} y2={cy + 2} stroke="#fff" strokeWidth={2.5} strokeLinecap="round" />
+      <line
+        x1={cx}
+        y1={cy - 5}
+        x2={cx}
+        y2={cy + 2}
+        stroke="#fff"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+      />
       <circle cx={cx} cy={cy + 6} r={1.2} fill="#fff" />
     </>
   )

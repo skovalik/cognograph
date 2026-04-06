@@ -18,19 +18,14 @@ import { useState } from 'react'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
-import {
-  ContextSection,
-  AgentSection,
-  ExtractionsSection,
-  AttachmentsSection,
-} from './sections'
+import { AgentSection, AttachmentsSection, ContextSection, ExtractionsSection } from './sections'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -82,9 +77,7 @@ export function AdvancedSettingsModal({
   defaultTab,
 }: AdvancedSettingsModalProps): JSX.Element {
   const node = useWorkspaceStore((state) => state.nodes.find((n) => n.id === nodeId))
-  const [activeTab, setActiveTab] = useState<TabValue>(
-    (defaultTab as TabValue) ?? DEFAULT_TAB,
-  )
+  const [activeTab, setActiveTab] = useState<TabValue>((defaultTab as TabValue) ?? DEFAULT_TAB)
 
   const title = (node?.data as Record<string, unknown>)?.title as string | undefined
 

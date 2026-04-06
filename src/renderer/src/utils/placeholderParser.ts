@@ -13,7 +13,7 @@
  *   5. {{key}} - Simple string placeholders (processed last)
  */
 
-import type { PlaceholderDefinition, PlaceholderType, NodeData } from '@shared/types'
+import type { NodeData, PlaceholderDefinition, PlaceholderType } from '@shared/types'
 import { PLACEHOLDER_PATTERNS } from '@shared/types'
 
 // -----------------------------------------------------------------------------
@@ -54,7 +54,7 @@ export function detectPlaceholders(content: string): DetectedPlaceholder[] {
     ['node-instruction', new RegExp(PLACEHOLDER_PATTERNS.instruction.source, 'gi')],
     ['node-reference', new RegExp(PLACEHOLDER_PATTERNS.link.source, 'gi')],
     ['selection', new RegExp(PLACEHOLDER_PATTERNS.selection.source, 'gi')],
-    ['string', new RegExp(PLACEHOLDER_PATTERNS.simple.source, 'gi')]
+    ['string', new RegExp(PLACEHOLDER_PATTERNS.simple.source, 'gi')],
   ]
 
   for (const [type, pattern] of patterns) {
@@ -74,8 +74,8 @@ export function detectPlaceholders(content: string): DetectedPlaceholder[] {
         param: type !== 'string' ? match[1] : undefined,
         location: {
           start: match.index,
-          end: match.index + fullMatch.length
-        }
+          end: match.index + fullMatch.length,
+        },
       })
     }
   }
@@ -89,9 +89,7 @@ export function detectPlaceholders(content: string): DetectedPlaceholder[] {
 /**
  * Detect placeholders in all string values within node data
  */
-export function detectPlaceholdersInNodeData(
-  data: Partial<NodeData>
-): DetectedPlaceholder[] {
+export function detectPlaceholdersInNodeData(data: Partial<NodeData>): DetectedPlaceholder[] {
   const found: DetectedPlaceholder[] = []
 
   function scanValue(value: unknown): void {
@@ -127,7 +125,7 @@ export function detectPlaceholdersInNodeData(
  * Build placeholder definitions from detected placeholders
  */
 export function buildPlaceholderDefinitions(
-  detected: DetectedPlaceholder[]
+  detected: DetectedPlaceholder[],
 ): PlaceholderDefinition[] {
   const definitions: PlaceholderDefinition[] = []
   const seenKeys = new Set<string>()
@@ -142,7 +140,7 @@ export function buildPlaceholderDefinitions(
       key: p.key,
       type: p.type,
       label: formatKeyAsLabel(p.key),
-      required: true
+      required: true,
     }
 
     // Type-specific defaults
@@ -206,16 +204,12 @@ export function resolveDatePlaceholder(dateType: string): string {
 /**
  * Resolve all placeholders in content with provided values
  */
-export function resolvePlaceholders(
-  content: string,
-  values: Record<string, string>
-): string {
+export function resolvePlaceholders(content: string, values: Record<string, string>): string {
   let result = content
 
   // First, resolve all date placeholders (auto-resolved)
-  result = result.replace(
-    new RegExp(PLACEHOLDER_PATTERNS.date.source, 'gi'),
-    (_match, dateType) => resolveDatePlaceholder(dateType)
+  result = result.replace(new RegExp(PLACEHOLDER_PATTERNS.date.source, 'gi'), (_match, dateType) =>
+    resolveDatePlaceholder(dateType),
   )
 
   // Then resolve other placeholders from provided values
@@ -223,20 +217,11 @@ export function resolvePlaceholders(
     // Replace simple {{key}}
     result = result.replace(new RegExp(`\\{\\{${escapeRegex(key)}\\}\\}`, 'gi'), value)
     // Replace {{describe:key}}
-    result = result.replace(
-      new RegExp(`\\{\\{describe:${escapeRegex(key)}\\}\\}`, 'gi'),
-      value
-    )
+    result = result.replace(new RegExp(`\\{\\{describe:${escapeRegex(key)}\\}\\}`, 'gi'), value)
     // Replace {{link:key}}
-    result = result.replace(
-      new RegExp(`\\{\\{link:${escapeRegex(key)}\\}\\}`, 'gi'),
-      value
-    )
+    result = result.replace(new RegExp(`\\{\\{link:${escapeRegex(key)}\\}\\}`, 'gi'), value)
     // Replace {{selection:N}}
-    result = result.replace(
-      new RegExp(`\\{\\{selection:${escapeRegex(key)}\\}\\}`, 'gi'),
-      value
-    )
+    result = result.replace(new RegExp(`\\{\\{selection:${escapeRegex(key)}\\}\\}`, 'gi'), value)
   }
 
   return result
@@ -247,7 +232,7 @@ export function resolvePlaceholders(
  */
 export function resolvePlaceholdersInNodeData<T extends Record<string, unknown>>(
   data: T,
-  values: Record<string, string>
+  values: Record<string, string>,
 ): T {
   const result: Record<string, unknown> = { ...data }
 
@@ -260,13 +245,10 @@ export function resolvePlaceholdersInNodeData<T extends Record<string, unknown>>
           ? resolvePlaceholders(item, values)
           : typeof item === 'object' && item !== null
             ? resolvePlaceholdersInNodeData(item as Record<string, unknown>, values)
-            : item
+            : item,
       )
     } else if (value && typeof value === 'object') {
-      result[key] = resolvePlaceholdersInNodeData(
-        value as Record<string, unknown>,
-        values
-      )
+      result[key] = resolvePlaceholdersInNodeData(value as Record<string, unknown>, values)
     }
   }
 
@@ -282,7 +264,7 @@ export function resolvePlaceholdersInNodeData<T extends Record<string, unknown>>
  */
 export function validatePlaceholderValues(
   definitions: PlaceholderDefinition[],
-  values: Record<string, string>
+  values: Record<string, string>,
 ): { valid: boolean; missing: string[] } {
   const missing: string[] = []
 
@@ -298,7 +280,7 @@ export function validatePlaceholderValues(
 
   return {
     valid: missing.length === 0,
-    missing
+    missing,
   }
 }
 
@@ -320,9 +302,7 @@ export function getUnresolvedPlaceholders(content: string): string[] {
  * e.g., "project_name" -> "Project Name"
  */
 export function formatKeyAsLabel(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+  return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 /**

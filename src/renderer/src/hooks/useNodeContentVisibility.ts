@@ -17,20 +17,17 @@
  */
 
 export {
-  // Hook
-  useNodeContentVisibility,
-
   // Pure functions (for testing)
   computeNodeContentVisibility,
   computeZoomLevel,
-
-  // Types
-  type NodeContentVisibility,
-  type ZoomLevel,
-
-  // Constants (for testing)
-  THRESHOLDS,
   HYSTERESIS,
   HYSTERESIS_WIDE,
-  ZOOM_LEVEL_TO_LOD
+  // Types
+  type NodeContentVisibility,
+  // Constants (for testing)
+  THRESHOLDS,
+  // Hook
+  useNodeContentVisibility,
+  ZOOM_LEVEL_TO_LOD,
+  type ZoomLevel,
 } from './useSemanticZoom'

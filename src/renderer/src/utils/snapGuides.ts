@@ -37,7 +37,7 @@ export function calculateSnapGuides(
   _draggingNodes: NodeRect[],
   staticNodes: NodeRect[],
   currentPosition: { x: number; y: number },
-  primaryNodeRect: NodeRect
+  primaryNodeRect: NodeRect,
 ): SnapResult {
   if (staticNodes.length === 0) {
     return { snappedPosition: currentPosition, guides: [] }
@@ -137,7 +137,7 @@ export function calculateSnapGuides(
           type: 'vertical',
           position: stat,
           start: minY,
-          end: maxY
+          end: maxY,
         })
       }
     }
@@ -159,7 +159,7 @@ export function calculateSnapGuides(
           type: 'horizontal',
           position: stat,
           start: minX,
-          end: maxX
+          end: maxX,
         })
       }
     }
@@ -178,6 +178,6 @@ export function calculateSnapGuides(
 
   return {
     snappedPosition: { x: finalX, y: finalY },
-    guides: uniqueGuides
+    guides: uniqueGuides,
   }
 }

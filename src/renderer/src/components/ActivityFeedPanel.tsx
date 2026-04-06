@@ -20,25 +20,29 @@
  * @module ActivityFeedPanel
  */
 
-import { memo, useRef, useEffect, useState, useCallback, useMemo } from 'react'
+import type { CCActivityEvent } from '@shared/bridge-types'
 import {
+  AlertCircle,
+  ArrowDownToLine,
+  Bot,
   FileEdit,
   FileOutput,
   FileSearch,
-  Terminal,
-  Search,
-  Regex,
-  Bot,
   Globe,
-  Trash2,
-  ArrowDownToLine,
   Play,
+  Regex,
+  Search,
   Square,
-  AlertCircle,
+  Terminal,
+  Trash2,
   Zap,
 } from 'lucide-react'
-import { useCCBridgeStore, selectCCBridgeEvents, selectCCBridgeConnected } from '../stores/ccBridgeStore'
-import type { CCActivityEvent } from '@shared/bridge-types'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  selectCCBridgeConnected,
+  selectCCBridgeEvents,
+  useCCBridgeStore,
+} from '../stores/ccBridgeStore'
 
 // -----------------------------------------------------------------------------
 // Props
@@ -128,9 +132,7 @@ const EventItem = memo(function EventItem({ event }: EventItemProps): JSX.Elemen
 
   // Normal tool_use events
   return (
-    <div
-      className="flex items-center gap-2 px-3 py-1.5 text-xs gui-text hover:gui-surface-hover transition-colors rounded-sm group"
-    >
+    <div className="flex items-center gap-2 px-3 py-1.5 text-xs gui-text hover:gui-surface-hover transition-colors rounded-sm group">
       <span className={isError ? 'text-red-400' : 'gui-text-secondary'}>
         {getToolIcon(toolName)}
       </span>
@@ -184,10 +186,7 @@ function ActivityFeedPanelComponent({ sidebarWidth = 260 }: ActivityFeedPanelPro
   }, [])
 
   // Stats
-  const toolUseCount = useMemo(
-    () => events.filter((e) => e.type === 'tool_use').length,
-    [events]
-  )
+  const toolUseCount = useMemo(() => events.filter((e) => e.type === 'tool_use').length, [events])
 
   return (
     <div className="h-full flex flex-col glass-soft gui-panel">

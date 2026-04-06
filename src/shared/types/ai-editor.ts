@@ -8,9 +8,9 @@
 // streaming types, preview types, context types, action template types
 // =============================================================================
 
-import type { NodeData } from './nodes'
-import type { EdgeData, EdgeStrength } from './edges'
 import type { SpatialRegion } from '../actionTypes'
+import type { EdgeData, EdgeStrength } from './edges'
+import type { NodeData } from './nodes'
 
 // -----------------------------------------------------------------------------
 // Position Resolution Types
@@ -22,7 +22,12 @@ import type { SpatialRegion } from '../actionTypes'
  */
 export type RelativePosition =
   | { type: 'absolute'; x: number; y: number }
-  | { type: 'relative-to'; anchor: string; direction: 'above' | 'below' | 'left' | 'right'; offset?: number }
+  | {
+      type: 'relative-to'
+      anchor: string
+      direction: 'above' | 'below' | 'left' | 'right'
+      offset?: number
+    }
   | { type: 'center-of-selection' }
   | { type: 'center-of-view' }
   | { type: 'below-selection'; index?: number }
@@ -47,7 +52,7 @@ export const NODE_DEFAULTS: Record<NodeData['type'], { width: number; height: nu
   workspace: { width: 320, height: 220 },
   text: { width: 200, height: 60 },
   action: { width: 280, height: 140 },
-  orchestrator: { width: 360, height: 280 }
+  orchestrator: { width: 360, height: 280 },
 } as const
 
 // -----------------------------------------------------------------------------
@@ -124,23 +129,24 @@ export const AI_EDITOR_MODE_DESCRIPTIONS_LEGACY = {
   fix: {
     label: 'Fix',
     description: 'Fix issues in selected nodes (broken connections, missing data, inconsistencies)',
-    icon: 'Wrench'
+    icon: 'Wrench',
   },
   refactor: {
     label: 'Refactor',
-    description: 'Restructure and improve organization (split nodes, merge content, update relationships)',
-    icon: 'GitBranch'
+    description:
+      'Restructure and improve organization (split nodes, merge content, update relationships)',
+    icon: 'GitBranch',
   },
   organize: {
     label: 'Organize',
     description: 'Arrange and layout nodes spatially (align, distribute, group by type)',
-    icon: 'LayoutGrid'
+    icon: 'LayoutGrid',
   },
   generate: {
     label: 'Generate',
     description: 'Create new nodes and connections based on prompt (brainstorm, expand, fill gaps)',
-    icon: 'Sparkles'
-  }
+    icon: 'Sparkles',
+  },
 } as const
 
 // -----------------------------------------------------------------------------
@@ -152,20 +158,20 @@ export const AI_EDITOR_MODE_DESCRIPTIONS_LEGACY = {
 export const AI_EDITOR_SCOPE_DESCRIPTIONS_LEGACY = {
   single: {
     label: 'Single Node',
-    description: 'Target node with full detail, connected nodes as context'
+    description: 'Target node with full detail, connected nodes as context',
   },
   selection: {
     label: 'Selection',
-    description: 'Only selected nodes and their immediate connections'
+    description: 'Only selected nodes and their immediate connections',
   },
   view: {
     label: 'Visible',
-    description: 'All nodes currently visible in the viewport'
+    description: 'All nodes currently visible in the viewport',
   },
   canvas: {
     label: 'Canvas',
-    description: 'The entire workspace (may be slow for large workspaces)'
-  }
+    description: 'The entire workspace (may be slow for large workspaces)',
+  },
 } as const
 
 // -----------------------------------------------------------------------------
@@ -302,7 +308,12 @@ export interface AIEditorContext {
   visibleNodes: AIEditorNodeSummary[]
 
   // All canvas nodes (if scope is 'canvas') - minimal info
-  allNodes?: Array<{ id: string; type: NodeData['type']; title: string; position: { x: number; y: number } }>
+  allNodes?: Array<{
+    id: string
+    type: NodeData['type']
+    title: string
+    position: { x: number; y: number }
+  }>
 
   // Edges
   edges: AIEditorEdgeSummary[]
@@ -440,7 +451,10 @@ export interface AIEditorState {
   conversationHistory: ConversationMessage[]
 }
 
-export const DEFAULT_AI_EDITOR_STATE: Omit<AIEditorState, 'tempIdToRealId' | 'conversationHistory'> & { tempIdToRealId: Record<string, string>; conversationHistory: ConversationMessage[] } = {
+export const DEFAULT_AI_EDITOR_STATE: Omit<
+  AIEditorState,
+  'tempIdToRealId' | 'conversationHistory'
+> & { tempIdToRealId: Record<string, string>; conversationHistory: ConversationMessage[] } = {
   isOpen: false,
   isSidebarOpen: false,
   mode: 'generate',
@@ -458,7 +472,7 @@ export const DEFAULT_AI_EDITOR_STATE: Omit<AIEditorState, 'tempIdToRealId' | 'co
   isExecutingPlan: false,
   executionError: null,
   tempIdToRealId: {},
-  conversationHistory: []
+  conversationHistory: [],
 }
 
 // -----------------------------------------------------------------------------
@@ -547,15 +561,15 @@ export interface ActionTemplate {
  * Phases of plan generation
  */
 export type StreamingPhase =
-  | 'idle'        // Not generating
-  | 'connecting'  // Establishing API connection
-  | 'analyzing'   // AI is reading the context
-  | 'thinking'    // AI is reasoning about the request
-  | 'generating'  // AI is outputting the plan
-  | 'parsing'     // Parsing final JSON
-  | 'complete'    // Successfully finished
-  | 'cancelled'   // User cancelled
-  | 'error'       // Failed
+  | 'idle' // Not generating
+  | 'connecting' // Establishing API connection
+  | 'analyzing' // AI is reading the context
+  | 'thinking' // AI is reasoning about the request
+  | 'generating' // AI is outputting the plan
+  | 'parsing' // Parsing final JSON
+  | 'complete' // Successfully finished
+  | 'cancelled' // User cancelled
+  | 'error' // Failed
 
 /**
  * Valid state transitions for streaming phase state machine
@@ -569,7 +583,7 @@ export const STREAMING_VALID_TRANSITIONS: Record<StreamingPhase, StreamingPhase[
   parsing: ['complete', 'error', 'cancelled'],
   complete: ['idle'],
   cancelled: ['idle'],
-  error: ['idle']
+  error: ['idle'],
 }
 
 /**
@@ -580,7 +594,7 @@ export interface PlanPhasePayload {
   /** Request ID for matching events to generation */
   requestId: string
   phase: StreamingPhase
-  message?: string  // Human-readable status, e.g., "Analyzing 12 nodes..."
+  message?: string // Human-readable status, e.g., "Analyzing 12 nodes..."
 }
 
 /**
@@ -644,32 +658,35 @@ export type AIEditorMode = 'generate' | 'edit' | 'organize' | 'automate' | 'ask'
 /**
  * AI Editor mode descriptions for UI
  */
-export const AI_EDITOR_MODE_DESCRIPTIONS: Record<AIEditorMode, { label: string; description: string; icon: string }> = {
+export const AI_EDITOR_MODE_DESCRIPTIONS: Record<
+  AIEditorMode,
+  { label: string; description: string; icon: string }
+> = {
   generate: {
     label: 'Generate',
     description: 'Create new nodes and connections based on prompt (brainstorm, expand, fill gaps)',
-    icon: 'Sparkles'
+    icon: 'Sparkles',
   },
   edit: {
     label: 'Edit',
     description: 'Modify content of selected nodes (rewrite, expand, summarize)',
-    icon: 'Pencil'
+    icon: 'Pencil',
   },
   organize: {
     label: 'Organize',
     description: 'Arrange and layout nodes spatially (align, distribute, group by type)',
-    icon: 'LayoutGrid'
+    icon: 'LayoutGrid',
   },
   automate: {
     label: 'Automate',
     description: 'Create action nodes with triggers and conditions',
-    icon: 'Zap'
+    icon: 'Zap',
   },
   ask: {
     label: 'Ask',
     description: 'Ask questions about your workspace content',
-    icon: 'MessageCircle'
-  }
+    icon: 'MessageCircle',
+  },
 }
 
 /**
@@ -680,25 +697,28 @@ export type AIEditorScope = 'selection' | 'canvas' | 'workspace' | 'single' | 'v
 /**
  * AI Editor scope descriptions for UI
  */
-export const AI_EDITOR_SCOPE_DESCRIPTIONS: Record<AIEditorScope, { label: string; description: string }> = {
+export const AI_EDITOR_SCOPE_DESCRIPTIONS: Record<
+  AIEditorScope,
+  { label: string; description: string }
+> = {
   selection: {
     label: 'Selection',
-    description: 'Only selected nodes and their immediate connections'
+    description: 'Only selected nodes and their immediate connections',
   },
   canvas: {
     label: 'Canvas',
-    description: 'All nodes currently visible in the viewport'
+    description: 'All nodes currently visible in the viewport',
   },
   workspace: {
     label: 'Workspace',
-    description: 'The entire workspace (may be slow for large workspaces)'
+    description: 'The entire workspace (may be slow for large workspaces)',
   },
   single: {
     label: 'Single Node',
-    description: 'Target a specific node by ID'
+    description: 'Target a specific node by ID',
   },
   view: {
     label: 'Viewport',
-    description: 'Current visible area of the canvas'
-  }
+    description: 'Current visible area of the canvas',
+  },
 }

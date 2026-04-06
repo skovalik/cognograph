@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
-import { resolveGlassStyle } from '../glassUtils'
 import type { GlassStyle } from '@shared/types'
+import { describe, expect, it } from 'vitest'
+import { resolveGlassStyle } from '../glassUtils'
 
 describe('resolveGlassStyle', () => {
   describe('auto mode', () => {
@@ -89,7 +89,7 @@ describe('resolveGlassStyle', () => {
 
       styles.forEach((style) => {
         tiers.forEach((tier) => {
-          [true, false].forEach((ambient) => {
+          ;[true, false].forEach((ambient) => {
             const result = resolveGlassStyle(style, tier, ambient)
             expect(['solid', 'soft-blur', 'fluid-glass']).toContain(result)
           })

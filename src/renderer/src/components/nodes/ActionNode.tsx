@@ -1,22 +1,34 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useMemo, useCallback, useEffect, useState } from 'react'
-import { NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
-import { SpreadHandles } from './SpreadHandles'
-import { Zap, Play, Power } from 'lucide-react'
 import type { ActionNodeData } from '@shared/actionTypes'
 import { DEFAULT_THEME_SETTINGS } from '@shared/types'
-import { useWorkspaceStore, useIsSpawning, useNodeWarmth, useIsNodePinned, useIsNodeBookmarked, useNodeNumberedBookmark } from '../../stores/workspaceStore'
-import { useShowMembersClass } from '../../hooks/useShowMembersClass'
+import {
+  type NodeProps,
+  NodeResizer,
+  type ResizeParams,
+  useUpdateNodeInternals,
+} from '@xyflow/react'
+import { Play, Power, Zap } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { CONIC_PALETTES } from '../../constants/conicPalettes'
 import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
-import { EditableTitle } from '../EditableTitle'
-import { AttachmentBadge } from './AttachmentBadge'
 import { useNodeResize } from '../../hooks/useNodeResize'
 import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
+import { useShowMembersClass } from '../../hooks/useShowMembersClass'
+import {
+  useIsNodeBookmarked,
+  useIsNodePinned,
+  useIsSpawning,
+  useNodeNumberedBookmark,
+  useNodeWarmth,
+  useWorkspaceStore,
+} from '../../stores/workspaceStore'
+import { EditableTitle } from '../EditableTitle'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
+import { AttachmentBadge } from './AttachmentBadge'
 import { NodePropertyControls } from './NodePropertyControls'
-import { CONIC_PALETTES } from '../../constants/conicPalettes'
+import { SpreadHandles } from './SpreadHandles'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -37,35 +49,35 @@ const MIN_HEIGHT = 100
 // Trigger type display labels
 const TRIGGER_LABELS: Record<string, string> = {
   'property-change': 'Property Change',
-  'manual': 'Manual',
-  'schedule': 'Schedule',
+  manual: 'Manual',
+  schedule: 'Schedule',
   'node-created': 'Node Created',
   'connection-made': 'Connection Made',
   'region-enter': 'Region Enter',
   'region-exit': 'Region Exit',
   'cluster-size': 'Cluster Size',
-  'proximity': 'Proximity',
+  proximity: 'Proximity',
   'children-complete': 'Children Complete',
   'ancestor-change': 'Ancestor Change',
   'connection-count': 'Connection Count',
-  'isolation': 'Isolation'
+  isolation: 'Isolation',
 }
 
 // Trigger type short labels (for L1 compact display)
 const TRIGGER_SHORT_LABELS: Record<string, string> = {
   'property-change': 'on-change',
-  'manual': 'manual',
-  'schedule': 'on-schedule',
+  manual: 'manual',
+  schedule: 'on-schedule',
   'node-created': 'on-create',
   'connection-made': 'on-connect',
   'region-enter': 'on-enter',
   'region-exit': 'on-exit',
   'cluster-size': 'on-cluster',
-  'proximity': 'on-proximity',
+  proximity: 'on-proximity',
   'children-complete': 'on-complete',
   'ancestor-change': 'on-ancestor',
   'connection-count': 'on-connections',
-  'isolation': 'on-isolate'
+  isolation: 'on-isolate',
 }
 
 // Step type short labels
@@ -76,10 +88,10 @@ const STEP_TYPE_LABELS: Record<string, string> = {
   'move-node': 'move',
   'link-nodes': 'link',
   'unlink-nodes': 'unlink',
-  'wait': 'wait',
-  'condition': 'if',
+  wait: 'wait',
+  condition: 'if',
   'llm-call': 'AI',
-  'http-request': 'HTTP'
+  'http-request': 'HTTP',
 }
 
 function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): JSX.Element {
@@ -109,7 +121,8 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
   }, [id])
 
   // Calculate dynamic node color
-  const nodeColor = nodeData.color || themeSettings.nodeColors.action || DEFAULT_THEME_SETTINGS.nodeColors.action
+  const nodeColor =
+    nodeData.color || themeSettings.nodeColors.action || DEFAULT_THEME_SETTINGS.nodeColors.action
 
   // Glass system integration
   const transparent = nodeData.transparent
@@ -139,8 +152,8 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
       // Grayscale + dim for disabled actions at ALL zoom levels
       ...(isDisabled && {
         filter: 'grayscale(1)',
-        opacity: 0.5
-      })
+        opacity: 0.5,
+      }),
     }
   }, [nodeColor, themeSettings.nodeColors.action, nodeWidth, effectiveHeight, isDisabled])
 
@@ -149,9 +162,12 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
     startNodeResize(id)
   }, [id, startNodeResize])
 
-  const handleResize = useCallback((_event: unknown, params: ResizeParams) => {
-    updateNodeDimensions(id, params.width, params.height)
-  }, [id, updateNodeDimensions])
+  const handleResize = useCallback(
+    (_event: unknown, params: ResizeParams) => {
+      updateNodeDimensions(id, params.width, params.height)
+    },
+    [id, updateNodeDimensions],
+  )
 
   const handleResizeEnd = useCallback(() => {
     updateNodeInternals(id)
@@ -169,13 +185,22 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
   const isPinned = useIsNodePinned(id)
   const isBookmarked = useIsNodeBookmarked(id)
   const numberedBookmark = useNodeNumberedBookmark(id)
-  const isCut = useWorkspaceStore(s => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id))
+  const isCut = useWorkspaceStore(
+    (s) => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id),
+  )
 
   // LOD (Level of Detail) rendering based on zoom level
   const {
-    showContent, showTitle, showBadges, showLede,
-    showHeader, showFooter, showInteractiveControls,
-    showPlaceholders, zoomLevel, lodLevel
+    showContent,
+    showTitle,
+    showBadges,
+    showLede,
+    showHeader,
+    showFooter,
+    showInteractiveControls,
+    showPlaceholders,
+    zoomLevel,
+    lodLevel,
   } = useNodeContentVisibility()
 
   const isUltraFar = zoomLevel === 'ultra-far'
@@ -202,32 +227,42 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
     isPinned && 'node--pinned',
     isBookmarked && 'cognograph-node--bookmarked',
     isCut && 'cognograph-node--cut',
-    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`
-  ].filter(Boolean).join(' ')
+    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   // Build trigger summary
   const triggerLabel = TRIGGER_LABELS[nodeData.trigger.type] || nodeData.trigger.type
   const triggerShortLabel = TRIGGER_SHORT_LABELS[nodeData.trigger.type] || nodeData.trigger.type
 
   // Build action steps summary
-  const activeSteps = nodeData.actions.filter(s => !s.disabled)
-  const stepsLabels = activeSteps.map(s => STEP_TYPE_LABELS[s.type] || s.type)
+  const activeSteps = nodeData.actions.filter((s) => !s.disabled)
+  const stepsLabels = activeSteps.map((s) => STEP_TYPE_LABELS[s.type] || s.type)
 
   // First 2 steps for L2 compact list
   const compactSteps = activeSteps.slice(0, 2)
 
   // Manual trigger handler
-  const handleManualTrigger = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    // Dispatch a custom event that the action store will pick up
-    window.dispatchEvent(new CustomEvent('action:manual-trigger', { detail: { actionNodeId: id } }))
-  }, [id])
+  const handleManualTrigger = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      // Dispatch a custom event that the action store will pick up
+      window.dispatchEvent(
+        new CustomEvent('action:manual-trigger', { detail: { actionNodeId: id } }),
+      )
+    },
+    [id],
+  )
 
   // Toggle enabled/disabled
-  const handleToggleEnabled = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    updateNode(id, { enabled: !nodeData.enabled })
-  }, [id, nodeData.enabled, updateNode])
+  const handleToggleEnabled = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      updateNode(id, { enabled: !nodeData.enabled })
+    },
+    [id, nodeData.enabled, updateNode],
+  )
 
   const nodeContent = (
     <div
@@ -240,9 +275,7 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
       {...(isUltraFar ? { role: 'img', 'aria-label': `Action: ${nodeData.title}` } : {})}
     >
       {/* Type label: floats above node */}
-      <div className="cognograph-node__type-label">
-        ACTION
-      </div>
+      <div className="cognograph-node__type-label">ACTION</div>
 
       {/* ================================================================
           L0 (ultra-far): Trigger shape icon + enabled/disabled status dot
@@ -262,7 +295,7 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
           L1+ (far and above): Handles on all four sides
           Suppressed at L0 — no connection affordance at navigation level
           ================================================================ */}
-      <SpreadHandles hidden={isUltraFar} />
+      <SpreadHandles hidden={isUltraFar} width={nodeWidth} height={effectiveHeight} />
 
       {/* Numbered bookmark badge — visible at L1+ (navigation aid) */}
       {!isUltraFar && numberedBookmark && (
@@ -301,7 +334,7 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
               className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0"
               style={{
                 backgroundColor: `${nodeColor}20`,
-                color: nodeColor
+                color: nodeColor,
               }}
             >
               {triggerShortLabel}
@@ -311,11 +344,7 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
           {showInteractiveControls && (
             <div className="node-chrome--hover">
               <NodeAIErrorBoundary compact>
-                <AIPropertyAssist
-                  nodeId={id}
-                  nodeData={nodeData}
-                  compact={true}
-                />
+                <AIPropertyAssist nodeId={id} nodeData={nodeData} compact={true} />
               </NodeAIErrorBoundary>
             </div>
           )}
@@ -350,7 +379,10 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
           as compact list. Summary card mode.
           ================================================================ */}
       {showLede && (
-        <div className="cognograph-node__body text-xs flex flex-col gap-1 overflow-hidden" style={{ opacity: 0.8 }}>
+        <div
+          className="cognograph-node__body text-xs flex flex-col gap-1 overflow-hidden"
+          style={{ opacity: 0.8 }}
+        >
           {/* WHEN line — trigger type with detail */}
           <div className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
             <span className="font-medium uppercase text-[10px] opacity-70">WHEN:</span>
@@ -367,7 +399,7 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
             <div className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
               <span className="font-medium uppercase text-[10px] opacity-70">THEN:</span>
               <span className="truncate">
-                {compactSteps.map(s => STEP_TYPE_LABELS[s.type] || s.type).join(', ')}
+                {compactSteps.map((s) => STEP_TYPE_LABELS[s.type] || s.type).join(', ')}
                 {activeSteps.length > 2 && ` +${activeSteps.length - 2}`}
               </span>
             </div>
@@ -412,7 +444,9 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
           {nodeData.conditions.length > 0 && (
             <div className="flex items-center gap-1.5 text-[var(--node-text-secondary)]">
               <span className="font-medium uppercase text-[10px] opacity-70">IF:</span>
-              <span>{nodeData.conditions.length} condition{nodeData.conditions.length > 1 ? 's' : ''}</span>
+              <span>
+                {nodeData.conditions.length} condition{nodeData.conditions.length > 1 ? 's' : ''}
+              </span>
             </div>
           )}
 
@@ -429,7 +463,10 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
           L2 (mid): Simplified footer — attachment count only
           ================================================================ */}
       {showFooter && !showContent && (
-        <div className="cognograph-node__footer flex items-center gap-2 text-[10px] text-[var(--node-text-muted)]" style={{ opacity: 0.7 }}>
+        <div
+          className="cognograph-node__footer flex items-center gap-2 text-[10px] text-[var(--node-text-muted)]"
+          style={{ opacity: 0.7 }}
+        >
           {nodeData.attachments && nodeData.attachments.length > 0 && (
             <AttachmentBadge count={nodeData.attachments.length} />
           )}
@@ -441,7 +478,11 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
           ================================================================ */}
       {showFooter && showContent && (
         <div className="cognograph-node__footer flex items-center gap-2 text-[10px] text-[var(--node-text-muted)]">
-          <NodePropertyControls nodeId={id} nodeType="action" data={data as Record<string, unknown>} />
+          <NodePropertyControls
+            nodeId={id}
+            nodeType="action"
+            data={data as Record<string, unknown>}
+          />
           {/* Enable/disable toggle */}
           <button
             onClick={handleToggleEnabled}
@@ -449,12 +490,12 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
             title={nodeData.enabled ? 'Click to disable' : 'Click to enable'}
           >
             <Power className="w-3 h-3" />
-            <span className={`w-1.5 h-1.5 rounded-full ${nodeData.enabled ? 'bg-emerald-400' : 'bg-[var(--text-muted)]'}`} />
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${nodeData.enabled ? 'bg-emerald-400' : 'bg-[var(--text-muted)]'}`}
+            />
             {nodeData.enabled ? 'Enabled' : 'Disabled'}
           </button>
-          {nodeData.runCount > 0 && (
-            <span>Runs: {nodeData.runCount}</span>
-          )}
+          {nodeData.runCount > 0 && <span>Runs: {nodeData.runCount}</span>}
           {nodeData.errorCount > 0 && (
             <span className="text-red-400">Errors: {nodeData.errorCount}</span>
           )}

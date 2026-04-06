@@ -6,40 +6,39 @@
 // =============================================================================
 // Main modal for AI-assisted action configuration
 
-import { memo, useCallback, useEffect, useReducer, useRef } from 'react'
-import { X, AlertCircle, Sparkles, RotateCcw } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { createFocusTrap } from '../../utils/accessibility'
-import { escapeManager, EscapePriority } from '../../utils/EscapeManager'
-import { MiniConstellationLoader } from '../MiniConstellationLoader'
 import type {
   ActionNodeData,
-  AIConfigResponse,
-  AIStreamingState,
+  AIActionContext,
   AIClarifyingQuestion,
+  AIConfigResponse,
   AIGeneratedConfig,
-  AIActionContext
+  AIStreamingState,
 } from '@shared/actionTypes'
+import { AnimatePresence, motion } from 'framer-motion'
+import { AlertCircle, RotateCcw, Sparkles, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useReducer, useRef } from 'react'
+import {
+  buildPrompt,
+  MAX_QUESTION_ROUNDS,
+  parseAIResponse,
+  validateConfig,
+} from '../../services/actionAIService'
 import { useAIConfigStreaming } from '../../services/actionAIStreaming'
-import { buildPrompt, parseAIResponse, validateConfig, MAX_QUESTION_ROUNDS } from '../../services/actionAIService'
 import { aiConfigAnalytics } from '../../services/aiConfigAnalytics'
 import { aiConfigLearning } from '../../services/aiConfigLearning'
-import { AIConfigQuestions } from './AIConfigQuestions'
-import { AIConfigPreview } from './AIConfigPreview'
-import { AIConfigFeedback } from './AIConfigFeedback'
 import { useConnectorStore } from '../../stores/connectorStore'
+import { createFocusTrap } from '../../utils/accessibility'
+import { EscapePriority, escapeManager } from '../../utils/EscapeManager'
+import { MiniConstellationLoader } from '../MiniConstellationLoader'
+import { AIConfigFeedback } from './AIConfigFeedback'
+import { AIConfigPreview } from './AIConfigPreview'
+import { AIConfigQuestions } from './AIConfigQuestions'
 
 // =============================================================================
 // STATE MACHINE
 // =============================================================================
 
-type AIConfigPhase =
-  | 'idle'
-  | 'streaming'
-  | 'questions'
-  | 'preview'
-  | 'applied'
-  | 'error'
+type AIConfigPhase = 'idle' | 'streaming' | 'questions' | 'preview' | 'applied' | 'error'
 
 interface AIConfigState {
   phase: AIConfigPhase
@@ -77,7 +76,7 @@ const initialState: AIConfigState = {
   planSummary: null,
   warnings: [],
   error: null,
-  sessionId: null
+  sessionId: null,
 }
 
 function reducer(state: AIConfigState, action: AIConfigAction): AIConfigState {
@@ -87,13 +86,13 @@ function reducer(state: AIConfigState, action: AIConfigAction): AIConfigState {
         ...initialState,
         phase: 'streaming',
         sessionId: action.sessionId,
-        streamState: { phase: 'analyzing', partialConfig: {} }
+        streamState: { phase: 'analyzing', partialConfig: {} },
       }
 
     case 'STREAM_UPDATE':
       return {
         ...state,
-        streamState: action.state
+        streamState: action.state,
       }
 
     case 'STREAM_COMPLETE': {
@@ -107,7 +106,7 @@ function reducer(state: AIConfigState, action: AIConfigAction): AIConfigState {
           questions: response.questions,
           questionRound: state.questionRound + 1,
           planSummary: response.planSummary || null,
-          streamState: null
+          streamState: null,
         }
       }
 
@@ -122,7 +121,7 @@ function reducer(state: AIConfigState, action: AIConfigAction): AIConfigState {
           planSummary: response.planSummary || response.reasoning,
           warnings: validation.warnings,
           streamState: null,
-          error: validation.errors.length > 0 ? validation.errors.join(', ') : null
+          error: validation.errors.length > 0 ? validation.errors.join(', ') : null,
         }
       }
 
@@ -131,7 +130,7 @@ function reducer(state: AIConfigState, action: AIConfigAction): AIConfigState {
         ...state,
         phase: 'error',
         error: response.reasoning || 'Could not generate configuration',
-        streamState: null
+        streamState: null,
       }
     }
 
@@ -141,13 +140,13 @@ function reducer(state: AIConfigState, action: AIConfigAction): AIConfigState {
         phase: 'streaming',
         allAnswers: { ...state.allAnswers, ...action.answers },
         questions: [],
-        streamState: { phase: 'analyzing', partialConfig: {} }
+        streamState: { phase: 'analyzing', partialConfig: {} },
       }
 
     case 'APPLY':
       return {
         ...state,
-        phase: 'applied'
+        phase: 'applied',
       }
 
     case 'CANCEL':
@@ -160,7 +159,7 @@ function reducer(state: AIConfigState, action: AIConfigAction): AIConfigState {
         error: null,
         streamState: null,
         questions: [],
-        config: null
+        config: null,
       }
 
     case 'ERROR':
@@ -168,7 +167,7 @@ function reducer(state: AIConfigState, action: AIConfigAction): AIConfigState {
         ...state,
         phase: 'error',
         error: action.error,
-        streamState: null
+        streamState: null,
       }
 
     case 'DISMISS_FEEDBACK':
@@ -200,7 +199,7 @@ function AIConfigModalComponent({
   context,
   onApply,
   onApplyAndRun,
-  onClose
+  onClose,
 }: AIConfigModalProps): JSX.Element {
   const [state, dispatch] = useReducer(reducer, initialState)
   const {
@@ -209,9 +208,9 @@ function AIConfigModalComponent({
     response: streamResponse,
     isStreaming: _isStreaming, // Reserved for future use
     start,
-    cancel
+    cancel,
   } = useAIConfigStreaming()
-  const defaultConnector = useConnectorStore(s => s.getDefaultConnector?.())
+  const defaultConnector = useConnectorStore((s) => s.getDefaultConnector?.())
   const modalRef = useRef<HTMLDivElement>(null)
 
   // Consolidated streaming state effect - handles all streaming updates in priority order
@@ -240,7 +239,7 @@ function AIConfigModalComponent({
           streamResponse.confidence,
           streamResponse.config.trigger.type,
           streamResponse.config.actions.length,
-          validation.warnings.length > 0
+          validation.warnings.length > 0,
         )
       }
       return
@@ -281,7 +280,7 @@ function AIConfigModalComponent({
     const sessionId = aiConfigAnalytics.startSession(
       nodeId,
       !!data.trigger && data.trigger.type !== 'manual',
-      description.length
+      description.length,
     )
 
     dispatch({ type: 'START', sessionId })
@@ -291,90 +290,102 @@ function AIConfigModalComponent({
   }, [defaultConnector, nodeId, data.trigger, description, context, start])
 
   // Handle question answers
-  const handleAnswerQuestions = useCallback(async (answers: Record<string, string>) => {
-    // Track answers
-    aiConfigAnalytics.trackQuestionsAnswered(
-      state.questionRound,
-      Object.keys(answers).length,
-      state.questions.filter(q => !answers[q.id]).length
-    )
+  const handleAnswerQuestions = useCallback(
+    async (answers: Record<string, string>) => {
+      // Track answers
+      aiConfigAnalytics.trackQuestionsAnswered(
+        state.questionRound,
+        Object.keys(answers).length,
+        state.questions.filter((q) => !answers[q.id]).length,
+      )
 
-    // Check if max rounds reached
-    if (state.questionRound >= MAX_QUESTION_ROUNDS) {
-      dispatch({ type: 'ERROR', error: 'Too many clarifications needed. Try being more specific.' })
-      return
-    }
-
-    dispatch({ type: 'ANSWER_QUESTIONS', answers })
-
-    // Make another LLM call with answers
-    const allAnswers = { ...state.allAnswers, ...answers }
-    const { systemPrompt, userPrompt } = buildPrompt(description, context, allAnswers)
-
-    try {
-      const response = await window.api.llm.extract({
-        systemPrompt,
-        userPrompt,
-        maxTokens: 2048
-      })
-
-      // Check for API errors first
-      if (!response.success) {
-        throw new Error(response.error?.message || 'LLM call failed')
+      // Check if max rounds reached
+      if (state.questionRound >= MAX_QUESTION_ROUNDS) {
+        dispatch({
+          type: 'ERROR',
+          error: 'Too many clarifications needed. Try being more specific.',
+        })
+        return
       }
 
-      // Ensure we have content to parse
-      if (!response.data) {
-        throw new Error('LLM returned empty response')
-      }
+      dispatch({ type: 'ANSWER_QUESTIONS', answers })
 
-      // Parse the content string (not the response object)
-      const parsed = parseAIResponse(response.data)
-      dispatch({ type: 'STREAM_COMPLETE', response: parsed })
-    } catch (error) {
-      dispatch({ type: 'ERROR', error: (error as Error).message })
-    }
-  }, [state.questionRound, state.questions, state.allAnswers, description, context])
+      // Make another LLM call with answers
+      const allAnswers = { ...state.allAnswers, ...answers }
+      const { systemPrompt, userPrompt } = buildPrompt(description, context, allAnswers)
+
+      try {
+        const response = await window.api.llm.extract({
+          systemPrompt,
+          userPrompt,
+          maxTokens: 2048,
+        })
+
+        // Check for API errors first
+        if (!response.success) {
+          throw new Error(response.error?.message || 'LLM call failed')
+        }
+
+        // Ensure we have content to parse
+        if (!response.data) {
+          throw new Error('LLM returned empty response')
+        }
+
+        // Parse the content string (not the response object)
+        const parsed = parseAIResponse(response.data)
+        dispatch({ type: 'STREAM_COMPLETE', response: parsed })
+      } catch (error) {
+        dispatch({ type: 'ERROR', error: (error as Error).message })
+      }
+    },
+    [state.questionRound, state.questions, state.allAnswers, description, context],
+  )
 
   // Handle apply
-  const handleApply = useCallback((useSuggestedTitle: boolean) => {
-    if (!state.config) return
+  const handleApply = useCallback(
+    (useSuggestedTitle: boolean) => {
+      if (!state.config) return
 
-    // Track apply
-    aiConfigAnalytics.trackApplied(state.config, state.questionRound)
+      // Track apply
+      aiConfigAnalytics.trackApplied(state.config, state.questionRound)
 
-    // Record learning outcome
-    aiConfigLearning.recordOutcome(description, state.config, true, false)
+      // Record learning outcome
+      aiConfigLearning.recordOutcome(description, state.config, true, false)
 
-    // Record prompt to history
-    aiConfigLearning.recordPrompt(description, state.config.trigger.type)
+      // Record prompt to history
+      aiConfigLearning.recordPrompt(description, state.config.trigger.type)
 
-    dispatch({ type: 'APPLY' })
+      dispatch({ type: 'APPLY' })
 
-    // Apply to parent
-    const title = useSuggestedTitle && state.suggestedTitle ? state.suggestedTitle : undefined
-    onApply(state.config, title)
-  }, [state.config, state.questionRound, state.suggestedTitle, description, onApply])
+      // Apply to parent
+      const title = useSuggestedTitle && state.suggestedTitle ? state.suggestedTitle : undefined
+      onApply(state.config, title)
+    },
+    [state.config, state.questionRound, state.suggestedTitle, description, onApply],
+  )
 
   // Handle apply and run (apply config then execute the action immediately)
-  const handleApplyAndRun = useCallback((useSuggestedTitle: boolean) => {
-    if (!state.config) return
+  const handleApplyAndRun = useCallback(
+    (useSuggestedTitle: boolean) => {
+      if (!state.config) return
 
-    // Track apply
-    aiConfigAnalytics.trackApplied(state.config, state.questionRound)
+      // Track apply
+      aiConfigAnalytics.trackApplied(state.config, state.questionRound)
 
-    // Record learning outcome
-    aiConfigLearning.recordOutcome(description, state.config, true, false)
+      // Record learning outcome
+      aiConfigLearning.recordOutcome(description, state.config, true, false)
 
-    // Record prompt to history
-    aiConfigLearning.recordPrompt(description, state.config.trigger.type)
+      // Record prompt to history
+      aiConfigLearning.recordPrompt(description, state.config.trigger.type)
 
-    dispatch({ type: 'APPLY' })
+      dispatch({ type: 'APPLY' })
 
-    // Apply to parent and trigger execution
-    const title = useSuggestedTitle && state.suggestedTitle ? state.suggestedTitle : undefined
-    onApplyAndRun(state.config, title)
-  }, [state.config, state.questionRound, state.suggestedTitle, description, onApplyAndRun])
+      // Apply to parent and trigger execution
+      const title = useSuggestedTitle && state.suggestedTitle ? state.suggestedTitle : undefined
+      onApplyAndRun(state.config, title)
+    },
+    [state.config, state.questionRound, state.suggestedTitle, description, onApplyAndRun],
+  )
 
   // Handle edit (apply but keep modal open for manual editing)
   const handleEdit = useCallback(() => {
@@ -389,8 +400,11 @@ function AIConfigModalComponent({
   const handleCancel = useCallback(() => {
     cancel()
     aiConfigAnalytics.trackCancelled(
-      state.phase === 'streaming' ? 'streaming' :
-      state.phase === 'questions' ? 'questions' : 'preview'
+      state.phase === 'streaming'
+        ? 'streaming'
+        : state.phase === 'questions'
+          ? 'questions'
+          : 'preview',
     )
     dispatch({ type: 'CANCEL' })
     onClose()
@@ -436,7 +450,9 @@ function AIConfigModalComponent({
         <div className="flex items-center justify-between p-3 border-b border-[var(--border-subtle)]">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-purple-400" />
-            <span id="ai-config-modal-title" className="text-sm font-medium gui-text">AI Configuration</span>
+            <span id="ai-config-modal-title" className="text-sm font-medium gui-text">
+              AI Configuration
+            </span>
           </div>
           <button
             onClick={handleCancel}
@@ -549,7 +565,7 @@ function StreamingView({ state }: { state: AIStreamingState }): JSX.Element {
     trigger: 'Detected trigger...',
     conditions: 'Checking conditions...',
     steps: 'Building action steps...',
-    complete: 'Configuration ready!'
+    complete: 'Configuration ready!',
   }
 
   return (
@@ -570,8 +586,7 @@ function StreamingView({ state }: { state: AIStreamingState }): JSX.Element {
         <div className="space-y-2 pl-8">
           {state.partialConfig.trigger && (
             <div className="text-xs gui-text-secondary">
-              <span className="text-purple-400">Trigger:</span>{' '}
-              {state.partialConfig.trigger.type}
+              <span className="text-purple-400">Trigger:</span> {state.partialConfig.trigger.type}
             </div>
           )}
           {state.partialConfig.conditions && state.partialConfig.conditions.length > 0 && (
@@ -582,8 +597,7 @@ function StreamingView({ state }: { state: AIStreamingState }): JSX.Element {
           )}
           {state.partialConfig.actions && state.partialConfig.actions.length > 0 && (
             <div className="text-xs gui-text-secondary">
-              <span className="text-emerald-400">Steps:</span>{' '}
-              {state.partialConfig.actions.length}
+              <span className="text-emerald-400">Steps:</span> {state.partialConfig.actions.length}
             </div>
           )}
         </div>
@@ -604,7 +618,7 @@ function StreamingView({ state }: { state: AIStreamingState }): JSX.Element {
 function ErrorView({
   error,
   onRetry,
-  onCancel
+  onCancel,
 }: {
   error: string
   onRetry: () => void

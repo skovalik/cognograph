@@ -6,7 +6,7 @@
 // Runs the Cognograph MCP server without Electron
 
 import { existsSync, statSync } from 'fs'
-import { resolve, join } from 'path'
+import { join, resolve } from 'path'
 import { FileSyncProvider } from './provider'
 import { createMCPServer } from './server'
 
@@ -78,9 +78,18 @@ async function main(): Promise<void> {
 
   // Create provider and load workspace
   const provider = new FileSyncProvider(workspacePath)
-  await provider.load()
+  try {
+    await provider.load()
+  } catch (loadErr) {
+    console.error(`[MCP] FATAL: Failed to load workspace: ${loadErr}`)
+    console.error(`[MCP] Workspace path: ${workspacePath}`)
+    console.error('[MCP] The workspace file may be corrupted, locked, or inaccessible.')
+    process.exit(1)
+  }
 
-  console.error(`[MCP] Workspace loaded: ${provider.getWorkspaceName()} (${provider.getWorkspaceId()})`)
+  console.error(
+    `[MCP] Workspace loaded: ${provider.getWorkspaceName()} (${provider.getWorkspaceId()})`,
+  )
 
   // Create and start MCP server
   const server = await createMCPServer(provider)
@@ -114,12 +123,26 @@ function getDataDir(args: string[]): string {
   // Platform-specific default
   const platform = process.platform
   if (platform === 'win32') {
-    return join(process.env.APPDATA || join(process.env.USERPROFILE || '', 'AppData', 'Roaming'), 'cognograph', 'workspaces')
+    return join(
+      process.env.APPDATA || join(process.env.USERPROFILE || '', 'AppData', 'Roaming'),
+      'cognograph',
+      'workspaces',
+    )
   } else if (platform === 'darwin') {
-    return join(process.env.HOME || '', 'Library', 'Application Support', 'cognograph', 'workspaces')
+    return join(
+      process.env.HOME || '',
+      'Library',
+      'Application Support',
+      'cognograph',
+      'workspaces',
+    )
   } else {
     // Linux / other
-    return join(process.env.XDG_CONFIG_HOME || join(process.env.HOME || '', '.config'), 'cognograph', 'workspaces')
+    return join(
+      process.env.XDG_CONFIG_HOME || join(process.env.HOME || '', '.config'),
+      'cognograph',
+      'workspaces',
+    )
   }
 }
 

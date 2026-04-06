@@ -31,8 +31,8 @@ const store = new Store<SettingsSchema>({
     autoSaveInterval: 2000,
     defaultProvider: 'anthropic',
     recentWorkspaces: [],
-    encryptedApiKeys: {}
-  }
+    encryptedApiKeys: {},
+  },
 })
 
 export function registerSettingsHandlers(): void {

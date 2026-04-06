@@ -6,8 +6,8 @@
 // orchestrated execution. Positioned at the canvas level so ANY node
 // type can show execution status without modifying its component.
 
-import { memo, useMemo } from 'react'
 import { useNodes, useViewport } from '@xyflow/react'
+import { memo, useMemo } from 'react'
 import { useExecutionStatusStore } from '../stores/executionStatusStore'
 import { ExecutionStatusBadge } from './ExecutionStatusBadge'
 
@@ -34,7 +34,7 @@ function ExecutionStatusOverlayComponent(): JSX.Element | null {
   const entries = useMemo(() => {
     const result: Array<{
       nodeId: string
-      status: typeof nodeExecutions[string]
+      status: (typeof nodeExecutions)[string]
       pos: { x: number; y: number; width: number; height: number }
     }> = []
 
@@ -75,10 +75,7 @@ function ExecutionStatusOverlayComponent(): JSX.Element | null {
               pointerEvents: 'none',
             }}
           >
-            <ExecutionStatusBadge
-              status={status.status}
-              message={status.message}
-            />
+            <ExecutionStatusBadge status={status.status} message={status.message} />
           </div>
         )
       })}

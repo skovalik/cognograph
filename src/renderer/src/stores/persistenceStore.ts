@@ -8,11 +8,11 @@
  * Extracted from workspaceStore as part of Week 2 Stream B Track 2 Phase 2.2a.
  */
 
-import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
-import { subscribeWithSelector } from 'zustand/middleware'
-import { v4 as uuid } from 'uuid'
 import type { WorkspaceData } from '@shared/types'
+import { v4 as uuid } from 'uuid'
+import { create } from 'zustand'
+import { subscribeWithSelector } from 'zustand/middleware'
+import { immer } from 'zustand/middleware/immer'
 
 // =============================================================================
 // Store State
@@ -87,7 +87,7 @@ const initialState: PersistenceState = {
   lastSaved: null,
   saveStatus: 'saved',
   autoSaveEnabled: true,
-  autoSaveInterval: 2000 // 2 seconds
+  autoSaveInterval: 2000, // 2 seconds
 }
 
 // =============================================================================
@@ -256,7 +256,7 @@ export const usePersistenceStore = create<PersistenceStore>()(
           viewport: { x: 0, y: 0, zoom: 1 }, // Would be collected from canvasViewportStore
           propertySchema: { properties: [] }, // Would be collected from propertiesStore
           createdAt: state.createdAt || undefined,
-          lastSaved: state.lastSaved || undefined
+          lastSaved: state.lastSaved || undefined,
         } as WorkspaceData
       },
 
@@ -279,20 +279,18 @@ export const usePersistenceStore = create<PersistenceStore>()(
         set((state) => {
           state.lastSaved = timestamp
         })
-      }
-    }))
-  )
+      },
+    })),
+  ),
 )
 
 // =============================================================================
 // Selector Hooks
 // =============================================================================
 
-export const useWorkspaceName = (): string =>
-  usePersistenceStore((state) => state.workspaceName)
+export const useWorkspaceName = (): string => usePersistenceStore((state) => state.workspaceName)
 
-export const useWorkspaceId = (): string | null =>
-  usePersistenceStore((state) => state.workspaceId)
+export const useWorkspaceId = (): string | null => usePersistenceStore((state) => state.workspaceId)
 
 export const useWorkspacePath = (): string | null =>
   usePersistenceStore((state) => state.currentWorkspacePath)
@@ -304,8 +302,7 @@ export const useIsLoading = (): boolean => usePersistenceStore((state) => state.
 export const useSaveStatus = (): 'saved' | 'saving' | 'unsaved' | 'error' =>
   usePersistenceStore((state) => state.saveStatus)
 
-export const useLastSaved = (): number | null =>
-  usePersistenceStore((state) => state.lastSaved)
+export const useLastSaved = (): number | null => usePersistenceStore((state) => state.lastSaved)
 
 export const useAutoSaveEnabled = (): boolean =>
   usePersistenceStore((state) => state.autoSaveEnabled)

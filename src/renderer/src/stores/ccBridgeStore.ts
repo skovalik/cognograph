@@ -18,7 +18,6 @@
  * @module ccBridgeStore
  */
 
-import { create } from 'zustand'
 import type {
   CCActivityEvent,
   CCDispatchMessage,
@@ -28,6 +27,7 @@ import type {
   FileTouchOperation,
 } from '@shared/bridge-types'
 import { CC_SESSION_TIMEOUTS } from '@shared/bridge-types'
+import { create } from 'zustand'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -70,7 +70,12 @@ interface CCBridgeState {
   runHeartbeatCheck: () => void
 
   // File touch actions
-  recordFileTouch: (filePath: string, fileRelative: string, sessionId: string, operation: FileTouchOperation) => void
+  recordFileTouch: (
+    filePath: string,
+    fileRelative: string,
+    sessionId: string,
+    operation: FileTouchOperation,
+  ) => void
   clearFileTouches: () => void
 
   // Dispatch actions
@@ -284,7 +289,7 @@ export const useCCBridgeStore = create<CCBridgeState>((set, get) => ({
     filePath: string,
     fileRelative: string,
     sessionId: string,
-    operation: FileTouchOperation
+    operation: FileTouchOperation,
   ) =>
     set((state) => {
       const fileTouches = new Map(state.fileTouches)
@@ -363,18 +368,14 @@ export function initCCBridgeListener(): () => void {
   })
 
   // Dispatch updates (Phase 3)
-  const cleanupDispatchUpdate = window.api.ccBridge.onDispatchUpdate(
-    (dispatch) => {
-      store().updateDispatch(dispatch)
-    }
-  )
+  const cleanupDispatchUpdate = window.api.ccBridge.onDispatchUpdate((dispatch) => {
+    store().updateDispatch(dispatch)
+  })
 
   // Dispatch completions (Phase 3)
-  const cleanupDispatchComplete = window.api.ccBridge.onDispatchCompleted(
-    (data) => {
-      store().updateDispatch(data.dispatch)
-    }
-  )
+  const cleanupDispatchComplete = window.api.ccBridge.onDispatchCompleted((data) => {
+    store().updateDispatch(data.dispatch)
+  })
 
   // Session heartbeat check (Phase 2 — ERR-F3)
   heartbeatInterval = setInterval(() => {

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useCallback } from 'react'
-import { Plus, X, ChevronUp, ChevronDown, Power } from 'lucide-react'
-import { v4 as uuid } from 'uuid'
 import type { ActionStep } from '@shared/actionTypes'
+import { ChevronDown, ChevronUp, Plus, Power, X } from 'lucide-react'
+import { memo, useCallback } from 'react'
+import { v4 as uuid } from 'uuid'
 import { ActionStepConfig } from './ActionStepConfig'
 
 interface ActionStepListProps {
@@ -18,40 +18,55 @@ function ActionStepListComponent({ steps, onChange }: ActionStepListProps): JSX.
       id: uuid(),
       type: 'update-property',
       onError: 'stop',
-      config: { target: 'trigger-node', property: '', value: '' }
+      config: { target: 'trigger-node', property: '', value: '' },
     }
     onChange([...steps, newStep])
   }, [steps, onChange])
 
-  const handleRemove = useCallback((id: string) => {
-    onChange(steps.filter(s => s.id !== id))
-  }, [steps, onChange])
+  const handleRemove = useCallback(
+    (id: string) => {
+      onChange(steps.filter((s) => s.id !== id))
+    },
+    [steps, onChange],
+  )
 
-  const handleUpdate = useCallback((id: string, updatedStep: ActionStep) => {
-    onChange(steps.map(s => s.id === id ? updatedStep : s))
-  }, [steps, onChange])
+  const handleUpdate = useCallback(
+    (id: string, updatedStep: ActionStep) => {
+      onChange(steps.map((s) => (s.id === id ? updatedStep : s)))
+    },
+    [steps, onChange],
+  )
 
-  const handleMoveUp = useCallback((index: number) => {
-    if (index === 0) return
-    const newSteps = [...steps]
-    const temp = newSteps[index - 1]!
-    newSteps[index - 1] = newSteps[index]!
-    newSteps[index] = temp
-    onChange(newSteps)
-  }, [steps, onChange])
+  const handleMoveUp = useCallback(
+    (index: number) => {
+      if (index === 0) return
+      const newSteps = [...steps]
+      const temp = newSteps[index - 1]!
+      newSteps[index - 1] = newSteps[index]!
+      newSteps[index] = temp
+      onChange(newSteps)
+    },
+    [steps, onChange],
+  )
 
-  const handleMoveDown = useCallback((index: number) => {
-    if (index === steps.length - 1) return
-    const newSteps = [...steps]
-    const temp = newSteps[index]!
-    newSteps[index] = newSteps[index + 1]!
-    newSteps[index + 1] = temp
-    onChange(newSteps)
-  }, [steps, onChange])
+  const handleMoveDown = useCallback(
+    (index: number) => {
+      if (index === steps.length - 1) return
+      const newSteps = [...steps]
+      const temp = newSteps[index]!
+      newSteps[index] = newSteps[index + 1]!
+      newSteps[index + 1] = temp
+      onChange(newSteps)
+    },
+    [steps, onChange],
+  )
 
-  const handleToggleDisabled = useCallback((id: string) => {
-    onChange(steps.map(s => s.id === id ? { ...s, disabled: !s.disabled } : s))
-  }, [steps, onChange])
+  const handleToggleDisabled = useCallback(
+    (id: string) => {
+      onChange(steps.map((s) => (s.id === id ? { ...s, disabled: !s.disabled } : s)))
+    },
+    [steps, onChange],
+  )
 
   return (
     <div className="space-y-2">
@@ -79,9 +94,7 @@ function ActionStepListComponent({ steps, onChange }: ActionStepListProps): JSX.
         >
           {/* Step header with controls */}
           <div className="flex items-center gap-1 mb-1.5">
-            <span className="text-[9px] gui-text-secondary font-mono w-4">
-              {index + 1}.
-            </span>
+            <span className="text-[9px] gui-text-secondary font-mono w-4">{index + 1}.</span>
 
             {/* Move up/down buttons */}
             <button
@@ -105,7 +118,9 @@ function ActionStepListComponent({ steps, onChange }: ActionStepListProps): JSX.
             <input
               type="text"
               value={step.label || ''}
-              onChange={(e) => handleUpdate(step.id, { ...step, label: e.target.value || undefined })}
+              onChange={(e) =>
+                handleUpdate(step.id, { ...step, label: e.target.value || undefined })
+              }
               placeholder="step label"
               className="flex-1 min-w-0 text-[10px] bg-transparent border-none outline-none gui-text-secondary placeholder:opacity-40"
             />
@@ -130,10 +145,7 @@ function ActionStepListComponent({ steps, onChange }: ActionStepListProps): JSX.
           </div>
 
           {/* Step configuration */}
-          <ActionStepConfig
-            step={step}
-            onChange={(updated) => handleUpdate(step.id, updated)}
-          />
+          <ActionStepConfig step={step} onChange={(updated) => handleUpdate(step.id, updated)} />
         </div>
       ))}
     </div>

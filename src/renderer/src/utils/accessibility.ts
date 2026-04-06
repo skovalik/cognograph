@@ -59,7 +59,7 @@ function ensureLiveRegion(): HTMLDivElement {
     overflow: 'hidden',
     clip: 'rect(0, 0, 0, 0)',
     whiteSpace: 'nowrap',
-    border: '0'
+    border: '0',
   })
 
   document.body.appendChild(liveRegion)
@@ -74,7 +74,7 @@ function ensureLiveRegion(): HTMLDivElement {
  */
 export function announceToScreenReader(
   message: string,
-  priority: 'polite' | 'assertive' = 'polite'
+  priority: 'polite' | 'assertive' = 'polite',
 ): void {
   const region = ensureLiveRegion()
   region.setAttribute('aria-live', priority)
@@ -117,7 +117,7 @@ export function createFocusTrap(container: HTMLElement): {
     'select:not([disabled])',
     'textarea:not([disabled])',
     'a[href]',
-    '[tabindex]:not([tabindex="-1"])'
+    '[tabindex]:not([tabindex="-1"])',
   ].join(', ')
 
   const getFocusableElements = (): HTMLElement[] => {
@@ -167,7 +167,7 @@ export function createFocusTrap(container: HTMLElement): {
       if (previouslyFocused) {
         previouslyFocused.focus()
       }
-    }
+    },
   }
 }
 
@@ -186,7 +186,7 @@ export function createFocusTrap(container: HTMLElement): {
 export function handleArrowNavigation(
   e: KeyboardEvent,
   items: HTMLElement[],
-  currentIndex: number
+  currentIndex: number,
 ): number {
   if (items.length === 0) return currentIndex
 
@@ -230,9 +230,7 @@ export function prefersReducedMotion(): boolean {
  * Subscribe to reduced motion preference changes.
  * Returns unsubscribe function.
  */
-export function subscribeToReducedMotion(
-  callback: (prefersReduced: boolean) => void
-): () => void {
+export function subscribeToReducedMotion(callback: (prefersReduced: boolean) => void): () => void {
   if (typeof window === 'undefined') return () => {}
 
   const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')

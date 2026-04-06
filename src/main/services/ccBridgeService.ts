@@ -18,18 +18,18 @@
  * @module ccBridgeService
  */
 
-import http from 'http'
-import crypto from 'crypto'
-import fs from 'fs'
-import os from 'os'
-import { BrowserWindow } from 'electron'
-import path from 'path'
 import type {
   CCDispatchConfig,
-  CCDispatchMessage,
   CCDispatchHealthCheck,
+  CCDispatchMessage,
 } from '@shared/bridge-types'
 import { DEFAULT_CC_DISPATCH_CONFIG } from '@shared/bridge-types'
+import crypto from 'crypto'
+import { BrowserWindow } from 'electron'
+import fs from 'fs'
+import http from 'http'
+import os from 'os'
+import path from 'path'
 
 // -----------------------------------------------------------------------------
 // Module State
@@ -171,7 +171,7 @@ export function getTokenFilePath(): string | null {
  */
 export function startDispatchServer(
   projectDir: string,
-  config?: Partial<CCDispatchConfig>
+  config?: Partial<CCDispatchConfig>,
 ): Promise<number | null> {
   currentConfig = { ...DEFAULT_CC_DISPATCH_CONFIG, ...config }
   currentProjectDir = projectDir
@@ -224,8 +224,8 @@ export function queueDispatch(message: CCDispatchMessage): CCDispatchMessage {
       console.warn(
         '[CCBridgeService] Rejected file paths outside project directory:',
         message.filePaths.filter(
-          (fp) => !path.resolve(fp).startsWith(path.resolve(currentProjectDir!))
-        )
+          (fp) => !path.resolve(fp).startsWith(path.resolve(currentProjectDir!)),
+        ),
       )
     }
     message.filePaths = validPaths
@@ -235,7 +235,7 @@ export function queueDispatch(message: CCDispatchMessage): CCDispatchMessage {
   const contentSize = Buffer.byteLength(message.content, 'utf8')
   if (contentSize > currentConfig.maxPayloadBytes) {
     console.warn(
-      `[CCBridgeService] Dispatch content exceeds max payload (${contentSize} > ${currentConfig.maxPayloadBytes}). Truncating.`
+      `[CCBridgeService] Dispatch content exceeds max payload (${contentSize} > ${currentConfig.maxPayloadBytes}). Truncating.`,
     )
     message.content = truncateToByteLimit(message.content, currentConfig.maxPayloadBytes)
   }
@@ -300,7 +300,7 @@ function tryBindServer(port: number, attempt: number): Promise<number | null> {
   return new Promise((resolve) => {
     if (attempt > currentConfig.dispatchPortRange) {
       console.error(
-        `[CCBridgeService] Failed to bind to any port in range ${currentConfig.dispatchPort}-${currentConfig.dispatchPort + currentConfig.dispatchPortRange}`
+        `[CCBridgeService] Failed to bind to any port in range ${currentConfig.dispatchPort}-${currentConfig.dispatchPort + currentConfig.dispatchPortRange}`,
       )
       resolve(null)
       return
@@ -313,7 +313,7 @@ function tryBindServer(port: number, attempt: number): Promise<number | null> {
       .then((isRunning) => {
         if (isRunning) {
           console.warn(
-            `[CCBridgeService] Another instance detected on port ${currentPort}, trying next port`
+            `[CCBridgeService] Another instance detected on port ${currentPort}, trying next port`,
           )
           notifyRenderer('cc-bridge:dispatch-warning', {
             message: `Another Cognograph instance is running the bridge on port ${currentPort}`,
@@ -369,7 +369,7 @@ function checkExistingServer(port: number): Promise<boolean> {
             resolve(false)
           }
         })
-      }
+      },
     )
     req.on('error', () => resolve(false))
     req.on('timeout', () => {
@@ -473,7 +473,7 @@ function handleGetPending(res: http.ServerResponse): void {
 function handleAcknowledge(
   dispatchId: string,
   _req: http.IncomingMessage,
-  res: http.ServerResponse
+  res: http.ServerResponse,
 ): void {
   const dispatch = dispatchQueue.find((d) => d.id === dispatchId)
   if (!dispatch) {
@@ -485,7 +485,7 @@ function handleAcknowledge(
   if (dispatch.status !== 'pending') {
     res.writeHead(409, { 'Content-Type': 'application/json' })
     res.end(
-      JSON.stringify({ error: `Dispatch ${dispatchId} is ${dispatch.status}, cannot acknowledge` })
+      JSON.stringify({ error: `Dispatch ${dispatchId} is ${dispatch.status}, cannot acknowledge` }),
     )
     return
   }
@@ -502,7 +502,7 @@ function handleAcknowledge(
 function handleComplete(
   dispatchId: string,
   req: http.IncomingMessage,
-  res: http.ServerResponse
+  res: http.ServerResponse,
 ): void {
   const dispatch = dispatchQueue.find((d) => d.id === dispatchId)
   if (!dispatch) {
@@ -514,34 +514,36 @@ function handleComplete(
   if (dispatch.status !== 'acknowledged') {
     res.writeHead(409, { 'Content-Type': 'application/json' })
     res.end(
-      JSON.stringify({ error: `Dispatch ${dispatchId} is ${dispatch.status}, cannot complete` })
+      JSON.stringify({ error: `Dispatch ${dispatchId} is ${dispatch.status}, cannot complete` }),
     )
     return
   }
 
   // Read POST body for completion details
-  readBody(req).then((body) => {
-    try {
-      const data = body ? JSON.parse(body) : {}
-      dispatch.status = 'completed'
-      dispatch.updatedAt = Date.now()
-      dispatch.completionMessage = typeof data.message === 'string' ? data.message : undefined
+  readBody(req)
+    .then((body) => {
+      try {
+        const data = body ? JSON.parse(body) : {}
+        dispatch.status = 'completed'
+        dispatch.updatedAt = Date.now()
+        dispatch.completionMessage = typeof data.message === 'string' ? data.message : undefined
 
-      notifyRenderer('cc-bridge:dispatch-completed', {
-        dispatch,
-        filesModified: Array.isArray(data.filesModified) ? data.filesModified : [],
-      })
+        notifyRenderer('cc-bridge:dispatch-completed', {
+          dispatch,
+          filesModified: Array.isArray(data.filesModified) ? data.filesModified : [],
+        })
 
-      res.writeHead(200, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ success: true, dispatch }))
-    } catch {
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ success: true, dispatch }))
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'Invalid JSON body' }))
+      }
+    })
+    .catch(() => {
       res.writeHead(400, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ error: 'Invalid JSON body' }))
-    }
-  }).catch(() => {
-    res.writeHead(400, { 'Content-Type': 'application/json' })
-    res.end(JSON.stringify({ error: 'Failed to read request body' }))
-  })
+      res.end(JSON.stringify({ error: 'Failed to read request body' }))
+    })
 }
 
 // -----------------------------------------------------------------------------
@@ -576,7 +578,7 @@ function authenticateRequest(req: http.IncomingMessage): boolean {
 
   return crypto.timingSafeEqual(
     Buffer.from(providedToken, 'utf-8'),
-    Buffer.from(ephemeralToken, 'utf-8')
+    Buffer.from(ephemeralToken, 'utf-8'),
   )
 }
 

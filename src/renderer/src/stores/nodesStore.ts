@@ -8,35 +8,35 @@
  * Extracted from workspaceStore as part of Week 2 Stream B Track 2 Phase 2.2a.
  */
 
-import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
-import { subscribeWithSelector } from 'zustand/middleware'
-import { v4 as uuid } from 'uuid'
-import type { Node } from '@xyflow/react'
 import type {
-  NodeData,
+  ActionNodeData,
+  ArtifactContentType,
+  ArtifactNodeData,
+  ArtifactSource,
+  ContextMetadata,
   ConversationNodeData,
-  ProjectNodeData,
+  NodeData,
   NoteNodeData,
+  ProjectNodeData,
   TaskNodeData,
   TextNodeData,
-  ArtifactNodeData,
   WorkspaceNodeData,
-  ActionNodeData,
-  ContextMetadata,
-  ArtifactContentType,
-  ArtifactSource
 } from '@shared/types'
+import type { Node } from '@xyflow/react'
+import { v4 as uuid } from 'uuid'
+import { create } from 'zustand'
+import { subscribeWithSelector } from 'zustand/middleware'
+import { immer } from 'zustand/middleware/immer'
 import {
-  createConversationData,
-  createProjectData,
-  createNoteData,
-  createTaskData,
   createArtifactData,
-  createWorkspaceData,
-  createTextData,
+  createConversationData,
+  createNoteData,
   createOrchestratorData,
-  DEFAULT_NODE_DIMENSIONS
+  createProjectData,
+  createTaskData,
+  createTextData,
+  createWorkspaceData,
+  DEFAULT_NODE_DIMENSIONS,
 } from './nodeFactories'
 
 // =============================================================================
@@ -113,7 +113,7 @@ const initialState: NodesState = {
   nodes: [],
   nodeUpdatedAt: new Map(),
   recentlySpawnedNodes: new Set(),
-  spawningNodeIds: []
+  spawningNodeIds: [],
 }
 
 // =============================================================================
@@ -189,7 +189,7 @@ export const useNodesStore = create<NodesStore>()(
             width: dimensions.width,
             height: dimensions.height,
             selected: true,
-            zIndex: maxZ + 1
+            zIndex: maxZ + 1,
           }
 
           state.nodes.push(node)
@@ -211,17 +211,27 @@ export const useNodesStore = create<NodesStore>()(
         // Immediately set mode to 'agent' and preset to 'general'
         get().updateNode(id, {
           mode: 'agent',
-          agentPreset: 'general'
+          agentPreset: 'general',
         } as Partial<NodeData>)
         return id
       },
 
       updateNode: (nodeId, data) => {
         // Validate provider if being set
-        const VALID_PROVIDERS = ['anthropic', 'gemini', 'openai', 'ollama', 'custom', 'google', 'openrouter'] as const
+        const VALID_PROVIDERS = [
+          'anthropic',
+          'gemini',
+          'openai',
+          'ollama',
+          'custom',
+          'google',
+          'openrouter',
+        ] as const
         if ('provider' in data && data.provider && typeof data.provider === 'string') {
-          if (!VALID_PROVIDERS.includes(data.provider as typeof VALID_PROVIDERS[number])) {
-            console.warn(`[nodesStore] Invalid provider "${data.provider}" — falling back to "anthropic"`)
+          if (!VALID_PROVIDERS.includes(data.provider as (typeof VALID_PROVIDERS)[number])) {
+            console.warn(
+              `[nodesStore] Invalid provider "${data.provider}" — falling back to "anthropic"`,
+            )
             ;(data as Record<string, unknown>).provider = 'anthropic'
           }
         }
@@ -283,7 +293,7 @@ export const useNodesStore = create<NodesStore>()(
             activationCondition: oldData.activationCondition,
             enabled: oldData.enabled,
             width: (oldData as { width?: number }).width,
-            height: (oldData as { height?: number }).height
+            height: (oldData as { height?: number }).height,
           }
 
           // Map content between types
@@ -298,7 +308,7 @@ export const useNodesStore = create<NodesStore>()(
               newData = {
                 ...commonFields,
                 type: 'note',
-                content: textContent
+                content: textContent,
               } as NoteNodeData
               break
             case 'task':
@@ -307,7 +317,7 @@ export const useNodesStore = create<NodesStore>()(
                 type: 'task',
                 description: textContent,
                 status: 'todo',
-                priority: 'none'
+                priority: 'none',
               } as TaskNodeData
               break
             case 'project':
@@ -317,7 +327,7 @@ export const useNodesStore = create<NodesStore>()(
                 description: textContent,
                 collapsed: false,
                 childNodeIds: [],
-                color: oldData.color || '#8b5cf6'
+                color: oldData.color || '#8b5cf6',
               } as ProjectNodeData
               break
             case 'conversation':
@@ -325,7 +335,7 @@ export const useNodesStore = create<NodesStore>()(
                 ...commonFields,
                 type: 'conversation',
                 messages: [],
-                provider: 'anthropic'
+                provider: 'anthropic',
               } as ConversationNodeData
               break
             case 'artifact':
@@ -335,7 +345,7 @@ export const useNodesStore = create<NodesStore>()(
                 content: textContent,
                 contentType: 'markdown',
                 source: { type: 'created', method: 'manual' } as ArtifactSource,
-                version: 1
+                version: 1,
               } as ArtifactNodeData
               break
             case 'workspace':
@@ -345,14 +355,14 @@ export const useNodesStore = create<NodesStore>()(
                 description: textContent,
                 memberNodeIds: [],
                 workspaceId: null,
-                workspacePath: null
+                workspacePath: null,
               } as unknown as WorkspaceNodeData
               break
             case 'text':
               newData = {
                 ...commonFields,
                 type: 'text',
-                content: textContent
+                content: textContent,
               } as TextNodeData
               break
             case 'action':
@@ -365,7 +375,7 @@ export const useNodesStore = create<NodesStore>()(
                 conditions: [],
                 actions: [],
                 runCount: 0,
-                errorCount: 0
+                errorCount: 0,
               } as ActionNodeData
               break
             default:
@@ -388,15 +398,15 @@ export const useNodesStore = create<NodesStore>()(
           id: newId,
           position: {
             x: node.position.x + offset.x,
-            y: node.position.y + offset.y
+            y: node.position.y + offset.y,
           },
           selected: true,
           data: {
             ...JSON.parse(JSON.stringify(node.data)),
             title: `${node.data.title} (Copy)`,
             createdAt: Date.now(),
-            updatedAt: Date.now()
-          }
+            updatedAt: Date.now(),
+          },
         }
 
         set((state) => {
@@ -510,7 +520,7 @@ export const useNodesStore = create<NodesStore>()(
             const projectNode = state.nodes.find((n) => n.id === node.data.parentId)
             if (projectNode && projectNode.data.type === 'project') {
               const projectData = projectNode.data as ProjectNodeData
-              projectData.childNodeIds = projectData.childNodeIds.filter(id => id !== nodeId)
+              projectData.childNodeIds = projectData.childNodeIds.filter((id) => id !== nodeId)
             }
             node.data.parentId = undefined
           }
@@ -566,7 +576,7 @@ export const useNodesStore = create<NodesStore>()(
 
       removeSpawningNode: (nodeId) => {
         set((state) => {
-          state.spawningNodeIds = state.spawningNodeIds.filter(id => id !== nodeId)
+          state.spawningNodeIds = state.spawningNodeIds.filter((id) => id !== nodeId)
         })
       },
 
@@ -598,9 +608,9 @@ export const useNodesStore = create<NodesStore>()(
 
       getNodeById: (nodeId) => {
         return get().nodes.find((n) => n.id === nodeId)
-      }
-    }))
-  )
+      },
+    })),
+  ),
 )
 
 // =============================================================================

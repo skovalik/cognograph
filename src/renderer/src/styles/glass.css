@@ -296,6 +296,15 @@ html[data-glass-style="fluid-glass"] .glass-soft {
   overflow: hidden;
 }
 
+/* Mobile drawer must keep fixed positioning even under fluid-glass */
+html[data-glass-style="fluid-glass"] .mobile-drawer.glass-soft {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  overflow-y: auto;
+}
+
 /* When surface is DISABLED → force solid for that surface type */
 html[data-glass-modals="false"] .glass-fluid,
 html[data-glass-modals="false"] .glass-soft {

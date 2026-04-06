@@ -1,32 +1,69 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useState, useCallback, useEffect, useRef } from 'react'
-import { X, Settings, Monitor, Palette, Layout, FolderOpen, Info, Coins, Brain, SlidersHorizontal, Accessibility, Eye, Volume2, Keyboard, Save, Download, Upload, BarChart3 } from 'lucide-react'
+import { getPluginSettingsTabs } from '@plugins/renderer-registry'
+import type {
+  ChatDisplayMode,
+  ExtractionSettings,
+  GlassSettings,
+  PropertiesDisplayMode,
+} from '@shared/types'
+import {
+  CONNECTOR_PROVIDER_INFO,
+  type ConnectorProvider,
+  DEFAULT_EXTRACTION_SETTINGS,
+  DEFAULT_GLASS_SETTINGS,
+} from '@shared/types'
+import {
+  Accessibility,
+  BarChart3,
+  Brain,
+  Coins,
+  Download,
+  Eye,
+  FolderOpen,
+  Info,
+  Keyboard,
+  Layout,
+  type Monitor,
+  Palette,
+  Save,
+  Settings,
+  SlidersHorizontal,
+  Upload,
+  Volume2,
+  X,
+} from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { type ReduceMotionPreference, useProgramStore } from '../stores/programStore'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import { useProgramStore, type ReduceMotionPreference } from '../stores/programStore'
+import { createFocusTrap } from '../utils/accessibility'
+import { EscapePriority, escapeManager } from '../utils/EscapeManager'
+import { logger } from '../utils/logger'
+import { performThemeTransition } from '../utils/themeTransition'
 import { useShortcutHelpStore } from './KeyboardShortcutsHelp'
+import { AppearanceSettings } from './Settings/AppearanceSettings'
 import { ConnectorsTab } from './Settings/ConnectorsTab'
 import { DefaultPropertySettings } from './Settings/DefaultPropertySettings'
-import { KeyboardSettings } from './Settings/KeyboardSettings'
 import { GlassSettingsSection } from './Settings/GlassSettingsSection'
-import { AppearanceSettings } from './Settings/AppearanceSettings'
+import { KeyboardSettings } from './Settings/KeyboardSettings'
 import { UsageStats } from './UsageStats'
-import { Switch } from './ui/switch'
 import { Slider } from './ui/slider'
-import { createFocusTrap } from '../utils/accessibility'
-import { escapeManager, EscapePriority } from '../utils/EscapeManager'
-import { performThemeTransition } from '../utils/themeTransition'
-import type { PropertiesDisplayMode, ChatDisplayMode, ExtractionSettings, GlassSettings } from '@shared/types'
-import { DEFAULT_EXTRACTION_SETTINGS, DEFAULT_GLASS_SETTINGS, CONNECTOR_PROVIDER_INFO, type ConnectorProvider } from '@shared/types'
-import { logger } from '../utils/logger'
-import { getPluginSettingsTabs } from '@plugins/renderer-registry'
+import { Switch } from './ui/switch'
 
 // -----------------------------------------------------------------------------
 // Types
 // -----------------------------------------------------------------------------
 
-type SettingsCategory = 'appearance' | 'workspace' | 'ai' | 'preferences' | 'keyboard' | 'defaults' | 'usage' | `plugin:${string}`
+type SettingsCategory =
+  | 'appearance'
+  | 'workspace'
+  | 'ai'
+  | 'preferences'
+  | 'keyboard'
+  | 'defaults'
+  | 'usage'
+  | `plugin:${string}`
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -38,8 +75,14 @@ interface SettingsModalProps {
 // SettingsModal Component
 // -----------------------------------------------------------------------------
 
-function SettingsModalComponent({ isOpen, onClose, defaultCategory }: SettingsModalProps): JSX.Element | null {
-  const [activeCategory, setActiveCategory] = useState<SettingsCategory>(defaultCategory || 'appearance')
+function SettingsModalComponent({
+  isOpen,
+  onClose,
+  defaultCategory,
+}: SettingsModalProps): JSX.Element | null {
+  const [activeCategory, setActiveCategory] = useState<SettingsCategory>(
+    defaultCategory || 'appearance',
+  )
 
   // Update active category when defaultCategory changes (e.g., onboarding opens to AI tab)
   useEffect(() => {
@@ -84,42 +127,54 @@ function SettingsModalComponent({ isOpen, onClose, defaultCategory }: SettingsMo
     setAIPaletteEnabled(!themeSettings.aiPaletteEnabled)
   }, [setAIPaletteEnabled, themeSettings.aiPaletteEnabled])
 
-  const handleGlassSettingsChange = useCallback((updates: Partial<GlassSettings>) => {
-    logger.log('[SETTINGS] handleGlassSettingsChange called with:', updates)
-    const currentGlass = themeSettings.glassSettings ?? DEFAULT_GLASS_SETTINGS
-    logger.log('[SETTINGS] Current glass settings:', currentGlass)
-    // Ensure all fields have defaults — protects against partial/corrupted glassSettings
-    const currentApplyTo = currentGlass.applyTo ?? DEFAULT_GLASS_SETTINGS.applyTo
-    const newGlassSettings = {
-      ...DEFAULT_GLASS_SETTINGS,
-      ...currentGlass,
-      ...updates,
-      applyTo: updates.applyTo
-        ? { ...DEFAULT_GLASS_SETTINGS.applyTo, ...currentApplyTo, ...updates.applyTo }
-        : { ...DEFAULT_GLASS_SETTINGS.applyTo, ...currentApplyTo }
-    }
-    logger.log('[SETTINGS] New glass settings:', newGlassSettings)
-    useWorkspaceStore.setState((state) => ({
-      themeSettings: {
-        ...state.themeSettings,
-        glassSettings: newGlassSettings
-      },
-      isDirty: true
-    }))
-    logger.log('[SETTINGS] State updated, isDirty set to true')
-  }, [themeSettings.glassSettings])
+  const handleGlassSettingsChange = useCallback(
+    (updates: Partial<GlassSettings>) => {
+      logger.log('[SETTINGS] handleGlassSettingsChange called with:', updates)
+      const currentGlass = themeSettings.glassSettings ?? DEFAULT_GLASS_SETTINGS
+      logger.log('[SETTINGS] Current glass settings:', currentGlass)
+      // Ensure all fields have defaults — protects against partial/corrupted glassSettings
+      const currentApplyTo = currentGlass.applyTo ?? DEFAULT_GLASS_SETTINGS.applyTo
+      const newGlassSettings = {
+        ...DEFAULT_GLASS_SETTINGS,
+        ...currentGlass,
+        ...updates,
+        applyTo: updates.applyTo
+          ? { ...DEFAULT_GLASS_SETTINGS.applyTo, ...currentApplyTo, ...updates.applyTo }
+          : { ...DEFAULT_GLASS_SETTINGS.applyTo, ...currentApplyTo },
+      }
+      logger.log('[SETTINGS] New glass settings:', newGlassSettings)
+      useWorkspaceStore.setState((state) => ({
+        themeSettings: {
+          ...state.themeSettings,
+          glassSettings: newGlassSettings,
+        },
+        isDirty: true,
+      }))
+      logger.log('[SETTINGS] State updated, isDirty set to true')
+    },
+    [themeSettings.glassSettings],
+  )
 
-  const handlePropertiesDisplayModeChange = useCallback((mode: PropertiesDisplayMode) => {
-    setPropertiesDisplayMode(mode)
-  }, [setPropertiesDisplayMode])
+  const handlePropertiesDisplayModeChange = useCallback(
+    (mode: PropertiesDisplayMode) => {
+      setPropertiesDisplayMode(mode)
+    },
+    [setPropertiesDisplayMode],
+  )
 
-  const handleChatDisplayModeChange = useCallback((mode: ChatDisplayMode) => {
-    setChatDisplayMode(mode)
-  }, [setChatDisplayMode])
+  const handleChatDisplayModeChange = useCallback(
+    (mode: ChatDisplayMode) => {
+      setChatDisplayMode(mode)
+    },
+    [setChatDisplayMode],
+  )
 
-  const handleReduceMotionChange = useCallback((preference: ReduceMotionPreference) => {
-    setReduceMotion(preference)
-  }, [setReduceMotion])
+  const handleReduceMotionChange = useCallback(
+    (preference: ReduceMotionPreference) => {
+      setReduceMotion(preference)
+    },
+    [setReduceMotion],
+  )
 
   const handleHighContrastFocusToggle = useCallback(() => {
     setHighContrastFocus(!accessibilitySettings.highContrastFocus)
@@ -133,45 +188,54 @@ function SettingsModalComponent({ isOpen, onClose, defaultCategory }: SettingsMo
     setShowTokenEstimates(!workspacePreferences.showTokenEstimates)
   }, [setShowTokenEstimates, workspacePreferences.showTokenEstimates])
 
-  const handleWorkspaceNameChange = useCallback((name: string) => {
-    updateWorkspaceName(name)
-  }, [updateWorkspaceName])
+  const handleWorkspaceNameChange = useCallback(
+    (name: string) => {
+      updateWorkspaceName(name)
+    },
+    [updateWorkspaceName],
+  )
 
   const handleContextDepthChange = useCallback((depth: number) => {
     useWorkspaceStore.setState((state) => ({
       contextSettings: { ...state.contextSettings, globalDepth: depth },
-      isDirty: true
+      isDirty: true,
     }))
   }, [])
 
-  const handlePropertiesSidebarWidthChange = useCallback((width: number) => {
-    setPropertiesSidebarWidth(width)
-  }, [setPropertiesSidebarWidth])
+  const handlePropertiesSidebarWidthChange = useCallback(
+    (width: number) => {
+      setPropertiesSidebarWidth(width)
+    },
+    [setPropertiesSidebarWidth],
+  )
 
   const handlePhysicsEnabledChange = useCallback((enabled: boolean) => {
     useWorkspaceStore.setState((state) => ({
       themeSettings: { ...state.themeSettings, physicsEnabled: enabled },
-      isDirty: true
+      isDirty: true,
     }))
   }, [])
 
   const handlePhysicsEdgeLengthChange = useCallback((length: number) => {
     useWorkspaceStore.setState((state) => ({
       themeSettings: { ...state.themeSettings, physicsIdealEdgeLength: length },
-      isDirty: true
+      isDirty: true,
     }))
   }, [])
 
   const handlePhysicsStrengthChange = useCallback((strength: 'gentle' | 'medium' | 'strong') => {
     useWorkspaceStore.setState((state) => ({
       themeSettings: { ...state.themeSettings, physicsStrength: strength },
-      isDirty: true
+      isDirty: true,
     }))
   }, [])
 
-  const handleLeftSidebarWidthChange = useCallback((width: number) => {
-    setLeftSidebarWidth(width)
-  }, [setLeftSidebarWidth])
+  const handleLeftSidebarWidthChange = useCallback(
+    (width: number) => {
+      setLeftSidebarWidth(width)
+    },
+    [setLeftSidebarWidth],
+  )
 
   // Focus trap and keyboard handling
   const modalRef = useRef<HTMLDivElement>(null)
@@ -210,17 +274,22 @@ function SettingsModalComponent({ isOpen, onClose, defaultCategory }: SettingsMo
 
   return (
     <div className="fixed inset-0 gui-z-modals flex items-center justify-center pointer-events-none">
-      <div ref={modalRef} className="gui-modal glass-fluid w-[680px] max-w-[calc(100vw-32px)] max-h-[80vh] flex flex-col pointer-events-auto" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+      <div
+        ref={modalRef}
+        className="gui-modal glass-fluid w-[680px] max-w-[calc(100vw-32px)] max-h-[80vh] flex flex-col pointer-events-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-modal-title"
+      >
         {/* Header */}
         <div className="gui-panel-header p-4">
           <div className="gui-panel-header-title">
             <Settings className="w-5 h-5" style={{ color: 'var(--gui-accent-secondary)' }} />
-            <h2 id="settings-modal-title" className="font-semibold gui-text">Settings</h2>
+            <h2 id="settings-modal-title" className="font-semibold gui-text">
+              Settings
+            </h2>
           </div>
-          <button
-            onClick={onClose}
-            className="gui-btn gui-btn-ghost gui-btn-icon rounded"
-          >
+          <button onClick={onClose} className="gui-btn gui-btn-ghost gui-btn-icon rounded">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -242,12 +311,14 @@ function SettingsModalComponent({ isOpen, onClose, defaultCategory }: SettingsMo
             {pluginTabs.length > 0 && (
               <>
                 <div className="my-2 border-t gui-border" />
-                {pluginTabs.map(tab => {
+                {pluginTabs.map((tab) => {
                   const isActive = activeCategory === `plugin:${tab.pluginId}`
                   return (
                     <button
                       key={tab.pluginId}
-                      onClick={() => setActiveCategory(`plugin:${tab.pluginId}` as SettingsCategory)}
+                      onClick={() =>
+                        setActiveCategory(`plugin:${tab.pluginId}` as SettingsCategory)
+                      }
                       className={`gui-nav-item w-full ${isActive ? 'gui-nav-item-active' : ''}`}
                     >
                       <tab.icon className="w-4 h-4" />
@@ -261,9 +332,7 @@ function SettingsModalComponent({ isOpen, onClose, defaultCategory }: SettingsMo
 
           {/* Right: Settings content */}
           <div className="flex-1 p-4 overflow-y-auto" style={{ minHeight: '400px' }}>
-            {activeCategory === 'appearance' && (
-              <AppearanceSettings />
-            )}
+            {activeCategory === 'appearance' && <AppearanceSettings />}
             {activeCategory === 'workspace' && (
               <WorkspaceSettings
                 workspaceName={workspaceName}
@@ -282,9 +351,7 @@ function SettingsModalComponent({ isOpen, onClose, defaultCategory }: SettingsMo
                 onPhysicsStrengthChange={handlePhysicsStrengthChange}
               />
             )}
-            {activeCategory === 'ai' && (
-              <AISettings />
-            )}
+            {activeCategory === 'ai' && <AISettings />}
             {activeCategory === 'preferences' && (
               <PreferencesSettings
                 reduceMotion={accessibilitySettings.reduceMotion}
@@ -311,27 +378,21 @@ function SettingsModalComponent({ isOpen, onClose, defaultCategory }: SettingsMo
                 <KeyboardSettings />
               </div>
             )}
-            {activeCategory === 'defaults' && (
-              <DefaultPropertySettings />
-            )}
-            {activeCategory === 'usage' && (
-              <UsageStats />
-            )}
+            {activeCategory === 'defaults' && <DefaultPropertySettings />}
+            {activeCategory === 'usage' && <UsageStats />}
 
-            {activeCategory.startsWith('plugin:') && (() => {
-              const pluginId = activeCategory.slice('plugin:'.length)
-              const tab = pluginTabs.find(t => t.pluginId === pluginId)
-              return tab?.render() ?? null
-            })()}
+            {activeCategory.startsWith('plugin:') &&
+              (() => {
+                const pluginId = activeCategory.slice('plugin:'.length)
+                const tab = pluginTabs.find((t) => t.pluginId === pluginId)
+                return tab?.render() ?? null
+              })()}
           </div>
         </div>
 
         {/* Footer */}
         <div className="flex justify-end p-4 border-t gui-border">
-          <button
-            onClick={onClose}
-            className="gui-btn gui-btn-accent"
-          >
+          <button onClick={onClose} className="gui-btn gui-btn-accent">
             Done
           </button>
         </div>
@@ -344,20 +405,25 @@ function SettingsModalComponent({ isOpen, onClose, defaultCategory }: SettingsMo
 // Toggle helper
 // -----------------------------------------------------------------------------
 
-function ToggleSwitch({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }): JSX.Element {
-  return (
-    <Switch
-      checked={enabled}
-      onCheckedChange={onToggle}
-    />
-  )
+function ToggleSwitch({
+  enabled,
+  onToggle,
+}: {
+  enabled: boolean
+  onToggle: () => void
+}): JSX.Element {
+  return <Switch checked={enabled} onCheckedChange={onToggle} />
 }
 
 // -----------------------------------------------------------------------------
 // Option button helper (for theme mode, display mode selectors)
 // -----------------------------------------------------------------------------
 
-function OptionButton({ selected, onClick, children }: {
+function OptionButton({
+  selected,
+  onClick,
+  children,
+}: {
   selected: boolean
   onClick: (e: React.MouseEvent) => void
   children: React.ReactNode
@@ -366,9 +432,7 @@ function OptionButton({ selected, onClick, children }: {
     <button
       onClick={onClick}
       className={`flex-1 px-3 py-2 rounded border text-sm transition-colors ${
-        selected
-          ? 'gui-btn-accent'
-          : 'gui-card'
+        selected ? 'gui-btn-accent' : 'gui-card'
       }`}
     >
       {children}
@@ -415,9 +479,7 @@ function PreferencesSettings({
     <div className="space-y-6">
       <div>
         <h3 className="text-sm font-medium gui-text mb-1">Preferences</h3>
-        <p className="text-xs gui-text-secondary">
-          Accessibility and auto-save settings
-        </p>
+        <p className="text-xs gui-text-secondary">Accessibility and auto-save settings</p>
       </div>
 
       {/* Accessibility Section */}
@@ -497,11 +559,12 @@ function PreferencesSettings({
               <Save className="w-4 h-4" />
               Auto-save
             </span>
-            <ToggleSwitch enabled={autoSaveEnabled} onToggle={() => onAutoSaveEnabledChange(!autoSaveEnabled)} />
+            <ToggleSwitch
+              enabled={autoSaveEnabled}
+              onToggle={() => onAutoSaveEnabledChange(!autoSaveEnabled)}
+            />
           </label>
-          <p className="text-xs gui-text-secondary mt-1">
-            Automatically save workspace changes.
-          </p>
+          <p className="text-xs gui-text-secondary mt-1">Automatically save workspace changes.</p>
         </div>
 
         {autoSaveEnabled && (
@@ -610,10 +673,16 @@ function ProgramSettings({
           </span>
         </label>
         <div className="flex gap-2">
-          <OptionButton selected={themeMode === 'dark'} onClick={(e) => onThemeModeChange('dark', e)}>
+          <OptionButton
+            selected={themeMode === 'dark'}
+            onClick={(e) => onThemeModeChange('dark', e)}
+          >
             Dark
           </OptionButton>
-          <OptionButton selected={themeMode === 'light'} onClick={(e) => onThemeModeChange('light', e)}>
+          <OptionButton
+            selected={themeMode === 'light'}
+            onClick={(e) => onThemeModeChange('light', e)}
+          >
             Light
           </OptionButton>
         </div>
@@ -663,10 +732,16 @@ function ProgramSettings({
           </span>
         </label>
         <div className="flex gap-2">
-          <OptionButton selected={propertiesDisplayMode === 'sidebar'} onClick={() => onPropertiesDisplayModeChange('sidebar')}>
+          <OptionButton
+            selected={propertiesDisplayMode === 'sidebar'}
+            onClick={() => onPropertiesDisplayModeChange('sidebar')}
+          >
             Sidebar
           </OptionButton>
-          <OptionButton selected={propertiesDisplayMode === 'modal'} onClick={() => onPropertiesDisplayModeChange('modal')}>
+          <OptionButton
+            selected={propertiesDisplayMode === 'modal'}
+            onClick={() => onPropertiesDisplayModeChange('modal')}
+          >
             Floating Modal
           </OptionButton>
         </div>
@@ -684,16 +759,20 @@ function ProgramSettings({
           </span>
         </label>
         <div className="flex gap-2">
-          <OptionButton selected={chatDisplayMode === 'column'} onClick={() => onChatDisplayModeChange('column')}>
+          <OptionButton
+            selected={chatDisplayMode === 'column'}
+            onClick={() => onChatDisplayModeChange('column')}
+          >
             Column
           </OptionButton>
-          <OptionButton selected={chatDisplayMode === 'modal'} onClick={() => onChatDisplayModeChange('modal')}>
+          <OptionButton
+            selected={chatDisplayMode === 'modal'}
+            onClick={() => onChatDisplayModeChange('modal')}
+          >
             Floating Modal
           </OptionButton>
         </div>
-        <p className="text-xs gui-text-secondary mt-1">
-          Choose how chat panels are displayed.
-        </p>
+        <p className="text-xs gui-text-secondary mt-1">Choose how chat panels are displayed.</p>
       </div>
 
       {/* Accessibility Section */}
@@ -773,11 +852,12 @@ function ProgramSettings({
               <Save className="w-4 h-4" />
               Auto-save
             </span>
-            <ToggleSwitch enabled={autoSaveEnabled} onToggle={() => onAutoSaveEnabledChange(!autoSaveEnabled)} />
+            <ToggleSwitch
+              enabled={autoSaveEnabled}
+              onToggle={() => onAutoSaveEnabledChange(!autoSaveEnabled)}
+            />
           </label>
-          <p className="text-xs gui-text-secondary mt-1">
-            Automatically save workspace changes.
-          </p>
+          <p className="text-xs gui-text-secondary mt-1">Automatically save workspace changes.</p>
         </div>
 
         {autoSaveEnabled && (
@@ -818,9 +898,7 @@ function ProgramSettings({
 
       {/* Version Info */}
       <div className="pt-4 border-t gui-border">
-        <p className="text-xs gui-text-secondary text-center">
-          [Cognograph] v0.1.0
-        </p>
+        <p className="text-xs gui-text-secondary text-center">[Cognograph] v0.1.0</p>
       </div>
     </div>
   )
@@ -874,9 +952,7 @@ function WorkspaceSettings({
 
       {/* Workspace Name */}
       <div>
-        <label className="block text-sm font-medium gui-text mb-2">
-          Workspace Name
-        </label>
+        <label className="block text-sm font-medium gui-text mb-2">Workspace Name</label>
         <input
           type="text"
           value={workspaceName}
@@ -905,9 +981,7 @@ function WorkspaceSettings({
         </div>
         <p className="text-xs gui-text-secondary mt-2 flex items-start gap-1.5">
           <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-          <span>
-            Controls how many "hops" away from a conversation node context is gathered.
-          </span>
+          <span>Controls how many "hops" away from a conversation node context is gathered.</span>
         </p>
       </div>
 
@@ -921,7 +995,9 @@ function WorkspaceSettings({
           max={600}
           step={10}
           value={[propertiesSidebarWidth]}
-          onValueChange={(values) => onPropertiesSidebarWidthChange(values[0] ?? propertiesSidebarWidth)}
+          onValueChange={(values) =>
+            onPropertiesSidebarWidthChange(values[0] ?? propertiesSidebarWidth)
+          }
           className="w-full"
         />
         <div className="flex justify-between text-xs gui-text-secondary mt-1">
@@ -953,9 +1029,7 @@ function WorkspaceSettings({
       <div className="border-t border-[var(--border-subtle)] pt-4">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <label className="block text-sm font-medium gui-text">
-              Live Physics
-            </label>
+            <label className="block text-sm font-medium gui-text">Live Physics</label>
             <p className="text-xs gui-text-secondary mt-0.5">
               Edges act as springs, pulling nodes toward ideal distances
             </p>
@@ -970,9 +1044,7 @@ function WorkspaceSettings({
           <div className="mt-3 space-y-4">
             {/* Physics Strength */}
             <div>
-              <label className="block text-sm font-medium gui-text mb-2">
-                Physics Strength
-              </label>
+              <label className="block text-sm font-medium gui-text mb-2">Physics Strength</label>
               <div className="flex gap-1">
                 {(['gentle', 'medium', 'strong'] as const).map((level) => (
                   <button
@@ -1005,7 +1077,9 @@ function WorkspaceSettings({
                 max={240}
                 step={10}
                 value={[physicsIdealEdgeLength]}
-                onValueChange={(values) => onPhysicsEdgeLengthChange(values[0] ?? physicsIdealEdgeLength)}
+                onValueChange={(values) =>
+                  onPhysicsEdgeLengthChange(values[0] ?? physicsIdealEdgeLength)
+                }
                 className="w-full"
               />
               <div className="flex justify-between text-xs gui-text-secondary mt-1">
@@ -1034,8 +1108,8 @@ function WorkspaceSettings({
                   defaultPath: `${data.name || 'workspace'}.json`,
                   filters: [
                     { name: 'Cognograph Workspace', extensions: ['json'] },
-                    { name: 'All Files', extensions: ['*'] }
-                  ]
+                    { name: 'All Files', extensions: ['*'] },
+                  ],
                 })
                 if (!result.canceled && result.filePath) {
                   await window.api.workspace.saveAs(data, result.filePath)
@@ -1052,9 +1126,9 @@ function WorkspaceSettings({
                   title: 'Import Workspace',
                   filters: [
                     { name: 'Cognograph Workspace', extensions: ['json'] },
-                    { name: 'All Files', extensions: ['*'] }
+                    { name: 'All Files', extensions: ['*'] },
                   ],
-                  properties: ['openFile']
+                  properties: ['openFile'],
                 })
                 if (!result.canceled && result.filePaths?.[0]) {
                   const loadResult = await window.api.workspace.loadFromPath(result.filePaths[0])
@@ -1093,28 +1167,36 @@ function AISettings(): JSX.Element {
   // Workspace-level extraction defaults
   const contextSettings = useWorkspaceStore((state) => state.contextSettings)
   const [defaultProvider, setDefaultProvider] = useState<ConnectorProvider>(
-    (contextSettings as Record<string, unknown>).defaultProvider as ConnectorProvider || 'anthropic'
+    ((contextSettings as Record<string, unknown>).defaultProvider as ConnectorProvider) ||
+      'anthropic',
   )
   const [extractionDefaults, setExtractionDefaults] = useState<ExtractionSettings>(
-    (contextSettings as Record<string, unknown>).extractionDefaults as ExtractionSettings || DEFAULT_EXTRACTION_SETTINGS
+    ((contextSettings as Record<string, unknown>).extractionDefaults as ExtractionSettings) ||
+      DEFAULT_EXTRACTION_SETTINGS,
   )
 
   // Save default provider to workspace context settings
   const handleDefaultProviderChange = useCallback((provider: ConnectorProvider) => {
     setDefaultProvider(provider)
     useWorkspaceStore.setState((state) => ({
-      contextSettings: { ...state.contextSettings, defaultProvider: provider } as typeof state.contextSettings,
-      isDirty: true
+      contextSettings: {
+        ...state.contextSettings,
+        defaultProvider: provider,
+      } as typeof state.contextSettings,
+      isDirty: true,
     }))
   }, [])
 
   // Save extraction defaults to workspace context settings
   const updateExtractionDefaults = useCallback((updates: Partial<ExtractionSettings>) => {
-    setExtractionDefaults(prev => {
+    setExtractionDefaults((prev) => {
       const next = { ...prev, ...updates }
       useWorkspaceStore.setState((state) => ({
-        contextSettings: { ...state.contextSettings, extractionDefaults: next } as typeof state.contextSettings,
-        isDirty: true
+        contextSettings: {
+          ...state.contextSettings,
+          extractionDefaults: next,
+        } as typeof state.contextSettings,
+        isDirty: true,
       }))
       return next
     })
@@ -1138,7 +1220,11 @@ function AISettings(): JSX.Element {
           </span>
         </label>
         <div className="flex gap-2 flex-wrap">
-          {(Object.entries(CONNECTOR_PROVIDER_INFO) as Array<[ConnectorProvider, typeof CONNECTOR_PROVIDER_INFO[ConnectorProvider]]>)
+          {(
+            Object.entries(CONNECTOR_PROVIDER_INFO) as Array<
+              [ConnectorProvider, (typeof CONNECTOR_PROVIDER_INFO)[ConnectorProvider]]
+            >
+          )
             .filter(([key]) => key !== 'custom')
             .map(([key, info]) => (
               <OptionButton
@@ -1166,7 +1252,11 @@ function AISettings(): JSX.Element {
               <span className="text-sm gui-text">Auto-extract notes & tasks</span>
               <ToggleSwitch
                 enabled={extractionDefaults.autoExtractEnabled}
-                onToggle={() => updateExtractionDefaults({ autoExtractEnabled: !extractionDefaults.autoExtractEnabled })}
+                onToggle={() =>
+                  updateExtractionDefaults({
+                    autoExtractEnabled: !extractionDefaults.autoExtractEnabled,
+                  })
+                }
               />
             </label>
             <p className="text-xs gui-text-secondary mt-1">
@@ -1184,7 +1274,11 @@ function AISettings(): JSX.Element {
                   selected={extractionDefaults.extractionTrigger === trigger}
                   onClick={() => updateExtractionDefaults({ extractionTrigger: trigger })}
                 >
-                  {trigger === 'per-message' ? 'Per Message' : trigger === 'on-demand' ? 'On Demand' : 'On Close'}
+                  {trigger === 'per-message'
+                    ? 'Per Message'
+                    : trigger === 'on-demand'
+                      ? 'On Demand'
+                      : 'On Close'}
                 </OptionButton>
               ))}
             </div>
@@ -1193,14 +1287,17 @@ function AISettings(): JSX.Element {
           {/* Confidence threshold */}
           <div>
             <label className="block text-sm gui-text mb-2">
-              Confidence Threshold: {Math.round(extractionDefaults.extractionConfidenceThreshold * 100)}%
+              Confidence Threshold:{' '}
+              {Math.round(extractionDefaults.extractionConfidenceThreshold * 100)}%
             </label>
             <Slider
               min={0}
               max={100}
               step={5}
               value={[Math.round(extractionDefaults.extractionConfidenceThreshold * 100)]}
-              onValueChange={(values) => updateExtractionDefaults({ extractionConfidenceThreshold: (values[0] ?? 50) / 100 })}
+              onValueChange={(values) =>
+                updateExtractionDefaults({ extractionConfidenceThreshold: (values[0] ?? 50) / 100 })
+              }
               className="w-full"
             />
             <div className="flex justify-between text-xs gui-text-secondary mt-1">
@@ -1221,7 +1318,7 @@ function AISettings(): JSX.Element {
                     onChange={(e) => {
                       const types = e.target.checked
                         ? [...extractionDefaults.extractionTypes, type]
-                        : extractionDefaults.extractionTypes.filter(t => t !== type)
+                        : extractionDefaults.extractionTypes.filter((t) => t !== type)
                       updateExtractionDefaults({ extractionTypes: types })
                     }}
                     className="rounded"

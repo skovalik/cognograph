@@ -1,13 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useState, useCallback, useEffect, lazy, Suspense } from 'react'
+import {
+  AlertTriangle,
+  CheckCircle,
+  Circle,
+  Database,
+  Edit2,
+  Link,
+  Loader2,
+  Play,
+  Plug,
+  Plus,
+  Server,
+  Trash2,
+  X,
+  Zap,
+} from 'lucide-react'
+import { lazy, memo, Suspense, useCallback, useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { Plus, Plug, Server, Trash2, Edit2, Play, Circle, Loader2, CheckCircle, AlertTriangle, X, Database, Link, Zap } from 'lucide-react'
 import { useConnectorStore } from '../../stores/connectorStore'
+import { Switch } from '../ui/switch'
 import { LLMConnectorCard } from './LLMConnectorCard'
-const AddLLMModal = lazy(() => import('./AddLLMModal').then(m => ({ default: m.AddLLMModal })))
-import type { LLMConnector, MCPConnector, ConnectorStatus } from '@shared/types'
+
+const AddLLMModal = lazy(() => import('./AddLLMModal').then((m) => ({ default: m.AddLLMModal })))
+
+import type { ConnectorStatus, LLMConnector, MCPConnector } from '@shared/types'
 
 function ConnectorsTabComponent(): JSX.Element {
   const [addModalOpen, setAddModalOpen] = useState(false)
@@ -26,24 +44,27 @@ function ConnectorsTabComponent(): JSX.Element {
     })
   }, [isElectron])
 
-  const handleProToggle = useCallback(async (checked: boolean) => {
-    if (checked && isElectron) {
-      const cliCheck = await (window as any).api.agent.checkCli()
-      if (!cliCheck.installed) {
-        toast.error('Claude CLI not found. Install from claude.ai/code')
-        return
-      }
-      if (!cliCheck.loggedIn) {
-        const loginResult = await (window as any).api.agent.login()
-        if (!loginResult.success) {
-          toast.error('Claude login failed or was cancelled')
+  const handleProToggle = useCallback(
+    async (checked: boolean) => {
+      if (checked && isElectron) {
+        const cliCheck = await (window as any).api.agent.checkCli()
+        if (!cliCheck.installed) {
+          toast.error('Claude CLI not found. Install from claude.ai/code')
           return
         }
+        if (!cliCheck.loggedIn) {
+          const loginResult = await (window as any).api.agent.login()
+          if (!loginResult.success) {
+            toast.error('Claude login failed or was cancelled')
+            return
+          }
+        }
       }
-    }
-    await window.api.settings.set('useClaudeProAccount', checked)
-    setUseClaudeProAccount(checked)
-  }, [isElectron])
+      await window.api.settings.set('useClaudeProAccount', checked)
+      setUseClaudeProAccount(checked)
+    },
+    [isElectron],
+  )
 
   const connectors = useConnectorStore((s) => s.connectors)
   const removeConnector = useConnectorStore((s) => s.removeConnector)
@@ -55,37 +76,40 @@ function ConnectorsTabComponent(): JSX.Element {
     setAddModalOpen(true)
   }, [])
 
-  const handleTest = useCallback(async (connector: LLMConnector) => {
-    setTestingId(connector.id)
-    try {
-      const apiKey = await window.api.settings.getApiKey(connector.provider)
-      if (!apiKey) {
-        setConnectorStatus(connector.id, 'error', 'No API key stored for this provider')
-        return
-      }
+  const handleTest = useCallback(
+    async (connector: LLMConnector) => {
+      setTestingId(connector.id)
+      try {
+        const apiKey = await window.api.settings.getApiKey(connector.provider)
+        if (!apiKey) {
+          setConnectorStatus(connector.id, 'error', 'No API key stored for this provider')
+          return
+        }
 
-      const result = await window.api.connector.test({
-        provider: connector.provider,
-        apiKey,
-        model: connector.model,
-        baseUrl: connector.baseUrl
-      })
+        const result = await window.api.connector.test({
+          provider: connector.provider,
+          apiKey,
+          model: connector.model,
+          baseUrl: connector.baseUrl,
+        })
 
-      if (result.success) {
-        setConnectorStatus(connector.id, 'connected')
-      } else {
-        setConnectorStatus(connector.id, 'error', result.error || 'Connection test failed')
+        if (result.success) {
+          setConnectorStatus(connector.id, 'connected')
+        } else {
+          setConnectorStatus(connector.id, 'error', result.error || 'Connection test failed')
+        }
+      } catch (err) {
+        setConnectorStatus(
+          connector.id,
+          'error',
+          err instanceof Error ? err.message : 'Unknown error',
+        )
+      } finally {
+        setTestingId(null)
       }
-    } catch (err) {
-      setConnectorStatus(
-        connector.id,
-        'error',
-        err instanceof Error ? err.message : 'Unknown error'
-      )
-    } finally {
-      setTestingId(null)
-    }
-  }, [setConnectorStatus])
+    },
+    [setConnectorStatus],
+  )
 
   const handleModalClose = useCallback(() => {
     setAddModalOpen(false)
@@ -114,15 +138,7 @@ function ConnectorsTabComponent(): JSX.Element {
               </div>
             </div>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={useClaudeProAccount}
-              onChange={(e) => handleProToggle(e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
+          <Switch checked={useClaudeProAccount} onCheckedChange={handleProToggle} />
         </div>
       )}
 
@@ -176,10 +192,7 @@ function ConnectorsTabComponent(): JSX.Element {
       {/* Add/Edit LLM Modal */}
       {addModalOpen && (
         <Suspense fallback={null}>
-          <AddLLMModal
-            connector={editingConnector}
-            onClose={handleModalClose}
-          />
+          <AddLLMModal connector={editingConnector} onClose={handleModalClose} />
         </Suspense>
       )}
     </div>
@@ -205,34 +218,37 @@ function MCPServersSection(): JSX.Element {
     setAddModalOpen(true)
   }, [])
 
-  const handleTest = useCallback(async (connector: MCPConnector) => {
-    setTestingId(connector.id)
-    try {
-      const result = await window.api.connector.testMCP({
-        command: connector.command,
-        args: connector.args,
-        env: connector.env
-      })
-
-      if (result.success) {
-        setMCPConnectorStatus(connector.id, 'connected')
-        updateMCPConnector(connector.id, {
-          discoveredTools: result.toolCount,
-          discoveredResources: result.resourceCount
+  const handleTest = useCallback(
+    async (connector: MCPConnector) => {
+      setTestingId(connector.id)
+      try {
+        const result = await window.api.connector.testMCP({
+          command: connector.command,
+          args: connector.args,
+          env: connector.env,
         })
-      } else {
-        setMCPConnectorStatus(connector.id, 'error', result.error || 'Connection test failed')
+
+        if (result.success) {
+          setMCPConnectorStatus(connector.id, 'connected')
+          updateMCPConnector(connector.id, {
+            discoveredTools: result.toolCount,
+            discoveredResources: result.resourceCount,
+          })
+        } else {
+          setMCPConnectorStatus(connector.id, 'error', result.error || 'Connection test failed')
+        }
+      } catch (err) {
+        setMCPConnectorStatus(
+          connector.id,
+          'error',
+          err instanceof Error ? err.message : 'Unknown error',
+        )
+      } finally {
+        setTestingId(null)
       }
-    } catch (err) {
-      setMCPConnectorStatus(
-        connector.id,
-        'error',
-        err instanceof Error ? err.message : 'Unknown error'
-      )
-    } finally {
-      setTestingId(null)
-    }
-  }, [setMCPConnectorStatus, updateMCPConnector])
+    },
+    [setMCPConnectorStatus, updateMCPConnector],
+  )
 
   const handleModalClose = useCallback(() => {
     setAddModalOpen(false)
@@ -246,10 +262,7 @@ function MCPServersSection(): JSX.Element {
           <Server className="w-4 h-4" style={{ color: 'var(--gui-accent-primary)' }} />
           <span className="text-sm font-medium gui-text">MCP Servers</span>
         </div>
-        <button
-          onClick={() => setAddModalOpen(true)}
-          className="gui-btn gui-btn-accent gui-btn-sm"
-        >
+        <button onClick={() => setAddModalOpen(true)} className="gui-btn gui-btn-accent gui-btn-sm">
           <Plus className="w-3 h-3" />
           Add Server
         </button>
@@ -279,12 +292,7 @@ function MCPServersSection(): JSX.Element {
       )}
 
       {/* Add/Edit MCP Modal */}
-      {addModalOpen && (
-        <AddMCPModal
-          connector={editingConnector}
-          onClose={handleModalClose}
-        />
-      )}
+      {addModalOpen && <AddMCPModal connector={editingConnector} onClose={handleModalClose} />}
     </div>
   )
 }
@@ -298,7 +306,13 @@ function StatusDot({ status }: { status: ConnectorStatus }): JSX.Element {
   return <Circle className="w-2.5 h-2.5 fill-current" style={{ color }} />
 }
 
-function MCPServerCard({ connector, onEdit, onTest, onRemove, isTesting }: {
+function MCPServerCard({
+  connector,
+  onEdit,
+  onTest,
+  onRemove,
+  isTesting,
+}: {
   connector: MCPConnector
   onEdit: (connector: MCPConnector) => void
   onTest: (connector: MCPConnector) => void
@@ -310,18 +324,22 @@ function MCPServerCard({ connector, onEdit, onTest, onRemove, isTesting }: {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
           {isTesting ? (
-            <Loader2 className="w-3 h-3 animate-spin" style={{ color: 'var(--gui-accent-primary)' }} />
+            <Loader2
+              className="w-3 h-3 animate-spin"
+              style={{ color: 'var(--gui-accent-primary)' }}
+            />
           ) : (
             <StatusDot status={connector.status} />
           )}
           <span className="text-sm font-medium gui-text truncate">{connector.name}</span>
-          {connector.status === 'connected' && (connector.discoveredTools || connector.discoveredResources) && (
-            <span className="text-[10px] gui-text-secondary">
-              {connector.discoveredTools ? `${connector.discoveredTools} tools` : ''}
-              {connector.discoveredTools && connector.discoveredResources ? ', ' : ''}
-              {connector.discoveredResources ? `${connector.discoveredResources} resources` : ''}
-            </span>
-          )}
+          {connector.status === 'connected' &&
+            (connector.discoveredTools || connector.discoveredResources) && (
+              <span className="text-[10px] gui-text-secondary">
+                {connector.discoveredTools ? `${connector.discoveredTools} tools` : ''}
+                {connector.discoveredTools && connector.discoveredResources ? ', ' : ''}
+                {connector.discoveredResources ? `${connector.discoveredResources} resources` : ''}
+              </span>
+            )}
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -353,7 +371,8 @@ function MCPServerCard({ connector, onEdit, onTest, onRemove, isTesting }: {
         </div>
       </div>
       <div className="mt-1.5 text-xs gui-text-secondary font-mono truncate">
-        {connector.command}{connector.args?.length ? ` ${connector.args.join(' ')}` : ''}
+        {connector.command}
+        {connector.args?.length ? ` ${connector.args.join(' ')}` : ''}
       </div>
       {connector.status === 'connected' && connector.lastTestedAt && (
         <div className="mt-1 flex items-center gap-1 text-[10px] text-green-500">
@@ -375,14 +394,41 @@ function MCPServerCard({ connector, onEdit, onTest, onRemove, isTesting }: {
 // Add/Edit MCP Modal
 // -----------------------------------------------------------------------------
 
-const MCP_PRESETS: Array<{ name: string; command: string; args: string[]; envHint?: Record<string, string> }> = [
-  { name: 'GitHub', command: 'npx', args: ['-y', '@modelcontextprotocol/server-github'], envHint: { GITHUB_PERSONAL_ACCESS_TOKEN: '' } },
-  { name: 'Filesystem', command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem', '.'] },
-  { name: 'PostgreSQL', command: 'npx', args: ['-y', '@modelcontextprotocol/server-postgres'], envHint: { POSTGRES_CONNECTION_STRING: '' } },
-  { name: 'Brave Search', command: 'npx', args: ['-y', '@modelcontextprotocol/server-brave-search'], envHint: { BRAVE_API_KEY: '' } },
+const MCP_PRESETS: Array<{
+  name: string
+  command: string
+  args: string[]
+  envHint?: Record<string, string>
+}> = [
+  {
+    name: 'GitHub',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-github'],
+    envHint: { GITHUB_PERSONAL_ACCESS_TOKEN: '' },
+  },
+  {
+    name: 'Filesystem',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-filesystem', '.'],
+  },
+  {
+    name: 'PostgreSQL',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-postgres'],
+    envHint: { POSTGRES_CONNECTION_STRING: '' },
+  },
+  {
+    name: 'Brave Search',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-brave-search'],
+    envHint: { BRAVE_API_KEY: '' },
+  },
 ]
 
-function AddMCPModal({ connector, onClose }: {
+function AddMCPModal({
+  connector,
+  onClose,
+}: {
   connector: MCPConnector | null
   onClose: () => void
 }): JSX.Element {
@@ -393,9 +439,7 @@ function AddMCPModal({ connector, onClose }: {
   const [command, setCommand] = useState(connector?.command || '')
   const [argsStr, setArgsStr] = useState(connector?.args?.join(' ') || '')
   const [envPairs, setEnvPairs] = useState<Array<{ key: string; value: string }>>(
-    connector?.env
-      ? Object.entries(connector.env).map(([key, value]) => ({ key, value }))
-      : []
+    connector?.env ? Object.entries(connector.env).map(([key, value]) => ({ key, value })) : [],
   )
 
   const isEditing = Boolean(connector)
@@ -404,9 +448,12 @@ function AddMCPModal({ connector, onClose }: {
     if (!name.trim() || !command.trim()) return
 
     const args = argsStr.trim() ? argsStr.trim().split(/\s+/) : undefined
-    const env = envPairs.filter(p => p.key.trim()).length > 0
-      ? Object.fromEntries(envPairs.filter(p => p.key.trim()).map(p => [p.key.trim(), p.value]))
-      : undefined
+    const env =
+      envPairs.filter((p) => p.key.trim()).length > 0
+        ? Object.fromEntries(
+            envPairs.filter((p) => p.key.trim()).map((p) => [p.key.trim(), p.value]),
+          )
+        : undefined
 
     if (isEditing && connector) {
       updateMCPConnector(connector.id, { name: name.trim(), command: command.trim(), args, env })
@@ -414,9 +461,19 @@ function AddMCPModal({ connector, onClose }: {
       addMCPConnector({ type: 'mcp', name: name.trim(), command: command.trim(), args, env })
     }
     onClose()
-  }, [name, command, argsStr, envPairs, isEditing, connector, addMCPConnector, updateMCPConnector, onClose])
+  }, [
+    name,
+    command,
+    argsStr,
+    envPairs,
+    isEditing,
+    connector,
+    addMCPConnector,
+    updateMCPConnector,
+    onClose,
+  ])
 
-  const applyPreset = useCallback((preset: typeof MCP_PRESETS[0]) => {
+  const applyPreset = useCallback((preset: (typeof MCP_PRESETS)[0]) => {
     setName(preset.name)
     setCommand(preset.command)
     setArgsStr(preset.args.join(' '))
@@ -426,19 +483,22 @@ function AddMCPModal({ connector, onClose }: {
   }, [])
 
   const addEnvPair = useCallback(() => {
-    setEnvPairs(prev => [...prev, { key: '', value: '' }])
+    setEnvPairs((prev) => [...prev, { key: '', value: '' }])
   }, [])
 
   const removeEnvPair = useCallback((index: number) => {
-    setEnvPairs(prev => prev.filter((_, i) => i !== index))
+    setEnvPairs((prev) => prev.filter((_, i) => i !== index))
   }, [])
 
   const updateEnvPair = useCallback((index: number, field: 'key' | 'value', val: string) => {
-    setEnvPairs(prev => prev.map((p, i) => i === index ? { ...p, [field]: val } : p))
+    setEnvPairs((prev) => prev.map((p, i) => (i === index ? { ...p, [field]: val } : p)))
   }, [])
 
   return (
-    <div className="gui-backdrop gui-z-modals flex items-center justify-center" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div
+      className="gui-backdrop gui-z-modals flex items-center justify-center"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
       <div className="glass-fluid gui-modal w-[480px] p-4 space-y-4 max-h-[80vh] overflow-y-auto">
         <h3 className="text-sm font-medium gui-text">
           {isEditing ? 'Edit MCP Server' : 'Add MCP Server'}
@@ -489,7 +549,9 @@ function AddMCPModal({ connector, onClose }: {
 
         {/* Args */}
         <div>
-          <label className="block text-xs gui-text-secondary mb-1">Arguments (space-separated)</label>
+          <label className="block text-xs gui-text-secondary mb-1">
+            Arguments (space-separated)
+          </label>
           <input
             type="text"
             value={argsStr}
@@ -550,8 +612,12 @@ function AddMCPModal({ connector, onClose }: {
           <div>
             <label className="block text-xs gui-text-secondary mb-1">Preview</label>
             <div className="gui-card rounded p-2 text-xs font-mono gui-text-secondary break-all">
-              {envPairs.filter(p => p.key.trim()).map(p => `${p.key}=*** `).join('')}
-              {command.trim()}{argsStr.trim() ? ` ${argsStr.trim()}` : ''}
+              {envPairs
+                .filter((p) => p.key.trim())
+                .map((p) => `${p.key}=*** `)
+                .join('')}
+              {command.trim()}
+              {argsStr.trim() ? ` ${argsStr.trim()}` : ''}
             </div>
           </div>
         )}
@@ -649,7 +715,6 @@ function NotionSection(): JSX.Element {
       } else {
         throw new Error(result.error || 'Connection test failed')
       }
-
     } catch (err) {
       setConnectionStatus('error')
       setErrorMessage(err instanceof Error ? err.message : 'Connection test failed')
@@ -692,7 +757,12 @@ function NotionSection(): JSX.Element {
         <div className="flex items-center gap-2">
           <Database className="w-4 h-4" style={{ color: 'var(--gui-accent-tertiary)' }} />
           <span className="text-sm font-medium gui-text">Notion</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded gui-text-secondary" style={{ backgroundColor: 'var(--surface-secondary)' }}>Plugin</span>
+          <span
+            className="text-[10px] px-1.5 py-0.5 rounded gui-text-secondary"
+            style={{ backgroundColor: 'var(--surface-secondary)' }}
+          >
+            Plugin
+          </span>
         </div>
         {connectionStatus === 'connected' && (
           <div className="flex items-center gap-2">
@@ -705,9 +775,7 @@ function NotionSection(): JSX.Element {
       <div className="gui-card rounded-lg p-4 space-y-4">
         {/* Token Input */}
         <div>
-          <label className="block text-xs font-medium gui-text mb-1.5">
-            Integration Token
-          </label>
+          <label className="block text-xs font-medium gui-text mb-1.5">Integration Token</label>
           <div className="flex gap-2">
             <input
               type="password"
@@ -734,10 +802,7 @@ function NotionSection(): JSX.Element {
               )}
             </button>
             {connectionStatus === 'connected' && (
-              <button
-                onClick={handleDisconnect}
-                className="gui-btn gui-btn-ghost gui-btn-sm"
-              >
+              <button onClick={handleDisconnect} className="gui-btn gui-btn-ghost gui-btn-sm">
                 <X className="w-3 h-3" />
               </button>
             )}
@@ -755,13 +820,9 @@ function NotionSection(): JSX.Element {
               How to get your Notion token
             </a>
           </p>
-          {errorMessage && (
-            <p className="text-xs text-red-500 mt-1">{errorMessage}</p>
-          )}
+          {errorMessage && <p className="text-xs text-red-500 mt-1">{errorMessage}</p>}
           {connectionStatus === 'connected' && !errorMessage && (
-            <p className="text-xs text-green-500 mt-1">
-              Connected to {workspaceName}
-            </p>
+            <p className="text-xs text-green-500 mt-1">Connected to {workspaceName}</p>
           )}
         </div>
 
@@ -810,18 +871,13 @@ function NotionSection(): JSX.Element {
                   Sync workspace data to Notion databases
                 </div>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={syncEnabled}
-                  onChange={(e) => {
-                    setSyncEnabled(e.target.checked)
-                    handleSaveSettings()
-                  }}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
+              <Switch
+                checked={syncEnabled}
+                onCheckedChange={(checked) => {
+                  setSyncEnabled(checked)
+                  handleSaveSettings()
+                }}
+              />
             </div>
 
             {/* Node-Level Sync Section */}
@@ -833,22 +889,17 @@ function NotionSection(): JSX.Element {
                     Push individual nodes (tasks, projects, notes) to Notion
                   </div>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={nodeSyncEnabled}
-                    onChange={(e) => {
-                      setNodeSyncEnabled(e.target.checked)
-                      handleSaveSettings()
-                    }}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
+                <Switch
+                  checked={nodeSyncEnabled}
+                  onCheckedChange={(checked) => {
+                    setNodeSyncEnabled(checked)
+                    handleSaveSettings()
+                  }}
+                />
               </div>
 
               {nodeSyncEnabled && (
-                <div className="space-y-3 pl-2 border-l-2 border-blue-600/30">
+                <div className="space-y-3 pl-2 border-l-2 border-[var(--gui-accent-primary)]/30">
                   <div>
                     <label className="block text-xs font-medium gui-text mb-1.5">
                       Tasks Database ID
@@ -878,9 +929,7 @@ function NotionSection(): JSX.Element {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium gui-text mb-1.5">
-                      Hub Page ID
-                    </label>
+                    <label className="block text-xs font-medium gui-text mb-1.5">Hub Page ID</label>
                     <input
                       type="text"
                       value={hubPageId}

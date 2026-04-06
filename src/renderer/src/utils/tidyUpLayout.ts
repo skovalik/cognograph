@@ -45,7 +45,7 @@ export interface TidyOptions {
 export function tidyUpLayout(
   nodes: LayoutNode[],
   edges: LayoutEdge[],
-  options?: TidyOptions
+  options?: TidyOptions,
 ): Array<{ id: string; x: number; y: number }> {
   if (nodes.length === 0) return []
 
@@ -195,7 +195,7 @@ export function tidyUpLayout(
     return {
       id: node.id,
       x: pos.x,
-      y: pos.y
+      y: pos.y,
     }
   })
 }

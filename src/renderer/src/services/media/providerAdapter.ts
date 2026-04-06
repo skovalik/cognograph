@@ -7,7 +7,7 @@ export abstract class ProviderAdapter {
 
   constructor(
     protected apiKey: string,
-    protected creditBalance: number | null
+    protected creditBalance: number | null,
   ) {}
 
   abstract generateImage(params: ImageGenParams): Promise<MediaResult>
@@ -27,9 +27,9 @@ export abstract class ProviderAdapter {
         if (attempt === maxRetries - 1) throw err
         if (err.status === 429) {
           const delay = Math.min(1000 * 2 ** attempt + Math.random() * 500, 30000)
-          await new Promise(r => setTimeout(r, delay))
+          await new Promise((r) => setTimeout(r, delay))
         } else if (err.status >= 500) {
-          await new Promise(r => setTimeout(r, 1000))
+          await new Promise((r) => setTimeout(r, 1000))
         } else {
           throw err
         }
@@ -39,7 +39,13 @@ export abstract class ProviderAdapter {
   }
 }
 
-export type ProviderCapability = 'image_gen' | 'image_edit' | 'video_gen' | '3d_gen' | 'audio_gen' | 'media_analysis'
+export type ProviderCapability =
+  | 'image_gen'
+  | 'image_edit'
+  | 'video_gen'
+  | '3d_gen'
+  | 'audio_gen'
+  | 'media_analysis'
 
 export interface MediaResult {
   buffer: Blob
@@ -47,11 +53,28 @@ export interface MediaResult {
   metadata: Record<string, unknown>
 }
 
-export interface ImageGenParams { prompt: string; style?: string; aspectRatio?: string }
-export interface VideoGenParams { prompt: string; imageUrl?: string; duration?: number }
-export interface AudioGenParams { text: string; voice?: string }
-export interface Model3DGenParams { prompt: string; imageUrl?: string }
-export interface AnalyzeParams { mediaUrl: string; prompt: string }
+export interface ImageGenParams {
+  prompt: string
+  style?: string
+  aspectRatio?: string
+}
+export interface VideoGenParams {
+  prompt: string
+  imageUrl?: string
+  duration?: number
+}
+export interface AudioGenParams {
+  text: string
+  voice?: string
+}
+export interface Model3DGenParams {
+  prompt: string
+  imageUrl?: string
+}
+export interface AnalyzeParams {
+  mediaUrl: string
+  prompt: string
+}
 
 export interface ImageEditParams {
   image: Blob

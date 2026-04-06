@@ -32,7 +32,7 @@ export function parseCombo(combo: string): {
     shift: parts.includes('Shift'),
     alt: parts.includes('Alt'),
     meta: parts.includes('Meta'),
-    key: key.length === 1 ? key : key // Keep as-is for special keys like "Delete", "Escape"
+    key: key.length === 1 ? key : key, // Keep as-is for special keys like "Delete", "Escape"
   }
 }
 
@@ -125,7 +125,12 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
   { id: 'toggleSidebar', label: 'Toggle Sidebar', defaultCombo: 'Ctrl+\\', category: 'view' },
   { id: 'toggleMinimap', label: 'Toggle Minimap', defaultCombo: 'Alt+M', category: 'view' },
   { id: 'linkNodes', label: 'Link Selected Nodes', defaultCombo: 'Ctrl+L', category: 'view' },
-  { id: 'unlinkNodes', label: 'Unlink Selected Nodes', defaultCombo: 'Ctrl+Shift+L', category: 'view' },
+  {
+    id: 'unlinkNodes',
+    label: 'Unlink Selected Nodes',
+    defaultCombo: 'Ctrl+Shift+L',
+    category: 'view',
+  },
   { id: 'commandPalette', label: 'Command Palette', defaultCombo: 'Ctrl+K', category: 'view' },
   { id: 'shortcutHelp', label: 'Keyboard Shortcuts', defaultCombo: '?', category: 'view' },
   { id: 'bringForward', label: 'Bring Forward', defaultCombo: 'Ctrl+]', category: 'view' },
@@ -133,15 +138,30 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
 
   // Create (Shift+letter)
   { id: 'createNote', label: 'New Note', defaultCombo: 'Shift+N', category: 'create' },
-  { id: 'createConversation', label: 'New Conversation', defaultCombo: 'Shift+C', category: 'create' },
+  {
+    id: 'createConversation',
+    label: 'New Conversation',
+    defaultCombo: 'Shift+C',
+    category: 'create',
+  },
   { id: 'createAgent', label: 'New Agent', defaultCombo: 'Ctrl+Shift+A', category: 'create' },
   { id: 'createTask', label: 'New Task', defaultCombo: 'Shift+T', category: 'create' },
   { id: 'createProject', label: 'New Project', defaultCombo: 'Shift+P', category: 'create' },
   { id: 'createArtifact', label: 'New Artifact', defaultCombo: 'Shift+A', category: 'create' },
-  { id: 'createWorkspace', label: 'New Workspace Node', defaultCombo: 'Shift+W', category: 'create' },
+  {
+    id: 'createWorkspace',
+    label: 'New Workspace Node',
+    defaultCombo: 'Shift+W',
+    category: 'create',
+  },
   { id: 'createText', label: 'New Text', defaultCombo: 'Shift+X', category: 'create' },
   { id: 'createAction', label: 'New Action', defaultCombo: 'Shift+Z', category: 'create' },
-  { id: 'createOrchestrator', label: 'New Orchestrator', defaultCombo: 'Shift+O', category: 'create' },
+  {
+    id: 'createOrchestrator',
+    label: 'New Orchestrator',
+    defaultCombo: 'Shift+O',
+    category: 'create',
+  },
 
   // Panels
   { id: 'sidebarOutline', label: 'Sidebar: Outline', defaultCombo: 'Ctrl+1', category: 'panels' },
@@ -154,11 +174,26 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
   { id: 'toggleTimeline', label: 'Timeline', defaultCombo: 'Alt+L', category: 'panels' },
 
   // Navigation
-  { id: 'navigateBack', label: 'Navigate Back', defaultCombo: 'Alt+ArrowLeft', category: 'navigation' },
-  { id: 'navigateForward', label: 'Navigate Forward', defaultCombo: 'Alt+ArrowRight', category: 'navigation' },
+  {
+    id: 'navigateBack',
+    label: 'Navigate Back',
+    defaultCombo: 'Alt+ArrowLeft',
+    category: 'navigation',
+  },
+  {
+    id: 'navigateForward',
+    label: 'Navigate Forward',
+    defaultCombo: 'Alt+ArrowRight',
+    category: 'navigation',
+  },
   { id: 'toggleFocusMode', label: 'Focus Mode', defaultCombo: 'Alt+F', category: 'navigation' },
   { id: 'bookmarkNode', label: 'Bookmark Node', defaultCombo: 'Alt+B', category: 'navigation' },
-  { id: 'jumpToBookmark', label: 'Jump to Bookmark', defaultCombo: 'Alt+G', category: 'navigation' },
+  {
+    id: 'jumpToBookmark',
+    label: 'Jump to Bookmark',
+    defaultCombo: 'Alt+G',
+    category: 'navigation',
+  },
   { id: 'toggleCollapse', label: 'Toggle Collapse', defaultCombo: 'Alt+.', category: 'navigation' },
   { id: 'toggleTheme', label: 'Toggle Theme', defaultCombo: 'Alt+D', category: 'navigation' },
   { id: 'cycleNodeMode', label: 'Cycle Node Mode', defaultCombo: 'M', category: 'navigation' },
@@ -170,19 +205,21 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
   { id: 'inlinePrompt', label: 'Inline Prompt', defaultCombo: '/', category: 'ai' },
   { id: 'toggleAISidebar', label: 'AI Sidebar', defaultCombo: 'Ctrl+Shift+I', category: 'ai' },
   { id: 'openAIEditor', label: 'AI Editor', defaultCombo: 'Ctrl+E', category: 'ai' },
-  { id: 'templateBrowser', label: 'Template Browser', defaultCombo: 'Ctrl+Shift+T', category: 'ai' },
-  { id: 'saveAsTemplate', label: 'Save as Template', defaultCombo: 'Ctrl+Shift+S', category: 'ai' }
+  {
+    id: 'templateBrowser',
+    label: 'Template Browser',
+    defaultCombo: 'Ctrl+Shift+T',
+    category: 'ai',
+  },
+  { id: 'saveAsTemplate', label: 'Save as Template', defaultCombo: 'Ctrl+Shift+S', category: 'ai' },
 ]
 
 /**
  * Get the active combo for a shortcut, accounting for user overrides.
  */
-export function getActiveCombo(
-  shortcutId: string,
-  overrides: Record<string, string>
-): string {
+export function getActiveCombo(shortcutId: string, overrides: Record<string, string>): string {
   if (overrides[shortcutId]) return overrides[shortcutId]
-  const def = DEFAULT_SHORTCUTS.find(s => s.id === shortcutId)
+  const def = DEFAULT_SHORTCUTS.find((s) => s.id === shortcutId)
   return def?.defaultCombo || ''
 }
 
@@ -192,7 +229,7 @@ export function getActiveCombo(
 export function matchesShortcut(
   e: KeyboardEvent,
   shortcutId: string,
-  overrides: Record<string, string>
+  overrides: Record<string, string>,
 ): boolean {
   const combo = getActiveCombo(shortcutId, overrides)
   if (!combo) return false
@@ -205,7 +242,7 @@ export function matchesShortcut(
 export function findConflict(
   combo: string,
   excludeId: string,
-  overrides: Record<string, string>
+  overrides: Record<string, string>,
 ): string | null {
   for (const def of DEFAULT_SHORTCUTS) {
     if (def.id === excludeId) continue

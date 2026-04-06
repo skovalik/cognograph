@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { BrowserWindow, app } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import { promises as fs } from 'fs'
 import { join } from 'path'
 import { notionService } from './notionService'
@@ -90,7 +90,9 @@ class PersistentSyncQueue {
         if (!win.isDestroyed()) {
           // TODO: This should trigger a toast in the renderer
           // For now just log it
-          console.warn('[NotionSync] SYNC QUEUE WRITE FAILED - data held in memory, do not close app')
+          console.warn(
+            '[NotionSync] SYNC QUEUE WRITE FAILED - data held in memory, do not close app',
+          )
         }
       }
     }
@@ -115,7 +117,10 @@ class PersistentSyncQueue {
 
           // Discard entries older than TTL
           if (now - entry.timestamp > this.TTL_MS) {
-            console.warn(`[NotionSync] Discarding stale queue entry (>${Math.floor(this.TTL_MS / 86400000)} days old):`, file)
+            console.warn(
+              `[NotionSync] Discarding stale queue entry (>${Math.floor(this.TTL_MS / 86400000)} days old):`,
+              file,
+            )
             await fs.unlink(filePath)
             continue
           }
@@ -240,7 +245,9 @@ class WorkflowSync {
       }
     }
 
-    console.log(`[NotionSync] Queue replay complete: ${successCount} succeeded, ${failCount} failed`)
+    console.log(
+      `[NotionSync] Queue replay complete: ${successCount} succeeded, ${failCount} failed`,
+    )
     this.isReplaying = false
   }
 
@@ -258,7 +265,7 @@ class WorkflowSync {
       state = {
         timer: null,
         lastSyncVersion: -1,
-        firstChangeTime: Date.now()
+        firstChangeTime: Date.now(),
       }
       this.debounceStates.set(canvasId, state)
     }
@@ -270,7 +277,9 @@ class WorkflowSync {
 
     // Dirty check: skip if version hasn't changed since last sync
     if (version === state.lastSyncVersion) {
-      console.log(`[NotionSync] Skipping sync for canvas ${canvasId} - version unchanged (${version})`)
+      console.log(
+        `[NotionSync] Skipping sync for canvas ${canvasId} - version unchanged (${version})`,
+      )
       return
     }
 
@@ -296,7 +305,7 @@ class WorkflowSync {
           title: workspaceData.title || `Canvas ${workspaceData.id.slice(0, 8)}`,
           version: workspaceData.version,
           nodeCount: workspaceData.nodes?.length || 0,
-          edgeCount: workspaceData.edges?.length || 0
+          edgeCount: workspaceData.edges?.length || 0,
         }
 
         const result = await this.syncToNotion(payload)
@@ -310,7 +319,7 @@ class WorkflowSync {
             await this.queue.enqueue({
               timestamp: Date.now(),
               canvasId,
-              payload
+              payload,
             })
           }
         }
@@ -343,70 +352,63 @@ class WorkflowSync {
     }
 
     const properties = {
-      'Name': {
-        title: [{ text: { content: payload.title } }]
+      Name: {
+        title: [{ text: { content: payload.title } }],
       },
       'Canvas ID': {
-        rich_text: [{ text: { content: payload.canvasId } }]
+        rich_text: [{ text: { content: payload.canvasId } }],
       },
-      'Version': {
-        number: payload.version
+      Version: {
+        number: payload.version,
       },
       'Node Count': {
-        number: payload.nodeCount
+        number: payload.nodeCount,
       },
       'Edge Count': {
-        number: payload.edgeCount
+        number: payload.edgeCount,
       },
       'Last Synced': {
-        date: { start: new Date().toISOString() }
-      }
+        date: { start: new Date().toISOString() },
+      },
     }
 
     // Query first: find existing page by Canvas ID (upsert logic)
-    const queryResult = await notionService.request(
-      async (client) => {
-        return await client.databases.query({
-          database_id: config.workflowsDbId,
-          filter: {
-            property: 'Canvas ID',
-            rich_text: { equals: payload.canvasId }
-          }
-        })
-      },
-      'queryWorkflow'
-    )
+    const queryResult = await notionService.request(async (client) => {
+      return await client.databases.query({
+        database_id: config.workflowsDbId,
+        filter: {
+          property: 'Canvas ID',
+          rich_text: { equals: payload.canvasId },
+        },
+      })
+    }, 'queryWorkflow')
 
     if (queryResult.success && queryResult.data?.results?.length > 0) {
       // Update existing page
       const existingPageId = queryResult.data.results[0].id
       if (queryResult.data.results.length > 1) {
-        console.warn(`[NotionSync] Found ${queryResult.data.results.length} pages for canvas ${payload.canvasId}, updating first`)
+        console.warn(
+          `[NotionSync] Found ${queryResult.data.results.length} pages for canvas ${payload.canvasId}, updating first`,
+        )
       }
-      const updateResult = await notionService.request(
-        async (client) => {
-          return await client.pages.update({
-            page_id: existingPageId,
-            properties
-          })
-        },
-        'updateWorkflow'
-      )
+      const updateResult = await notionService.request(async (client) => {
+        return await client.pages.update({
+          page_id: existingPageId,
+          properties,
+        })
+      }, 'updateWorkflow')
       return updateResult.success
         ? { success: true }
         : { success: false, error: updateResult.error, shouldSuspend: updateResult.shouldSuspend }
     }
 
     // No existing page found — create new
-    const createResult = await notionService.request(
-      async (client) => {
-        return await client.pages.create({
-          parent: { database_id: config.workflowsDbId },
-          properties
-        })
-      },
-      'createWorkflow'
-    )
+    const createResult = await notionService.request(async (client) => {
+      return await client.pages.create({
+        parent: { database_id: config.workflowsDbId },
+        properties,
+      })
+    }, 'createWorkflow')
 
     return createResult.success
       ? { success: true }

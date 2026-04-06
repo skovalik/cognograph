@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { ProviderAdapter, type ImageGenParams, type MediaResult, type AnalyzeParams } from '../providerAdapter'
+import {
+  type AnalyzeParams,
+  type ImageGenParams,
+  type MediaResult,
+  ProviderAdapter,
+} from '../providerAdapter'
 
 export class GeminiAdapter extends ProviderAdapter {
   readonly name = 'gemini'
@@ -16,9 +21,9 @@ export class GeminiAdapter extends ProviderAdapter {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: [{ text: params.prompt }] }],
-            generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
-          })
-        }
+            generationConfig: { responseModalities: ['IMAGE', 'TEXT'] },
+          }),
+        },
       )
 
       if (!res.ok) {
@@ -28,8 +33,8 @@ export class GeminiAdapter extends ProviderAdapter {
       }
 
       const data = await res.json()
-      const imagePart = data.candidates?.[0]?.content?.parts?.find(
-        (p: any) => p.inlineData?.mimeType?.startsWith('image/')
+      const imagePart = data.candidates?.[0]?.content?.parts?.find((p: any) =>
+        p.inlineData?.mimeType?.startsWith('image/'),
       )
       if (!imagePart) throw new Error('No image in Gemini response')
 
@@ -40,7 +45,7 @@ export class GeminiAdapter extends ProviderAdapter {
       return {
         buffer: new Blob([bytes], { type: imagePart.inlineData.mimeType }),
         mimeType: imagePart.inlineData.mimeType,
-        metadata: { model: 'gemini-2.0-flash-exp' }
+        metadata: { model: 'gemini-2.0-flash-exp' },
       }
     })
   }
@@ -53,14 +58,16 @@ export class GeminiAdapter extends ProviderAdapter {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{
-              parts: [
-                { text: params.prompt },
-                { fileData: { mimeType: 'image/jpeg', fileUri: params.mediaUrl } }
-              ]
-            }]
-          })
-        }
+            contents: [
+              {
+                parts: [
+                  { text: params.prompt },
+                  { fileData: { mimeType: 'image/jpeg', fileUri: params.mediaUrl } },
+                ],
+              },
+            ],
+          }),
+        },
       )
 
       if (!res.ok) {

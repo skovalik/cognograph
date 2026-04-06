@@ -8,7 +8,13 @@
  * Shows the current value with an optional color dot indicator.
  */
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 
 export interface SelectOption {
@@ -36,10 +42,11 @@ export function SelectField({
   const current = options.find((o) => o.value === value)
 
   return (
-    <div className="flex items-center justify-between gap-2" data-testid={`inspector-field-${fieldId}`}>
-      <span className="text-[11px] text-[var(--text-secondary)] shrink-0">
-        {label}
-      </span>
+    <div
+      className="flex items-center justify-between gap-2"
+      data-testid={`inspector-field-${fieldId}`}
+    >
+      <span className="text-[11px] text-[var(--text-secondary)] shrink-0">{label}</span>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger
           className={cn(

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // =============================================================================
 // Mocks — must be defined before importing the module under test
@@ -12,7 +12,7 @@ let capturedGeminiModelConfig: Record<string, unknown> | null = null
 
 const mockSend = vi.fn()
 const mockBrowserWindow = {
-  webContents: { send: mockSend }
+  webContents: { send: mockSend },
 }
 
 // Track ipcMain.handle registrations so we can invoke them directly
@@ -22,15 +22,15 @@ vi.mock('electron', () => ({
   ipcMain: {
     handle: vi.fn((channel: string, handler: (...args: unknown[]) => Promise<unknown>) => {
       ipcHandlers.set(channel, handler)
-    })
+    }),
   },
   BrowserWindow: {
-    getAllWindows: vi.fn(() => [mockBrowserWindow])
+    getAllWindows: vi.fn(() => [mockBrowserWindow]),
   },
   safeStorage: {
     isEncryptionAvailable: vi.fn(() => false),
-    decryptString: vi.fn()
-  }
+    decryptString: vi.fn(),
+  },
 }))
 
 vi.mock('electron-store', () => {
@@ -40,10 +40,10 @@ vi.mock('electron-store', () => {
         return {
           anthropic: 'test-anthropic-key',
           gemini: 'test-gemini-key',
-          openai: 'test-openai-key'
+          openai: 'test-openai-key',
         }
       }
-    }
+    },
   }
 })
 
@@ -56,19 +56,19 @@ vi.mock('@anthropic-ai/sdk', () => {
   return {
     default: class MockAnthropic {
       messages = {
-        stream: mockAnthropicMessagesStream
+        stream: mockAnthropicMessagesStream,
       }
       constructor(...args: unknown[]) {
         anthropicConstructorSpy(...args)
       }
-    }
+    },
   }
 })
 
 // --- Gemini mock ---
 const mockGeminiSendMessageStream = vi.fn()
 const mockGeminiStartChat = vi.fn(() => ({
-  sendMessageStream: mockGeminiSendMessageStream
+  sendMessageStream: mockGeminiSendMessageStream,
 }))
 const mockGetGenerativeModel = vi.fn((config: Record<string, unknown>) => {
   capturedGeminiModelConfig = config
@@ -82,7 +82,7 @@ vi.mock('@google/generative-ai', () => ({
     constructor(...args: unknown[]) {
       geminiConstructorSpy(...args)
     }
-  }
+  },
 }))
 
 // --- OpenAI mock ---
@@ -94,13 +94,13 @@ vi.mock('openai', () => {
     default: class MockOpenAI {
       chat = {
         completions: {
-          create: mockOpenAICreate
-        }
+          create: mockOpenAICreate,
+        },
       }
       constructor(...args: unknown[]) {
         openaiConstructorSpy(...args)
       }
-    }
+    },
   }
 })
 
@@ -108,32 +108,35 @@ vi.mock('openai', () => {
 // Import after mocking
 // =============================================================================
 
-import { registerLLMHandlers, clearClientCache, getClientCacheSize } from '../llm'
+import { clearClientCache, getClientCacheSize, registerLLMHandlers } from '../llm'
 
 // =============================================================================
 // Helpers
 // =============================================================================
 
-function makeLLMRequest(overrides: Partial<{
-  conversationId: string
-  provider: 'anthropic' | 'gemini' | 'openai'
-  messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>
-  systemPrompt: string
-  model: string
-}> = {}) {
+function makeLLMRequest(
+  overrides: Partial<{
+    conversationId: string
+    provider: 'anthropic' | 'gemini' | 'openai'
+    messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>
+    systemPrompt: string
+    model: string
+  }> = {},
+) {
   return {
     conversationId: overrides.conversationId ?? 'conv-1',
     provider: overrides.provider ?? 'gemini',
     messages: overrides.messages ?? [{ role: 'user' as const, content: 'Hello' }],
     systemPrompt: overrides.systemPrompt,
-    model: overrides.model
+    model: overrides.model,
   }
 }
 
 /** Call the registered llm:send handler (simulates ipcMain.handle invocation) */
 async function invokeLLMSend(request: ReturnType<typeof makeLLMRequest>): Promise<void> {
   const handler = ipcHandlers.get('llm:send')
-  if (!handler) throw new Error('llm:send handler not registered — call registerLLMHandlers() first')
+  if (!handler)
+    throw new Error('llm:send handler not registered — call registerLLMHandlers() first')
   await handler({} /* _event */, request)
 }
 
@@ -141,17 +144,19 @@ async function invokeLLMSend(request: ReturnType<typeof makeLLMRequest>): Promis
 function makeEmptyAnthropicStream() {
   return {
     [Symbol.asyncIterator]: () => ({
-      next: vi.fn().mockResolvedValue({ done: true, value: undefined })
+      next: vi.fn().mockResolvedValue({ done: true, value: undefined }),
     }),
-    finalMessage: vi.fn().mockResolvedValue({ usage: null })
+    finalMessage: vi.fn().mockResolvedValue({ usage: null }),
   }
 }
 
 /** Creates a default empty Gemini stream mock return value */
 function makeEmptyGeminiStream() {
   return {
-    stream: (async function* () { /* no chunks */ })(),
-    response: Promise.resolve({ usageMetadata: null })
+    stream: (async function* () {
+      /* no chunks */
+    })(),
+    response: Promise.resolve({ usageMetadata: null }),
   }
 }
 
@@ -170,7 +175,9 @@ describe('llm', () => {
     mockGeminiSendMessageStream.mockResolvedValue(makeEmptyGeminiStream())
     mockAnthropicMessagesStream.mockResolvedValue(makeEmptyAnthropicStream())
     mockOpenAICreate.mockResolvedValue({
-      [Symbol.asyncIterator]: async function* () { /* no chunks */ }
+      [Symbol.asyncIterator]: async function* () {
+        /* no chunks */
+      },
     })
 
     // Register handlers so ipcHandlers map is populated
@@ -185,7 +192,7 @@ describe('llm', () => {
     it('passes systemInstruction to getGenerativeModel when systemPrompt is provided', async () => {
       const request = makeLLMRequest({
         provider: 'gemini',
-        systemPrompt: 'You are a spatial AI assistant with full BFS context.'
+        systemPrompt: 'You are a spatial AI assistant with full BFS context.',
       })
 
       await invokeLLMSend(request)
@@ -193,13 +200,13 @@ describe('llm', () => {
       expect(mockGetGenerativeModel).toHaveBeenCalledTimes(1)
       expect(capturedGeminiModelConfig).not.toBeNull()
       expect(capturedGeminiModelConfig!.systemInstruction).toBe(
-        'You are a spatial AI assistant with full BFS context.'
+        'You are a spatial AI assistant with full BFS context.',
       )
     })
 
     it('passes undefined systemInstruction when systemPrompt is omitted', async () => {
       const request = makeLLMRequest({
-        provider: 'gemini'
+        provider: 'gemini',
         // no systemPrompt
       })
 
@@ -214,14 +221,14 @@ describe('llm', () => {
       const request = makeLLMRequest({
         provider: 'gemini',
         systemPrompt: 'Context here',
-        model: 'gemini-2.0-flash'
+        model: 'gemini-2.0-flash',
       })
 
       await invokeLLMSend(request)
 
       expect(capturedGeminiModelConfig).toEqual({
         model: 'gemini-2.0-flash',
-        systemInstruction: 'Context here'
+        systemInstruction: 'Context here',
       })
     })
   })
@@ -233,47 +240,56 @@ describe('llm', () => {
   describe('duplicate stream abort', () => {
     it('aborts existing Gemini stream when a second send arrives for the same conversationId', async () => {
       let resolveFirstStream!: () => void
-      const firstStreamHang = new Promise<void>(r => { resolveFirstStream = r })
+      const firstStreamHang = new Promise<void>((r) => {
+        resolveFirstStream = r
+      })
 
       // First call: stream that hangs (simulates in-flight request)
       mockGeminiSendMessageStream.mockResolvedValueOnce({
         stream: (async function* () {
           await firstStreamHang
         })(),
-        response: Promise.resolve({ usageMetadata: null })
+        response: Promise.resolve({ usageMetadata: null }),
       })
 
       // Second call: normal fast stream
       mockGeminiSendMessageStream.mockResolvedValueOnce(makeEmptyGeminiStream())
 
       // Start first stream (don't await — it will hang)
-      const firstPromise = invokeLLMSend(makeLLMRequest({
-        conversationId: 'conv-dup',
-        provider: 'gemini',
-        systemPrompt: 'First request context'
-      }))
+      const firstPromise = invokeLLMSend(
+        makeLLMRequest({
+          conversationId: 'conv-dup',
+          provider: 'gemini',
+          systemPrompt: 'First request context',
+        }),
+      )
 
       // Give the first stream a tick to register its AbortController
-      await new Promise(r => setTimeout(r, 10))
+      await new Promise((r) => setTimeout(r, 10))
 
       // The second send for the same conversationId should abort the first
-      await invokeLLMSend(makeLLMRequest({
-        conversationId: 'conv-dup',
-        provider: 'gemini',
-        systemPrompt: 'Second request context'
-      }))
+      await invokeLLMSend(
+        makeLLMRequest({
+          conversationId: 'conv-dup',
+          provider: 'gemini',
+          systemPrompt: 'Second request context',
+        }),
+      )
 
       // Resolve the first stream so the promise settles
       resolveFirstStream()
-      await firstPromise.catch(() => { /* expected abort */ })
+      await firstPromise.catch(() => {
+        /* expected abort */
+      })
 
       // getGenerativeModel called twice (once per stream)
       expect(mockGetGenerativeModel).toHaveBeenCalledTimes(2)
 
       // llm:complete was sent for the second stream
       const completeCalls = mockSend.mock.calls.filter(
-        (call: unknown[]) => call[0] === 'llm:complete' &&
-          (call[1] as Record<string, unknown>).conversationId === 'conv-dup'
+        (call: unknown[]) =>
+          call[0] === 'llm:complete' &&
+          (call[1] as Record<string, unknown>).conversationId === 'conv-dup',
       )
       expect(completeCalls.length).toBeGreaterThanOrEqual(1)
     })
@@ -281,67 +297,81 @@ describe('llm', () => {
     it('aborts existing Anthropic stream when a second send arrives for the same conversationId', async () => {
       let firstAbortSignalAborted = false
       let resolveFirstStream!: () => void
-      const firstStreamHang = new Promise<void>(r => { resolveFirstStream = r })
+      const firstStreamHang = new Promise<void>((r) => {
+        resolveFirstStream = r
+      })
 
       // First Anthropic call: captures the signal and hangs the stream
       mockAnthropicMessagesStream.mockImplementationOnce(
         (_params: unknown, opts?: { signal?: AbortSignal }) => {
           if (opts?.signal) {
-            opts.signal.addEventListener('abort', () => { firstAbortSignalAborted = true })
+            opts.signal.addEventListener('abort', () => {
+              firstAbortSignalAborted = true
+            })
           }
           return Promise.resolve({
             [Symbol.asyncIterator]: () => ({
               async next() {
                 await firstStreamHang
                 return { done: true, value: undefined }
-              }
+              },
             }),
-            finalMessage: vi.fn().mockResolvedValue({ usage: null })
+            finalMessage: vi.fn().mockResolvedValue({ usage: null }),
           })
-        }
+        },
       )
 
       // Second call: normal empty stream
-      mockAnthropicMessagesStream.mockImplementationOnce(
-        () => Promise.resolve(makeEmptyAnthropicStream())
+      mockAnthropicMessagesStream.mockImplementationOnce(() =>
+        Promise.resolve(makeEmptyAnthropicStream()),
       )
 
       // Start first stream (will hang)
-      const firstPromise = invokeLLMSend(makeLLMRequest({
-        conversationId: 'conv-anthropic-dup',
-        provider: 'anthropic',
-        systemPrompt: 'First'
-      }))
+      const firstPromise = invokeLLMSend(
+        makeLLMRequest({
+          conversationId: 'conv-anthropic-dup',
+          provider: 'anthropic',
+          systemPrompt: 'First',
+        }),
+      )
 
-      await new Promise(r => setTimeout(r, 10))
+      await new Promise((r) => setTimeout(r, 10))
 
       // Second send should abort the first
-      await invokeLLMSend(makeLLMRequest({
-        conversationId: 'conv-anthropic-dup',
-        provider: 'anthropic',
-        systemPrompt: 'Second'
-      }))
+      await invokeLLMSend(
+        makeLLMRequest({
+          conversationId: 'conv-anthropic-dup',
+          provider: 'anthropic',
+          systemPrompt: 'Second',
+        }),
+      )
 
       // Resolve first stream and let it settle
       resolveFirstStream()
-      await firstPromise.catch(() => { /* expected */ })
+      await firstPromise.catch(() => {
+        /* expected */
+      })
 
       // The first controller's signal should have been aborted
       expect(firstAbortSignalAborted).toBe(true)
     })
 
     it('does not abort when different conversationIds are used', async () => {
-      await invokeLLMSend(makeLLMRequest({
-        conversationId: 'conv-a',
-        provider: 'gemini',
-        systemPrompt: 'Context A'
-      }))
+      await invokeLLMSend(
+        makeLLMRequest({
+          conversationId: 'conv-a',
+          provider: 'gemini',
+          systemPrompt: 'Context A',
+        }),
+      )
 
-      await invokeLLMSend(makeLLMRequest({
-        conversationId: 'conv-b',
-        provider: 'gemini',
-        systemPrompt: 'Context B'
-      }))
+      await invokeLLMSend(
+        makeLLMRequest({
+          conversationId: 'conv-b',
+          provider: 'gemini',
+          systemPrompt: 'Context B',
+        }),
+      )
 
       // Both should complete normally
       expect(mockGetGenerativeModel).toHaveBeenCalledTimes(2)
@@ -384,7 +414,9 @@ describe('llm', () => {
 
     it('reuses OpenAI client across multiple calls', async () => {
       mockOpenAICreate.mockResolvedValue({
-        [Symbol.asyncIterator]: async function* () { /* no chunks */ }
+        [Symbol.asyncIterator]: async function* () {
+          /* no chunks */
+        },
       })
 
       await invokeLLMSend(makeLLMRequest({ provider: 'openai', conversationId: 'c1' }))

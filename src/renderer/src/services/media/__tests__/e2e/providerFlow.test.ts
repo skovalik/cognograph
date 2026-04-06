@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { getAvailableMediaTools } from '../../agentToolRegistry'
 
 describe('Provider flow (integration)', () => {
@@ -21,7 +21,7 @@ describe('Provider flow (integration)', () => {
     localStorage.setItem('cognograph:apikey:elevenlabs', 'el-test')
 
     const tools = getAvailableMediaTools()
-    const names = tools.map(t => t.name)
+    const names = tools.map((t) => t.name)
 
     expect(names).toContain('generate_image')
     expect(names).toContain('edit_image')
@@ -34,7 +34,7 @@ describe('Provider flow (integration)', () => {
   it('only image tools available with stability key only', () => {
     localStorage.setItem('cognograph:apikey:stability', 'sk-test')
     const tools = getAvailableMediaTools()
-    const names = tools.map(t => t.name)
+    const names = tools.map((t) => t.name)
 
     expect(names).toContain('generate_image')
     expect(names).not.toContain('generate_audio')
@@ -44,7 +44,7 @@ describe('Provider flow (integration)', () => {
   it('openai key enables image + analysis tools', () => {
     localStorage.setItem('cognograph:apikey:openai', 'sk-test')
     const tools = getAvailableMediaTools()
-    const names = tools.map(t => t.name)
+    const names = tools.map((t) => t.name)
 
     expect(names).toContain('generate_image')
     // OpenAI doesn't have audio or video
@@ -54,7 +54,7 @@ describe('Provider flow (integration)', () => {
   it('google/gemini key enables image gen + analysis', () => {
     localStorage.setItem('cognograph:apikey:google', 'gk-test')
     const tools = getAvailableMediaTools()
-    const names = tools.map(t => t.name)
+    const names = tools.map((t) => t.name)
 
     expect(names).toContain('generate_image')
     expect(names).toContain('analyze_media')
@@ -63,7 +63,7 @@ describe('Provider flow (integration)', () => {
   it('replicate key enables image + 3D tools', () => {
     localStorage.setItem('cognograph:apikey:replicate', 'r8-test')
     const tools = getAvailableMediaTools()
-    const names = tools.map(t => t.name)
+    const names = tools.map((t) => t.name)
 
     expect(names).toContain('generate_image')
     expect(names).toContain('generate_3d')

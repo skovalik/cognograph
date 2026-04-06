@@ -114,7 +114,11 @@ export interface ContextMetadata {
 // Node Activation Condition Types
 // -----------------------------------------------------------------------------
 
-export type ActivationTrigger = 'any-connected' | 'all-connected' | 'specific-node' | 'edge-property'
+export type ActivationTrigger =
+  | 'any-connected'
+  | 'all-connected'
+  | 'specific-node'
+  | 'edge-property'
 
 export interface NodeActivationCondition {
   trigger: ActivationTrigger
@@ -194,7 +198,14 @@ export interface PropertySchema {
 // Design Token Types
 // -----------------------------------------------------------------------------
 
-export type DesignTokenType = 'color' | 'spacing' | 'typography' | 'shadow' | 'border' | 'opacity' | 'custom'
+export type DesignTokenType =
+  | 'color'
+  | 'spacing'
+  | 'typography'
+  | 'shadow'
+  | 'border'
+  | 'opacity'
+  | 'custom'
 
 export interface DesignToken {
   value: string

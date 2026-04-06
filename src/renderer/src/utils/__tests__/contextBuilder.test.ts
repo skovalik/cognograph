@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { buildAIEditorContext } from '../contextBuilder'
+import type { EdgeData, NodeData } from '@shared/types'
+import type { Edge, Node } from '@xyflow/react'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
   createConversationNode,
   createNoteNode,
-  createTaskNode,
   createProjectNode,
+  createTaskNode,
   createTestEdge,
-  resetTestCounters
+  resetTestCounters,
 } from '../../../../test/utils'
-import type { Node, Edge } from '@xyflow/react'
-import type { NodeData, EdgeData } from '@shared/types'
+import { buildAIEditorContext } from '../contextBuilder'
 
 describe('contextBuilder', () => {
   beforeEach(() => {
@@ -22,7 +22,7 @@ describe('contextBuilder', () => {
   describe('buildAIEditorContext', () => {
     it('should build context with basic inputs', () => {
       const nodes: Node<NodeData>[] = [
-        createConversationNode([], { id: 'conv-1', position: { x: 0, y: 0 } })
+        createConversationNode([], { id: 'conv-1', position: { x: 0, y: 0 } }),
       ]
       const edges: Edge<EdgeData>[] = []
 
@@ -34,7 +34,7 @@ describe('contextBuilder', () => {
         edges,
         selectedNodeIds: ['conv-1'],
         viewport: { x: 0, y: 0, zoom: 1 },
-        viewportBounds: { width: 1000, height: 800 }
+        viewportBounds: { width: 1000, height: 800 },
       })
 
       expect(context.mode).toBe('fix')
@@ -49,7 +49,7 @@ describe('contextBuilder', () => {
     it('should include node type in summaries', () => {
       const nodes: Node<NodeData>[] = [
         createNoteNode('Important note', { id: 'note-1' }),
-        createTaskNode('todo', { id: 'task-1' })
+        createTaskNode('todo', { id: 'task-1' }),
       ]
 
       const context = buildAIEditorContext({
@@ -60,7 +60,7 @@ describe('contextBuilder', () => {
         edges: [],
         selectedNodeIds: ['note-1', 'task-1'],
         viewport: { x: 0, y: 0, zoom: 1 },
-        viewportBounds: { width: 1000, height: 800 }
+        viewportBounds: { width: 1000, height: 800 },
       })
 
       expect(context.selectedNodes.length).toBe(2)
@@ -69,9 +69,7 @@ describe('contextBuilder', () => {
     })
 
     it('should include task status in summary', () => {
-      const nodes: Node<NodeData>[] = [
-        createTaskNode('in-progress', { id: 'task-1' })
-      ]
+      const nodes: Node<NodeData>[] = [createTaskNode('in-progress', { id: 'task-1' })]
 
       const context = buildAIEditorContext({
         mode: 'fix',
@@ -81,7 +79,7 @@ describe('contextBuilder', () => {
         edges: [],
         selectedNodeIds: ['task-1'],
         viewport: { x: 0, y: 0, zoom: 1 },
-        viewportBounds: { width: 1000, height: 800 }
+        viewportBounds: { width: 1000, height: 800 },
       })
 
       expect(context.selectedNodes[0]!.status).toBe('in-progress')
@@ -89,7 +87,7 @@ describe('contextBuilder', () => {
 
     it('should include project child count', () => {
       const nodes: Node<NodeData>[] = [
-        createProjectNode(['child-1', 'child-2', 'child-3'], { id: 'proj-1' })
+        createProjectNode(['child-1', 'child-2', 'child-3'], { id: 'proj-1' }),
       ]
 
       const context = buildAIEditorContext({
@@ -100,7 +98,7 @@ describe('contextBuilder', () => {
         edges: [],
         selectedNodeIds: ['proj-1'],
         viewport: { x: 0, y: 0, zoom: 1 },
-        viewportBounds: { width: 1000, height: 800 }
+        viewportBounds: { width: 1000, height: 800 },
       })
 
       expect(context.selectedNodes[0]!.childCount).toBe(3)
@@ -109,11 +107,9 @@ describe('contextBuilder', () => {
     it('should include relevant edges', () => {
       const nodes: Node<NodeData>[] = [
         createConversationNode([], { id: 'conv-1', position: { x: 0, y: 0 } }),
-        createNoteNode('Context note', { id: 'note-1', position: { x: -200, y: 0 } })
+        createNoteNode('Context note', { id: 'note-1', position: { x: -200, y: 0 } }),
       ]
-      const edges: Edge<EdgeData>[] = [
-        createTestEdge('note-1', 'conv-1')
-      ]
+      const edges: Edge<EdgeData>[] = [createTestEdge('note-1', 'conv-1')]
 
       const context = buildAIEditorContext({
         mode: 'fix',
@@ -123,7 +119,7 @@ describe('contextBuilder', () => {
         edges,
         selectedNodeIds: ['conv-1'],
         viewport: { x: 0, y: 0, zoom: 1 },
-        viewportBounds: { width: 1000, height: 800 }
+        viewportBounds: { width: 1000, height: 800 },
       })
 
       expect(context.edges.length).toBe(1)
@@ -134,7 +130,7 @@ describe('contextBuilder', () => {
     it('should calculate canvas bounds from nodes', () => {
       const nodes: Node<NodeData>[] = [
         createNoteNode('A', { id: 'n1', position: { x: -100, y: -50 } }),
-        createNoteNode('B', { id: 'n2', position: { x: 200, y: 300 } })
+        createNoteNode('B', { id: 'n2', position: { x: 200, y: 300 } }),
       ]
 
       const context = buildAIEditorContext({
@@ -145,7 +141,7 @@ describe('contextBuilder', () => {
         edges: [],
         selectedNodeIds: [],
         viewport: { x: 0, y: 0, zoom: 1 },
-        viewportBounds: { width: 1000, height: 800 }
+        viewportBounds: { width: 1000, height: 800 },
       })
 
       expect(context.canvasBounds.minX).toBe(-100)
@@ -164,7 +160,7 @@ describe('contextBuilder', () => {
         edges: [],
         selectedNodeIds: [],
         viewport: { x: 0, y: 0, zoom: 1 },
-        viewportBounds: { width: 1000, height: 800 }
+        viewportBounds: { width: 1000, height: 800 },
       })
 
       expect(context.selectedNodes).toEqual([])
@@ -175,11 +171,9 @@ describe('contextBuilder', () => {
     it('should handle single scope with targetNodeId', () => {
       const nodes: Node<NodeData>[] = [
         createConversationNode([], { id: 'conv-1', position: { x: 0, y: 0 } }),
-        createNoteNode('Connected', { id: 'note-1', position: { x: -200, y: 0 } })
+        createNoteNode('Connected', { id: 'note-1', position: { x: -200, y: 0 } }),
       ]
-      const edges: Edge<EdgeData>[] = [
-        createTestEdge('note-1', 'conv-1')
-      ]
+      const edges: Edge<EdgeData>[] = [createTestEdge('note-1', 'conv-1')]
 
       const context = buildAIEditorContext({
         mode: 'fix',
@@ -190,7 +184,7 @@ describe('contextBuilder', () => {
         selectedNodeIds: ['some-other-id'],
         targetNodeId: 'conv-1',
         viewport: { x: 0, y: 0, zoom: 1 },
-        viewportBounds: { width: 1000, height: 800 }
+        viewportBounds: { width: 1000, height: 800 },
       })
 
       // Single scope should use targetNodeId, not selectedNodeIds
@@ -206,7 +200,7 @@ describe('contextBuilder', () => {
       const nodes: Node<NodeData>[] = [
         createNoteNode('A', { id: 'n1', position: { x: 0, y: 0 } }),
         createNoteNode('B', { id: 'n2', position: { x: 100, y: 100 } }),
-        createNoteNode('C', { id: 'n3', position: { x: 200, y: 200 } })
+        createNoteNode('C', { id: 'n3', position: { x: 200, y: 200 } }),
       ]
 
       const context = buildAIEditorContext({
@@ -217,7 +211,7 @@ describe('contextBuilder', () => {
         edges: [],
         selectedNodeIds: [],
         viewport: { x: 0, y: 0, zoom: 1 },
-        viewportBounds: { width: 1000, height: 800 }
+        viewportBounds: { width: 1000, height: 800 },
       })
 
       expect(context.allNodes).toBeDefined()
@@ -225,9 +219,7 @@ describe('contextBuilder', () => {
     })
 
     it('should not include allNodes for non-canvas scopes', () => {
-      const nodes: Node<NodeData>[] = [
-        createNoteNode('A', { id: 'n1' })
-      ]
+      const nodes: Node<NodeData>[] = [createNoteNode('A', { id: 'n1' })]
 
       const context = buildAIEditorContext({
         mode: 'fix',
@@ -237,7 +229,7 @@ describe('contextBuilder', () => {
         edges: [],
         selectedNodeIds: ['n1'],
         viewport: { x: 0, y: 0, zoom: 1 },
-        viewportBounds: { width: 1000, height: 800 }
+        viewportBounds: { width: 1000, height: 800 },
       })
 
       expect(context.allNodes).toBeUndefined()
@@ -249,10 +241,10 @@ describe('contextBuilder', () => {
           [
             { role: 'user', content: 'Hello' },
             { role: 'assistant', content: 'Hi there!' },
-            { role: 'user', content: 'How are you?' }
+            { role: 'user', content: 'How are you?' },
           ],
-          { id: 'conv-1' }
-        )
+          { id: 'conv-1' },
+        ),
       ]
 
       const context = buildAIEditorContext({
@@ -263,7 +255,7 @@ describe('contextBuilder', () => {
         edges: [],
         selectedNodeIds: ['conv-1'],
         viewport: { x: 0, y: 0, zoom: 1 },
-        viewportBounds: { width: 1000, height: 800 }
+        viewportBounds: { width: 1000, height: 800 },
       })
 
       expect(context.selectedNodes[0]!.messageCount).toBe(3)

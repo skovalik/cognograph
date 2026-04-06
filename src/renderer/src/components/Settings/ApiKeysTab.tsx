@@ -9,18 +9,28 @@
  * available, falls back to Electron IPC for local desktop key storage.
  */
 
-import { memo, useState, useCallback, useEffect } from 'react'
-import { Key, Plus, Trash2, Play, Loader2, CheckCircle, AlertTriangle, ShieldCheck } from 'lucide-react'
-// Cloud key store not available in open-source build
+import {
+  AlertTriangle,
+  CheckCircle,
+  Key,
+  Loader2,
+  Play,
+  Plus,
+  ShieldCheck,
+  Trash2,
+} from 'lucide-react'
+import { memo, useCallback, useEffect, useState } from 'react'
+// Cloud features disabled in open-source build (src/web/ not included)
 const isAuthEnabled = (): boolean => false
-type ApiKeyEntry = { id: string; provider: string; keyPrefix: string; createdAt: string }
-const useApiKeyStore = (_selector: any): any => {
-  const noop = async (): Promise<boolean> => false
-  return _selector({
-    keys: [] as ApiKeyEntry[], loading: false,
-    fetchKeys: noop, addKey: noop, removeKey: noop, testKey: noop,
-  })
-}
+type ApiKeyEntry = { id: string; key: string; provider: string; lastFour: string }
+const useApiKeyStore = (selector: (s: any) => any) => selector({
+  keys: [] as ApiKeyEntry[],
+  loading: false,
+  fetchKeys: async () => {},
+  addKey: async () => false,
+  removeKey: async () => false,
+  testKey: async () => false,
+})
 
 // ---------------------------------------------------------------------------
 // Provider definitions
@@ -41,8 +51,14 @@ type ProviderId = (typeof PROVIDERS)[number]['id']
 // Provider Card
 // ---------------------------------------------------------------------------
 
-function ProviderCard({ provider, existingKey, onAdd, onRemove, onTest }: {
-  provider: typeof PROVIDERS[number]
+function ProviderCard({
+  provider,
+  existingKey,
+  onAdd,
+  onRemove,
+  onTest,
+}: {
+  provider: (typeof PROVIDERS)[number]
   existingKey: ApiKeyEntry | undefined
   onAdd: (providerId: string, key: string) => Promise<boolean>
   onRemove: (keyId: string) => Promise<boolean>
@@ -85,14 +101,19 @@ function ProviderCard({ provider, existingKey, onAdd, onRemove, onTest }: {
     <div className="gui-card rounded-lg p-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
-          <Key className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--gui-accent-secondary)' }} />
+          <Key
+            className="w-3.5 h-3.5 flex-shrink-0"
+            style={{ color: 'var(--gui-accent-secondary)' }}
+          />
           <span className="text-sm font-medium gui-text">{provider.name}</span>
         </div>
         <div className="flex items-center gap-1.5">
           {existingKey ? (
             <>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1"
-                style={{ backgroundColor: 'rgba(34, 197, 94, 0.15)', color: '#22c55e' }}>
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1"
+                style={{ backgroundColor: 'rgba(34, 197, 94, 0.15)', color: '#22c55e' }}
+              >
                 <ShieldCheck className="w-3 h-3" />
                 ••••{existingKey.lastFour}
               </span>
@@ -125,7 +146,10 @@ function ProviderCard({ provider, existingKey, onAdd, onRemove, onTest }: {
             placeholder={provider.placeholder}
             className="gui-input flex-1 px-2 py-1.5 rounded text-xs font-mono"
             autoFocus
-            onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setShowInput(false) }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleAdd()
+              if (e.key === 'Escape') setShowInput(false)
+            }}
           />
           <button
             onClick={handleTest}
@@ -133,7 +157,11 @@ function ProviderCard({ provider, existingKey, onAdd, onRemove, onTest }: {
             className="p-1.5 rounded gui-btn-ghost transition-colors disabled:opacity-50"
             title="Test key"
           >
-            {testing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+            {testing ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Play className="w-3.5 h-3.5" />
+            )}
           </button>
           <button
             onClick={handleAdd}
@@ -179,7 +207,7 @@ function ApiKeysTabComponent(): JSX.Element {
   }, [fetchKeys])
 
   const getKeyForProvider = (providerId: string): ApiKeyEntry | undefined =>
-    keys.find(k => k.provider === providerId)
+    keys.find((k) => k.provider === providerId)
 
   if (!isAuthEnabled()) {
     return (
@@ -207,7 +235,8 @@ function ApiKeysTabComponent(): JSX.Element {
       <div>
         <h3 className="text-sm font-medium gui-text mb-1">API Keys</h3>
         <p className="text-xs gui-text-secondary">
-          Bring your own keys or use Cognograph credits. Keys are encrypted server-side with AES-256.
+          Bring your own keys or use Cognograph credits. Keys are encrypted server-side with
+          AES-256.
         </p>
       </div>
 

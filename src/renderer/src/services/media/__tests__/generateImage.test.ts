@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, vi } from 'vitest'
-import { generateImageTool } from '../tools/generateImage'
-import { getAvailableMediaTools } from '../agentToolRegistry'
+import { describe, expect, it, vi } from 'vitest'
 import { getAdapterForProvider } from '../adapterFactory'
+import { getAvailableMediaTools } from '../agentToolRegistry'
+import { generateImageTool } from '../tools/generateImage'
 
-// Cloud key store not available in open-source build — tests use localStorage
+// Cloud features disabled in open-source build — no web store to mock
 
 describe('generateImage tool', () => {
   it('has correct tool definition', () => {
@@ -26,7 +26,7 @@ describe('generateImage tool', () => {
   it('registry returns generate_image when stability key exists', () => {
     localStorage.setItem('cognograph:apikey:stability', 'sk-test')
     const tools = getAvailableMediaTools()
-    expect(tools.some(t => t.name === 'generate_image')).toBe(true)
+    expect(tools.some((t) => t.name === 'generate_image')).toBe(true)
     localStorage.clear()
   })
 

@@ -8,11 +8,21 @@
  * Uses the existing context builder and workspace store to compute estimates.
  */
 
+import type {
+  ActionNodeData,
+  ArtifactNodeData,
+  ConversationNodeData,
+  NodeData,
+  NoteNodeData,
+  OrchestratorNodeData,
+  ProjectNodeData,
+  TaskNodeData,
+  TextNodeData,
+} from '@shared/types'
 import { useMemo } from 'react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import { buildTokenEstimate, type TokenEstimate } from '../utils/tokenEstimator'
 import { estimateTokens } from '../utils/tokenEstimation'
-import type { ConversationNodeData, NodeData, NoteNodeData, ProjectNodeData, TaskNodeData, ArtifactNodeData, TextNodeData, ActionNodeData, OrchestratorNodeData } from '@shared/types'
+import { buildTokenEstimate, type TokenEstimate } from '../utils/tokenEstimator'
 
 /**
  * Get a text representation of a node's content for token estimation.
@@ -45,7 +55,7 @@ function getNodeContentText(data: NodeData): string {
     }
     case 'conversation': {
       const conv = data as ConversationNodeData
-      return conv.messages.map(m => m.content).join('\n')
+      return conv.messages.map((m) => m.content).join('\n')
     }
     case 'orchestrator': {
       const orch = data as OrchestratorNodeData
@@ -71,7 +81,7 @@ export function useTokenEstimate(nodeId: string, currentInput?: string): TokenEs
   const getContextForNode = useWorkspaceStore((state) => state.getContextForNode)
 
   return useMemo(() => {
-    const node = nodes.find(n => n.id === nodeId)
+    const node = nodes.find((n) => n.id === nodeId)
     if (!node || node.data.type !== 'conversation') return null
 
     const nodeData = node.data as ConversationNodeData
@@ -85,13 +95,18 @@ export function useTokenEstimate(nodeId: string, currentInput?: string): TokenEs
     const maxDepth = contextSettings.globalDepth
 
     const getInboundEdges = (targetId: string) =>
-      edges.filter(e => e.target === targetId && e.data?.active !== false)
+      edges.filter((e) => e.target === targetId && e.data?.active !== false)
 
     const getBidirectionalEdges = (targetId: string) =>
-      edges.filter(e => e.source === targetId && e.data?.active !== false && e.data?.direction === 'bidirectional')
+      edges.filter(
+        (e) =>
+          e.source === targetId &&
+          e.data?.active !== false &&
+          e.data?.direction === 'bidirectional',
+      )
 
     interface QueueItem {
-      node: typeof nodes[0]
+      node: (typeof nodes)[0]
       depth: number
       path: string[]
     }
@@ -102,15 +117,15 @@ export function useTokenEstimate(nodeId: string, currentInput?: string): TokenEs
     const initialInbound = getInboundEdges(nodeId)
     const initialBidirectional = getBidirectionalEdges(nodeId)
 
-    initialInbound.forEach(edge => {
-      const sourceNode = nodes.find(n => n.id === edge.source)
+    initialInbound.forEach((edge) => {
+      const sourceNode = nodes.find((n) => n.id === edge.source)
       if (sourceNode && sourceNode.data.includeInContext !== false) {
         queue.push({ node: sourceNode, depth: 1, path: [nodeId, sourceNode.id] })
       }
     })
 
-    initialBidirectional.forEach(edge => {
-      const targetNode = nodes.find(n => n.id === edge.target)
+    initialBidirectional.forEach((edge) => {
+      const targetNode = nodes.find((n) => n.id === edge.target)
       if (targetNode && targetNode.data.includeInContext !== false && !visited.has(edge.target)) {
         queue.push({ node: targetNode, depth: 1, path: [nodeId, targetNode.id] })
       }
@@ -130,7 +145,7 @@ export function useTokenEstimate(nodeId: string, currentInput?: string): TokenEs
         contextBreakdown.push({
           label: title,
           nodeId: current.node.id,
-          text: content
+          text: content,
         })
       }
 
@@ -138,20 +153,28 @@ export function useTokenEstimate(nodeId: string, currentInput?: string): TokenEs
         const nextInbound = getInboundEdges(current.node.id)
         const nextBidirectional = getBidirectionalEdges(current.node.id)
 
-        nextInbound.forEach(edge => {
+        nextInbound.forEach((edge) => {
           if (!visited.has(edge.source) && !current.path.includes(edge.source)) {
-            const sourceNode = nodes.find(n => n.id === edge.source)
+            const sourceNode = nodes.find((n) => n.id === edge.source)
             if (sourceNode && sourceNode.data.includeInContext !== false) {
-              queue.push({ node: sourceNode, depth: current.depth + 1, path: [...current.path, sourceNode.id] })
+              queue.push({
+                node: sourceNode,
+                depth: current.depth + 1,
+                path: [...current.path, sourceNode.id],
+              })
             }
           }
         })
 
-        nextBidirectional.forEach(edge => {
+        nextBidirectional.forEach((edge) => {
           if (!visited.has(edge.target) && !current.path.includes(edge.target)) {
-            const targetNode = nodes.find(n => n.id === edge.target)
+            const targetNode = nodes.find((n) => n.id === edge.target)
             if (targetNode && targetNode.data.includeInContext !== false) {
-              queue.push({ node: targetNode, depth: current.depth + 1, path: [...current.path, targetNode.id] })
+              queue.push({
+                node: targetNode,
+                depth: current.depth + 1,
+                path: [...current.path, targetNode.id],
+              })
             }
           }
         })
@@ -165,7 +188,15 @@ export function useTokenEstimate(nodeId: string, currentInput?: string): TokenEs
       systemPrompt: llmSettings?.systemPrompt,
       currentInput,
       model: llmSettings?.model,
-      maxOutputTokens: llmSettings?.maxTokens
+      maxOutputTokens: llmSettings?.maxTokens,
     })
-  }, [nodeId, currentInput, getEffectiveLLMSettings, getContextForNode, nodes, edges, contextSettings])
+  }, [
+    nodeId,
+    currentInput,
+    getEffectiveLLMSettings,
+    getContextForNode,
+    nodes,
+    edges,
+    contextSettings,
+  ])
 }

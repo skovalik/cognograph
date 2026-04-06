@@ -14,10 +14,10 @@
  * - Optional: selected nodes
  */
 
+import type { NodeData } from '@shared/types'
+import { v4 as uuid } from 'uuid'
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import { v4 as uuid } from 'uuid'
-import type { NodeData } from '@shared/types'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -66,7 +66,7 @@ interface SavedViewsActions {
     viewport: { x: number; y: number; zoom: number },
     hiddenNodeTypes: Set<NodeData['type']>,
     focusModeNodeId: string | null,
-    selectedNodeIds?: string[]
+    selectedNodeIds?: string[],
   ) => string
 
   updateView: (id: string, updates: Partial<Omit<SavedView, 'id' | 'createdAt'>>) => void
@@ -107,7 +107,7 @@ export const useSavedViewsStore = create<SavedViewsStore>()(
         viewport,
         hiddenNodeTypes: Array.from(hiddenNodeTypes),
         focusModeNodeId,
-        selectedNodeIds
+        selectedNodeIds,
       }
 
       set((state) => {
@@ -119,7 +119,7 @@ export const useSavedViewsStore = create<SavedViewsStore>()(
 
     updateView: (id, updates) => {
       set((state) => {
-        const view = state.views.find(v => v.id === id)
+        const view = state.views.find((v) => v.id === id)
         if (view) {
           Object.assign(view, updates, { updatedAt: Date.now() })
         }
@@ -128,7 +128,7 @@ export const useSavedViewsStore = create<SavedViewsStore>()(
 
     deleteView: (id) => {
       set((state) => {
-        state.views = state.views.filter(v => v.id !== id)
+        state.views = state.views.filter((v) => v.id !== id)
         if (state.activeViewId === id) {
           state.activeViewId = null
         }
@@ -145,7 +145,7 @@ export const useSavedViewsStore = create<SavedViewsStore>()(
       set((state) => {
         // Clear existing shortcut with this key
         if (key !== undefined) {
-          state.views.forEach(v => {
+          state.views.forEach((v) => {
             if (v.shortcutKey === key) {
               v.shortcutKey = undefined
             }
@@ -153,7 +153,7 @@ export const useSavedViewsStore = create<SavedViewsStore>()(
         }
 
         // Assign new shortcut
-        const view = state.views.find(v => v.id === viewId)
+        const view = state.views.find((v) => v.id === viewId)
         if (view) {
           view.shortcutKey = key
           view.updatedAt = Date.now()
@@ -162,7 +162,7 @@ export const useSavedViewsStore = create<SavedViewsStore>()(
     },
 
     getViewByShortcut: (key) => {
-      return get().views.find(v => v.shortcutKey === key)
+      return get().views.find((v) => v.shortcutKey === key)
     },
 
     loadViews: (views) => {
@@ -173,6 +173,6 @@ export const useSavedViewsStore = create<SavedViewsStore>()(
 
     getViewsForSave: () => {
       return get().views
-    }
-  }))
+    },
+  })),
 )

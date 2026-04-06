@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  CompactionCircuitBreaker,
+  type CompactionConfig,
+  type CompactionLLMCall,
+  type CompactionMessage,
+  type CompactionSummary,
   compactConversation,
   shouldFullCompact,
-  CompactionCircuitBreaker,
-  type CompactionMessage,
-  type CompactionConfig,
-  type CompactionSummary,
-  type CompactionLLMCall,
 } from '../compactionService'
 
 // ---------------------------------------------------------------------------
@@ -123,7 +123,7 @@ describe('CompactionCircuitBreaker', () => {
   it('trips after 3 consecutive failures', () => {
     expect(breaker.recordFailure()).toBe(false) // 1
     expect(breaker.recordFailure()).toBe(false) // 2
-    expect(breaker.recordFailure()).toBe(true)  // 3 — tripped
+    expect(breaker.recordFailure()).toBe(true) // 3 — tripped
     expect(breaker.isTripped).toBe(true)
     expect(breaker.failures).toBe(3)
   })
@@ -206,7 +206,9 @@ describe('compactConversation', () => {
 
     // The summary message should be before the last 3 messages
     const summaryIdx = compacted.findIndex(
-      (m) => typeof m.content === 'string' && (m.content as string).includes('Conversation Compaction Summary')
+      (m) =>
+        typeof m.content === 'string' &&
+        (m.content as string).includes('Conversation Compaction Summary'),
     )
     expect(summaryIdx).toBeGreaterThan(-1)
     expect(summaryIdx).toBe(compacted.length - 4) // 3 recent + summary at -4
@@ -250,7 +252,7 @@ describe('compactConversation', () => {
     const result = await compactConversation(messages, config, breaker)
 
     const summaryMsg = result.messages!.find(
-      (m) => typeof m.content === 'string' && (m.content as string).includes('Compaction Summary')
+      (m) => typeof m.content === 'string' && (m.content as string).includes('Compaction Summary'),
     )
     expect(summaryMsg).toBeDefined()
     expect(summaryMsg!.role).toBe('user') // User role = dynamic zone, not system/cached
@@ -262,7 +264,12 @@ describe('compactConversation', () => {
 
   it('fails gracefully on LLM error', async () => {
     const config = makeConfig({ llmCall: failingLLMCall('API timeout') })
-    const messages = [makeUserMessage('Hello'), makeUserMessage('R1'), makeUserMessage('R2'), makeUserMessage('R3')]
+    const messages = [
+      makeUserMessage('Hello'),
+      makeUserMessage('R1'),
+      makeUserMessage('R2'),
+      makeUserMessage('R3'),
+    ]
 
     const result = await compactConversation(messages, config, breaker)
 
@@ -273,7 +280,12 @@ describe('compactConversation', () => {
 
   it('trips circuit breaker after 3 consecutive LLM failures', async () => {
     const config = makeConfig({ llmCall: failingLLMCall('timeout') })
-    const messages = [makeUserMessage('Hello'), makeUserMessage('R1'), makeUserMessage('R2'), makeUserMessage('R3')]
+    const messages = [
+      makeUserMessage('Hello'),
+      makeUserMessage('R1'),
+      makeUserMessage('R2'),
+      makeUserMessage('R3'),
+    ]
 
     await compactConversation(messages, config, breaker)
     await compactConversation(messages, config, breaker)
@@ -316,7 +328,7 @@ describe('compactConversation', () => {
         (m) =>
           m.role === 'user' &&
           Array.isArray(m.content) &&
-          (m.content as Array<Record<string, unknown>>).some((b) => b.type === 'tool_result')
+          (m.content as Array<Record<string, unknown>>).some((b) => b.type === 'tool_result'),
       )
       expect(hasToolResult).toBe(false)
     })
@@ -374,7 +386,12 @@ describe('compactConversation', () => {
     const config = makeConfig({
       llmCall: vi.fn().mockResolvedValue('This is not valid JSON at all'),
     })
-    const messages = [makeUserMessage('Hello'), makeUserMessage('R1'), makeUserMessage('R2'), makeUserMessage('R3')]
+    const messages = [
+      makeUserMessage('Hello'),
+      makeUserMessage('R1'),
+      makeUserMessage('R2'),
+      makeUserMessage('R3'),
+    ]
 
     const result = await compactConversation(messages, config, breaker)
 
@@ -419,7 +436,7 @@ describe('compactConversation', () => {
     expect(result.success).toBe(true)
     // The compacted messages should contain a summary message mentioning the original task
     const summaryMsg = result.messages!.find(
-      (m) => typeof m.content === 'string' && (m.content as string).includes('Original Task')
+      (m) => typeof m.content === 'string' && (m.content as string).includes('Original Task'),
     )
     expect(summaryMsg).toBeDefined()
   })
@@ -445,18 +462,14 @@ describe('shouldFullCompact', () => {
   it('returns true when messages exceed 90% of token budget', () => {
     // Create messages totaling roughly 1000 tokens
     // chars/4 ≈ tokens for prose, so ~4000 chars ≈ 1000 tokens
-    const messages: CompactionMessage[] = [
-      makeUserMessage('x'.repeat(4000)),
-    ]
+    const messages: CompactionMessage[] = [makeUserMessage('x'.repeat(4000))]
 
     // Budget of 1000 tokens → 90% = 900. Our message should be ~1004 tokens.
     expect(shouldFullCompact(messages, 'anthropic', 1000)).toBe(true)
   })
 
   it('returns false when messages are under 90% of token budget', () => {
-    const messages: CompactionMessage[] = [
-      makeUserMessage('Hello'),
-    ]
+    const messages: CompactionMessage[] = [makeUserMessage('Hello')]
 
     expect(shouldFullCompact(messages, 'anthropic', 100000)).toBe(false)
   })

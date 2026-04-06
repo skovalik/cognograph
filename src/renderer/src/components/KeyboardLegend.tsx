@@ -13,7 +13,7 @@
  */
 
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { useUIStore, selectKeyboardNavActive } from '../stores/uiStore'
+import { selectKeyboardNavActive, useUIStore } from '../stores/uiStore'
 
 const STORAGE_KEY = 'cognograph.keyboard-legend-dismissed'
 const AUTO_HIDE_MS = 5000
@@ -29,14 +29,12 @@ const SHORTCUTS = [
   { keys: 'Tab', label: 'Cycle connected' },
   { keys: `\u21E7+\u2191\u2193`, label: 'Multi-select' },
   { keys: `${MOD}+\u21B5`, label: 'Focus mode' },
-  { keys: 'Esc', label: 'Exit / Deselect' }
+  { keys: 'Esc', label: 'Exit / Deselect' },
 ] as const
 
 export const KeyboardLegend = memo(function KeyboardLegend(): JSX.Element | null {
   const keyboardNavActive = useUIStore(selectKeyboardNavActive)
-  const [dismissed, setDismissed] = useState(
-    () => localStorage.getItem(STORAGE_KEY) === 'true'
-  )
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem(STORAGE_KEY) === 'true')
   const [visible, setVisible] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -112,7 +110,7 @@ export const KeyboardLegend = memo(function KeyboardLegend(): JSX.Element | null
         fontSize: 12,
         lineHeight: 1.5,
         pointerEvents: 'auto',
-        animation: 'keyboard-legend-in 200ms ease-out'
+        animation: 'keyboard-legend-in 200ms ease-out',
       }}
     >
       {/* Dismiss button */}
@@ -131,7 +129,7 @@ export const KeyboardLegend = memo(function KeyboardLegend(): JSX.Element | null
           lineHeight: 1,
           color: 'var(--gui-text-secondary, #888)',
           opacity: 0.7,
-          transition: 'opacity 150ms'
+          transition: 'opacity 150ms',
         }}
         onMouseEnter={(e) => {
           ;(e.target as HTMLElement).style.opacity = '1'
@@ -157,7 +155,7 @@ export const KeyboardLegend = memo(function KeyboardLegend(): JSX.Element | null
                   fontWeight: 600,
                   color: 'var(--gui-text-primary, #eee)',
                   whiteSpace: 'nowrap',
-                  letterSpacing: '0.02em'
+                  letterSpacing: '0.02em',
                 }}
               >
                 {keys}
@@ -167,7 +165,7 @@ export const KeyboardLegend = memo(function KeyboardLegend(): JSX.Element | null
                   paddingTop: 1,
                   paddingBottom: 1,
                   color: 'var(--gui-text-secondary, #999)',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {label}

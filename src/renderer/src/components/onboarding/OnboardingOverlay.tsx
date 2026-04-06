@@ -29,28 +29,28 @@
  * Uses the project's glass.css tier system for the modal card.
  */
 
-import { memo, useCallback, useEffect, useRef, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowRight,
-  X,
   Check,
-  Sparkles,
-  Plus,
-  Link2,
-  PartyPopper,
-  Rocket,
   FileText,
-  Search,
-  MessagesSquare,
   GitBranch,
-  LayoutGrid
+  LayoutGrid,
+  Link2,
+  MessagesSquare,
+  PartyPopper,
+  Plus,
+  Rocket,
+  Search,
+  Sparkles,
+  X,
 } from 'lucide-react'
-import { useOnboardingStore } from '../../stores/onboardingStore'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useAnalyticsStore } from '../../stores/analyticsStore'
 import { useEdgesStore } from '../../stores/edgesStore'
 import { useNodesStore } from '../../stores/nodesStore'
-import { useAnalyticsStore } from '../../stores/analyticsStore'
+import { useOnboardingStore } from '../../stores/onboardingStore'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 
 // =============================================================================
 // Constants
@@ -81,7 +81,7 @@ const STARTER_TEMPLATES: StarterTemplate[] = [
     title: 'Empty Canvas',
     description: 'Start from scratch with a blank workspace.',
     icon: LayoutGrid,
-    nodes: []
+    nodes: [],
   },
   {
     id: 'research',
@@ -92,8 +92,8 @@ const STARTER_TEMPLATES: StarterTemplate[] = [
       { type: 'note', title: 'Research Brief', position: { x: 100, y: 200 } },
       { type: 'note', title: 'Sources', position: { x: 100, y: 400 } },
       { type: 'conversation', title: 'AI Analysis', position: { x: 450, y: 300 } },
-      { type: 'artifact', title: 'Findings', position: { x: 800, y: 300 } }
-    ]
+      { type: 'artifact', title: 'Findings', position: { x: 800, y: 300 } },
+    ],
   },
   {
     id: 'multi-agent',
@@ -104,8 +104,8 @@ const STARTER_TEMPLATES: StarterTemplate[] = [
       { type: 'note', title: 'Shared Context', position: { x: 350, y: 100 } },
       { type: 'conversation', title: 'Claude', position: { x: 100, y: 350 } },
       { type: 'conversation', title: 'GPT-4', position: { x: 450, y: 350 } },
-      { type: 'artifact', title: 'Combined Output', position: { x: 275, y: 550 } }
-    ]
+      { type: 'artifact', title: 'Combined Output', position: { x: 275, y: 550 } },
+    ],
   },
   {
     id: 'code-review',
@@ -116,9 +116,9 @@ const STARTER_TEMPLATES: StarterTemplate[] = [
       { type: 'artifact', title: 'Code to Review', position: { x: 100, y: 200 } },
       { type: 'conversation', title: 'Code Review AI', position: { x: 450, y: 200 } },
       { type: 'task', title: 'Review Checklist', position: { x: 450, y: 420 } },
-      { type: 'note', title: 'Review Notes', position: { x: 100, y: 420 } }
-    ]
-  }
+      { type: 'note', title: 'Review Notes', position: { x: 100, y: 420 } },
+    ],
+  },
 ]
 
 // =============================================================================
@@ -149,7 +149,7 @@ function StepDots({ current, total }: StepDotsProps): JSX.Element {
                 : i < current
                   ? 'var(--text-secondary, #9E978D)'
                   : 'var(--text-muted, #5A554E)',
-            opacity: i === current ? 1 : i < current ? 0.7 : 0.4
+            opacity: i === current ? 1 : i < current ? 0.7 : 0.4,
           }}
         />
       ))}
@@ -176,16 +176,12 @@ function WelcomeStep({ onStart }: WelcomeStepProps): JSX.Element {
             fontStyle: 'italic',
             fontSize: '2.25rem',
             letterSpacing: '-0.02em',
-            color: 'var(--text-primary, #EDE8E0)'
+            color: 'var(--text-primary, #EDE8E0)',
           }}
         >
-          <span style={{ color: 'var(--accent-glow, #C8963E)', fontWeight: 400 }}>
-            [
-          </span>
+          <span style={{ color: 'var(--accent-glow, #C8963E)', fontWeight: 400 }}>[</span>
           Cognograph
-          <span style={{ color: 'var(--accent-glow, #C8963E)', fontWeight: 400 }}>
-            ]
-          </span>
+          <span style={{ color: 'var(--accent-glow, #C8963E)', fontWeight: 400 }}>]</span>
         </span>
       </div>
 
@@ -194,8 +190,8 @@ function WelcomeStep({ onStart }: WelcomeStepProps): JSX.Element {
         className="text-base leading-relaxed mb-8 max-w-[360px]"
         style={{ color: 'var(--text-secondary, #9E978D)' }}
       >
-        Orchestrate AI workflows spatially. Connect conversations, notes, and
-        context on an infinite canvas.
+        Orchestrate AI workflows spatially. Connect conversations, notes, and context on an infinite
+        canvas.
       </p>
 
       {/* Start button */}
@@ -221,7 +217,7 @@ interface TemplateGalleryStepProps {
 
 function TemplateGalleryStep({
   onSelectTemplate,
-  selectedId
+  selectedId,
 }: TemplateGalleryStepProps): JSX.Element {
   return (
     <div>
@@ -231,7 +227,7 @@ function TemplateGalleryStep({
           className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
           style={{
             background: 'var(--accent-glow-subtle, rgba(200, 150, 62, 0.15))',
-            border: '1px solid var(--accent-glow-subtle, rgba(200, 150, 62, 0.15))'
+            border: '1px solid var(--accent-glow-subtle, rgba(200, 150, 62, 0.15))',
           }}
         >
           <FileText className="w-5 h-5" style={{ color: 'var(--accent-glow, #C8963E)' }} />
@@ -264,7 +260,7 @@ function TemplateGalleryStep({
                 border: isSelected
                   ? '1px solid var(--accent-glow, #C8963E)'
                   : '1px solid var(--border-subtle, rgba(240, 237, 232, 0.06))',
-                outline: 'none'
+                outline: 'none',
               }}
               onMouseEnter={(e) => {
                 if (!isSelected) {
@@ -288,7 +284,7 @@ function TemplateGalleryStep({
                   style={{
                     background: isSelected
                       ? 'var(--accent-glow-subtle, rgba(200, 150, 62, 0.2))'
-                      : 'rgba(255, 255, 255, 0.05)'
+                      : 'rgba(255, 255, 255, 0.05)',
                   }}
                 >
                   <Icon
@@ -296,7 +292,7 @@ function TemplateGalleryStep({
                     style={{
                       color: isSelected
                         ? 'var(--accent-glow, #C8963E)'
-                        : 'var(--text-secondary, #9E978D)'
+                        : 'var(--text-secondary, #9E978D)',
                     }}
                   />
                 </div>
@@ -306,7 +302,7 @@ function TemplateGalleryStep({
                     style={{
                       color: isSelected
                         ? 'var(--text-primary, #EDE8E0)'
-                        : 'var(--text-secondary, #9E978D)'
+                        : 'var(--text-secondary, #9E978D)',
                     }}
                   >
                     {template.title}
@@ -363,7 +359,7 @@ function FirstNodeStep({ nodeCount }: FirstNodeStepProps): JSX.Element {
           className="w-16 h-16 rounded-2xl flex items-center justify-center"
           style={{
             background: 'var(--accent-glow-subtle, rgba(200, 150, 62, 0.15))',
-            border: '1px solid var(--accent-glow-subtle, rgba(200, 150, 62, 0.2))'
+            border: '1px solid var(--accent-glow-subtle, rgba(200, 150, 62, 0.2))',
           }}
           animate={
             hasNodes
@@ -372,8 +368,8 @@ function FirstNodeStep({ nodeCount }: FirstNodeStepProps): JSX.Element {
                   boxShadow: [
                     '0 0 0 0px rgba(200, 150, 62, 0.3)',
                     '0 0 0 12px rgba(200, 150, 62, 0)',
-                    '0 0 0 0px rgba(200, 150, 62, 0.3)'
-                  ]
+                    '0 0 0 0px rgba(200, 150, 62, 0.3)',
+                  ],
                 }
           }
           transition={
@@ -382,7 +378,7 @@ function FirstNodeStep({ nodeCount }: FirstNodeStepProps): JSX.Element {
               : {
                   duration: 2,
                   repeat: Infinity,
-                  ease: 'easeInOut'
+                  ease: 'easeInOut',
                 }
           }
         >
@@ -392,25 +388,16 @@ function FirstNodeStep({ nodeCount }: FirstNodeStepProps): JSX.Element {
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 400, damping: 15 }}
             >
-              <Check
-                className="w-7 h-7"
-                style={{ color: 'var(--accent-glow, #C8963E)' }}
-              />
+              <Check className="w-7 h-7" style={{ color: 'var(--accent-glow, #C8963E)' }} />
             </motion.div>
           ) : (
-            <Plus
-              className="w-7 h-7"
-              style={{ color: 'var(--accent-glow, #C8963E)' }}
-            />
+            <Plus className="w-7 h-7" style={{ color: 'var(--accent-glow, #C8963E)' }} />
           )}
         </motion.div>
       </div>
 
       {/* Title */}
-      <h2
-        className="text-lg font-semibold mb-2"
-        style={{ color: 'var(--text-primary, #EDE8E0)' }}
-      >
+      <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary, #EDE8E0)' }}>
         {hasNodes ? 'Node created!' : 'Create your first node'}
       </h2>
 
@@ -430,7 +417,7 @@ function FirstNodeStep({ nodeCount }: FirstNodeStepProps): JSX.Element {
           className="text-[11px] flex items-center gap-1.5 px-3 py-1.5 rounded-lg"
           style={{
             color: 'var(--text-muted, #5A554E)',
-            background: 'rgba(255, 255, 255, 0.03)'
+            background: 'rgba(255, 255, 255, 0.03)',
           }}
         >
           <Sparkles className="w-3 h-3" />
@@ -451,33 +438,87 @@ function HandleSpotlight(): JSX.Element {
       className="flex items-center justify-center gap-3 py-3 px-4 rounded-lg mb-2"
       style={{
         background: 'var(--accent-glow-subtle, rgba(200, 150, 62, 0.08))',
-        border: '1px solid var(--accent-glow-subtle, rgba(200, 150, 62, 0.1))'
+        border: '1px solid var(--accent-glow-subtle, rgba(200, 150, 62, 0.1))',
       }}
     >
       {/* Simplified node-to-node connection diagram */}
       <svg width="200" height="48" viewBox="0 0 200 48" fill="none">
         {/* Left node */}
-        <rect x="4" y="10" width="56" height="28" rx="6" fill="rgba(200,150,62,0.15)" stroke="rgba(200,150,62,0.4)" strokeWidth="1" />
-        <text x="32" y="28" textAnchor="middle" fill="#9E978D" fontSize="9" fontFamily="sans-serif">Note</text>
+        <rect
+          x="4"
+          y="10"
+          width="56"
+          height="28"
+          rx="6"
+          fill="rgba(200,150,62,0.15)"
+          stroke="rgba(200,150,62,0.4)"
+          strokeWidth="1"
+        />
+        <text x="32" y="28" textAnchor="middle" fill="#9E978D" fontSize="9" fontFamily="sans-serif">
+          Note
+        </text>
         {/* Right handle of left node */}
         <circle cx="64" cy="24" r="5" fill="#C8963E" stroke="#C8963E" strokeWidth="1.5">
           <animate attributeName="r" values="4;6;4" dur="1.5s" repeatCount="indefinite" />
           <animate attributeName="opacity" values="0.8;1;0.8" dur="1.5s" repeatCount="indefinite" />
         </circle>
         {/* Connection line (animated dash) */}
-        <line x1="70" y1="24" x2="130" y2="24" stroke="#C8963E" strokeWidth="1.5" strokeDasharray="4 3">
-          <animate attributeName="stroke-dashoffset" values="0;-14" dur="1s" repeatCount="indefinite" />
+        <line
+          x1="70"
+          y1="24"
+          x2="130"
+          y2="24"
+          stroke="#C8963E"
+          strokeWidth="1.5"
+          strokeDasharray="4 3"
+        >
+          <animate
+            attributeName="stroke-dashoffset"
+            values="0;-14"
+            dur="1s"
+            repeatCount="indefinite"
+          />
         </line>
         {/* Arrow */}
         <polygon points="128,20 136,24 128,28" fill="#C8963E" />
         {/* Left handle of right node */}
         <circle cx="136" cy="24" r="5" fill="#C8963E" stroke="#C8963E" strokeWidth="1.5">
-          <animate attributeName="r" values="4;6;4" dur="1.5s" repeatCount="indefinite" begin="0.75s" />
-          <animate attributeName="opacity" values="0.8;1;0.8" dur="1.5s" repeatCount="indefinite" begin="0.75s" />
+          <animate
+            attributeName="r"
+            values="4;6;4"
+            dur="1.5s"
+            repeatCount="indefinite"
+            begin="0.75s"
+          />
+          <animate
+            attributeName="opacity"
+            values="0.8;1;0.8"
+            dur="1.5s"
+            repeatCount="indefinite"
+            begin="0.75s"
+          />
         </circle>
         {/* Right node */}
-        <rect x="140" y="10" width="56" height="28" rx="6" fill="rgba(200,150,62,0.15)" stroke="rgba(200,150,62,0.4)" strokeWidth="1" />
-        <text x="168" y="28" textAnchor="middle" fill="#9E978D" fontSize="9" fontFamily="sans-serif">Chat</text>
+        <rect
+          x="140"
+          y="10"
+          width="56"
+          height="28"
+          rx="6"
+          fill="rgba(200,150,62,0.15)"
+          stroke="rgba(200,150,62,0.4)"
+          strokeWidth="1"
+        />
+        <text
+          x="168"
+          y="28"
+          textAnchor="middle"
+          fill="#9E978D"
+          fontSize="9"
+          fontFamily="sans-serif"
+        >
+          Chat
+        </text>
       </svg>
     </div>
   )
@@ -500,16 +541,13 @@ function CelebrationContent({ connectedNodeName }: CelebrationContentProps): JSX
           className="flex items-center gap-2.5 py-2.5 px-3.5 rounded-lg"
           style={{
             background: 'rgba(16, 185, 129, 0.1)',
-            border: '1px solid rgba(16, 185, 129, 0.25)'
+            border: '1px solid rgba(16, 185, 129, 0.25)',
           }}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.4 }}
         >
-          <Check
-            className="w-4 h-4 flex-shrink-0"
-            style={{ color: '#10b981' }}
-          />
+          <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#10b981' }} />
           <span className="text-xs leading-relaxed" style={{ color: '#9FE2BF' }}>
             Context from <strong style={{ color: '#EDE8E0' }}>{connectedNodeName}</strong> is now
             available in connected conversations.
@@ -522,14 +560,14 @@ function CelebrationContent({ connectedNodeName }: CelebrationContentProps): JSX
         {[
           { label: 'Templates', hint: 'Pre-built workflows' },
           { label: 'Themes', hint: 'Customize your look' },
-          { label: 'Shortcuts', hint: 'Press ? for keys' }
+          { label: 'Shortcuts', hint: 'Press ? for keys' },
         ].map(({ label, hint }) => (
           <div
             key={label}
             className="flex-1 py-2 px-2.5 rounded-lg text-center"
             style={{
               background: 'var(--accent-glow-subtle, rgba(200, 150, 62, 0.06))',
-              border: '1px solid var(--accent-glow-subtle, rgba(200, 150, 62, 0.08))'
+              border: '1px solid var(--accent-glow-subtle, rgba(200, 150, 62, 0.08))',
             }}
           >
             <div
@@ -538,10 +576,7 @@ function CelebrationContent({ connectedNodeName }: CelebrationContentProps): JSX
             >
               {label}
             </div>
-            <div
-              className="text-[10px]"
-              style={{ color: 'var(--text-muted, #5A554E)' }}
-            >
+            <div className="text-[10px]" style={{ color: 'var(--text-muted, #5A554E)' }}>
               {hint}
             </div>
           </div>
@@ -567,18 +602,18 @@ const STEP_META: Record<number, StepMeta> = {
   3: {
     title: 'Connect Context',
     description:
-      'Drag from one node\'s handle to another to share context. Connected notes automatically feed into AI conversations.',
+      "Drag from one node's handle to another to share context. Connected notes automatically feed into AI conversations.",
     icon: Link2,
     interactive: true,
     detail:
-      'Hover over a node to reveal its handles (the small circles on each edge). Click and drag from a handle to another node to create a connection.'
+      'Hover over a node to reveal its handles (the small circles on each edge). Click and drag from a handle to another node to create a connection.',
   },
   4: {
-    title: 'You\'re Ready',
+    title: "You're Ready",
     description:
-      'You\'ve got the basics. Explore templates, customize your theme, and build your knowledge graph.',
-    icon: Rocket
-  }
+      "You've got the basics. Explore templates, customize your theme, and build your knowledge graph.",
+    icon: Rocket,
+  },
 }
 
 // =============================================================================
@@ -692,7 +727,7 @@ function OnboardingOverlayComponent(): JSX.Element | null {
     (template: StarterTemplate) => {
       setSelectedTemplate(template.id)
     },
-    [setSelectedTemplate]
+    [setSelectedTemplate],
   )
 
   const handleTemplateConfirm = useCallback(() => {
@@ -727,7 +762,7 @@ function OnboardingOverlayComponent(): JSX.Element | null {
   const isFirstNodeStep = step === 2
   const currentMeta = STEP_META[step]
   const isInteractiveStep =
-    (isFirstNodeStep && nodeCount === 0) || (currentMeta?.interactive === true)
+    (isFirstNodeStep && nodeCount === 0) || currentMeta?.interactive === true
 
   return (
     <AnimatePresence>
@@ -736,7 +771,7 @@ function OnboardingOverlayComponent(): JSX.Element | null {
         style={{
           pointerEvents: isInteractiveStep ? 'none' : 'auto',
           alignItems: currentMeta?.interactive ? 'flex-end' : 'center',
-          paddingBottom: currentMeta?.interactive ? '24px' : '0'
+          paddingBottom: currentMeta?.interactive ? '24px' : '0',
         }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -747,11 +782,9 @@ function OnboardingOverlayComponent(): JSX.Element | null {
         <div
           className="absolute inset-0 transition-all duration-500"
           style={{
-            background: isInteractiveStep
-              ? 'rgba(0, 0, 0, 0.25)'
-              : 'rgba(0, 0, 0, 0.6)',
+            background: isInteractiveStep ? 'rgba(0, 0, 0, 0.25)' : 'rgba(0, 0, 0, 0.6)',
             backdropFilter: isInteractiveStep ? 'none' : 'blur(4px)',
-            pointerEvents: isInteractiveStep ? 'none' : 'auto'
+            pointerEvents: isInteractiveStep ? 'none' : 'auto',
           }}
         />
 
@@ -759,9 +792,8 @@ function OnboardingOverlayComponent(): JSX.Element | null {
         <motion.div
           className={`relative ${isTemplateStep ? 'w-[560px]' : 'w-[520px]'} max-w-[90vw] glass-soft rounded-2xl overflow-hidden`}
           style={{
-            boxShadow:
-              '0 25px 60px rgba(0, 0, 0, 0.5), 0 0 80px rgba(200, 150, 62, 0.08)',
-            pointerEvents: 'auto'
+            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5), 0 0 80px rgba(200, 150, 62, 0.08)',
+            pointerEvents: 'auto',
           }}
           initial={{ scale: 0.9, y: 20 }}
           animate={{ scale: 1, y: 0 }}
@@ -803,88 +835,92 @@ function OnboardingOverlayComponent(): JSX.Element | null {
                 {isFirstNodeStep && <FirstNodeStep nodeCount={nodeCount} />}
 
                 {/* Step 3: Connect Context */}
-                {step === 3 && currentMeta && (() => {
-                  const StepIcon = currentMeta.icon
-                  return (
-                    <>
-                      <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
-                        style={{
-                          background: 'var(--accent-glow-subtle, rgba(200, 150, 62, 0.15))',
-                          border: '1px solid var(--accent-glow-subtle, rgba(200, 150, 62, 0.15))'
-                        }}
-                      >
-                        <StepIcon
-                          className="w-6 h-6"
-                          style={{ color: 'var(--accent-glow, #C8963E)' }}
-                        />
-                      </div>
-                      <h2
-                        className="text-xl font-semibold mb-2"
-                        style={{ color: 'var(--text-primary, #EDE8E0)' }}
-                      >
-                        {currentMeta.title}
-                      </h2>
-                      <p
-                        className="text-sm leading-relaxed mb-3"
-                        style={{ color: 'var(--text-secondary, #9E978D)' }}
-                      >
-                        {currentMeta.description}
-                      </p>
-                      <HandleSpotlight />
-                      <p
-                        className="text-xs leading-relaxed mb-4"
-                        style={{ color: 'var(--text-muted, #5A554E)' }}
-                      >
-                        {currentMeta.detail}
-                      </p>
-                      <div
-                        className="flex items-center gap-2 text-xs py-1.5 px-2.5 rounded-md mb-3"
-                        style={{
-                          background: 'rgba(200, 150, 62, 0.06)',
-                          color: 'var(--text-secondary, #9E978D)'
-                        }}
-                      >
-                        <Sparkles className="w-3 h-3" style={{ color: 'var(--accent-glow, #C8963E)' }} />
-                        Create a connection and this step will complete automatically
-                      </div>
-                    </>
-                  )
-                })()}
+                {step === 3 &&
+                  currentMeta &&
+                  (() => {
+                    const StepIcon = currentMeta.icon
+                    return (
+                      <>
+                        <div
+                          className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+                          style={{
+                            background: 'var(--accent-glow-subtle, rgba(200, 150, 62, 0.15))',
+                            border: '1px solid var(--accent-glow-subtle, rgba(200, 150, 62, 0.15))',
+                          }}
+                        >
+                          <StepIcon
+                            className="w-6 h-6"
+                            style={{ color: 'var(--accent-glow, #C8963E)' }}
+                          />
+                        </div>
+                        <h2
+                          className="text-xl font-semibold mb-2"
+                          style={{ color: 'var(--text-primary, #EDE8E0)' }}
+                        >
+                          {currentMeta.title}
+                        </h2>
+                        <p
+                          className="text-sm leading-relaxed mb-3"
+                          style={{ color: 'var(--text-secondary, #9E978D)' }}
+                        >
+                          {currentMeta.description}
+                        </p>
+                        <HandleSpotlight />
+                        <p
+                          className="text-xs leading-relaxed mb-4"
+                          style={{ color: 'var(--text-muted, #5A554E)' }}
+                        >
+                          {currentMeta.detail}
+                        </p>
+                        <div
+                          className="flex items-center gap-2 text-xs py-1.5 px-2.5 rounded-md mb-3"
+                          style={{
+                            background: 'rgba(200, 150, 62, 0.06)',
+                            color: 'var(--text-secondary, #9E978D)',
+                          }}
+                        >
+                          <Sparkles
+                            className="w-3 h-3"
+                            style={{ color: 'var(--accent-glow, #C8963E)' }}
+                          />
+                          Create a connection and this step will complete automatically
+                        </div>
+                      </>
+                    )
+                  })()}
 
                 {/* Step 4: You're Ready */}
-                {step === 4 && currentMeta && (() => {
-                  const StepIcon = currentMeta.icon
-                  return (
-                    <>
-                      <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
-                        style={{
-                          background: 'rgba(16, 185, 129, 0.15)',
-                          border: '1px solid rgba(16, 185, 129, 0.25)'
-                        }}
-                      >
-                        <StepIcon
-                          className="w-6 h-6"
-                          style={{ color: '#10b981' }}
-                        />
-                      </div>
-                      <h2
-                        className="text-xl font-semibold mb-2"
-                        style={{ color: 'var(--text-primary, #EDE8E0)' }}
-                      >
-                        {currentMeta.title}
-                      </h2>
-                      <p
-                        className="text-sm leading-relaxed mb-3"
-                        style={{ color: 'var(--text-secondary, #9E978D)' }}
-                      >
-                        {currentMeta.description}
-                      </p>
-                      <CelebrationContent connectedNodeName={connectedNodeName} />
-                    </>
-                  )
-                })()}
+                {step === 4 &&
+                  currentMeta &&
+                  (() => {
+                    const StepIcon = currentMeta.icon
+                    return (
+                      <>
+                        <div
+                          className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+                          style={{
+                            background: 'rgba(16, 185, 129, 0.15)',
+                            border: '1px solid rgba(16, 185, 129, 0.25)',
+                          }}
+                        >
+                          <StepIcon className="w-6 h-6" style={{ color: '#10b981' }} />
+                        </div>
+                        <h2
+                          className="text-xl font-semibold mb-2"
+                          style={{ color: 'var(--text-primary, #EDE8E0)' }}
+                        >
+                          {currentMeta.title}
+                        </h2>
+                        <p
+                          className="text-sm leading-relaxed mb-3"
+                          style={{ color: 'var(--text-secondary, #9E978D)' }}
+                        >
+                          {currentMeta.description}
+                        </p>
+                        <CelebrationContent connectedNodeName={connectedNodeName} />
+                      </>
+                    )
+                  })()}
               </motion.div>
             </AnimatePresence>
 
@@ -899,7 +935,7 @@ function OnboardingOverlayComponent(): JSX.Element | null {
                     className="gui-btn gui-btn-accent gui-btn-sm flex items-center gap-1.5 cursor-pointer"
                     disabled={selectedTemplate === null}
                     style={{
-                      opacity: selectedTemplate === null ? 0.5 : 1
+                      opacity: selectedTemplate === null ? 0.5 : 1,
                     }}
                   >
                     Continue
@@ -915,10 +951,7 @@ function OnboardingOverlayComponent(): JSX.Element | null {
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   ) : (
-                    <span
-                      className="text-[11px]"
-                      style={{ color: 'var(--text-muted, #5A554E)' }}
-                    >
+                    <span className="text-[11px]" style={{ color: 'var(--text-muted, #5A554E)' }}>
                       Waiting for first node...
                     </span>
                   )
@@ -953,19 +986,15 @@ function OnboardingOverlayComponent(): JSX.Element | null {
           <div
             className="px-8 py-3 flex items-center justify-end"
             style={{
-              borderTop: '1px solid var(--border-subtle, rgba(240,237,232,0.06))'
+              borderTop: '1px solid var(--border-subtle, rgba(240,237,232,0.06))',
             }}
           >
             <button
               onClick={handleSkip}
               className="text-[11px] transition-colors underline underline-offset-2 cursor-pointer"
               style={{ color: 'var(--text-muted, #5A554E)' }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.color = 'var(--text-secondary, #9E978D)')
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.color = 'var(--text-muted, #5A554E)')
-              }
+              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-secondary, #9E978D)')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted, #5A554E)')}
             >
               Skip — I'll explore on my own
             </button>

@@ -85,16 +85,16 @@ export const useOfflineStore = create<OfflineState>()(
           id,
           timestamp: Date.now(),
           retryCount: 0,
-          maxRetries: operation.maxRetries ?? 3
+          maxRetries: operation.maxRetries ?? 3,
         }
 
         set((state) => ({
-          pendingOperations: [...state.pendingOperations, fullOperation]
+          pendingOperations: [...state.pendingOperations, fullOperation],
         }))
 
         addBreadcrumb('offline', `Queued operation: ${operation.type}`, 'info', {
           operationId: id,
-          endpoint: operation.endpoint
+          endpoint: operation.endpoint,
         })
 
         return id
@@ -105,7 +105,7 @@ export const useOfflineStore = create<OfflineState>()(
        */
       removeOperation: (id) => {
         set((state) => ({
-          pendingOperations: state.pendingOperations.filter((op) => op.id !== id)
+          pendingOperations: state.pendingOperations.filter((op) => op.id !== id),
         }))
       },
 
@@ -116,8 +116,8 @@ export const useOfflineStore = create<OfflineState>()(
         if (workspaceId) {
           set((state) => ({
             pendingOperations: state.pendingOperations.filter(
-              (op) => op.workspaceId !== workspaceId
-            )
+              (op) => op.workspaceId !== workspaceId,
+            ),
           }))
         } else {
           set({ pendingOperations: [] })
@@ -138,7 +138,7 @@ export const useOfflineStore = create<OfflineState>()(
         set({
           isSyncing: false,
           lastSyncTime: error ? get().lastSyncTime : Date.now(),
-          syncError: error || null
+          syncError: error || null,
         })
       },
 
@@ -168,7 +168,7 @@ export const useOfflineStore = create<OfflineState>()(
             // Increment retry count
             const updatedOp = {
               ...operation,
-              retryCount: operation.retryCount + 1
+              retryCount: operation.retryCount + 1,
             }
 
             // Keep if under retry limit
@@ -178,7 +178,7 @@ export const useOfflineStore = create<OfflineState>()(
               // Drop operation after max retries
               captureMessage(
                 `Operation dropped after ${updatedOp.maxRetries} retries: ${operation.type}`,
-                'warning'
+                'warning',
               )
             }
           }
@@ -187,26 +187,24 @@ export const useOfflineStore = create<OfflineState>()(
         // Update queue with failed operations
         set((state) => ({
           pendingOperations: [
-            ...state.pendingOperations.filter(
-              (op) => !operations.some((o) => o.id === op.id)
-            ),
-            ...failedOperations
-          ]
+            ...state.pendingOperations.filter((op) => !operations.some((o) => o.id === op.id)),
+            ...failedOperations,
+          ],
         }))
 
         get().finishSync(
-          failedOperations.length > 0 ? `${failedOperations.length} operations failed` : undefined
+          failedOperations.length > 0 ? `${failedOperations.length} operations failed` : undefined,
         )
-      }
+      },
     }),
     {
       name: 'cognograph-offline',
       partialize: (state) => ({
         pendingOperations: state.pendingOperations,
-        lastSyncTime: state.lastSyncTime
-      })
-    }
-  )
+        lastSyncTime: state.lastSyncTime,
+      }),
+    },
+  ),
 )
 
 // -----------------------------------------------------------------------------
@@ -225,9 +223,9 @@ async function processOperation(operation: PendingOperation): Promise<void> {
       await fetch(operation.endpoint, {
         method: operation.method,
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: operation.payload ? JSON.stringify(operation.payload) : undefined
+        body: operation.payload ? JSON.stringify(operation.payload) : undefined,
       })
       break
 

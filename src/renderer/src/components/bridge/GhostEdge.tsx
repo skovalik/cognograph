@@ -9,18 +9,28 @@
  * Color matches the target node type.
  */
 
-import { memo } from 'react'
-import { getBezierPath, EdgeLabelRenderer } from '@xyflow/react'
 import type { EdgeProps } from '@xyflow/react'
+import { EdgeLabelRenderer, getBezierPath } from '@xyflow/react'
+import { memo } from 'react'
 import { Badge } from '../ui/Badge'
 
 function GhostEdgeComponent({
-  sourceX, sourceY, targetX, targetY,
-  sourcePosition, targetPosition, data, style,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  data,
+  style,
 }: EdgeProps): JSX.Element {
   const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX, sourceY, targetX, targetY,
-    sourcePosition, targetPosition,
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
   })
 
   const ghostData = data as { proposalId?: string; changeId?: string; label?: string } | undefined
@@ -31,7 +41,7 @@ function GhostEdgeComponent({
         className="ghost-edge"
         d={edgePath}
         fill="none"
-        stroke={style?.stroke as string || '#94a3b8'}
+        stroke={(style?.stroke as string) || '#94a3b8'}
         style={style}
       />
       {ghostData?.label && (

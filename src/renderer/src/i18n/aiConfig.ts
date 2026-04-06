@@ -99,7 +99,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       cancel: 'Cancel',
       tryAgain: 'Try Again',
       editManually: 'Edit Manually',
-      useTemplate: 'Use a template'
+      useTemplate: 'Use a template',
     },
     status: {
       analyzing: 'Analyzing your description...',
@@ -108,7 +108,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       buildingSteps: 'Building action steps...',
       generatingConfig: 'Generating configuration...',
       complete: 'Configuration ready!',
-      askingQuestions: 'Need some clarification...'
+      askingQuestions: 'Need some clarification...',
     },
     preview: {
       title: 'AI Configuration Preview',
@@ -119,7 +119,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       warnings: 'Warnings',
       suggestedTitle: 'Suggested name',
       useThisName: 'Use this',
-      keepCurrent: 'Keep current'
+      keepCurrent: 'Keep current',
     },
     questions: {
       title: 'Clarification needed',
@@ -127,7 +127,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       useDefault: 'Use default',
       skip: 'Skip',
       round: 'Round {{current}} of {{max}}',
-      followUp: 'Follow-up questions'
+      followUp: 'Follow-up questions',
     },
     templates: {
       title: 'Templates',
@@ -137,14 +137,14 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
         recent: 'Your patterns',
         triggers: 'Trigger patterns',
         actions: 'Action patterns',
-        complete: 'Complete examples'
-      }
+        complete: 'Complete examples',
+      },
     },
     feedback: {
       prompt: 'How was this configuration?',
       placeholder: 'What would have been better?',
       submit: 'Submit Feedback',
-      thankYou: 'Thanks for the feedback!'
+      thankYou: 'Thanks for the feedback!',
     },
     errors: {
       noConnector: 'No AI connector configured',
@@ -154,25 +154,25 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       parseError: 'Could not understand AI response',
       parseErrorSuggestion: 'Please try again or configure manually',
       validationError: 'Configuration has errors',
-      tooManyRounds: 'Too many clarifications needed. Try being more specific.'
+      tooManyRounds: 'Too many clarifications needed. Try being more specific.',
     },
     tooltips: {
       button: 'Describe what you want this action to do, then click to auto-configure',
       emptyDescription: 'Enter a description above to use AI configuration',
-      configureFirst: 'Add a description first'
+      configureFirst: 'Add a description first',
     },
     validation: {
       invalidTrigger: 'Invalid trigger type: {{type}}',
       missingField: 'Step {{step}}: missing {{field}}',
       undefinedVariable: 'Variable {{name}} used before defined',
       potentialLoop: 'This action may cause an infinite loop',
-      httpWarning: 'Will make {{method}} requests to {{domain}}'
+      httpWarning: 'Will make {{method}} requests to {{domain}}',
     },
     plurals: {
       steps: { one: '{{count}} step', other: '{{count}} steps' },
       questions: { one: '{{count}} question', other: '{{count}} questions' },
-      warnings: { one: '{{count}} warning', other: '{{count}} warnings' }
-    }
+      warnings: { one: '{{count}} warning', other: '{{count}} warnings' },
+    },
   },
 
   // Spanish
@@ -183,7 +183,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       cancel: 'Cancelar',
       tryAgain: 'Reintentar',
       editManually: 'Editar manualmente',
-      useTemplate: 'Usar una plantilla'
+      useTemplate: 'Usar una plantilla',
     },
     status: {
       analyzing: 'Analizando tu descripción...',
@@ -192,7 +192,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       buildingSteps: 'Construyendo pasos de acción...',
       generatingConfig: 'Generando configuración...',
       complete: '¡Configuración lista!',
-      askingQuestions: 'Necesito aclaración...'
+      askingQuestions: 'Necesito aclaración...',
     },
     preview: {
       title: 'Vista previa de configuración IA',
@@ -203,7 +203,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       warnings: 'Advertencias',
       suggestedTitle: 'Nombre sugerido',
       useThisName: 'Usar este',
-      keepCurrent: 'Mantener actual'
+      keepCurrent: 'Mantener actual',
     },
     questions: {
       title: 'Se necesita aclaración',
@@ -211,7 +211,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       useDefault: 'Usar predeterminado',
       skip: 'Omitir',
       round: 'Ronda {{current}} de {{max}}',
-      followUp: 'Preguntas de seguimiento'
+      followUp: 'Preguntas de seguimiento',
     },
     templates: {
       title: 'Plantillas',
@@ -221,14 +221,14 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
         recent: 'Tus patrones',
         triggers: 'Patrones de disparador',
         actions: 'Patrones de acción',
-        complete: 'Ejemplos completos'
-      }
+        complete: 'Ejemplos completos',
+      },
     },
     feedback: {
       prompt: '¿Cómo estuvo esta configuración?',
       placeholder: '¿Qué hubiera sido mejor?',
       submit: 'Enviar comentarios',
-      thankYou: '¡Gracias por los comentarios!'
+      thankYou: '¡Gracias por los comentarios!',
     },
     errors: {
       noConnector: 'No hay conector de IA configurado',
@@ -238,25 +238,25 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       parseError: 'No se pudo entender la respuesta de la IA',
       parseErrorSuggestion: 'Por favor intenta de nuevo o configura manualmente',
       validationError: 'La configuración tiene errores',
-      tooManyRounds: 'Se necesitan demasiadas aclaraciones. Intenta ser más específico.'
+      tooManyRounds: 'Se necesitan demasiadas aclaraciones. Intenta ser más específico.',
     },
     tooltips: {
       button: 'Describe lo que quieres que haga esta acción, luego haz clic para auto-configurar',
       emptyDescription: 'Ingresa una descripción arriba para usar la configuración de IA',
-      configureFirst: 'Primero agrega una descripción'
+      configureFirst: 'Primero agrega una descripción',
     },
     validation: {
       invalidTrigger: 'Tipo de disparador inválido: {{type}}',
       missingField: 'Paso {{step}}: falta {{field}}',
       undefinedVariable: 'Variable {{name}} usada antes de definir',
       potentialLoop: 'Esta acción puede causar un bucle infinito',
-      httpWarning: 'Hará solicitudes {{method}} a {{domain}}'
+      httpWarning: 'Hará solicitudes {{method}} a {{domain}}',
     },
     plurals: {
       steps: { one: '{{count}} paso', other: '{{count}} pasos' },
       questions: { one: '{{count}} pregunta', other: '{{count}} preguntas' },
-      warnings: { one: '{{count}} advertencia', other: '{{count}} advertencias' }
-    }
+      warnings: { one: '{{count}} advertencia', other: '{{count}} advertencias' },
+    },
   },
 
   // French
@@ -267,7 +267,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       cancel: 'Annuler',
       tryAgain: 'Réessayer',
       editManually: 'Modifier manuellement',
-      useTemplate: 'Utiliser un modèle'
+      useTemplate: 'Utiliser un modèle',
     },
     status: {
       analyzing: 'Analyse de votre description...',
@@ -276,7 +276,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       buildingSteps: 'Construction des étapes...',
       generatingConfig: 'Génération de la configuration...',
       complete: 'Configuration prête!',
-      askingQuestions: 'Besoin de clarification...'
+      askingQuestions: 'Besoin de clarification...',
     },
     preview: {
       title: 'Aperçu de configuration IA',
@@ -287,7 +287,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       warnings: 'Avertissements',
       suggestedTitle: 'Nom suggéré',
       useThisName: 'Utiliser ce nom',
-      keepCurrent: 'Garder actuel'
+      keepCurrent: 'Garder actuel',
     },
     questions: {
       title: 'Clarification nécessaire',
@@ -295,7 +295,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       useDefault: 'Utiliser défaut',
       skip: 'Ignorer',
       round: 'Tour {{current}} sur {{max}}',
-      followUp: 'Questions de suivi'
+      followUp: 'Questions de suivi',
     },
     templates: {
       title: 'Modèles',
@@ -304,43 +304,44 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       categories: {
         recent: 'Vos patterns',
         triggers: 'Patterns de déclencheur',
-        actions: 'Patterns d\'action',
-        complete: 'Exemples complets'
-      }
+        actions: "Patterns d'action",
+        complete: 'Exemples complets',
+      },
     },
     feedback: {
       prompt: 'Comment était cette configuration?',
-      placeholder: 'Qu\'est-ce qui aurait été mieux?',
+      placeholder: "Qu'est-ce qui aurait été mieux?",
       submit: 'Envoyer commentaires',
-      thankYou: 'Merci pour vos commentaires!'
+      thankYou: 'Merci pour vos commentaires!',
     },
     errors: {
       noConnector: 'Aucun connecteur IA configuré',
       noConnectorAction: 'Configurer dans Paramètres',
-      timeout: 'L\'IA a mis trop de temps à répondre',
+      timeout: "L'IA a mis trop de temps à répondre",
       timeoutSuggestion: 'Essayez de simplifier votre description',
-      parseError: 'Impossible de comprendre la réponse de l\'IA',
+      parseError: "Impossible de comprendre la réponse de l'IA",
       parseErrorSuggestion: 'Veuillez réessayer ou configurer manuellement',
       validationError: 'La configuration a des erreurs',
-      tooManyRounds: 'Trop de clarifications nécessaires. Essayez d\'être plus précis.'
+      tooManyRounds: "Trop de clarifications nécessaires. Essayez d'être plus précis.",
     },
     tooltips: {
-      button: 'Décrivez ce que vous voulez que cette action fasse, puis cliquez pour auto-configurer',
+      button:
+        'Décrivez ce que vous voulez que cette action fasse, puis cliquez pour auto-configurer',
       emptyDescription: 'Entrez une description ci-dessus pour utiliser la configuration IA',
-      configureFirst: 'Ajoutez d\'abord une description'
+      configureFirst: "Ajoutez d'abord une description",
     },
     validation: {
       invalidTrigger: 'Type de déclencheur invalide: {{type}}',
       missingField: 'Étape {{step}}: {{field}} manquant',
       undefinedVariable: 'Variable {{name}} utilisée avant définition',
       potentialLoop: 'Cette action peut causer une boucle infinie',
-      httpWarning: 'Effectuera des requêtes {{method}} vers {{domain}}'
+      httpWarning: 'Effectuera des requêtes {{method}} vers {{domain}}',
     },
     plurals: {
       steps: { one: '{{count}} étape', other: '{{count}} étapes' },
       questions: { one: '{{count}} question', other: '{{count}} questions' },
-      warnings: { one: '{{count}} avertissement', other: '{{count}} avertissements' }
-    }
+      warnings: { one: '{{count}} avertissement', other: '{{count}} avertissements' },
+    },
   },
 
   // German
@@ -351,7 +352,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       cancel: 'Abbrechen',
       tryAgain: 'Erneut versuchen',
       editManually: 'Manuell bearbeiten',
-      useTemplate: 'Vorlage verwenden'
+      useTemplate: 'Vorlage verwenden',
     },
     status: {
       analyzing: 'Beschreibung wird analysiert...',
@@ -360,7 +361,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       buildingSteps: 'Aktionsschritte werden erstellt...',
       generatingConfig: 'Konfiguration wird generiert...',
       complete: 'Konfiguration bereit!',
-      askingQuestions: 'Klärung erforderlich...'
+      askingQuestions: 'Klärung erforderlich...',
     },
     preview: {
       title: 'KI-Konfigurationsvorschau',
@@ -371,7 +372,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       warnings: 'Warnungen',
       suggestedTitle: 'Vorgeschlagener Name',
       useThisName: 'Diesen verwenden',
-      keepCurrent: 'Aktuellen behalten'
+      keepCurrent: 'Aktuellen behalten',
     },
     questions: {
       title: 'Klärung erforderlich',
@@ -379,7 +380,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       useDefault: 'Standard verwenden',
       skip: 'Überspringen',
       round: 'Runde {{current}} von {{max}}',
-      followUp: 'Folgefragen'
+      followUp: 'Folgefragen',
     },
     templates: {
       title: 'Vorlagen',
@@ -389,14 +390,14 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
         recent: 'Ihre Muster',
         triggers: 'Auslösermuster',
         actions: 'Aktionsmuster',
-        complete: 'Vollständige Beispiele'
-      }
+        complete: 'Vollständige Beispiele',
+      },
     },
     feedback: {
       prompt: 'Wie war diese Konfiguration?',
       placeholder: 'Was wäre besser gewesen?',
       submit: 'Feedback senden',
-      thankYou: 'Danke für das Feedback!'
+      thankYou: 'Danke für das Feedback!',
     },
     errors: {
       noConnector: 'Kein KI-Connector konfiguriert',
@@ -406,25 +407,25 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       parseError: 'KI-Antwort konnte nicht verstanden werden',
       parseErrorSuggestion: 'Bitte erneut versuchen oder manuell konfigurieren',
       validationError: 'Konfiguration enthält Fehler',
-      tooManyRounds: 'Zu viele Klärungen erforderlich. Versuchen Sie, spezifischer zu sein.'
+      tooManyRounds: 'Zu viele Klärungen erforderlich. Versuchen Sie, spezifischer zu sein.',
     },
     tooltips: {
       button: 'Beschreiben Sie, was diese Aktion tun soll, dann klicken Sie zum Auto-Konfigurieren',
       emptyDescription: 'Geben Sie oben eine Beschreibung ein, um die KI-Konfiguration zu nutzen',
-      configureFirst: 'Fügen Sie zuerst eine Beschreibung hinzu'
+      configureFirst: 'Fügen Sie zuerst eine Beschreibung hinzu',
     },
     validation: {
       invalidTrigger: 'Ungültiger Auslösertyp: {{type}}',
       missingField: 'Schritt {{step}}: {{field}} fehlt',
       undefinedVariable: 'Variable {{name}} vor Definition verwendet',
       potentialLoop: 'Diese Aktion kann eine Endlosschleife verursachen',
-      httpWarning: 'Wird {{method}}-Anfragen an {{domain}} senden'
+      httpWarning: 'Wird {{method}}-Anfragen an {{domain}} senden',
     },
     plurals: {
       steps: { one: '{{count}} Schritt', other: '{{count}} Schritte' },
       questions: { one: '{{count}} Frage', other: '{{count}} Fragen' },
-      warnings: { one: '{{count}} Warnung', other: '{{count}} Warnungen' }
-    }
+      warnings: { one: '{{count}} Warnung', other: '{{count}} Warnungen' },
+    },
   },
 
   // Japanese
@@ -435,7 +436,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       cancel: 'キャンセル',
       tryAgain: '再試行',
       editManually: '手動で編集',
-      useTemplate: 'テンプレートを使用'
+      useTemplate: 'テンプレートを使用',
     },
     status: {
       analyzing: '説明を分析中...',
@@ -444,7 +445,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       buildingSteps: 'アクションステップを構築中...',
       generatingConfig: '設定を生成中...',
       complete: '設定完了!',
-      askingQuestions: '確認が必要です...'
+      askingQuestions: '確認が必要です...',
     },
     preview: {
       title: 'AI設定プレビュー',
@@ -455,7 +456,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       warnings: '警告',
       suggestedTitle: '提案された名前',
       useThisName: 'これを使用',
-      keepCurrent: '現在を維持'
+      keepCurrent: '現在を維持',
     },
     questions: {
       title: '確認が必要',
@@ -463,7 +464,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       useDefault: 'デフォルトを使用',
       skip: 'スキップ',
       round: '{{max}}中{{current}}ラウンド',
-      followUp: 'フォローアップ質問'
+      followUp: 'フォローアップ質問',
     },
     templates: {
       title: 'テンプレート',
@@ -473,14 +474,14 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
         recent: 'あなたのパターン',
         triggers: 'トリガーパターン',
         actions: 'アクションパターン',
-        complete: '完全な例'
-      }
+        complete: '完全な例',
+      },
     },
     feedback: {
       prompt: 'この設定はいかがでしたか？',
       placeholder: '何が良かったですか？',
       submit: 'フィードバックを送信',
-      thankYou: 'フィードバックありがとうございます！'
+      thankYou: 'フィードバックありがとうございます！',
     },
     errors: {
       noConnector: 'AIコネクタが設定されていません',
@@ -490,25 +491,25 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       parseError: 'AI応答を理解できませんでした',
       parseErrorSuggestion: '再試行するか、手動で設定してください',
       validationError: '設定にエラーがあります',
-      tooManyRounds: '確認が多すぎます。より具体的にしてください。'
+      tooManyRounds: '確認が多すぎます。より具体的にしてください。',
     },
     tooltips: {
       button: 'このアクションで何をしたいか説明し、クリックして自動設定',
       emptyDescription: '上に説明を入力してAI設定を使用',
-      configureFirst: '最初に説明を追加'
+      configureFirst: '最初に説明を追加',
     },
     validation: {
       invalidTrigger: '無効なトリガータイプ: {{type}}',
       missingField: 'ステップ {{step}}: {{field}} がありません',
       undefinedVariable: '変数 {{name}} は定義前に使用されています',
       potentialLoop: 'このアクションは無限ループを引き起こす可能性があります',
-      httpWarning: '{{domain}} に {{method}} リクエストを行います'
+      httpWarning: '{{domain}} に {{method}} リクエストを行います',
     },
     plurals: {
       steps: { one: '{{count}} ステップ', other: '{{count}} ステップ' },
       questions: { one: '{{count}} 質問', other: '{{count}} 質問' },
-      warnings: { one: '{{count}} 警告', other: '{{count}} 警告' }
-    }
+      warnings: { one: '{{count}} 警告', other: '{{count}} 警告' },
+    },
   },
 
   // Chinese (Simplified)
@@ -519,7 +520,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       cancel: '取消',
       tryAgain: '重试',
       editManually: '手动编辑',
-      useTemplate: '使用模板'
+      useTemplate: '使用模板',
     },
     status: {
       analyzing: '正在分析您的描述...',
@@ -528,7 +529,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       buildingSteps: '正在构建操作步骤...',
       generatingConfig: '正在生成配置...',
       complete: '配置完成！',
-      askingQuestions: '需要澄清...'
+      askingQuestions: '需要澄清...',
     },
     preview: {
       title: 'AI配置预览',
@@ -539,7 +540,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       warnings: '警告',
       suggestedTitle: '建议的名称',
       useThisName: '使用此名称',
-      keepCurrent: '保持当前'
+      keepCurrent: '保持当前',
     },
     questions: {
       title: '需要澄清',
@@ -547,7 +548,7 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       useDefault: '使用默认值',
       skip: '跳过',
       round: '第 {{current}} 轮，共 {{max}} 轮',
-      followUp: '后续问题'
+      followUp: '后续问题',
     },
     templates: {
       title: '模板',
@@ -557,14 +558,14 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
         recent: '您的模式',
         triggers: '触发器模式',
         actions: '操作模式',
-        complete: '完整示例'
-      }
+        complete: '完整示例',
+      },
     },
     feedback: {
       prompt: '这个配置怎么样？',
       placeholder: '什么会更好？',
       submit: '提交反馈',
-      thankYou: '感谢您的反馈！'
+      thankYou: '感谢您的反馈！',
     },
     errors: {
       noConnector: '未配置AI连接器',
@@ -574,26 +575,26 @@ export const aiConfigStrings: Record<SupportedLanguage, AIConfigStrings> = {
       parseError: '无法理解AI响应',
       parseErrorSuggestion: '请重试或手动配置',
       validationError: '配置有错误',
-      tooManyRounds: '需要太多澄清。请尝试更具体。'
+      tooManyRounds: '需要太多澄清。请尝试更具体。',
     },
     tooltips: {
       button: '描述您希望此操作执行的内容，然后点击自动配置',
       emptyDescription: '在上方输入描述以使用AI配置',
-      configureFirst: '首先添加描述'
+      configureFirst: '首先添加描述',
     },
     validation: {
       invalidTrigger: '无效的触发器类型: {{type}}',
       missingField: '步骤 {{step}}: 缺少 {{field}}',
       undefinedVariable: '变量 {{name}} 在定义之前使用',
       potentialLoop: '此操作可能导致无限循环',
-      httpWarning: '将向 {{domain}} 发送 {{method}} 请求'
+      httpWarning: '将向 {{domain}} 发送 {{method}} 请求',
     },
     plurals: {
       steps: { one: '{{count}} 个步骤', other: '{{count}} 个步骤' },
       questions: { one: '{{count}} 个问题', other: '{{count}} 个问题' },
-      warnings: { one: '{{count}} 个警告', other: '{{count}} 个警告' }
-    }
-  }
+      warnings: { one: '{{count}} 个警告', other: '{{count}} 个警告' },
+    },
+  },
 }
 
 // RTL languages

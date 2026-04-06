@@ -7,16 +7,16 @@
  * Tests the pure helper functions and the hook CSS class + effective zoom level logic.
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+import { DOF_DISCONNECTED } from '../../stores/contextVisualizationStore'
 import {
   computeEffectiveZoomLevel,
-  getDofCssClass,
-  ZOOM_LEVEL_ORDER,
-  RING_LOD_REDUCTION,
+  DISCONNECTED_CSS_CLASS,
   DISCONNECTED_LOD_REDUCTION,
-  DISCONNECTED_CSS_CLASS
+  getDofCssClass,
+  RING_LOD_REDUCTION,
+  ZOOM_LEVEL_ORDER,
 } from '../useDepthOfField'
-import { DOF_DISCONNECTED } from '../../stores/contextVisualizationStore'
 import type { ZoomLevel } from '../useSemanticZoom'
 
 // --- computeEffectiveZoomLevel tests --------------------------------------

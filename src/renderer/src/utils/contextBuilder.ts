@@ -11,29 +11,29 @@
  * understanding of workspace structure and relationships.
  */
 
-import type { Node, Edge } from '@xyflow/react'
 import type {
   AIEditorContext,
-  AIEditorMode,
-  AIEditorScope,
-  AIEditorNodeSummary,
   AIEditorEdgeSummary,
-  NodeData,
-  EdgeData,
-  ConversationNodeData,
-  NoteNodeData,
-  TextNodeData,
+  AIEditorMode,
+  AIEditorNodeSummary,
+  AIEditorScope,
   ArtifactNodeData,
-  TaskNodeData,
+  ConversationNodeData,
+  EdgeData,
+  EnhancedContextAnalysis,
+  NodeData,
+  NoteNodeData,
   ProjectNodeData,
+  TaskNodeData,
+  TextNodeData,
   WorkspaceNodeData,
-  EnhancedContextAnalysis
 } from '@shared/types'
 import { sanitizeForContext } from '@shared/utils/sanitizeContext'
-import { buildEnhancedContext } from './enhancedContextBuilder'
-import { describeContext } from './contextDescriber'
-import { estimateTokens, getModelContextLimit } from './tokenEstimation'
+import type { Edge, Node } from '@xyflow/react'
 import { serializeArtifactForContext } from '../services/media/mediaPiping'
+import { describeContext } from './contextDescriber'
+import { buildEnhancedContext } from './enhancedContextBuilder'
+import { estimateTokens, getModelContextLimit } from './tokenEstimation'
 
 // Token budget configuration
 const DEFAULT_MAX_CONTEXT_TOKENS = 50000
@@ -92,7 +92,7 @@ export function buildAIEditorContext(input: ContextBuilderInput): AIEditorContex
     viewportBounds,
     workspaceSettings,
     includeEnhancedAnalysis = false,
-    model
+    model,
   } = input
 
   // Calculate token budget based on model
@@ -105,9 +105,7 @@ export function buildAIEditorContext(input: ContextBuilderInput): AIEditorContex
   const visibleNodeIds = getVisibleNodeIds(nodes, viewport, viewportBounds)
 
   // For 'single' scope, use targetNodeId as the sole selected node
-  const effectiveSelectedIds = scope === 'single' && targetNodeId
-    ? [targetNodeId]
-    : selectedNodeIds
+  const effectiveSelectedIds = scope === 'single' && targetNodeId ? [targetNodeId] : selectedNodeIds
 
   const scopeNodeIds = getScopeNodeIds(scope, effectiveSelectedIds, visibleNodeIds, nodes)
 
@@ -119,7 +117,7 @@ export function buildAIEditorContext(input: ContextBuilderInput): AIEditorContex
     // Single scope: target node at full detail, connected nodes at summary
     const connectedNodeIds = edges
       .filter((e) => e.source === targetNodeId || e.target === targetNodeId)
-      .map((e) => e.source === targetNodeId ? e.target : e.source)
+      .map((e) => (e.source === targetNodeId ? e.target : e.source))
 
     selectedNodes = nodes
       .filter((n) => n.id === targetNodeId)
@@ -139,14 +137,15 @@ export function buildAIEditorContext(input: ContextBuilderInput): AIEditorContex
   }
 
   // All nodes for canvas scope (minimal info)
-  const allNodes = scope === 'canvas'
-    ? nodes.map((n) => ({
-        id: n.id,
-        type: n.data.type,
-        title: getNodeTitle(n.data),
-        position: { x: n.position.x, y: n.position.y }
-      }))
-    : undefined
+  const allNodes =
+    scope === 'canvas'
+      ? nodes.map((n) => ({
+          id: n.id,
+          type: n.data.type,
+          title: getNodeTitle(n.data),
+          position: { x: n.position.x, y: n.position.y },
+        }))
+      : undefined
 
   // Build edge summaries
   const relevantEdges = edges.filter((e) => {
@@ -180,7 +179,7 @@ export function buildAIEditorContext(input: ContextBuilderInput): AIEditorContex
     edges: edgeSummaries,
     prompt,
     enhanced,
-    contextDescription
+    contextDescription,
   })
 
   // Token overflow guard: progressively shed context layers to stay within budget.
@@ -200,7 +199,7 @@ export function buildAIEditorContext(input: ContextBuilderInput): AIEditorContex
         edges: edgeSummaries,
         prompt,
         enhanced: finalEnhanced,
-        contextDescription
+        contextDescription,
       })
     }
 
@@ -219,7 +218,7 @@ export function buildAIEditorContext(input: ContextBuilderInput): AIEditorContex
         edges: edgeSummaries,
         prompt,
         enhanced: finalEnhanced,
-        contextDescription
+        contextDescription,
       })
     }
 
@@ -233,7 +232,7 @@ export function buildAIEditorContext(input: ContextBuilderInput): AIEditorContex
         edges: edgeSummaries,
         prompt,
         enhanced: finalEnhanced,
-        contextDescription
+        contextDescription,
       })
     }
   }
@@ -256,7 +255,7 @@ export function buildAIEditorContext(input: ContextBuilderInput): AIEditorContex
     spatialDescription: contextDescription.spatial,
     edgeDescription: contextDescription.edges,
     layoutSuggestions: contextDescription.suggestions,
-    learningData: input.learningData
+    learningData: input.learningData,
   }
 }
 
@@ -267,10 +266,14 @@ export function buildAIEditorContext(input: ContextBuilderInput): AIEditorContex
 type DetailLevel = 'full' | 'summary' | 'minimal'
 
 // Security: filter sensitive keys and values from node properties before sending to AI
-const SENSITIVE_KEY_PATTERN = /key|secret|token|password|credential|apikey|api_key|auth|bearer|private/i
+const SENSITIVE_KEY_PATTERN =
+  /key|secret|token|password|credential|apikey|api_key|auth|bearer|private/i
 const SECRET_VALUE_PATTERN = /^(sk-|Bearer |ghp_|gho_|xox[bpas]-|AKIA|eyJ)/
 
-function filterAndSanitizeProperties(props: Record<string, unknown>, depth = 0): Record<string, unknown> {
+function filterAndSanitizeProperties(
+  props: Record<string, unknown>,
+  depth = 0,
+): Record<string, unknown> {
   if (depth > 3) return {}
   const filtered: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(props)) {
@@ -281,7 +284,9 @@ function filterAndSanitizeProperties(props: Record<string, unknown>, depth = 0):
     } else if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
       filtered[k] = filterAndSanitizeProperties(v as Record<string, unknown>, depth + 1)
     } else if (Array.isArray(v)) {
-      filtered[k] = v.map(item => typeof item === 'string' ? sanitizeForContext(item.slice(0, 200)) : item).slice(0, 20)
+      filtered[k] = v
+        .map((item) => (typeof item === 'string' ? sanitizeForContext(item.slice(0, 200)) : item))
+        .slice(0, 20)
     } else {
       filtered[k] = v
     }
@@ -289,10 +294,7 @@ function filterAndSanitizeProperties(props: Record<string, unknown>, depth = 0):
   return filtered
 }
 
-function buildNodeSummary(
-  node: Node<NodeData>,
-  detailLevel: DetailLevel
-): AIEditorNodeSummary {
+function buildNodeSummary(node: Node<NodeData>, detailLevel: DetailLevel): AIEditorNodeSummary {
   const data = node.data
 
   const summary: AIEditorNodeSummary = {
@@ -303,10 +305,12 @@ function buildNodeSummary(
     dimensions: node.measured
       ? { width: node.measured.width ?? 0, height: node.measured.height ?? 0 }
       : undefined,
-    tags: ((data.properties as Record<string, unknown> | undefined)?.tags as string[] | undefined) || data.tags,
+    tags:
+      ((data.properties as Record<string, unknown> | undefined)?.tags as string[] | undefined) ||
+      data.tags,
     contextRole: data.contextRole,
     color: data.color,
-    properties: filterAndSanitizeProperties((data.properties as Record<string, unknown>) || {})
+    properties: filterAndSanitizeProperties((data.properties as Record<string, unknown>) || {}),
   }
 
   // Add type-specific info based on detail level
@@ -327,17 +331,22 @@ function buildNodeSummary(
 
     case 'note': {
       const noteData = data as NoteNodeData
-      summary.contentPreview = detailLevel !== 'minimal'
-        ? truncateText(sanitizeForContext(noteData.content), CONTENT_PREVIEW_LENGTH)
-        : undefined
+      summary.contentPreview =
+        detailLevel !== 'minimal'
+          ? truncateText(sanitizeForContext(noteData.content), CONTENT_PREVIEW_LENGTH)
+          : undefined
       break
     }
 
     case 'artifact': {
       const artifactData = data as ArtifactNodeData
-      summary.contentPreview = detailLevel !== 'minimal'
-        ? truncateText(sanitizeForContext(serializeArtifactForContext(artifactData)), CONTENT_PREVIEW_LENGTH)
-        : undefined
+      summary.contentPreview =
+        detailLevel !== 'minimal'
+          ? truncateText(
+              sanitizeForContext(serializeArtifactForContext(artifactData)),
+              CONTENT_PREVIEW_LENGTH,
+            )
+          : undefined
       if (artifactData.folderPath) {
         const basename = artifactData.folderPath.split(/[/\\]/).pop() || artifactData.folderPath
         summary.properties = {
@@ -353,7 +362,10 @@ function buildNodeSummary(
       const taskData = data as TaskNodeData
       summary.status = taskData.status
       if (detailLevel !== 'minimal') {
-        summary.contentPreview = truncateText(sanitizeForContext(taskData.description), CONTENT_PREVIEW_LENGTH)
+        summary.contentPreview = truncateText(
+          sanitizeForContext(taskData.description),
+          CONTENT_PREVIEW_LENGTH,
+        )
       }
       break
     }
@@ -362,7 +374,10 @@ function buildNodeSummary(
       const projectData = data as ProjectNodeData
       summary.childCount = projectData.childNodeIds.length
       if (detailLevel !== 'minimal') {
-        summary.contentPreview = truncateText(sanitizeForContext(projectData.description), CONTENT_PREVIEW_LENGTH)
+        summary.contentPreview = truncateText(
+          sanitizeForContext(projectData.description),
+          CONTENT_PREVIEW_LENGTH,
+        )
       }
       if (projectData.folderPath) {
         const basename = projectData.folderPath.split(/[/\\]/).pop() || projectData.folderPath
@@ -379,16 +394,20 @@ function buildNodeSummary(
       const workspaceData = data as WorkspaceNodeData
       summary.memberCount = workspaceData.includedNodeIds.length
       if (detailLevel !== 'minimal') {
-        summary.contentPreview = truncateText(sanitizeForContext(workspaceData.description), CONTENT_PREVIEW_LENGTH)
+        summary.contentPreview = truncateText(
+          sanitizeForContext(workspaceData.description),
+          CONTENT_PREVIEW_LENGTH,
+        )
       }
       break
     }
 
     case 'text': {
       const textData = data as TextNodeData
-      summary.contentPreview = detailLevel !== 'minimal'
-        ? truncateText(sanitizeForContext(textData.content), CONTENT_PREVIEW_LENGTH)
-        : undefined
+      summary.contentPreview =
+        detailLevel !== 'minimal'
+          ? truncateText(sanitizeForContext(textData.content), CONTENT_PREVIEW_LENGTH)
+          : undefined
       break
     }
   }
@@ -409,7 +428,7 @@ function buildEdgeSummary(edge: Edge<EdgeData>): AIEditorEdgeSummary {
     target: edge.target,
     label: data?.label,
     strength: data?.strength,
-    direction: data?.direction
+    direction: data?.direction,
   }
 }
 
@@ -435,7 +454,10 @@ function getNodeTitle(data: NodeData): string {
       const textData = data as TextNodeData
       // Use first line of plain text content as title
       const plainText = textData.content
-        ? textData.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+        ? textData.content
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
         : ''
       return plainText.slice(0, 50) || 'Text'
     }
@@ -451,9 +473,12 @@ function truncateText(text: string, maxLength: number): string {
   return text.slice(0, maxLength - 3) + '...'
 }
 
-function calculateCanvasBounds(
-  nodes: Node<NodeData>[]
-): { minX: number; minY: number; maxX: number; maxY: number } {
+function calculateCanvasBounds(nodes: Node<NodeData>[]): {
+  minX: number
+  minY: number
+  maxX: number
+  maxY: number
+} {
   if (nodes.length === 0) {
     return { minX: 0, minY: 0, maxX: 1000, maxY: 1000 }
   }
@@ -479,7 +504,7 @@ function calculateCanvasBounds(
 function getVisibleNodeIds(
   nodes: Node<NodeData>[],
   viewport: { x: number; y: number; zoom: number },
-  viewportBounds: { width: number; height: number }
+  viewportBounds: { width: number; height: number },
 ): string[] {
   // Calculate visible area in canvas coordinates
   const visibleMinX = -viewport.x / viewport.zoom
@@ -507,7 +532,7 @@ function getScopeNodeIds(
   scope: AIEditorScope,
   selectedNodeIds: string[],
   visibleNodeIds: string[],
-  nodes: Node<NodeData>[]
+  nodes: Node<NodeData>[],
 ): string[] {
   switch (scope) {
     case 'single':
@@ -530,7 +555,12 @@ function getScopeNodeIds(
 function estimateContextTokens(data: {
   selectedNodes: AIEditorNodeSummary[]
   visibleNodes: AIEditorNodeSummary[]
-  allNodes?: Array<{ id: string; type: NodeData['type']; title: string; position: { x: number; y: number } }>
+  allNodes?: Array<{
+    id: string
+    type: NodeData['type']
+    title: string
+    position: { x: number; y: number }
+  }>
   edges: AIEditorEdgeSummary[]
   prompt: string
   enhanced?: EnhancedContextAnalysis

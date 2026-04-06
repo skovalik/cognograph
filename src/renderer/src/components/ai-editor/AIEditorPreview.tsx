@@ -9,16 +9,16 @@
  * All elements scale with viewport zoom level.
  */
 
-import { memo, useMemo } from 'react'
+import type { NodeData } from '@shared/types'
 import { useReactFlow } from '@xyflow/react'
+import { memo, useMemo } from 'react'
+import { useReducedMotion } from '../../hooks/useReducedMotion'
 import { useAIEditorStore } from '../../stores/aiEditorStore'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { calculateOptimalHandles, getHandlePosition } from '../../utils/positionResolver'
+import LiveRegion from '../a11y/LiveRegion'
 import DeletionOverlay from './DeletionOverlay'
 import MovementPath from './MovementPath'
-import LiveRegion from '../a11y/LiveRegion'
-import { useReducedMotion } from '../../hooks/useReducedMotion'
-import { calculateOptimalHandles, getHandlePosition } from '../../utils/positionResolver'
-import type { NodeData } from '@shared/types'
 
 function AIEditorPreviewComponent(): JSX.Element | null {
   const previewState = useAIEditorStore((state) => state.previewState)
@@ -34,7 +34,7 @@ function AIEditorPreviewComponent(): JSX.Element | null {
     for (const node of nodes) {
       map.set(node.id, {
         width: node.measured?.width ?? node.width ?? 280,
-        height: node.measured?.height ?? node.height ?? 140
+        height: node.measured?.height ?? node.height ?? 140,
       })
     }
     return map
@@ -75,9 +75,10 @@ function AIEditorPreviewComponent(): JSX.Element | null {
     previewState.deletionOverlays.length +
     previewState.movementPaths.length +
     previewState.nodeUpdates.length
-  const screenReaderSummary = changeCount > 0
-    ? `Preview showing ${changeCount} proposed changes: ${previewState.ghostNodes.length} new nodes, ${previewState.deletionOverlays.length} deletions, ${previewState.movementPaths.length} moves, ${previewState.nodeUpdates.length} edits`
-    : 'No changes to preview'
+  const screenReaderSummary =
+    changeCount > 0
+      ? `Preview showing ${changeCount} proposed changes: ${previewState.ghostNodes.length} new nodes, ${previewState.deletionOverlays.length} deletions, ${previewState.movementPaths.length} moves, ${previewState.nodeUpdates.length} edits`
+      : 'No changes to preview'
 
   return (
     <div
@@ -88,7 +89,7 @@ function AIEditorPreviewComponent(): JSX.Element | null {
         position: 'absolute',
         inset: 0,
         pointerEvents: 'none',
-        overflow: 'hidden'
+        overflow: 'hidden',
       }}
     >
       {/* Screen reader announcement */}
@@ -140,7 +141,7 @@ function AIEditorPreviewComponent(): JSX.Element | null {
             to={{ x: toScreenX, y: toScreenY }}
             nodeDimensions={{
               width: dimensions.width * viewport.zoom,
-              height: dimensions.height * viewport.zoom
+              height: dimensions.height * viewport.zoom,
             }}
             zoom={viewport.zoom}
             nodeTitle={nodeTitle}
@@ -180,7 +181,7 @@ function AIEditorPreviewComponent(): JSX.Element | null {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              animation: 'update-pulse 1.5s ease-in-out infinite'
+              animation: 'update-pulse 1.5s ease-in-out infinite',
             }}
           >
             <div
@@ -193,7 +194,7 @@ function AIEditorPreviewComponent(): JSX.Element | null {
                 fontSize: scaledFontSize,
                 fontWeight: 600,
                 padding: `${scaledPadding / 2}px ${scaledPadding}px`,
-                borderRadius: 4
+                borderRadius: 4,
               }}
             >
               EDIT
@@ -204,7 +205,7 @@ function AIEditorPreviewComponent(): JSX.Element | null {
                 fontSize: scaledFontSize,
                 fontWeight: 500,
                 textAlign: 'center',
-                padding: scaledPadding
+                padding: scaledPadding,
               }}
             >
               {nodeTitle && `"${nodeTitle}"`}
@@ -220,7 +221,7 @@ function AIEditorPreviewComponent(): JSX.Element | null {
           inset: 0,
           width: '100%',
           height: '100%',
-          pointerEvents: 'none'
+          pointerEvents: 'none',
         }}
       >
         <defs>
@@ -276,7 +277,7 @@ function AIEditorPreviewComponent(): JSX.Element | null {
             sourcePos,
             sourceDim,
             targetPos,
-            targetDim
+            targetDim,
           )
 
           // Get handle positions instead of center points for accurate preview
@@ -367,7 +368,7 @@ function AIEditorPreviewComponent(): JSX.Element | null {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: Math.max(2, 4 * viewport.zoom)
+              gap: Math.max(2, 4 * viewport.zoom),
             }}
           >
             <span
@@ -375,7 +376,7 @@ function AIEditorPreviewComponent(): JSX.Element | null {
                 color: '#22c55e',
                 fontSize: scaledTypeFontSize,
                 fontWeight: 600,
-                textTransform: 'uppercase'
+                textTransform: 'uppercase',
               }}
             >
               {ghost.type}
@@ -388,7 +389,7 @@ function AIEditorPreviewComponent(): JSX.Element | null {
                 textAlign: 'center',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
               }}
             >
               {(ghost.data as any)?.title || 'New Node'}
@@ -403,7 +404,7 @@ function AIEditorPreviewComponent(): JSX.Element | null {
                 fontSize: scaledBadgeFontSize,
                 fontWeight: 600,
                 padding: `${scaledBadgePadding}px ${scaledBadgePadding * 1.5}px`,
-                borderRadius: Math.max(2, 4 * viewport.zoom)
+                borderRadius: Math.max(2, 4 * viewport.zoom),
               }}
             >
               NEW

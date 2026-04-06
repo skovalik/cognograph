@@ -8,12 +8,12 @@
 // IPCResponse, ContextSettings, WorkspacePreferences
 // =============================================================================
 
-import type { Node, Edge } from '@xyflow/react'
-import type { NodeData, Message } from './nodes'
-import type { EdgeData } from './edges'
-import type { PropertySchema } from './common'
-import type { ThemeSettings } from './theme'
+import type { Edge, Node } from '@xyflow/react'
 import type { SpatialRegion } from '../actionTypes'
+import type { PropertySchema } from './common'
+import type { EdgeData } from './edges'
+import type { Message, NodeData } from './nodes'
+import type { ThemeSettings } from './theme'
 
 // -----------------------------------------------------------------------------
 // Command Bar Types
@@ -124,7 +124,7 @@ export interface ContextSettings {
 
 export const DEFAULT_CONTEXT_SETTINGS: ContextSettings = {
   globalDepth: 2,
-  traversalMode: 'all'
+  traversalMode: 'all',
 }
 
 // Context node used during traversal
@@ -186,6 +186,8 @@ export interface WorkspacePreferences {
   showTokenEstimates: boolean
   /** User preference for vertical toolbar layout (independent of window size) */
   preferVerticalToolbar: boolean
+  /** Allow nodes to auto-connect when dragged into proximity */
+  enableProximityConnect?: boolean
   /** Active project type for this workspace */
   projectType?: ProjectType
   /** Per-workspace encrypted credential store */
@@ -198,5 +200,6 @@ export const DEFAULT_WORKSPACE_PREFERENCES: WorkspacePreferences = {
   chatDisplayMode: 'column', // Default to column (current behavior)
   propertiesSidebarWidth: 320, // Default width
   showTokenEstimates: true, // Show token/cost estimates by default
-  preferVerticalToolbar: false // Default to horizontal toolbar
+  preferVerticalToolbar: false, // Default to horizontal toolbar
+  enableProximityConnect: true,
 }

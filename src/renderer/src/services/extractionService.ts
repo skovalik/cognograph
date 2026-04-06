@@ -8,9 +8,15 @@
  * Extracts child notes/tasks from any node type's content.
  */
 
-import type { NodeData, NoteNodeData, TaskNodeData, ConversationNodeData, ProjectNodeData } from '@shared/types'
-import { useWorkspaceStore } from '../stores/workspaceStore'
+import type {
+  ConversationNodeData,
+  NodeData,
+  NoteNodeData,
+  ProjectNodeData,
+  TaskNodeData,
+} from '@shared/types'
 import { sciFiToast } from '../components/ui/SciFiToast'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -33,9 +39,7 @@ function getNodeContent(data: NodeData): string {
   switch (data.type) {
     case 'conversation': {
       const convData = data as ConversationNodeData
-      return convData.messages
-        ?.map((m) => `${m.role}: ${m.content}`)
-        .join('\n\n') || ''
+      return convData.messages?.map((m) => `${m.role}: ${m.content}`).join('\n\n') || ''
     }
     case 'note':
       return (data as NoteNodeData).content || ''
@@ -92,7 +96,7 @@ export async function extractFromNode(nodeId: string): Promise<void> {
   try {
     const result = await window.api.llm.extract({
       systemPrompt: EXTRACT_SYSTEM_PROMPT,
-      userPrompt: `Extract actionable items from this content:\n\n${content.slice(0, 4000)}`
+      userPrompt: `Extract actionable items from this content:\n\n${content.slice(0, 4000)}`,
     })
 
     if (!result.success || !result.data) {
@@ -129,11 +133,11 @@ export async function extractFromNode(nodeId: string): Promise<void> {
           ...(item.type === 'task' && {
             priority: item.priority || 'medium',
             status: 'todo',
-            description: item.description
+            description: item.description,
           }),
-          tags: item.tags
+          tags: item.tags,
         },
-        confidence: item.confidence
+        confidence: item.confidence,
       })
     }
 

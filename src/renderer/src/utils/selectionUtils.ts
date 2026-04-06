@@ -24,7 +24,7 @@ export function filterParentProjects(selectedNodes: Node[]): string[] {
 
     // Check if ANY selected node is a direct child of this project
     const hasSelectedChild = selectedNodes.some(
-      (child) => child.id !== node.id && child.data.parentId === node.id
+      (child) => child.id !== node.id && child.data.parentId === node.id,
     )
 
     if (hasSelectedChild) {

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useRef, useEffect, useState, useCallback } from 'react'
-import { Box, RotateCcw } from 'lucide-react'
-import { viewportPool } from './Artifact3DViewportPool'
 import type { ArtifactMediaMetadata } from '@shared/types/nodes'
+import { Box, RotateCcw } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { viewportPool } from './Artifact3DViewportPool'
 
 interface Artifact3DRendererProps {
   nodeId: string
@@ -93,7 +93,7 @@ export const Artifact3DRenderer = memo(function Artifact3DRenderer({
           setError('Failed to load 3D model')
           setIsLive(false)
           viewportPool.release(nodeId)
-        }
+        },
       )
     } catch {
       setError('3D rendering unavailable')

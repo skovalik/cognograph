@@ -7,8 +7,8 @@
  * Export all template-related UI components
  */
 
-export { PlaceholderForm } from './PlaceholderForm'
-export { TemplatePreview } from './TemplatePreview'
-export { SaveTemplateModal } from './SaveTemplateModal'
 export { PasteTemplateModal } from './PasteTemplateModal'
+export { PlaceholderForm } from './PlaceholderForm'
+export { SaveTemplateModal } from './SaveTemplateModal'
 export { TemplateBrowser } from './TemplateBrowser'
+export { TemplatePreview } from './TemplatePreview'

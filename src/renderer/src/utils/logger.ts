@@ -50,5 +50,5 @@ export const logger = {
     if (isDev) {
       console.debug(...args)
     }
-  }
+  },
 }

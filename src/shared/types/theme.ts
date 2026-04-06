@@ -18,13 +18,20 @@ import type { GlassSettings } from './glass'
 export type ThemeMode = 'dark' | 'light'
 
 // Accent color theme presets (legacy flat list — prefer PRESET_ACCENT_PALETTES)
-export type AccentTheme = 'aurochs-gold' | 'cobalt' | 'copper' | 'emerald' | 'rose' | 'violet' | 'custom';
+export type AccentTheme =
+  | 'aurochs-gold'
+  | 'cobalt'
+  | 'copper'
+  | 'emerald'
+  | 'rose'
+  | 'violet'
+  | 'custom'
 
 export interface AccentPreset {
-  id: AccentTheme;
-  name: string;
-  accent: string;
-  accentGlow: string;
+  id: AccentTheme
+  name: string
+  accent: string
+  accentGlow: string
 }
 
 export const ACCENT_PRESETS: AccentPreset[] = [
@@ -34,13 +41,13 @@ export const ACCENT_PRESETS: AccentPreset[] = [
   { id: 'emerald', name: 'Emerald', accent: '#10B981', accentGlow: '#34D399' },
   { id: 'rose', name: 'Rose', accent: '#F43F5E', accentGlow: '#FB7185' },
   { id: 'violet', name: 'Violet', accent: '#A855F7', accentGlow: '#C084FC' },
-];
+]
 
 // Per-preset accent palettes — harmonized accent options per theme preset (matches DS v3)
 export interface PresetAccent {
-  label: string;
-  glow: string;      // Dark mode accent color
-  glowLight: string;  // Light mode accent color
+  label: string
+  glow: string // Dark mode accent color
+  glowLight: string // Light mode accent color
 }
 
 export const PRESET_ACCENT_PALETTES: Record<string, PresetAccent[]> = {
@@ -100,7 +107,7 @@ export const PRESET_ACCENT_PALETTES: Record<string, PresetAccent[]> = {
     { label: 'Azure', glow: '#93c5fd', glowLight: '#2563eb' },
     { label: 'Peach', glow: '#fdba74', glowLight: '#ea580c' },
   ],
-};
+}
 
 // Colors for a single mode (dark or light)
 export interface ThemePresetColors {
@@ -198,8 +205,8 @@ export const DEFAULT_GUI_COLORS_DARK: GuiColors = {
   panelBackgroundSecondary: '#12110F',
   textPrimary: '#EDE8E0',
   textSecondary: '#9E978D',
-  accentPrimary: '#E5B95C',      // Warm Gold — primary interactive accent
-  accentSecondary: '#C8963E',    // Gold glow — secondary/decorative
+  accentPrimary: '#E5B95C', // Warm Gold — primary interactive accent
+  accentSecondary: '#C8963E', // Gold glow — secondary/decorative
   toolbarIconDefault: '#5A554E',
   toolbarIconAccent: ['#E5B95C', '#E5B95C', '#E5B95C', '#E5B95C'],
 }
@@ -210,51 +217,54 @@ export const DEFAULT_GUI_COLORS_LIGHT: GuiColors = {
   panelBackgroundSecondary: '#FFFFFF',
   textPrimary: '#1A1816',
   textSecondary: '#6B6560',
-  accentPrimary: '#A67B30',      // Dark Gold — primary interactive accent
-  accentSecondary: '#A67B30',    // Gold glow — secondary/decorative
+  accentPrimary: '#A67B30', // Dark Gold — primary interactive accent
+  accentSecondary: '#A67B30', // Gold glow — secondary/decorative
   toolbarIconDefault: '#9E978D',
   toolbarIconAccent: ['#A67B30', '#A67B30', '#A67B30', '#A67B30'],
 }
 
 /** Canvas grid rendering style */
-export type GridStyle = 'dots' | 'hash' | 'none';
+export type GridStyle = 'dots' | 'hash' | 'none'
 
 // Font theme system — lazy-loaded web fonts
-export type FontTheme = 'space-grotesk' | 'satoshi' | 'instrument' | 'general-sans';
+export type FontTheme = 'space-grotesk' | 'satoshi' | 'instrument' | 'general-sans'
 
-export const FONT_THEMES: Record<FontTheme, { sans: string; display: string; mono: string; label: string }> = {
+export const FONT_THEMES: Record<
+  FontTheme,
+  { sans: string; display: string; mono: string; label: string }
+> = {
   'space-grotesk': {
     sans: "'Space Grotesk', system-ui, sans-serif",
     display: "'Space Grotesk', system-ui, sans-serif",
     mono: "'Space Mono', monospace",
     label: 'Space Grotesk',
   },
-  'satoshi': {
-    sans: "'Satoshi', system-ui, sans-serif",
-    display: "'Satoshi', system-ui, sans-serif",
+  satoshi: {
+    sans: "'Outfit', system-ui, sans-serif",
+    display: "'Outfit', system-ui, sans-serif",
     mono: "'JetBrains Mono', monospace",
-    label: 'Satoshi',
+    label: 'Outfit',
   },
-  'instrument': {
+  instrument: {
     sans: "'Instrument Sans', system-ui, sans-serif",
     display: "'Instrument Serif', Georgia, serif",
     mono: "'JetBrains Mono', monospace",
     label: 'Instrument',
   },
   'general-sans': {
-    sans: "'General Sans', system-ui, sans-serif",
-    display: "'General Sans', system-ui, sans-serif",
+    sans: "'DM Sans', system-ui, sans-serif",
+    display: "'DM Serif Display', Georgia, serif",
     mono: "'JetBrains Mono', monospace",
-    label: 'General Sans',
+    label: 'DM Sans',
   },
-};
+}
 
 export const FONT_LOAD_URLS: Record<FontTheme, string> = {
-  'space-grotesk': '',
-  'satoshi': 'https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap',
-  'instrument': 'https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap',
-  'general-sans': 'https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap',
-};
+  'space-grotesk': '', // self-hosted via tokens.css @font-face
+  satoshi: '', // now Outfit, self-hosted
+  instrument: '', // self-hosted
+  'general-sans': '', // now DM Sans + DM Serif Display, self-hosted
+}
 
 export interface ThemeSettings {
   mode: ThemeMode
@@ -376,7 +386,7 @@ export const DEFAULT_AMBIENT_EFFECT: AmbientEffectSettings = {
   enabled: true,
   effect: 'particles',
   bloomIntensity: 100,
-  effectProps: {}
+  effectProps: {},
 }
 
 // Light mode presets
@@ -387,14 +397,14 @@ export const LIGHT_MODE_PRESETS = {
     { color: '#f5f5f4', label: 'Stone' },
     { color: '#fafaf9', label: 'Warm' },
     { color: '#f0f9ff', label: 'Sky' },
-    { color: '#fef3c7', label: 'Amber' }
+    { color: '#fef3c7', label: 'Amber' },
   ],
   canvasGridColors: [
     { color: '#e2e8f0', label: 'Default' },
     { color: '#d1d5db', label: 'Gray' },
     { color: '#e5e7eb', label: 'Light' },
-    { color: '#transparent', label: 'None' }
-  ]
+    { color: '#transparent', label: 'None' },
+  ],
 }
 
 // Default link colors for dark and light modes
@@ -402,14 +412,14 @@ export const DEFAULT_LINK_COLORS_DARK = {
   default: '#4a5568', // gray-600 — muted default edge color
   active: '#3b82f6', // blue-500
   inactive: '#374151', // gray-700
-  selected: '#8b5cf6' // purple-500
+  selected: '#8b5cf6', // purple-500
 }
 
 export const DEFAULT_LINK_COLORS_LIGHT = {
   default: '#94a3b8', // slate-400
   active: '#2563eb', // blue-600
   inactive: '#d1d5db', // gray-300
-  selected: '#7c3aed' // purple-600
+  selected: '#7c3aed', // purple-600
 }
 
 export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
@@ -424,7 +434,7 @@ export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
     workspace: '#AB6A6A', // muted rose
     text: '#94a3b8', // already muted, keep
     action: '#C4845A', // muted copper
-    orchestrator: '#a855f7' // purple — primary, keep vivid
+    orchestrator: '#a855f7', // purple — primary, keep vivid
   },
   linkColors: DEFAULT_LINK_COLORS_DARK,
   linkColorsDark: DEFAULT_LINK_COLORS_DARK,
@@ -447,7 +457,7 @@ export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
   fontSize: 12,
   accentTheme: 'aurochs-gold' as AccentTheme,
   accentIndex: 0,
-  themeSource: 'system' as const
+  themeSource: 'system' as const,
 }
 
 export const LIGHT_THEME_DEFAULTS: Partial<ThemeSettings> = {
@@ -455,5 +465,5 @@ export const LIGHT_THEME_DEFAULTS: Partial<ThemeSettings> = {
   canvasBackground: 'linear-gradient(135deg, #fafbff 0%, #f5f3ff 50%, #fafbff 100%)',
   canvasGridColor: '#e2e4f0',
   canvasBackgroundLight: 'linear-gradient(135deg, #fafbff 0%, #f5f3ff 50%, #fafbff 100%)',
-  canvasGridColorLight: '#e2e4f0'
+  canvasGridColorLight: '#e2e4f0',
 }

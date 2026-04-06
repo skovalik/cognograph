@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { parseToolCalls } from '../responseParser'
 
 // ---------------------------------------------------------------------------
@@ -52,9 +52,7 @@ describe('parseToolCalls — Anthropic', () => {
 
   it('generates UUID for missing id', () => {
     const message = {
-      content: [
-        { type: 'tool_use', name: 'test', input: {} },
-      ],
+      content: [{ type: 'tool_use', name: 'test', input: {} }],
     }
 
     const calls = parseToolCalls(message, 'anthropic')
@@ -222,9 +220,7 @@ describe('parseToolCalls — Gemini', () => {
   it('extracts from direct content.parts', () => {
     const message = {
       content: {
-        parts: [
-          { functionCall: { name: 'search', args: { q: 'test' } } },
-        ],
+        parts: [{ functionCall: { name: 'search', args: { q: 'test' } } }],
       },
     }
 
@@ -235,9 +231,7 @@ describe('parseToolCalls — Gemini', () => {
 
   it('extracts from direct parts array', () => {
     const message = {
-      parts: [
-        { functionCall: { name: 'list', args: {} } },
-      ],
+      parts: [{ functionCall: { name: 'list', args: {} } }],
     }
 
     const calls = parseToolCalls(message, 'gemini')

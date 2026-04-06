@@ -8,8 +8,8 @@
  * Following the pattern from AdvancedOptions.tsx for consistency.
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 
 interface CollapsibleSectionProps {
   title: string
@@ -30,7 +30,7 @@ function CollapsibleSectionComponent({
   badgeColor = 'default',
   rightContent,
   onExpandedChange,
-  children
+  children,
 }: CollapsibleSectionProps): JSX.Element {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -56,7 +56,7 @@ function CollapsibleSectionComponent({
   }, [])
 
   const toggle = useCallback(() => {
-    setIsExpanded(prev => {
+    setIsExpanded((prev) => {
       const newValue = !prev
       onExpandedChange?.(newValue)
       return newValue
@@ -66,13 +66,12 @@ function CollapsibleSectionComponent({
   const badgeClasses = {
     default: 'bg-white/10 text-[var(--text-secondary)]',
     accent: 'gui-badge-accent',
-    warning: 'bg-amber-500/20 text-amber-400'
+    warning: 'bg-amber-500/20 text-amber-400',
   }
 
   // Check for reduced motion preference
   const prefersReducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   const transitionDuration = prefersReducedMotion ? '0ms' : '200ms'
   const sectionId = `section-content-${title.toLowerCase().replace(/\s+/g, '-')}`
@@ -118,7 +117,7 @@ function CollapsibleSectionComponent({
         style={{
           transitionDuration,
           maxHeight: isExpanded ? contentHeight : 0,
-          opacity: isExpanded ? 1 : 0
+          opacity: isExpanded ? 1 : 0,
         }}
       >
         {children}

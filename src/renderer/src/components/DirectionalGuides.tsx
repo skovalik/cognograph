@@ -18,10 +18,10 @@
  * Task 27: Visual Directional Guides [COULD]
  */
 
-import { memo, useMemo } from 'react'
 import { useViewport } from '@xyflow/react'
+import { memo, useMemo } from 'react'
+import { selectKeyboardNavActive, useUIStore } from '../stores/uiStore'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import { useUIStore, selectKeyboardNavActive } from '../stores/uiStore'
 
 // =============================================================================
 // Types
@@ -76,7 +76,7 @@ function findNearestInDirection(
   currentX: number,
   currentY: number,
   candidates: NodeCandidate[],
-  direction: Direction
+  direction: Direction,
 ): NodeCandidate | null {
   let best: NodeCandidate | null = null
   let bestScore = Infinity
@@ -124,11 +124,11 @@ function findNearestInDirection(
 function worldToScreen(
   wx: number,
   wy: number,
-  viewport: { x: number; y: number; zoom: number }
+  viewport: { x: number; y: number; zoom: number },
 ): { x: number; y: number } {
   return {
     x: wx * viewport.zoom + viewport.x,
-    y: wy * viewport.zoom + viewport.y
+    y: wy * viewport.zoom + viewport.y,
   }
 }
 
@@ -164,7 +164,7 @@ export const DirectionalGuides = memo(function DirectionalGuides(): JSX.Element 
         centerX: n.position.x + ((n.width as number) || 280) / 2,
         centerY: n.position.y + ((n.height as number) || 140) / 2,
         width: (n.width as number) || 280,
-        height: (n.height as number) || 140
+        height: (n.height as number) || 140,
       }))
 
     const directions: Direction[] = ['up', 'down', 'left', 'right']
@@ -179,7 +179,7 @@ export const DirectionalGuides = memo(function DirectionalGuides(): JSX.Element 
           targetCenterX: target.centerX,
           targetCenterY: target.centerY,
           targetWidth: target.width,
-          targetHeight: target.height
+          targetHeight: target.height,
         })
       }
     }
@@ -209,7 +209,7 @@ export const DirectionalGuides = memo(function DirectionalGuides(): JSX.Element 
         width: '100vw',
         height: '100vh',
         opacity: guides.length > 0 ? 1 : 0,
-        transition: 'opacity 200ms ease-in-out'
+        transition: 'opacity 200ms ease-in-out',
       }}
       aria-hidden="true"
     >

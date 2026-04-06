@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import StarterKit from '@tiptap/starter-kit'
 import BulletList from '@tiptap/extension-bullet-list'
-import OrderedList from '@tiptap/extension-ordered-list'
 import ListItem from '@tiptap/extension-list-item'
+import OrderedList from '@tiptap/extension-ordered-list'
 import Placeholder from '@tiptap/extension-placeholder'
 import TextAlign from '@tiptap/extension-text-align'
+import StarterKit from '@tiptap/starter-kit'
 
 export interface EditorExtensionOptions {
   enableLists?: boolean
@@ -22,7 +22,7 @@ export function createEditorExtensions(options?: EditorExtensionOptions) {
     enableHeadings = false,
     enableFormatting = true,
     enableAlignment = true,
-    placeholder = ''
+    placeholder = '',
   } = options || {}
 
   const extensions = [
@@ -43,9 +43,9 @@ export function createEditorExtensions(options?: EditorExtensionOptions) {
 
   if (enableLists) {
     extensions.push(
-      BulletList.configure({}) as unknown as typeof extensions[number],
-      OrderedList.configure({}) as unknown as typeof extensions[number],
-      ListItem.configure({}) as unknown as typeof extensions[number]
+      BulletList.configure({}) as unknown as (typeof extensions)[number],
+      OrderedList.configure({}) as unknown as (typeof extensions)[number],
+      ListItem.configure({}) as unknown as (typeof extensions)[number],
     )
   }
 
@@ -54,7 +54,7 @@ export function createEditorExtensions(options?: EditorExtensionOptions) {
       TextAlign.configure({
         types: ['heading', 'paragraph'],
         alignments: ['left', 'center', 'right', 'justify'],
-      }) as unknown as typeof extensions[number]
+      }) as unknown as (typeof extensions)[number],
     )
   }
 

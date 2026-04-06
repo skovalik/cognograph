@@ -12,8 +12,8 @@
  * relationships, edge semantics, and layout issues.
  */
 
-import type { Node, Edge } from '@xyflow/react'
-import type { NodeData, EdgeData, EnhancedContextAnalysis } from '@shared/types'
+import type { EdgeData, EnhancedContextAnalysis, NodeData } from '@shared/types'
+import type { Edge, Node } from '@xyflow/react'
 import { buildEnhancedContext } from './enhancedContextBuilder'
 
 export interface ContextDescription {
@@ -33,7 +33,7 @@ export interface ContextDescription {
 export function describeContext(
   nodes: Node<NodeData>[],
   edges: Edge<EdgeData>[],
-  precomputed?: EnhancedContextAnalysis
+  precomputed?: EnhancedContextAnalysis,
 ): ContextDescription {
   if (nodes.length === 0) {
     return { spatial: '', edges: '', suggestions: [] }
@@ -44,7 +44,7 @@ export function describeContext(
   return {
     spatial: describeSpatialLayout(nodes, analysis),
     edges: describeEdgeRelationships(nodes, edges, analysis),
-    suggestions: generateLayoutSuggestions(nodes, edges, analysis)
+    suggestions: generateLayoutSuggestions(nodes, edges, analysis),
   }
 }
 
@@ -59,7 +59,10 @@ function getNodeTitle(node: Node<NodeData>): string {
   // For text nodes, use content preview
   if (data.type === 'text' && 'content' in data) {
     const content = (data.content as string) || ''
-    const plainText = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    const plainText = content
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
     return plainText.slice(0, 30) || 'Text'
   }
   return 'Untitled'
@@ -68,10 +71,7 @@ function getNodeTitle(node: Node<NodeData>): string {
 /**
  * Describe spatial relationships in natural language
  */
-function describeSpatialLayout(
-  nodes: Node<NodeData>[],
-  analysis: EnhancedContextAnalysis
-): string {
+function describeSpatialLayout(nodes: Node<NodeData>[], analysis: EnhancedContextAnalysis): string {
   const descriptions: string[] = []
 
   // Describe extremes (top/bottom/left/right nodes)
@@ -135,7 +135,7 @@ function describeSpatialLayout(
 function describeEdgeRelationships(
   nodes: Node<NodeData>[],
   edges: Edge<EdgeData>[],
-  analysis: EnhancedContextAnalysis
+  analysis: EnhancedContextAnalysis,
 ): string {
   const descriptions: string[] = []
   const nodeMap = new Map(nodes.map((n) => [n.id, n]))
@@ -151,7 +151,9 @@ function describeEdgeRelationships(
   // Summarize edge types with semantic meaning
   for (const [label, labelEdges] of byLabel) {
     if (label === 'provides context') {
-      descriptions.push(`Context injection (${labelEdges.length}): These feed info into conversations`)
+      descriptions.push(
+        `Context injection (${labelEdges.length}): These feed info into conversations`,
+      )
     } else if (label === 'depends on') {
       descriptions.push(`Dependencies (${labelEdges.length}): Task workflow order`)
     } else if (label === 'child of') {
@@ -196,7 +198,7 @@ function describeEdgeRelationships(
 function generateLayoutSuggestions(
   nodes: Node<NodeData>[],
   edges: Edge<EdgeData>[],
-  analysis: EnhancedContextAnalysis
+  analysis: EnhancedContextAnalysis,
 ): string[] {
   const suggestions: string[] = []
 
@@ -208,7 +210,7 @@ function generateLayoutSuggestions(
       const source = nodes.find((n) => n.id === edge.source)
       if (source && source.position.y > conv.position.y + 100) {
         suggestions.push(
-          `Context source "${getNodeTitle(source)}" is BELOW conversation "${getNodeTitle(conv)}" - consider moving it above`
+          `Context source "${getNodeTitle(source)}" is BELOW conversation "${getNodeTitle(conv)}" - consider moving it above`,
         )
       }
     }
@@ -228,7 +230,7 @@ function generateLayoutSuggestions(
   if (analysis.workspace.orphanedNodes.length > 0) {
     const count = analysis.workspace.orphanedNodes.length
     suggestions.push(
-      `${count} nodes have no connections and no parent project - consider connecting or organizing them`
+      `${count} nodes have no connections and no parent project - consider connecting or organizing them`,
     )
   }
 
@@ -236,7 +238,7 @@ function generateLayoutSuggestions(
   const isolatedClusters = analysis.graph.clusters.filter((c) => c.nodes.length === 1)
   if (isolatedClusters.length > 2) {
     suggestions.push(
-      `${isolatedClusters.length} single-node clusters could be grouped or connected`
+      `${isolatedClusters.length} single-node clusters could be grouped or connected`,
     )
   }
 

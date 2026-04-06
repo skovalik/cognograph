@@ -13,10 +13,10 @@
  * Only one artboard can be active at a time.
  */
 
-import { useEffect, useCallback } from 'react'
-import { useUIStore } from '../stores/uiStore'
+import { useCallback, useEffect } from 'react'
 import { useSelectionStore } from '../stores/selectionStore'
-import { escapeManager, EscapePriority } from '../utils/EscapeManager'
+import { useUIStore } from '../stores/uiStore'
+import { EscapePriority, escapeManager } from '../utils/EscapeManager'
 
 export function useArtboardMode() {
   const artboardNodeId = useUIStore((s) => s.artboardNodeId)
@@ -29,7 +29,7 @@ export function useArtboardMode() {
     (nodeId: string) => {
       enterArtboard(nodeId)
     },
-    [enterArtboard]
+    [enterArtboard],
   )
 
   const handleExitArtboard = useCallback(() => {
@@ -73,6 +73,6 @@ export function useArtboardMode() {
     isArtboardActive,
     artboardNodeId,
     enterArtboard: handleEnterArtboard,
-    exitArtboard: handleExitArtboard
+    exitArtboard: handleExitArtboard,
   }
 }

@@ -1,21 +1,30 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useMemo, useCallback, useEffect } from 'react'
-import { NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
-import { SpreadHandles } from './SpreadHandles'
 import type { TextNodeData } from '@shared/types'
 import { DEFAULT_THEME_SETTINGS } from '@shared/types'
-import { useWorkspaceStore, useIsSpawning, useNodeWarmth, useIsNodePinned } from '../../stores/workspaceStore'
-import { useShowMembersClassForTextNode } from '../../hooks/useShowMembersClass'
+import {
+  type NodeProps,
+  NodeResizer,
+  type ResizeParams,
+  useUpdateNodeInternals,
+} from '@xyflow/react'
+import { memo, useCallback, useEffect, useMemo } from 'react'
 import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
-import { RichTextEditor } from '../RichTextEditor'
-import { AttachmentBadge } from './AttachmentBadge'
-import { ExtractionBadge, ExtractionControls } from '../extractions'
-import { AutoFitButton } from './AutoFitButton'
 import { useNodeResize } from '../../hooks/useNodeResize'
 import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
+import { useShowMembersClassForTextNode } from '../../hooks/useShowMembersClass'
+import {
+  useIsNodePinned,
+  useIsSpawning,
+  useNodeWarmth,
+  useWorkspaceStore,
+} from '../../stores/workspaceStore'
+import { ExtractionBadge, ExtractionControls } from '../extractions'
 import { AIPropertyAssist, NodeAIErrorBoundary } from '../properties'
+import { RichTextEditor } from '../RichTextEditor'
+import { AttachmentBadge } from './AttachmentBadge'
+import { SpreadHandles } from './SpreadHandles'
 
 // TypeScript interface for node styles with CSS custom properties
 interface NodeStyleWithCustomProps extends React.CSSProperties {
@@ -42,7 +51,8 @@ function TextNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   const commitNodeResize = useWorkspaceStore((state) => state.commitNodeResize)
 
   // Calculate dynamic node color
-  const nodeColor = nodeData.color || themeSettings.nodeColors.text || DEFAULT_THEME_SETTINGS.nodeColors.text
+  const nodeColor =
+    nodeData.color || themeSettings.nodeColors.text || DEFAULT_THEME_SETTINGS.nodeColors.text
 
   // Glass system integration
   const transparent = nodeData.transparent
@@ -68,9 +78,12 @@ function TextNodeComponent({ id, data, selected, width, height }: NodeProps): JS
     startNodeResize(id)
   }, [id, startNodeResize])
 
-  const handleResize = useCallback((_event: unknown, params: ResizeParams) => {
-    updateNodeDimensions(id, params.width, params.height)
-  }, [id, updateNodeDimensions])
+  const handleResize = useCallback(
+    (_event: unknown, params: ResizeParams) => {
+      updateNodeDimensions(id, params.width, params.height)
+    },
+    [id, updateNodeDimensions],
+  )
 
   const handleResizeEnd = useCallback(() => {
     updateNodeInternals(id)
@@ -89,7 +102,9 @@ function TextNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   const isSpawning = useIsSpawning(id)
   const warmthLevel = useNodeWarmth(id)
   const isPinned = useIsNodePinned(id)
-  const isCut = useWorkspaceStore(s => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id))
+  const isCut = useWorkspaceStore(
+    (s) => s.clipboardState?.mode === 'cut' && s.clipboardState.nodeIds.includes(id),
+  )
 
   // LOD (Level of Detail) rendering based on zoom level
   const { lodLevel, showContent, showPlaceholders } = useNodeContentVisibility()
@@ -105,14 +120,20 @@ function TextNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   const plainTextPreview = useMemo(() => {
     if (!nodeData.content) return ''
     // Strip HTML tags and collapse whitespace
-    const plain = nodeData.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    const plain = nodeData.content
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
     return plain
   }, [nodeData.content])
 
   // Estimate line count for placeholder bars at L1
   const estimatedLines = useMemo(() => {
     if (!nodeData.content) return 2
-    const plain = nodeData.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    const plain = nodeData.content
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
     const wordCount = plain ? plain.split(/\s+/).length : 0
     // ~5 words per line at typical text node width, clamp to 2-3
     return Math.min(3, Math.max(2, Math.ceil(wordCount / 5)))
@@ -130,8 +151,10 @@ function TextNodeComponent({ id, data, selected, width, height }: NodeProps): JS
     isPinned && 'node--pinned',
     isCut && 'text-node--cut',
     nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
-    `text-node--lod-${lodLevel}`
-  ].filter(Boolean).join(' ')
+    `text-node--lod-${lodLevel}`,
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   const nodeContent = (
     <div
@@ -158,9 +181,11 @@ function TextNodeComponent({ id, data, selected, width, height }: NodeProps): JS
               <div
                 key={i}
                 className={`placeholder-bar ${
-                  i === 0 ? 'placeholder-bar--long placeholder-bar--accent' :
-                  i === estimatedLines - 1 ? 'placeholder-bar--short' :
-                  'placeholder-bar--medium'
+                  i === 0
+                    ? 'placeholder-bar--long placeholder-bar--accent'
+                    : i === estimatedLines - 1
+                      ? 'placeholder-bar--short'
+                      : 'placeholder-bar--medium'
                 }`}
               />
             ))}
@@ -176,21 +201,8 @@ function TextNodeComponent({ id, data, selected, width, height }: NodeProps): JS
             TEXT
           </div>
 
-          {/* Auto-fit button */}
-          <AutoFitButton
-            nodeId={id}
-            title=""
-            content={nodeData.content}
-            selected={selected}
-            nodeColor={nodeColor}
-            minWidth={MIN_WIDTH}
-            minHeight={MIN_HEIGHT}
-            headerHeight={0}
-            footerHeight={0}
-          />
-
           {/* Handles */}
-          <SpreadHandles hidden={lodLevel === 0} />
+          <SpreadHandles hidden={lodLevel === 0} width={nodeWidth} height={nodeHeight} />
 
           {/* Extraction badge for spatial extraction system */}
           <ExtractionBadge nodeId={id} nodeColor={nodeColor} />
@@ -199,11 +211,7 @@ function TextNodeComponent({ id, data, selected, width, height }: NodeProps): JS
           {showInteractiveControls && (
             <div className="absolute top-1 right-1 z-10 flex items-center gap-1">
               <NodeAIErrorBoundary compact>
-                <AIPropertyAssist
-                  nodeId={id}
-                  nodeData={nodeData}
-                  compact={true}
-                />
+                <AIPropertyAssist nodeId={id} nodeData={nodeData} compact={true} />
               </NodeAIErrorBoundary>
               <ExtractionControls nodeId={id} />
             </div>

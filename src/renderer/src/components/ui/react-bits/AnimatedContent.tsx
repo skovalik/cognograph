@@ -10,8 +10,8 @@
  * When the user prefers reduced motion, content appears immediately.
  */
 
-import { useRef, useEffect, type ReactNode, type CSSProperties } from 'react'
-import { animate, type AnimationPlaybackControls } from 'framer-motion'
+import { type AnimationPlaybackControls, animate } from 'framer-motion'
+import { type CSSProperties, type ReactNode, useEffect, useRef } from 'react'
 import { useReducedMotion } from '../../../hooks/useReducedMotion'
 import { cn } from '../../../lib/utils'
 
@@ -76,7 +76,9 @@ export function AnimatedContent({
     // If reduced motion, just make content visible immediately
     if (prefersReducedMotion) {
       Object.assign(el.style, {
-        opacity: '1', transform: 'translate(0, 0) scale(1)', visibility: 'visible',
+        opacity: '1',
+        transform: 'translate(0, 0) scale(1)',
+        visibility: 'visible',
       })
       hasAnimated.current = true
       return
@@ -105,17 +107,21 @@ export function AnimatedContent({
     // Animate to final state
     let controls: AnimationPlaybackControls | undefined
     const timeoutId = window.setTimeout(() => {
-      controls = animate(el, {
-        transform: 'translate(0px, 0px) scale(1)',
-        opacity: 1,
-      }, {
-        duration,
-        ease,
-        onComplete() {
-          hasAnimated.current = true
-          onComplete?.()
+      controls = animate(
+        el,
+        {
+          transform: 'translate(0px, 0px) scale(1)',
+          opacity: 1,
         },
-      })
+        {
+          duration,
+          ease,
+          onComplete() {
+            hasAnimated.current = true
+            onComplete?.()
+          },
+        },
+      )
     }, delay * 1000)
 
     return () => {

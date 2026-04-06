@@ -9,18 +9,18 @@
  * Accessible via keyboard navigation.
  */
 
-import { memo, useState, useEffect, useRef, useCallback } from 'react'
 import {
-  Sparkles,
-  Pencil,
-  LayoutGrid,
-  Zap,
-  HelpCircle,
-  MessageSquare,
-  Slash,
   ChevronRight,
-  Keyboard
+  HelpCircle,
+  Keyboard,
+  LayoutGrid,
+  MessageSquare,
+  Pencil,
+  Slash,
+  Sparkles,
+  Zap,
 } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 // Types imported from aiEditorStore
 import { useAIEditorStore } from '../../stores/aiEditorStore'
 
@@ -42,7 +42,13 @@ interface MenuItem {
   separator?: boolean
 }
 
-function AIActionMenuComponent({ isOpen, onClose, anchorRect, onToggleAISidebar, onOpenInlinePrompt }: AIActionMenuProps): JSX.Element | null {
+function AIActionMenuComponent({
+  isOpen,
+  onClose,
+  anchorRect,
+  onToggleAISidebar,
+  onOpenInlinePrompt,
+}: AIActionMenuProps): JSX.Element | null {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const menuRef = useRef<HTMLDivElement>(null)
   const openModal = useAIEditorStore((state) => state.openModal)
@@ -54,35 +60,35 @@ function AIActionMenuComponent({ isOpen, onClose, anchorRect, onToggleAISidebar,
       description: 'Create new nodes, ideas, or content',
       icon: Sparkles,
       shortcut: 'Ctrl+E',
-      action: () => openModal({ mode: 'generate' })
+      action: () => openModal({ mode: 'generate' }),
     },
     {
       id: 'edit',
       label: 'Edit Selection',
       description: 'Modify or improve selected nodes',
       icon: Pencil,
-      action: () => openModal({ mode: 'edit', scope: 'selection' })
+      action: () => openModal({ mode: 'edit', scope: 'selection' }),
     },
     {
       id: 'organize',
       label: 'Organize Layout',
       description: 'Arrange and structure nodes',
       icon: LayoutGrid,
-      action: () => openModal({ mode: 'organize' })
+      action: () => openModal({ mode: 'organize' }),
     },
     {
       id: 'automate',
       label: 'Create Automation',
       description: 'Set up triggers and workflows',
       icon: Zap,
-      action: () => openModal({ mode: 'automate' })
+      action: () => openModal({ mode: 'automate' }),
     },
     {
       id: 'ask',
       label: 'Ask Question',
       description: 'Query your workspace',
       icon: HelpCircle,
-      action: () => openModal({ mode: 'ask' })
+      action: () => openModal({ mode: 'ask' }),
     },
     {
       id: 'separator-1',
@@ -90,7 +96,7 @@ function AIActionMenuComponent({ isOpen, onClose, anchorRect, onToggleAISidebar,
       description: '',
       icon: () => null,
       action: () => {},
-      separator: true
+      separator: true,
     },
     {
       id: 'sidebar',
@@ -101,7 +107,7 @@ function AIActionMenuComponent({ isOpen, onClose, anchorRect, onToggleAISidebar,
       action: () => {
         onToggleAISidebar?.()
         onClose()
-      }
+      },
     },
     {
       id: 'quick-prompt',
@@ -112,8 +118,8 @@ function AIActionMenuComponent({ isOpen, onClose, anchorRect, onToggleAISidebar,
       action: () => {
         onOpenInlinePrompt?.()
         onClose()
-      }
-    }
+      },
+    },
   ]
 
   // Filter out separators for navigation
@@ -148,7 +154,7 @@ function AIActionMenuComponent({ isOpen, onClose, anchorRect, onToggleAISidebar,
           break
       }
     },
-    [isOpen, selectedIndex, navigableItems, onClose]
+    [isOpen, selectedIndex, navigableItems, onClose],
   )
 
   // Close on outside click
@@ -184,7 +190,7 @@ function AIActionMenuComponent({ isOpen, onClose, anchorRect, onToggleAISidebar,
     position: 'fixed',
     top: anchorRect.bottom + 4,
     left: anchorRect.left,
-    zIndex: 9999
+    zIndex: 9999,
   }
 
   return (

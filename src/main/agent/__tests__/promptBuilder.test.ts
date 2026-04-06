@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   buildSystemPrompt,
-  flattenSystemPrompt,
   COGNOGRAPH_IDENTITY,
-  type ToolDefinition
+  flattenSystemPrompt,
+  type ToolDefinition,
 } from '../promptBuilder'
 
 // ---------------------------------------------------------------------------
@@ -21,10 +21,10 @@ const SAMPLE_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         title: { type: 'string' },
-        type: { type: 'string' }
+        type: { type: 'string' },
       },
-      required: ['title', 'type']
-    }
+      required: ['title', 'type'],
+    },
   },
   {
     name: 'search_nodes',
@@ -32,10 +32,10 @@ const SAMPLE_TOOLS: ToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        query: { type: 'string' }
-      }
-    }
-  }
+        query: { type: 'string' },
+      },
+    },
+  },
 ]
 
 const SAMPLE_BFS_CONTEXT = `## Connected Nodes (2)

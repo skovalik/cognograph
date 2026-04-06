@@ -8,12 +8,12 @@
  * "Show me my task view" → instant consistent workspace state.
  */
 
-import { memo, useState, useCallback } from 'react'
-import { Bookmark, Plus, Trash2, X, Edit2, Eye, Check } from 'lucide-react'
-import { useReactFlow } from '@xyflow/react'
-import { useSavedViewsStore, SavedView } from '../stores/savedViewsStore'
-import { useWorkspaceStore } from '../stores/workspaceStore'
 import type { NodeData } from '@shared/types'
+import { useReactFlow } from '@xyflow/react'
+import { Bookmark, Check, Edit2, Eye, Plus, Trash2, X } from 'lucide-react'
+import { memo, useCallback, useState } from 'react'
+import { type SavedView, useSavedViewsStore } from '../stores/savedViewsStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 interface SavedViewsPanelProps {
   isOpen: boolean
@@ -48,36 +48,33 @@ function SavedViewsPanelComponent({ isOpen, onClose }: SavedViewsPanelProps): JS
     if (!newViewName.trim()) return
 
     const viewport = getViewport()
-    saveCurrentView(
-      newViewName.trim(),
-      viewport,
-      hiddenNodeTypes,
-      focusModeNodeId,
-      selectedNodeIds
-    )
+    saveCurrentView(newViewName.trim(), viewport, hiddenNodeTypes, focusModeNodeId, selectedNodeIds)
 
     setNewViewName('')
     setIsAdding(false)
   }, [newViewName, getViewport, saveCurrentView, hiddenNodeTypes, focusModeNodeId, selectedNodeIds])
 
   // Apply a saved view
-  const handleApplyView = useCallback((view: SavedView) => {
-    // Apply viewport
-    setViewport(view.viewport, { duration: 300 })
+  const handleApplyView = useCallback(
+    (view: SavedView) => {
+      // Apply viewport
+      setViewport(view.viewport, { duration: 300 })
 
-    // Apply hidden node types
-    setHiddenNodeTypes(new Set(view.hiddenNodeTypes as NodeData['type'][]))
+      // Apply hidden node types
+      setHiddenNodeTypes(new Set(view.hiddenNodeTypes as NodeData['type'][]))
 
-    // Apply focus mode
-    setFocusModeNode(view.focusModeNodeId)
+      // Apply focus mode
+      setFocusModeNode(view.focusModeNodeId)
 
-    // Apply selection if saved
-    if (view.selectedNodeIds) {
-      setSelectedNodes(view.selectedNodeIds)
-    }
+      // Apply selection if saved
+      if (view.selectedNodeIds) {
+        setSelectedNodes(view.selectedNodeIds)
+      }
 
-    setActiveView(view.id)
-  }, [setViewport, setHiddenNodeTypes, setFocusModeNode, setSelectedNodes, setActiveView])
+      setActiveView(view.id)
+    },
+    [setViewport, setHiddenNodeTypes, setFocusModeNode, setSelectedNodes, setActiveView],
+  )
 
   // Start editing
   const handleStartEdit = useCallback((view: SavedView) => {
@@ -100,7 +97,7 @@ function SavedViewsPanelComponent({ isOpen, onClose }: SavedViewsPanelProps): JS
     <div
       className="absolute top-20 right-4 gui-z-panels w-72 rounded-lg overflow-hidden shadow-xl animate-fade-in glass-soft"
       style={{
-        border: '1px solid var(--gui-border-subtle)'
+        border: '1px solid var(--gui-border-subtle)',
       }}
     >
       {/* Header */}
@@ -138,7 +135,10 @@ function SavedViewsPanelComponent({ isOpen, onClose }: SavedViewsPanelProps): JS
       {isAdding && (
         <div
           className="px-3 py-2 border-b flex items-center gap-2"
-          style={{ borderColor: 'var(--gui-border-subtle)', backgroundColor: 'var(--gui-bg-tertiary)' }}
+          style={{
+            borderColor: 'var(--gui-border-subtle)',
+            backgroundColor: 'var(--gui-bg-tertiary)',
+          }}
         >
           <input
             type="text"
@@ -156,7 +156,7 @@ function SavedViewsPanelComponent({ isOpen, onClose }: SavedViewsPanelProps): JS
             className="flex-1 px-2 py-1 rounded text-sm bg-transparent border"
             style={{
               borderColor: 'var(--gui-border-subtle)',
-              color: 'var(--gui-text-primary)'
+              color: 'var(--gui-text-primary)',
             }}
           />
           <button
@@ -198,7 +198,7 @@ function SavedViewsPanelComponent({ isOpen, onClose }: SavedViewsPanelProps): JS
                   className="flex-1 px-2 py-0.5 rounded text-sm bg-transparent border"
                   style={{
                     borderColor: 'var(--gui-border-subtle)',
-                    color: 'var(--gui-text-primary)'
+                    color: 'var(--gui-text-primary)',
                   }}
                 />
               ) : (
@@ -211,15 +211,13 @@ function SavedViewsPanelComponent({ isOpen, onClose }: SavedViewsPanelProps): JS
                     <Eye
                       className="w-3.5 h-3.5 flex-shrink-0"
                       style={{
-                        color: activeViewId === view.id
-                          ? 'var(--gui-accent-primary)'
-                          : 'var(--gui-text-muted)'
+                        color:
+                          activeViewId === view.id
+                            ? 'var(--gui-accent-primary)'
+                            : 'var(--gui-text-muted)',
                       }}
                     />
-                    <span
-                      className="text-sm truncate"
-                      style={{ color: 'var(--gui-text-primary)' }}
-                    >
+                    <span className="text-sm truncate" style={{ color: 'var(--gui-text-primary)' }}>
                       {view.name}
                     </span>
                   </button>

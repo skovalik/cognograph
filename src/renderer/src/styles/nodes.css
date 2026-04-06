@@ -12,10 +12,10 @@
   --node-text-muted: var(--text-muted);
   --node-header-bg: var(--surface-node-header);
 
-  /* === Terminal inset colors === */
-  --terminal-bg: #1a1a2e;
-  --terminal-text: #e0e0e0;
-  --terminal-text-muted: #e0e0e080;
+  /* === Terminal inset colors (derived from theme tokens) === */
+  --terminal-bg: var(--surface-panel-secondary, #12110F);
+  --terminal-text: var(--text-primary, #e0e0e0);
+  --terminal-text-muted: var(--text-muted, #e0e0e080);
   --terminal-prompt: #22d3ee;
 
   /* === RGB-only variables for glass system (no alpha channel) === */
@@ -45,10 +45,10 @@
   /* RGB-only variable for glass system - light mode uses white base */
   --node-bg-rgb: 255 255 255;
 
-  /* ═══ TERMINAL LIGHT MODE ═══ */
-  --terminal-bg: #f1f5f9;           /* slate-100 */
-  --terminal-text: #334155;          /* slate-700 */
-  --terminal-text-muted: #64748b80;  /* slate-500 at 50% */
+  /* ═══ TERMINAL LIGHT MODE (inherits from theme tokens) ═══ */
+  --terminal-bg: var(--surface-panel-secondary, #FFFFFF);
+  --terminal-text: var(--text-primary, #334155);
+  --terminal-text-muted: var(--text-muted, #64748b80);
   --terminal-prompt: #16a34a;        /* green-600 */
 
   /* Light mode waypoint handles - darker border for contrast */
@@ -81,7 +81,7 @@
   background: var(--surface-node);
   border: 2px solid transparent; /* 2px provides gradient gap for conic thinking */
   border-radius: var(--radius-md);
-  box-shadow: none;
+  box-shadow: 0 0 0 1px rgba(240, 237, 232, 0.1);
   /* PRESERVED layout properties — nodes depend on these */
   min-width: var(--node-min-width, 150px);
   min-height: var(--node-min-height, 80px);
@@ -323,7 +323,8 @@
 }
 
 .cognograph-node__title {
-  @apply text-sm font-semibold truncate flex-1;
+  @apply text-lg font-semibold truncate flex-1;
+  font-family: var(--font-display);
   color: var(--node-text-primary);
   line-height: 1.3;
 }
@@ -524,27 +525,27 @@
 }
 
 /* ── Spread handles: invisible at rest, smaller hit area ── */
-/* Must use high-specificity selectors to override .cognograph-node:hover .react-flow__handle { opacity: 1 } */
-.cognograph-node .spread-handle,
-.cognograph-node:hover .spread-handle,
-.react-flow__node.selected .spread-handle {
-  opacity: 0 !important;
-  pointer-events: none !important;
+.cognograph-node .spread-handle {
+  opacity: 0;
+  pointer-events: none;
 }
 .spread-handle::before {
   width: 24px;
   height: 24px;
 }
 
-/* Spread handles: ONLY visible during active edge drag (connection mode).
-   RF v12 adds per-handle classes: connectingfrom/connectingto/valid/connectionindicator.
-   NOTE: v12 does NOT add .connecting to the root .react-flow element (that was v11).
-   These selectors must beat .cognograph-node:hover .spread-handle (0,3,0 + !important),
-   so we scope them under .cognograph-node for (0,3,0) + later source order = win. */
-.cognograph-node .spread-handle.connectingfrom,
-.cognograph-node .spread-handle.connectingto,
-.cognograph-node .spread-handle.valid,
-.cognograph-node .spread-handle.connection-target-highlight {
+/* Show dimension-appropriate spread handles on hover (dynamic handle areas) */
+.cognograph-node:hover .spread-handle.spread-visible,
+.react-flow__node.selected .spread-handle.spread-visible {
+  opacity: 0.6;
+  pointer-events: auto;
+}
+
+/* During active edge drag, ensure spread handles stay visible */
+.cognograph-node .spread-handle.spread-visible.connectingfrom,
+.cognograph-node .spread-handle.spread-visible.connectingto,
+.cognograph-node .spread-handle.spread-visible.valid,
+.cognograph-node .spread-handle.spread-visible.connection-target-highlight {
   opacity: 0.6 !important;
   pointer-events: auto !important;
 }
@@ -1934,7 +1935,7 @@
 
 /* =============================================================================
    PFD PHASE 2: Content Density Brackets (Aurochs Bracket Primitives)
-   Spec: COGNOGRAPH-PFD-IMPLEMENTATION-PLAN.md Section 2A
+   Content density bracket system
 
    Color = NoteMode type (via --density-accent CSS variable).
    Geometry = content density (progressive border treatment).
@@ -3040,27 +3041,42 @@
    ============================================================================= */
 
 .conversation-node--terminal {
-  background: var(--terminal-bg, #1a1a2e) !important;
+  background: var(--terminal-bg) !important;
   opacity: 1 !important;
 }
 
-/* Light mode: softer terminal node shell */
-[data-theme="light"] .conversation-node--terminal {
-  background: color-mix(in srgb, var(--surface-panel, var(--terminal-bg)) 95%, #fff 5%);
-}
-
-/* Terminal activity pulse — visible at L0-L1 as ambient status signal */
-@keyframes terminal-pulse {
-  0%, 100% { box-shadow: 0 0 4px 1px var(--pulse-color, #22d3ee); }
-  50% { box-shadow: 0 0 12px 3px var(--pulse-color, #22d3ee); }
-}
-
-.terminal-node-pulse {
-  animation: terminal-pulse 2s ease-in-out infinite;
-}
-
+/* Terminal activity indicator — slow breathing glow using theme tokens.
+   Uses opacity animation on a pseudo-element to guarantee smooth interpolation.
+   box-shadow with color-mix() in keyframes does not interpolate in all browsers. */
+.terminal-node-pulse,
 .terminal-node-idle {
-  box-shadow: 0 0 2px 0 var(--pulse-color, #22d3ee);
+  position: relative;
+}
+
+.terminal-node-pulse::before,
+.terminal-node-idle::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  box-shadow:
+    0 0 12px 3px var(--accent-glow-strong),
+    inset 0 0 8px 0 var(--accent-glow-subtle);
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes terminal-breathe {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.terminal-node-pulse::before {
+  animation: terminal-breathe 4s ease-in-out infinite;
+}
+
+.terminal-node-idle::before {
+  opacity: 0.2;
 }
 
 .terminal-node-exited {
@@ -3068,9 +3084,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .terminal-node-pulse {
+  .terminal-node-pulse::before {
     animation: none;
-    box-shadow: 0 0 6px 2px var(--pulse-color, #22d3ee);
+    opacity: 0.6;
   }
 }
 

@@ -12,12 +12,12 @@
  * @returns CSS class name: 'glass-solid', 'glass-soft', or 'glass-fluid'
  */
 
+import { DEFAULT_GLASS_SETTINGS } from '@shared/types'
 import { useMemo } from 'react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import { DEFAULT_GLASS_SETTINGS } from '@shared/types'
 
 export function useGlassClassName(
-  surface: 'nodes' | 'modals' | 'panels' | 'overlays' | 'toolbar'
+  surface: 'nodes' | 'modals' | 'panels' | 'overlays' | 'toolbar',
 ): string {
   // Select only glassSettings to minimize re-renders
   const glassSettings = useWorkspaceStore((state) => state.themeSettings.glassSettings)

@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import type { WorkspaceData } from '@shared/types'
-import type { SyncProvider, ExternalChangeCallback, UnsubscribeFn } from './SyncProvider'
 import { useProgramStore } from '../stores/programStore'
+import type { ExternalChangeCallback, SyncProvider, UnsubscribeFn } from './SyncProvider'
 
 const DEFAULT_SAVE_DEBOUNCE_MS = 2000
 
@@ -85,7 +85,7 @@ export class LocalSyncProvider implements SyncProvider {
             }
           }
         }
-      }
+      },
     )
   }
 
@@ -170,7 +170,9 @@ export class LocalSyncProvider implements SyncProvider {
           // If the save version advanced while we were writing, another mutation
           // occurred after our snapshot — trigger another save to persist it.
           if (this._saveVersion !== versionAtSave) {
-            console.warn('[LocalSyncProvider] State changed during save — scheduling follow-up save')
+            console.warn(
+              '[LocalSyncProvider] State changed during save — scheduling follow-up save',
+            )
             this.save(undefined as unknown as WorkspaceData) // re-enter debounced path
           } else {
             this._onSaveSuccess?.()
@@ -205,7 +207,9 @@ export class LocalSyncProvider implements SyncProvider {
 
         // If version advanced during the IPC round-trip, queue a follow-up save.
         if (this._saveVersion !== versionAtSave) {
-          console.warn('[LocalSyncProvider] State changed during immediate save — scheduling follow-up save')
+          console.warn(
+            '[LocalSyncProvider] State changed during immediate save — scheduling follow-up save',
+          )
           this.save(undefined as unknown as WorkspaceData) // re-enter debounced path
         } else {
           this._onSaveSuccess?.()

@@ -8,10 +8,10 @@
  * Used in both SaveTemplateModal (for editing) and PasteTemplateModal (for filling).
  */
 
-import { memo, useCallback } from 'react'
-import { Calendar, Link, Wand2, Hash, Type } from 'lucide-react'
-import type { PlaceholderDefinition, PlaceholderType, NodeData } from '@shared/types'
+import type { NodeData, PlaceholderDefinition, PlaceholderType } from '@shared/types'
 import type { Node } from '@xyflow/react'
+import { Calendar, Hash, Link, Type, Wand2 } from 'lucide-react'
+import { memo, useCallback } from 'react'
 
 // -----------------------------------------------------------------------------
 // Types
@@ -66,13 +66,13 @@ function PlaceholderFieldComponent({
   error,
   // mode is available for future use (edit vs fill mode styling)
   mode: _mode,
-  availableNodes
+  availableNodes,
 }: PlaceholderFieldProps): JSX.Element {
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
       onChange(e.target.value)
     },
-    [onChange]
+    [onChange],
   )
 
   const renderInput = (): JSX.Element => {
@@ -159,13 +159,13 @@ function PlaceholderFormComponent({
   onChange,
   errors = {},
   mode = 'fill',
-  availableNodes
+  availableNodes,
 }: PlaceholderFormProps): JSX.Element {
   const handleFieldChange = useCallback(
     (key: string) => (value: string) => {
       onChange(key, value)
     },
-    [onChange]
+    [onChange],
   )
 
   if (placeholders.length === 0) {
@@ -183,7 +183,7 @@ function PlaceholderFormComponent({
       acc[p.type].push(p)
       return acc
     },
-    {} as Record<PlaceholderType, PlaceholderDefinition[]>
+    {} as Record<PlaceholderType, PlaceholderDefinition[]>,
   )
 
   const typeOrder: PlaceholderType[] = [
@@ -191,7 +191,7 @@ function PlaceholderFormComponent({
     'date',
     'node-reference',
     'node-instruction',
-    'selection'
+    'selection',
   ]
 
   return (

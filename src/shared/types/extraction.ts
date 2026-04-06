@@ -25,7 +25,7 @@ export const DEFAULT_EXTRACTION_SETTINGS: ExtractionSettings = {
   autoExtractEnabled: false,
   extractionTypes: ['notes', 'tasks'],
   extractionTrigger: 'on-demand',
-  extractionConfidenceThreshold: 0.7
+  extractionConfidenceThreshold: 0.7,
 }
 
 export interface PendingExtraction {
@@ -53,13 +53,7 @@ export interface ExtractionResult {
 // -----------------------------------------------------------------------------
 
 /** Node types that support extraction */
-export const EXTRACTABLE_NODE_TYPES = [
-  'conversation',
-  'note',
-  'task',
-  'text',
-  'project',
-] as const
+export const EXTRACTABLE_NODE_TYPES = ['conversation', 'note', 'task', 'text', 'project'] as const
 
 export type ExtractableNodeType = (typeof EXTRACTABLE_NODE_TYPES)[number]
 
@@ -74,7 +68,9 @@ export function isExtractableNodeType(nodeType: string): nodeType is Extractable
 }
 
 /** Check if an artifact type supports extraction */
-export function isExtractableArtifactType(artifactType: string): artifactType is ExtractableArtifactType {
+export function isExtractableArtifactType(
+  artifactType: string,
+): artifactType is ExtractableArtifactType {
   return EXTRACTABLE_ARTIFACT_TYPES.includes(artifactType as ExtractableArtifactType)
 }
 

@@ -12,9 +12,9 @@
  * value, then newWorkspace() is called, and the clean state is verified.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { useWorkspaceStore } from '../workspaceStore'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { resetWorkspaceStore } from '../../../../test/storeUtils'
+import { useWorkspaceStore } from '../workspaceStore'
 
 describe('Workspace state golden reset', () => {
   beforeEach(() => {
@@ -50,7 +50,17 @@ describe('Workspace state golden reset', () => {
       focusModeNodeId: 'focus1',
       inPlaceExpandedNodeId: 'expanded1',
       bookmarkedNodeId: 'bm1',
-      numberedBookmarks: { 1: 'nb1', 2: 'nb2', 3: null, 4: null, 5: null, 6: null, 7: null, 8: null, 9: null },
+      numberedBookmarks: {
+        1: 'nb1',
+        2: 'nb2',
+        3: null,
+        4: null,
+        5: null,
+        6: null,
+        7: null,
+        8: null,
+        9: null,
+      },
 
       // Session state
       sessionInteractions: [{ nodeId: 'n1', timestamp: 123, action: 'select' as const }],
@@ -58,7 +68,12 @@ describe('Workspace state golden reset', () => {
 
       // Extraction state
       pendingExtractions: [{ id: 'ext1' } as any],
-      extractionDrag: { extractionId: 'drag1', position: { x: 0, y: 0 }, type: 'note' as const, title: 'test' },
+      extractionDrag: {
+        extractionId: 'drag1',
+        position: { x: 0, y: 0 },
+        type: 'note' as const,
+        title: 'test',
+      },
       extractionSourceFilter: 'source1',
       openExtractionPanelNodeId: 'panel1',
       lastAcceptedExtraction: {
@@ -73,7 +88,10 @@ describe('Workspace state golden reset', () => {
       streamingConversations: new Set(['conv1', 'conv2']),
       recentlySpawnedNodes: new Set(['rs1']),
       spawningNodeIds: ['sp1', 'sp2'],
-      nodeUpdatedAt: new Map([['n1', Date.now()], ['n2', Date.now()]]),
+      nodeUpdatedAt: new Map([
+        ['n1', Date.now()],
+        ['n2', Date.now()],
+      ]),
 
       // Drag/resize state
       dragStartPositions: new Map([['d1', { x: 10, y: 20 }]]),
@@ -83,7 +101,14 @@ describe('Workspace state golden reset', () => {
       floatingPropertiesNodeIds: ['fp1', 'fp2'],
 
       // Pinned windows
-      pinnedWindows: [{ nodeId: 'pin1', position: { x: 0, y: 0 }, size: { width: 200, height: 200 }, zIndex: 5 } as any],
+      pinnedWindows: [
+        {
+          nodeId: 'pin1',
+          position: { x: 0, y: 0 },
+          size: { width: 200, height: 200 },
+          zIndex: 5,
+        } as any,
+      ],
       nextPinnedZIndex: 5,
 
       // History
@@ -98,12 +123,23 @@ describe('Workspace state golden reset', () => {
       lastCreatedNodeId: 'created1',
 
       // Multiplayer
-      multiplayerConfig: { serverUrl: 'ws://test', workspaceId: 'mp1', token: 'tok', userName: 'user', userColor: '#ff0000' },
+      multiplayerConfig: {
+        serverUrl: 'ws://test',
+        workspaceId: 'mp1',
+        token: 'tok',
+        userName: 'user',
+        userColor: '#ff0000',
+      },
       _syncSource: 'yjs' as const,
 
       // Command bar
-      commandLog: [{ id: 'cmd1', input: 'test', status: 'completed', startedAt: Date.now() } as any],
-      workspaceConversation: { id: 'old-conv', messages: [{ id: '1', role: 'user' as const, content: 'old', timestamp: 0 }] },
+      commandLog: [
+        { id: 'cmd1', input: 'test', status: 'completed', startedAt: Date.now() } as any,
+      ],
+      workspaceConversation: {
+        id: 'old-conv',
+        messages: [{ id: '1', role: 'user' as const, content: 'old', timestamp: 0 }],
+      },
     })
 
     // 2. Verify state IS dirty (sanity check)
@@ -211,7 +247,10 @@ describe('Workspace state golden reset', () => {
     useWorkspaceStore.setState({
       streamingConversations: new Set(['a', 'b']),
       recentlySpawnedNodes: new Set(['c']),
-      nodeUpdatedAt: new Map([['x', 1], ['y', 2]]),
+      nodeUpdatedAt: new Map([
+        ['x', 1],
+        ['y', 2],
+      ]),
       dragStartPositions: new Map([['d1', { x: 10, y: 20 }]]),
       resizeStartDimensions: new Map([['r1', { width: 100, height: 200 }]]),
       expandedNodeIds: new Set(['e1']),
@@ -261,7 +300,10 @@ describe('Workspace state golden reset', () => {
 
   it('workspaceConversation gets a fresh id after reset', () => {
     useWorkspaceStore.setState({
-      workspaceConversation: { id: 'custom-old-id', messages: [{ id: '1', role: 'user', content: 'test', timestamp: 0 }] },
+      workspaceConversation: {
+        id: 'custom-old-id',
+        messages: [{ id: '1', role: 'user', content: 'test', timestamp: 0 }],
+      },
     })
 
     useWorkspaceStore.getState().newWorkspace()

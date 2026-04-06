@@ -56,7 +56,12 @@ export const useFileListingStore = create<FileListingState>((set, get) => ({
       listings: {
         ...state.listings,
         [folderPath]: {
-          ...(state.listings[folderPath] || { entries: [], total: 0, truncated: false, fetchedAt: 0 }),
+          ...(state.listings[folderPath] || {
+            entries: [],
+            total: 0,
+            truncated: false,
+            fetchedAt: 0,
+          }),
           loading: true,
         },
       },

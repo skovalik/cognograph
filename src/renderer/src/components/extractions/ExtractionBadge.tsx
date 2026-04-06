@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useCallback, useRef, useState, useEffect } from 'react'
 import { Sparkles } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import {
-  useExtractionStore,
   useExtractionCountForNode,
-  useIsExtractionPanelOpen
+  useExtractionStore,
+  useIsExtractionPanelOpen,
 } from '../../stores'
 
 interface ExtractionBadgeProps {
@@ -68,7 +68,7 @@ function ExtractionBadgeComponent({ nodeId, nodeColor }: ExtractionBadgeProps): 
         openExtractionPanel(nodeId)
       }
     },
-    [nodeId, isPanelOpen, openExtractionPanel, closeExtractionPanel]
+    [nodeId, isPanelOpen, openExtractionPanel, closeExtractionPanel],
   )
 
   // Cleanup timeout on unmount
@@ -86,9 +86,11 @@ function ExtractionBadgeComponent({ nodeId, nodeColor }: ExtractionBadgeProps): 
   return (
     <button
       className={`extraction-badge ${isPulsing ? 'extraction-badge--pulsing' : ''} ${isPanelOpen ? 'extraction-badge--active' : ''}`}
-      style={{
-        '--badge-color': nodeColor
-      } as React.CSSProperties}
+      style={
+        {
+          '--badge-color': nodeColor,
+        } as React.CSSProperties
+      }
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

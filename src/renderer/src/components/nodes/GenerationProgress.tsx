@@ -1,23 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import { AlertCircle, CheckCircle, Loader2, X } from 'lucide-react'
 import { memo, useEffect, useState } from 'react'
-import { Loader2, X, CheckCircle, AlertCircle } from 'lucide-react'
-import { useJobManager, type GenerationJob } from '../../services/media/jobManager'
+import { type GenerationJob, useJobManager } from '../../services/media/jobManager'
 
 interface GenerationProgressProps {
   nodeId: string
 }
 
-export const GenerationProgress = memo(function GenerationProgress({ nodeId }: GenerationProgressProps) {
-  const jobs = useJobManager(state => state.getJobsForNode(nodeId))
-  const activeJobs = jobs.filter(j => j.status === 'queued' || j.status === 'processing')
+export const GenerationProgress = memo(function GenerationProgress({
+  nodeId,
+}: GenerationProgressProps) {
+  const jobs = useJobManager((state) => state.getJobsForNode(nodeId))
+  const activeJobs = jobs.filter((j) => j.status === 'queued' || j.status === 'processing')
 
   if (activeJobs.length === 0) return null
 
   return (
     <div className="flex flex-col gap-1.5 mt-2">
-      {activeJobs.map(job => (
+      {activeJobs.map((job) => (
         <JobCard key={job.id} job={job} />
       ))}
     </div>
@@ -25,7 +27,7 @@ export const GenerationProgress = memo(function GenerationProgress({ nodeId }: G
 })
 
 const JobCard = memo(function JobCard({ job }: { job: GenerationJob }) {
-  const removeJob = useJobManager(state => state.removeJob)
+  const removeJob = useJobManager((state) => state.removeJob)
   const [elapsed, setElapsed] = useState(0)
 
   useEffect(() => {

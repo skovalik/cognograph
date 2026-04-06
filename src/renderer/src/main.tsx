@@ -5,6 +5,7 @@
 // In the Electron renderer, @sentry/electron/renderer re-exports @sentry/browser
 // with Electron-aware transport. Guard on SENTRY_DSN injected via Vite define.
 import * as Sentry from '@sentry/electron/renderer'
+
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,
@@ -19,7 +20,7 @@ import './styles/index.css'
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>
+  </React.StrictMode>,
 )
 
 // Test mode — expose stores for E2E test injection

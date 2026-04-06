@@ -14,7 +14,13 @@ import { logger } from '../utils/logger'
 
 type TokenMessage =
   | { type: 'TOKEN_REFRESHING'; workspaceId: string; tabId: string }
-  | { type: 'TOKEN_REFRESHED'; workspaceId: string; token: string; expiresAt: string; tabId: string }
+  | {
+      type: 'TOKEN_REFRESHED'
+      workspaceId: string
+      token: string
+      expiresAt: string
+      tabId: string
+    }
   | { type: 'TOKEN_REFRESH_FAILED'; workspaceId: string; error: string; tabId: string }
   | { type: 'TOKEN_REQUEST'; workspaceId: string; tabId: string }
 
@@ -102,7 +108,7 @@ class TokenSyncService {
     this.broadcast({
       type: 'TOKEN_REFRESHING',
       workspaceId,
-      tabId: this.tabId
+      tabId: this.tabId,
     })
   }
 
@@ -116,7 +122,7 @@ class TokenSyncService {
       workspaceId,
       token,
       expiresAt,
-      tabId: this.tabId
+      tabId: this.tabId,
     })
   }
 
@@ -129,7 +135,7 @@ class TokenSyncService {
       type: 'TOKEN_REFRESH_FAILED',
       workspaceId,
       error,
-      tabId: this.tabId
+      tabId: this.tabId,
     })
   }
 
@@ -140,7 +146,7 @@ class TokenSyncService {
     this.broadcast({
       type: 'TOKEN_REQUEST',
       workspaceId,
-      tabId: this.tabId
+      tabId: this.tabId,
     })
   }
 
@@ -163,10 +169,12 @@ class TokenSyncService {
       case 'TOKEN_REFRESHING':
         // Another tab is refreshing - don't start our own refresh
         this.refreshingWorkspaces.add(message.workspaceId)
-        logger.log(`[TokenSync] Tab ${message.tabId} is refreshing token for ${message.workspaceId}`)
+        logger.log(
+          `[TokenSync] Tab ${message.tabId} is refreshing token for ${message.workspaceId}`,
+        )
         break
 
-      case 'TOKEN_REFRESHED':
+      case 'TOKEN_REFRESHED': {
         // Another tab refreshed - update our token
         this.refreshingWorkspaces.delete(message.workspaceId)
         logger.log(`[TokenSync] Received refreshed token from tab ${message.tabId}`)
@@ -182,6 +190,7 @@ class TokenSyncService {
           }
         }
         break
+      }
 
       case 'TOKEN_REFRESH_FAILED':
         // Another tab's refresh failed - we might need to take over
@@ -209,7 +218,7 @@ class TokenSyncService {
           workspaceId,
           token: result.token,
           expiresAt: validation.expiresAt,
-          tabId: this.tabId
+          tabId: this.tabId,
         })
         logger.log(`[TokenSync] Shared token with tab ${requestingTabId}`)
       }

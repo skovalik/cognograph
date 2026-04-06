@@ -20,7 +20,7 @@ export function getSessionLinkMenuItems(
   nodeId: string,
   nodeType: string,
   existingLinks: SessionLink[],
-  pendingSessionIds: string[]
+  pendingSessionIds: string[],
 ): SessionLinkMenuItem[] {
   if (nodeType !== 'conversation') return []
 
@@ -35,7 +35,7 @@ export function getSessionLinkMenuItems(
       icon: 'Unlink',
       action: 'unlink-session',
       sessionId: existingLink.sessionId,
-      nodeId
+      nodeId,
     })
   } else if (pendingSessionIds.length > 0) {
     // Offer to link to any pending session
@@ -43,14 +43,14 @@ export function getSessionLinkMenuItems(
       label: `Link to Terminal... (${pendingSessionIds.length} available)`,
       icon: 'Link',
       action: 'link-session',
-      nodeId
+      nodeId,
     })
   } else {
     items.push({
       label: 'Link to Terminal...',
       icon: 'Link',
       action: 'link-session',
-      nodeId
+      nodeId,
     })
   }
 
@@ -63,7 +63,7 @@ export function getSessionLinkMenuItems(
 export function getSessionUnlinkMenuItems(
   nodeId: string,
   nodeType: string,
-  existingLinks: SessionLink[]
+  existingLinks: SessionLink[],
 ): SessionLinkMenuItem[] {
   if (nodeType !== 'conversation') return []
 
@@ -76,8 +76,8 @@ export function getSessionUnlinkMenuItems(
       icon: 'Unlink',
       action: 'unlink-session',
       sessionId: link.sessionId,
-      nodeId
-    }
+      nodeId,
+    },
   ]
 }
 
@@ -88,7 +88,7 @@ export function getSessionUnlinkMenuItems(
 export function getSessionMappingTier(
   envNodeId: string | undefined,
   existingLinks: SessionLink[],
-  sessionId: string
+  sessionId: string,
 ): 'tier1' | 'tier2' | 'tier3' {
   // Tier 1: COGNOGRAPH_NODE_ID env var matches
   if (envNodeId) return 'tier1'

@@ -19,11 +19,11 @@
  * Phase 4B — UX-JSONL
  */
 
-import { ipcMain, app } from 'electron'
-import { join } from 'path'
-import { promises as fs } from 'fs'
-import { randomUUID } from 'crypto'
 import type { Message } from '@shared/types/nodes'
+import { randomUUID } from 'crypto'
+import { app, ipcMain } from 'electron'
+import { promises as fs } from 'fs'
+import { join } from 'path'
 import { logger } from '../utils/logger'
 
 // Re-export for external callers
@@ -70,10 +70,7 @@ const appendQueues = new Map<string, AppendQueueEntry>()
  * workspace; additional messages are batched and flushed when the current
  * write completes.
  */
-export async function appendMessage(
-  workspaceId: string,
-  message: PersistedMessage,
-): Promise<void> {
+export async function appendMessage(workspaceId: string, message: PersistedMessage): Promise<void> {
   let entry = appendQueues.get(workspaceId)
   if (!entry) {
     entry = { inFlight: false, pending: [] }
@@ -106,10 +103,7 @@ async function drainAppendQueue(workspaceId: string): Promise<void> {
   }
 }
 
-async function writeMessages(
-  workspaceId: string,
-  messages: PersistedMessage[],
-): Promise<void> {
+async function writeMessages(workspaceId: string, messages: PersistedMessage[]): Promise<void> {
   const filePath = jsonlPath(workspaceId)
   const lines = messages.map((m) => JSON.stringify(m)).join('\n') + '\n'
   await fs.appendFile(filePath, lines, 'utf-8')
@@ -125,9 +119,7 @@ async function writeMessages(
  * - Returns messages sorted by timestamp (ascending).
  * - De-duplicates on UUID.
  */
-export async function loadMessages(
-  workspaceId: string,
-): Promise<PersistedMessage[]> {
+export async function loadMessages(workspaceId: string): Promise<PersistedMessage[]> {
   const filePath = jsonlPath(workspaceId)
 
   let content: string
@@ -204,10 +196,7 @@ export async function loadConversationMessages(
 /**
  * Enrich a Message with UUID and ISO timestamp for JSONL persistence.
  */
-export function enrichMessage(
-  message: Message,
-  conversationId: string,
-): PersistedMessage {
+export function enrichMessage(message: Message, conversationId: string): PersistedMessage {
   return {
     ...message,
     uuid: (message as PersistedMessage).uuid || randomUUID(),
@@ -291,8 +280,7 @@ export async function migrateInlineMessages(
     }
 
     if (newMessages.length > 0) {
-      const lines =
-        newMessages.map((m) => JSON.stringify(m)).join('\n') + '\n'
+      const lines = newMessages.map((m) => JSON.stringify(m)).join('\n') + '\n'
       await fs.appendFile(sidecarPath, lines, 'utf-8')
     }
   } else {
@@ -302,14 +290,9 @@ export async function migrateInlineMessages(
     const bkPath = backupPath(workspaceId)
     try {
       await fs.copyFile(workspaceJsonPath, bkPath)
-      logger.log(
-        `[ConversationPersistence] Backed up workspace JSON to ${bkPath}`,
-      )
+      logger.log(`[ConversationPersistence] Backed up workspace JSON to ${bkPath}`)
     } catch (err) {
-      logger.error(
-        `[ConversationPersistence] Failed to backup workspace JSON:`,
-        err,
-      )
+      logger.error(`[ConversationPersistence] Failed to backup workspace JSON:`, err)
       return false // don't migrate without backup
     }
 
@@ -325,21 +308,15 @@ export async function migrateInlineMessages(
     // Sort by timestamp before writing
     allMessages.sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
 
-    const lines =
-      allMessages.map((m) => JSON.stringify(m)).join('\n') + '\n'
+    const lines = allMessages.map((m) => JSON.stringify(m)).join('\n') + '\n'
     await fs.writeFile(sidecarPath, lines, 'utf-8')
-    logger.log(
-      `[ConversationPersistence] Migrated ${allMessages.length} messages to JSONL`,
-    )
+    logger.log(`[ConversationPersistence] Migrated ${allMessages.length} messages to JSONL`)
   }
 
   // 3. Strip messages from workspace JSON (keep empty arrays)
   let modified = false
   for (const node of conversationNodes) {
-    if (
-      Array.isArray(node.data.messages) &&
-      (node.data.messages as unknown[]).length > 0
-    ) {
+    if (Array.isArray(node.data.messages) && (node.data.messages as unknown[]).length > 0) {
       node.data.messages = []
       modified = true
     }
@@ -348,15 +325,9 @@ export async function migrateInlineMessages(
   if (modified) {
     // Write stripped workspace JSON (atomic via tmp+rename)
     const tmpPath = workspaceJsonPath + '.tmp'
-    await fs.writeFile(
-      tmpPath,
-      JSON.stringify(workspaceData, null, 2),
-      'utf-8',
-    )
+    await fs.writeFile(tmpPath, JSON.stringify(workspaceData, null, 2), 'utf-8')
     await fs.rename(tmpPath, workspaceJsonPath)
-    logger.log(
-      `[ConversationPersistence] Stripped inline messages from workspace JSON`,
-    )
+    logger.log(`[ConversationPersistence] Stripped inline messages from workspace JSON`)
   }
 
   return true
@@ -370,21 +341,13 @@ export function registerConversationPersistenceHandlers(): void {
   // Append a message to the JSONL sidecar (crash-safe: call BEFORE API call)
   ipcMain.handle(
     'conversation:appendMessage',
-    async (
-      _event,
-      workspaceId: string,
-      conversationId: string,
-      message: Message,
-    ) => {
+    async (_event, workspaceId: string, conversationId: string, message: Message) => {
       try {
         const persisted = enrichMessage(message, conversationId)
         await appendMessage(workspaceId, persisted)
         return { success: true, uuid: persisted.uuid }
       } catch (error) {
-        logger.error(
-          `[ConversationPersistence] Failed to append message:`,
-          error,
-        )
+        logger.error(`[ConversationPersistence] Failed to append message:`, error)
         return { success: false, error: String(error) }
       }
     },
@@ -395,59 +358,35 @@ export function registerConversationPersistenceHandlers(): void {
     'conversation:loadMessages',
     async (_event, workspaceId: string, conversationId: string) => {
       try {
-        const messages = await loadConversationMessages(
-          workspaceId,
-          conversationId,
-        )
+        const messages = await loadConversationMessages(workspaceId, conversationId)
         return { success: true, data: messages }
       } catch (error) {
-        logger.error(
-          `[ConversationPersistence] Failed to load messages:`,
-          error,
-        )
+        logger.error(`[ConversationPersistence] Failed to load messages:`, error)
         return { success: false, error: String(error) }
       }
     },
   )
 
   // Load ALL messages across all conversations in a workspace
-  ipcMain.handle(
-    'conversation:loadAllMessages',
-    async (_event, workspaceId: string) => {
-      try {
-        const messages = await loadMessages(workspaceId)
-        return { success: true, data: messages }
-      } catch (error) {
-        logger.error(
-          `[ConversationPersistence] Failed to load all messages:`,
-          error,
-        )
-        return { success: false, error: String(error) }
-      }
-    },
-  )
+  ipcMain.handle('conversation:loadAllMessages', async (_event, workspaceId: string) => {
+    try {
+      const messages = await loadMessages(workspaceId)
+      return { success: true, data: messages }
+    } catch (error) {
+      logger.error(`[ConversationPersistence] Failed to load all messages:`, error)
+      return { success: false, error: String(error) }
+    }
+  })
 
   // Run migration (called on workspace load)
-  ipcMain.handle(
-    'conversation:migrate',
-    async (_event, workspaceId: string) => {
-      try {
-        const workspaceJsonPath = join(
-          WORKSPACES_DIR(),
-          `${workspaceId}.json`,
-        )
-        const migrated = await migrateInlineMessages(
-          workspaceId,
-          workspaceJsonPath,
-        )
-        return { success: true, migrated }
-      } catch (error) {
-        logger.error(
-          `[ConversationPersistence] Migration failed:`,
-          error,
-        )
-        return { success: false, error: String(error) }
-      }
-    },
-  )
+  ipcMain.handle('conversation:migrate', async (_event, workspaceId: string) => {
+    try {
+      const workspaceJsonPath = join(WORKSPACES_DIR(), `${workspaceId}.json`)
+      const migrated = await migrateInlineMessages(workspaceId, workspaceJsonPath)
+      return { success: true, migrated }
+    } catch (error) {
+      logger.error(`[ConversationPersistence] Migration failed:`, error)
+      return { success: false, error: String(error) }
+    }
+  })
 }

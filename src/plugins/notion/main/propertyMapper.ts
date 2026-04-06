@@ -9,47 +9,47 @@
 // -----------------------------------------------------------------------------
 
 const TASK_STATUS_TO_NOTION: Record<string, string> = {
-  'todo': 'To Do',
+  todo: 'To Do',
   'in-progress': 'In Progress',
-  'done': 'Done'
+  done: 'Done',
 }
 
 const TASK_STATUS_FROM_NOTION: Record<string, string> = {
   'To Do': 'todo',
   'In Progress': 'in-progress',
   'In Review': 'in-progress',
-  'Blocked': 'todo',
-  'Done': 'done'
+  Blocked: 'todo',
+  Done: 'done',
 }
 
 const PRIORITY_TO_NOTION: Record<string, string> = {
-  'high': 'High',
-  'medium': 'Medium',
-  'low': 'Low'
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
 }
 
 const PRIORITY_FROM_NOTION: Record<string, string> = {
-  'High': 'high',
-  'Medium': 'medium',
-  'Low': 'low'
+  High: 'high',
+  Medium: 'medium',
+  Low: 'low',
 }
 
 const NOTE_MODE_ICONS: Record<string, string> = {
-  'general': '📝',
-  'reference': '📖',
-  'background': '🔍',
-  'examples': '💡',
-  'page': '📄',
-  'component': '🧩',
+  general: '📝',
+  reference: '📖',
+  background: '🔍',
+  examples: '💡',
+  page: '📄',
+  component: '🧩',
   'content-model': '🗂️',
-  'wp-config': '⚙️'
+  'wp-config': '⚙️',
 }
 
 const ARTIFACT_TYPE_ICONS: Record<string, string> = {
-  'code': '💻',
-  'markdown': '📝',
-  'html': '🌐',
-  'svg': '🎨'
+  code: '💻',
+  markdown: '📝',
+  html: '🌐',
+  svg: '🎨',
 }
 
 // Max length for rich_text property values (Notion limit)
@@ -134,7 +134,7 @@ function numberProperty(value: number): unknown {
 // Extract plain text from Notion rich_text array
 function extractRichText(richTextArray: Array<{ plain_text?: string }>): string {
   if (!Array.isArray(richTextArray)) return ''
-  return richTextArray.map(rt => rt.plain_text ?? '').join('')
+  return richTextArray.map((rt) => rt.plain_text ?? '').join('')
 }
 
 // Extract title from Notion title array
@@ -162,10 +162,7 @@ function extractNumber(numValue: number | null): number | undefined {
 // Task Node → Notion Tasks DB (Section 4a)
 // -----------------------------------------------------------------------------
 
-export function taskToNotion(
-  nodeId: string,
-  data: CognographNodeData
-): MappedNotionProperties {
+export function taskToNotion(nodeId: string, data: CognographNodeData): MappedNotionProperties {
   const properties: NotionPropertyObject = {}
 
   // Title (bidirectional)
@@ -214,9 +211,7 @@ export function taskToNotion(
 // Notion Tasks DB → Task Node (Section 4a pull)
 // -----------------------------------------------------------------------------
 
-export function taskFromNotion(
-  notionProperties: Record<string, any>
-): MappedCognographFields {
+export function taskFromNotion(notionProperties: Record<string, any>): MappedCognographFields {
   const result: MappedCognographFields = { notionExtras: {} }
 
   // Title
@@ -273,10 +268,7 @@ export function taskFromNotion(
 // Project Node → Notion Projects DB (Section 4b)
 // -----------------------------------------------------------------------------
 
-export function projectToNotion(
-  nodeId: string,
-  data: CognographNodeData
-): MappedNotionProperties {
+export function projectToNotion(nodeId: string, data: CognographNodeData): MappedNotionProperties {
   const properties: NotionPropertyObject = {}
 
   // Title (bidirectional)
@@ -304,9 +296,7 @@ export function projectToNotion(
 // Notion Projects DB → Project Node (Section 4b pull)
 // -----------------------------------------------------------------------------
 
-export function projectFromNotion(
-  notionProperties: Record<string, any>
-): MappedCognographFields {
+export function projectFromNotion(notionProperties: Record<string, any>): MappedCognographFields {
   const result: MappedCognographFields = { notionExtras: {} }
 
   // Title
@@ -353,7 +343,7 @@ export function projectFromNotion(
 
 export function noteToNotionPageProperties(
   nodeId: string,
-  data: CognographNodeData
+  data: CognographNodeData,
 ): NotionPropertyObject {
   const properties: NotionPropertyObject = {}
 
@@ -365,7 +355,7 @@ export function noteToNotionPageProperties(
   // Tags as multi_select (if target page has Tags property)
   if (data.tags && data.tags.length > 0) {
     properties['Tags'] = {
-      multi_select: data.tags.map(tag => ({ name: tag }))
+      multi_select: data.tags.map((tag) => ({ name: tag })),
     }
   }
 
@@ -379,7 +369,7 @@ export function noteToNotionPageProperties(
 
 export function artifactToNotionPageProperties(
   nodeId: string,
-  data: CognographNodeData
+  data: CognographNodeData,
 ): NotionPropertyObject {
   const properties: NotionPropertyObject = {}
 
@@ -396,7 +386,7 @@ export function artifactToNotionPageProperties(
 
 export function getPageIcon(
   nodeType: 'note' | 'artifact',
-  data: CognographNodeData
+  data: CognographNodeData,
 ): { emoji: string } | undefined {
   if (nodeType === 'note' && data.noteMode) {
     const icon = NOTE_MODE_ICONS[data.noteMode]
@@ -415,12 +405,15 @@ export function getPageIcon(
 
 export function getTargetDbId(
   nodeType: string,
-  config: { tasksDbId?: string; projectsDbId?: string }
+  config: { tasksDbId?: string; projectsDbId?: string },
 ): string | undefined {
   switch (nodeType) {
-    case 'task': return config.tasksDbId
-    case 'project': return config.projectsDbId
-    default: return undefined
+    case 'task':
+      return config.tasksDbId
+    case 'project':
+      return config.projectsDbId
+    default:
+      return undefined
   }
 }
 
@@ -431,23 +424,29 @@ export function getTargetDbId(
 export function nodeToNotionProperties(
   nodeType: string,
   nodeId: string,
-  data: CognographNodeData
+  data: CognographNodeData,
 ): MappedNotionProperties | null {
   switch (nodeType) {
-    case 'task': return taskToNotion(nodeId, data)
-    case 'project': return projectToNotion(nodeId, data)
-    default: return null
+    case 'task':
+      return taskToNotion(nodeId, data)
+    case 'project':
+      return projectToNotion(nodeId, data)
+    default:
+      return null
   }
 }
 
 export function notionToNodeFields(
   nodeType: string,
-  notionProperties: Record<string, any>
+  notionProperties: Record<string, any>,
 ): MappedCognographFields | null {
   switch (nodeType) {
-    case 'task': return taskFromNotion(notionProperties)
-    case 'project': return projectFromNotion(notionProperties)
-    default: return null
+    case 'task':
+      return taskFromNotion(notionProperties)
+    case 'project':
+      return projectFromNotion(notionProperties)
+    default:
+      return null
   }
 }
 
@@ -460,13 +459,20 @@ export type FieldAuthority = 'notion' | 'cognograph' | 'conflict'
 
 export function getFieldAuthority(field: string): FieldAuthority {
   switch (field) {
-    case 'status': return 'notion'
-    case 'priority': return 'notion'
-    case 'dueDate': return 'notion'
-    case 'title': return 'conflict'  // Always show conflict modal
-    case 'description': return 'cognograph'
-    case 'content': return 'cognograph'
-    default: return 'cognograph'
+    case 'status':
+      return 'notion'
+    case 'priority':
+      return 'notion'
+    case 'dueDate':
+      return 'notion'
+    case 'title':
+      return 'conflict' // Always show conflict modal
+    case 'description':
+      return 'cognograph'
+    case 'content':
+      return 'cognograph'
+    default:
+      return 'cognograph'
   }
 }
 

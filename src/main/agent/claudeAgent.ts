@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import { execFile, spawn } from 'node:child_process'
+import { promisify } from 'node:util'
 import { type Options, query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk'
 import Anthropic from '@anthropic-ai/sdk'
-import { execFile, spawn } from 'child_process'
 import { BrowserWindow, ipcMain, safeStorage } from 'electron'
 import Store from 'electron-store'
-import { promisify } from 'util'
 import { callMCPTool, getMCPToolsForServers, listMCPConnections } from '../mcp/mcpClient'
 import { getSetting } from '../settings'
 import { assembleToolPool } from '../tools/assembleToolPool'
 import type { BuiltinToolDeps } from '../tools/builtinTools'
 import { createBuiltinTools } from '../tools/builtinTools'
 import { adaptMCPTools } from '../tools/mcpToolAdapter'
-import type { ToolPool } from '../tools/types'
+import type { ExecutionContext, ToolPool } from '../tools/types'
 import { logger } from '../utils/logger'
 import {
   editFile as fsEditFile,
@@ -354,7 +354,7 @@ function buildAgentSystemPrompt(
   // promptPrefix goes BEFORE the default system prompt.
   // This allows presets to establish persona/role/context before
   // the standard agent instructions.
-  const prefix = promptPrefix ? promptPrefix + '\n\n' : ''
+  const prefix = promptPrefix ? `${promptPrefix}\n\n` : ''
 
   return `${prefix}You are an AI assistant integrated into Cognograph, a spatial AI workflow canvas application. You have access to tools that let you manipulate the user's workspace.
 
@@ -409,8 +409,8 @@ ${memorySection}
 // On Windows, .cmd files can't be spawned directly by the Agent SDK (EINVAL error).
 // Point to the actual JS entry point instead.
 function findClaudeBinary(): string {
-  const { join } = require('path')
-  const fs = require('fs')
+  const { join } = require('node:path')
+  const fs = require('node:fs')
 
   // On Windows, find the actual JS entry point (not the .cmd wrapper)
   if (process.platform === 'win32') {
@@ -449,6 +449,7 @@ function findClaudeBinary(): string {
 // Do NOT cache — each query() connects to the server, and a second connect crashes
 // with "Already connected to a transport". Create fresh per request.
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: SDK stream handler is inherently branchy
 async function handleAgentSDKRequest(payload: AgentRequestPayload): Promise<void> {
   const { requestId, conversationId, messages, context, systemPromptPrefix } = payload
 
@@ -457,6 +458,22 @@ async function handleAgentSDKRequest(payload: AgentRequestPayload): Promise<void
 
   // Set conversation context so MCP tools know which conversation to operate on
   setCurrentConversationId(conversationId)
+
+  // Wire the shared ToolPool so SDK MCP tool handlers execute through the
+  // main-process toolExecutor instead of the deprecated renderer IPC bridge.
+  // Without this, executeTool() in sdkTools.ts falls through to executeInRenderer()
+  // which requires initSdkToolBridge() in the renderer — currently not wired.
+  const builtinDeps = createApiPathBuiltinToolDeps()
+  const toolPool = getActiveToolPool(builtinDeps)
+  const sdkExecutionContext: ExecutionContext = {
+    workspaceId: conversationId,
+    conversationId,
+    allowedPaths: [],
+    messages: messages as unknown[],
+    activeMcpServerIds: [],
+    metadata: {},
+  }
+  setSdkToolPool(toolPool, sdkExecutionContext)
 
   const systemPrompt = buildAgentSystemPrompt(context, undefined, systemPromptPrefix)
 
@@ -512,12 +529,15 @@ async function handleAgentSDKRequest(payload: AgentRequestPayload): Promise<void
 
       // Store session ID for future resumption — extract OUTSIDE the msg.type check
       // so it's captured regardless of message type (session_id appears on all messages)
+      // biome-ignore lint/suspicious/noExplicitAny: SDK message types don't expose session_id
       if ((msg as any).session_id && !existingSessionId) {
+        // biome-ignore lint/suspicious/noExplicitAny: SDK message types don't expose session_id
         store.set(`sdkSession:${conversationId}`, (msg as any).session_id)
       }
 
       // Forward assistant text to renderer
       if (msg.type === 'assistant') {
+        // biome-ignore lint/suspicious/noExplicitAny: SDK assistant message shape not typed
         for (const block of (msg as any).message.content) {
           if (block.type === 'text') {
             sendStreamChunk({
@@ -532,6 +552,7 @@ async function handleAgentSDKRequest(payload: AgentRequestPayload): Promise<void
 
       // Forward completion
       if (msg.type === 'result') {
+        // biome-ignore lint/suspicious/noExplicitAny: SDK result message shape not typed
         const resultMsg = msg as any
 
         sendStreamChunk({

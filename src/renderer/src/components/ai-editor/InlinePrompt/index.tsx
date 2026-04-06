@@ -8,18 +8,18 @@
  * Combines prompt input, mode indicator, suggestions, and streaming preview.
  */
 
-import { memo, useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import type { AIEditorMode } from '@shared/types'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { aiConfigLearning } from '../../../services/aiConfigLearning'
 import { useAIEditorStore } from '../../../stores/aiEditorStore'
 import { useWorkspaceStore } from '../../../stores/workspaceStore'
 import { buildAIEditorContext } from '../../../utils/contextBuilder'
-import { executeMutationPlan } from '../../../utils/mutationExecutor'
 import { inferModeFromPrompt } from '../../../utils/modeInference'
-import { aiConfigLearning } from '../../../services/aiConfigLearning'
-import PromptInput from './PromptInput'
+import { executeMutationPlan } from '../../../utils/mutationExecutor'
 import ModeIndicator from './ModeIndicator'
-import SuggestionList from './SuggestionList'
+import PromptInput from './PromptInput'
 import StreamingPreview from './StreamingPreview'
-import type { AIEditorMode } from '@shared/types'
+import SuggestionList from './SuggestionList'
 
 interface InlinePromptProps {
   position: { x: number; y: number }
@@ -40,7 +40,7 @@ function InlinePromptComponent({ position, onClose }: InlinePromptProps): JSX.El
     setMode,
     setPrompt,
     generatePlanStreaming,
-    cancelGeneration
+    cancelGeneration,
   } = useAIEditorStore()
 
   const nodes = useWorkspaceStore((s) => s.nodes)
@@ -60,9 +60,9 @@ function InlinePromptComponent({ position, onClose }: InlinePromptProps): JSX.El
     const history = aiConfigLearning.getPromptHistory()
     // Return top prompts (sorted by lastUsed)
     return history
-      .filter(h => h.wasSuccessful)
+      .filter((h) => h.wasSuccessful)
       .slice(0, 5)
-      .map(h => h.prompt)
+      .map((h) => h.prompt)
   }, [])
 
   // Infer mode from prompt
@@ -77,12 +77,15 @@ function InlinePromptComponent({ position, onClose }: InlinePromptProps): JSX.El
   }, [localPrompt, mode, setMode])
 
   // Handle prompt change
-  const handlePromptChange = useCallback((value: string) => {
-    setLocalPrompt(value)
-    setPrompt(value)
-    setShowSuggestions(value.trim().length === 0)
-    setHighlightedSuggestion(-1)
-  }, [setPrompt])
+  const handlePromptChange = useCallback(
+    (value: string) => {
+      setLocalPrompt(value)
+      setPrompt(value)
+      setShowSuggestions(value.trim().length === 0)
+      setHighlightedSuggestion(-1)
+    },
+    [setPrompt],
+  )
 
   // Handle submit
   const handleSubmit = useCallback(async () => {
@@ -102,14 +105,23 @@ function InlinePromptComponent({ position, onClose }: InlinePromptProps): JSX.El
       viewportBounds: { width: window.innerWidth, height: window.innerHeight },
       workspaceSettings: {
         defaultProvider: 'anthropic',
-        themeMode: themeSettings.mode
+        themeMode: themeSettings.mode,
       },
-      includeEnhancedAnalysis: true
+      includeEnhancedAnalysis: true,
     })
 
     // Use streaming by default
     await generatePlanStreaming(context)
-  }, [localPrompt, mode, nodes, edges, selectedNodeIds, viewport, themeSettings.mode, generatePlanStreaming])
+  }, [
+    localPrompt,
+    mode,
+    nodes,
+    edges,
+    selectedNodeIds,
+    viewport,
+    themeSettings.mode,
+    generatePlanStreaming,
+  ])
 
   // Handle apply — execute the generated plan and close the prompt
   const handleApply = useCallback(async () => {
@@ -128,17 +140,23 @@ function InlinePromptComponent({ position, onClose }: InlinePromptProps): JSX.El
   }, [streamingPhase, cancelGeneration, onClose])
 
   // Handle mode change
-  const handleModeChange = useCallback((newMode: AIEditorMode) => {
-    setMode(newMode)
-    setInferredMode(false)
-  }, [setMode])
+  const handleModeChange = useCallback(
+    (newMode: AIEditorMode) => {
+      setMode(newMode)
+      setInferredMode(false)
+    },
+    [setMode],
+  )
 
   // Handle suggestion select
-  const handleSuggestionSelect = useCallback((text: string) => {
-    setLocalPrompt(text)
-    setPrompt(text)
-    setShowSuggestions(false)
-  }, [setPrompt])
+  const handleSuggestionSelect = useCallback(
+    (text: string) => {
+      setLocalPrompt(text)
+      setPrompt(text)
+      setShowSuggestions(false)
+    },
+    [setPrompt],
+  )
 
   // Close on click outside
   useEffect(() => {
@@ -163,7 +181,7 @@ function InlinePromptComponent({ position, onClose }: InlinePromptProps): JSX.El
       className="inline-prompt"
       style={{
         left: position.x,
-        top: position.y
+        top: position.y,
       }}
       role="dialog"
       aria-label="AI Editor inline prompt"

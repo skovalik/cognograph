@@ -8,36 +8,35 @@
  * Allows pasting templates and organizing them into folders.
  */
 
-import { memo, useState, useCallback, useMemo, useEffect } from 'react'
+import type { NodeData, NodeTemplate, TemplateFolder } from '@shared/types'
+import type { Node } from '@xyflow/react'
 import {
-  X,
-  Search,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Copy,
   Folder,
   FolderPlus,
-  Star,
-  Clock,
-  Trash2,
-  Copy,
-  Layers,
   Grid,
+  Layers,
   List,
-  ChevronRight,
-  ChevronDown
+  Search,
+  Star,
+  Trash2,
+  X,
 } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  useTemplateStore,
-  useTemplates,
-  useFolders,
   useFavoriteIds,
+  useFolders,
   useIsBrowserOpen,
   useSelectedFolderId,
-  useTemplateSearchQuery
+  useTemplateSearchQuery,
+  useTemplateStore,
+  useTemplates,
 } from '../../stores/templateStore'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
-import type { Node } from '@xyflow/react'
-import type { NodeData } from '@shared/types'
 import { TemplatePreview } from './TemplatePreview'
-import type { NodeTemplate, TemplateFolder } from '@shared/types'
 
 // -----------------------------------------------------------------------------
 // Template Card Component
@@ -64,7 +63,7 @@ function TemplateCard({
   onPaste,
   onToggleFavorite,
   onDuplicate,
-  onDelete
+  onDelete,
 }: TemplateCardProps): JSX.Element {
   const totalNodes = template.nodes.length
 
@@ -90,7 +89,11 @@ function TemplateCard({
           <p className="text-xs text-[var(--text-muted)] truncate">
             {totalNodes} node{totalNodes !== 1 ? 's' : ''}
             {template.placeholders.length > 0 && (
-              <> · {template.placeholders.length} placeholder{template.placeholders.length !== 1 ? 's' : ''}</>
+              <>
+                {' '}
+                · {template.placeholders.length} placeholder
+                {template.placeholders.length !== 1 ? 's' : ''}
+              </>
             )}
           </p>
         </div>
@@ -210,7 +213,7 @@ function FolderItem({
   onSelect,
   onToggleExpand,
   childFolders,
-  templateCount
+  templateCount,
 }: FolderItemProps): JSX.Element {
   const hasChildren = childFolders.length > 0
 
@@ -257,7 +260,7 @@ function FolderItem({
 // Wrapper to access store
 function FolderItemWrapper({
   folder,
-  level
+  level,
 }: {
   folder: TemplateFolder
   level: number
@@ -270,12 +273,12 @@ function FolderItemWrapper({
 
   const childFolders = useMemo(
     () => folders.filter((f) => f.parentId === folder.id),
-    [folders, folder.id]
+    [folders, folder.id],
   )
 
   const templateCount = useMemo(
     () => templates.filter((t) => t.folderId === folder.id).length,
-    [templates, folder.id]
+    [templates, folder.id],
   )
 
   return (
@@ -328,7 +331,7 @@ function calculateSelectionBounds(nodes: Node<NodeData>[]): {
     maxX,
     maxY,
     centerX: (minX + maxX) / 2,
-    centerY: (minY + maxY) / 2
+    centerY: (minY + maxY) / 2,
   }
 }
 
@@ -353,7 +356,7 @@ function getPastePosition(): { x: number; y: number } {
   // Convert screen center to flow coordinates
   return {
     x: -viewport.x / viewport.zoom + 400 / viewport.zoom,
-    y: -viewport.y / viewport.zoom + 300 / viewport.zoom
+    y: -viewport.y / viewport.zoom + 300 / viewport.zoom,
   }
 }
 
@@ -410,7 +413,7 @@ function TemplateBrowserComponent(): JSX.Element | null {
         (t) =>
           t.name.toLowerCase().includes(q) ||
           t.description?.toLowerCase().includes(q) ||
-          t.tags?.some((tag) => tag.toLowerCase().includes(q))
+          t.tags?.some((tag) => tag.toLowerCase().includes(q)),
       )
     } else if (showSection === 'favorites') {
       result = templates.filter((t) => favoriteIds.includes(t.id))
@@ -438,11 +441,11 @@ function TemplateBrowserComponent(): JSX.Element | null {
       const position = getPastePosition()
       openPasteModal({
         templateId,
-        position
+        position,
       })
       handleClose()
     },
-    [openPasteModal, handleClose]
+    [openPasteModal, handleClose],
   )
 
   const handleCreateFolder = useCallback(() => {
@@ -459,7 +462,7 @@ function TemplateBrowserComponent(): JSX.Element | null {
         deleteTemplate(templateId)
       }
     },
-    [deleteTemplate]
+    [deleteTemplate],
   )
 
   if (!isOpen) return null
@@ -528,7 +531,9 @@ function TemplateBrowserComponent(): JSX.Element | null {
             {/* Folders */}
             <div className="flex-1 overflow-y-auto p-2">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-[var(--text-muted)] uppercase">Folders</span>
+                <span className="text-xs font-medium text-[var(--text-muted)] uppercase">
+                  Folders
+                </span>
                 <button
                   onClick={() => setIsCreatingFolder(true)}
                   className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-panel-secondary)] rounded transition-colors"

@@ -7,14 +7,12 @@
 //
 // Debounces at 500ms during active editing to avoid BFS on every keystroke.
 
-import { useEffect, useRef, useCallback } from 'react'
-import { useWorkspaceStore } from '../stores/workspaceStore'
+import { useCallback, useEffect, useRef } from 'react'
 import { useContextVisualizationStore } from '../stores/contextVisualizationStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 export function useContextVisualization() {
-  const getContextTraversalForNode = useWorkspaceStore(
-    (state) => state.getContextTraversalForNode
-  )
+  const getContextTraversalForNode = useWorkspaceStore((state) => state.getContextTraversalForNode)
   const activate = useContextVisualizationStore((state) => state.activate)
   const deactivate = useContextVisualizationStore((state) => state.deactivate)
 
@@ -23,26 +21,32 @@ export function useContextVisualization() {
 
   const isTerminalRef = useRef(false)
 
-  const updateVisualization = useCallback((nodeId: string) => {
-    const traversal = getContextTraversalForNode(nodeId)
-    activate(nodeId, traversal.nodes, traversal.edges, isTerminalRef.current)
-  }, [getContextTraversalForNode, activate])
+  const updateVisualization = useCallback(
+    (nodeId: string) => {
+      const traversal = getContextTraversalForNode(nodeId)
+      activate(nodeId, traversal.nodes, traversal.edges, isTerminalRef.current)
+    },
+    [getContextTraversalForNode, activate],
+  )
 
-  const showContextScope = useCallback((nodeId: string, isTerminal = false) => {
-    activeNodeRef.current = nodeId
-    isTerminalRef.current = isTerminal
+  const showContextScope = useCallback(
+    (nodeId: string, isTerminal = false) => {
+      activeNodeRef.current = nodeId
+      isTerminalRef.current = isTerminal
 
-    // Debounce to 500ms to avoid BFS on every keystroke
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current)
-    }
-    debounceRef.current = setTimeout(() => {
-      // Only update if this node is still the active one
-      if (activeNodeRef.current === nodeId) {
-        updateVisualization(nodeId)
+      // Debounce to 500ms to avoid BFS on every keystroke
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
       }
-    }, 500)
-  }, [updateVisualization])
+      debounceRef.current = setTimeout(() => {
+        // Only update if this node is still the active one
+        if (activeNodeRef.current === nodeId) {
+          updateVisualization(nodeId)
+        }
+      }, 500)
+    },
+    [updateVisualization],
+  )
 
   const hideContextScope = useCallback(() => {
     activeNodeRef.current = null

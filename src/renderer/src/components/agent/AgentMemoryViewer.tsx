@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import React, { useState, useMemo } from 'react'
-import { Search, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import type { AgentMemory, MemoryEntry } from '@shared/types'
-import { Input } from '../ui/Input'
+import { ChevronDown, ChevronRight, Search, Trash2 } from 'lucide-react'
+import type React from 'react'
+import { useMemo, useState } from 'react'
 import { Button } from '../ui/Button'
+import { Input } from '../ui/Input'
 
 interface AgentMemoryViewerProps {
   nodeId: string
@@ -26,7 +27,7 @@ interface AgentMemoryViewerProps {
 export const AgentMemoryViewer: React.FC<AgentMemoryViewerProps> = ({
   nodeId,
   memory,
-  onChange
+  onChange,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -46,8 +47,7 @@ export const AgentMemoryViewer: React.FC<AgentMemoryViewerProps> = ({
     const query = searchQuery.toLowerCase()
     return entries.filter(
       (entry) =>
-        entry.key.toLowerCase().includes(query) ||
-        entry.value.toLowerCase().includes(query)
+        entry.key.toLowerCase().includes(query) || entry.value.toLowerCase().includes(query),
     )
   }, [entries, searchQuery])
 
@@ -67,7 +67,7 @@ export const AgentMemoryViewer: React.FC<AgentMemoryViewerProps> = ({
       key: newKey.trim(),
       value: newValue.trim(),
       source: 'user',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     }
 
     const existingIndex = entries.findIndex((e) => e.key === newEntry.key)
@@ -79,7 +79,7 @@ export const AgentMemoryViewer: React.FC<AgentMemoryViewerProps> = ({
       updatedEntries[existingIndex] = {
         ...updatedEntries[existingIndex],
         value: newEntry.value,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       }
     } else {
       // Add new entry
@@ -87,7 +87,9 @@ export const AgentMemoryViewer: React.FC<AgentMemoryViewerProps> = ({
 
       // Evict oldest if exceeds maxEntries
       if (updatedEntries.length > (memory.maxEntries || 50)) {
-        updatedEntries.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        updatedEntries.sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        )
         updatedEntries.shift()
       }
     }
@@ -148,7 +150,10 @@ export const AgentMemoryViewer: React.FC<AgentMemoryViewerProps> = ({
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold gui-text-primary truncate" title={entry.key}>
+                        <span
+                          className="text-xs font-semibold gui-text-primary truncate"
+                          title={entry.key}
+                        >
                           {entry.key.length > 40 ? `${entry.key.slice(0, 40)}...` : entry.key}
                         </span>
                         <span className="text-xs text-[var(--text-muted)]">→</span>
@@ -181,7 +186,9 @@ export const AgentMemoryViewer: React.FC<AgentMemoryViewerProps> = ({
           {totalPages > 1 && (
             <div className="px-2 py-2 border-t flex items-center justify-between text-xs text-[var(--text-muted)]">
               <span>
-                Showing {currentPage * pageSize + 1}-{Math.min((currentPage + 1) * pageSize, filteredEntries.length)} of {filteredEntries.length}
+                Showing {currentPage * pageSize + 1}-
+                {Math.min((currentPage + 1) * pageSize, filteredEntries.length)} of{' '}
+                {filteredEntries.length}
               </span>
               <div className="flex gap-1">
                 <Button

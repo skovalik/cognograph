@@ -14,10 +14,10 @@
  * format, etc.
  */
 
-import { useCallback } from 'react'
-import { HelpCircle } from 'lucide-react'
-import { useWorkspaceStore } from '../../../stores/workspaceStore'
 import type { ContextMetadata, NodeData } from '@shared/types'
+import { HelpCircle } from 'lucide-react'
+import { useCallback } from 'react'
+import { useWorkspaceStore } from '../../../stores/workspaceStore'
 
 // ---------------------------------------------------------------------------
 // Inline HelpTooltip (self-contained — avoids cross-section dependency)
@@ -102,9 +102,7 @@ export interface ContextSectionProps {
 // ---------------------------------------------------------------------------
 
 export function ContextSection({ nodeId }: ContextSectionProps): JSX.Element | null {
-  const nodeData = useWorkspaceStore(
-    (state) => state.nodes.find((n) => n.id === nodeId)?.data,
-  )
+  const nodeData = useWorkspaceStore((state) => state.nodes.find((n) => n.id === nodeId)?.data)
   const updateNode = useWorkspaceStore((state) => state.updateNode)
 
   const handleChange = useCallback(
@@ -201,9 +199,7 @@ export function ContextSection({ nodeId }: ContextSectionProps): JSX.Element | n
             value={data.contextLabel || ''}
             onChange={(e) => handleChange('contextLabel', e.target.value)}
             placeholder={
-              data.type === 'project'
-                ? 'e.g., Project Requirements'
-                : 'e.g., Code Style Guide'
+              data.type === 'project' ? 'e.g., Project Requirements' : 'e.g., Code Style Guide'
             }
             className="w-full gui-input border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500"
           />

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  estimateTokens,
+  _resetTiktokenState,
   countTokensPrecise,
-  shouldCompact,
   estimateMessageTokens,
-  _resetTiktokenState
+  estimateTokens,
+  shouldCompact,
 } from '../tokenEstimation'
 
 // ---------------------------------------------------------------------------
@@ -180,7 +180,7 @@ describe('tokenEstimation', () => {
       const messages = [
         { role: 'user', content: 'Hello, how are you?' },
         { role: 'assistant', content: 'I am doing well, thank you for asking!' },
-        { role: 'user', content: 'Can you help me with my project?' }
+        { role: 'user', content: 'Can you help me with my project?' },
       ]
 
       const tokens = estimateMessageTokens(messages)
@@ -196,8 +196,9 @@ describe('tokenEstimation', () => {
         { role: 'user', content: 'What is the weather like today in San Francisco?' },
         {
           role: 'assistant',
-          content: 'I don\'t have access to real-time weather data, but I can help you find that information. You could check a weather service like Weather.com or the National Weather Service for current conditions in San Francisco.'
-        }
+          content:
+            "I don't have access to real-time weather data, but I can help you find that information. You could check a weather service like Weather.com or the National Weather Service for current conditions in San Francisco.",
+        },
       ]
 
       const tokens = estimateMessageTokens(messages)

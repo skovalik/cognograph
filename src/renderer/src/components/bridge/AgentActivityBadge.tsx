@@ -13,27 +13,30 @@
  * Completed badges fade after configurable duration (default 3s).
  */
 
-import { memo, useState, useMemo } from 'react'
-import { Loader2, Clock, Check, AlertCircle, Pause, Clock3 } from 'lucide-react'
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
+import type { AgentActivityStatus } from '@shared/types/bridge'
+import { useStore } from '@xyflow/react'
+import { AlertCircle, Check, Clock, Clock3, Loader2, Pause } from 'lucide-react'
+import { memo, useMemo, useState } from 'react'
+import { usePerformanceMode } from '../../hooks/usePerformanceMode'
+import { cn } from '../../lib/utils'
+import { useBridgeStore } from '../../stores/bridgeStore'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 import { Separator } from '../ui/separator'
-import { useBridgeStore } from '../../stores/bridgeStore'
-import { usePerformanceMode } from '../../hooks/usePerformanceMode'
-import type { AgentActivityStatus } from '@shared/types/bridge'
-import { cn } from '../../lib/utils'
-import { useStore } from '@xyflow/react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 
 // Status config: icon, color class, and label
-const STATUS_CONFIG: Record<AgentActivityStatus, {
-  Icon: typeof Loader2
-  className: string
-  label: string
-  animateIcon: boolean
-}> = {
-  'running': {
+const STATUS_CONFIG: Record<
+  AgentActivityStatus,
+  {
+    Icon: typeof Loader2
+    className: string
+    label: string
+    animateIcon: boolean
+  }
+> = {
+  running: {
     Icon: Loader2,
     className: 'agent-badge--running',
     label: 'Running',
@@ -45,25 +48,25 @@ const STATUS_CONFIG: Record<AgentActivityStatus, {
     label: 'Waiting',
     animateIcon: false,
   },
-  'completed': {
+  completed: {
     Icon: Check,
     className: 'agent-badge--completed',
     label: 'Completed',
     animateIcon: false,
   },
-  'error': {
+  error: {
     Icon: AlertCircle,
     className: 'agent-badge--error',
     label: 'Error',
     animateIcon: false,
   },
-  'paused': {
+  paused: {
     Icon: Pause,
     className: 'agent-badge--paused',
     label: 'Paused',
     animateIcon: false,
   },
-  'queued': {
+  queued: {
     Icon: Clock3,
     className: 'agent-badge--queued',
     label: 'Queued',
@@ -84,9 +87,12 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${remainingSeconds}s`
 }
 
-function AgentActivityBadgeComponent({ nodeId, agentName }: AgentActivityBadgeProps): JSX.Element | null {
-  const agentState = useBridgeStore(s => s.activeAgents[nodeId])
-  const dismissError = useBridgeStore(s => s.dismissAgentError)
+function AgentActivityBadgeComponent({
+  nodeId,
+  agentName,
+}: AgentActivityBadgeProps): JSX.Element | null {
+  const agentState = useBridgeStore((s) => s.activeAgents[nodeId])
+  const dismissError = useBridgeStore((s) => s.dismissAgentError)
   const performanceMode = usePerformanceMode()
   const [popoverOpen, setPopoverOpen] = useState(false)
 
@@ -104,7 +110,8 @@ function AgentActivityBadgeComponent({ nodeId, agentName }: AgentActivityBadgePr
   if (!config) return null
 
   const { Icon, className: statusClass, label, animateIcon } = config
-  const showAnimation = performanceMode === 'full' || (performanceMode === 'reduced' && agentState.status === 'running')
+  const showAnimation =
+    performanceMode === 'full' || (performanceMode === 'reduced' && agentState.status === 'running')
 
   return (
     <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
@@ -124,7 +131,7 @@ function AgentActivityBadgeComponent({ nodeId, agentName }: AgentActivityBadgePr
               <Icon
                 className={cn(
                   'w-3.5 h-3.5 agent-badge-icon',
-                  showAnimation && animateIcon && 'agent-badge-spinner'
+                  showAnimation && animateIcon && 'agent-badge-spinner',
                 )}
               />
             </div>
@@ -133,7 +140,8 @@ function AgentActivityBadgeComponent({ nodeId, agentName }: AgentActivityBadgePr
         <TooltipContent side="top" className="max-w-[200px]">
           <p className="font-medium text-xs">{agentName || nodeId}</p>
           <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-            {label}{agentState.currentAction ? `: ${agentState.currentAction}` : ''}
+            {label}
+            {agentState.currentAction ? `: ${agentState.currentAction}` : ''}
           </p>
           <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
             {agentState.tokensUsed.toLocaleString()} tokens | ${agentState.costUSD.toFixed(4)}
@@ -175,9 +183,7 @@ function AgentActivityBadgeComponent({ nodeId, agentName }: AgentActivityBadgePr
               {agentState.tokensUsed.toLocaleString()}
             </span>
             <span style={{ color: 'var(--text-muted)' }}>Cost:</span>
-            <span style={{ color: 'var(--text-primary)' }}>
-              ${agentState.costUSD.toFixed(4)}
-            </span>
+            <span style={{ color: 'var(--text-primary)' }}>${agentState.costUSD.toFixed(4)}</span>
           </div>
 
           {agentState.status === 'error' && (

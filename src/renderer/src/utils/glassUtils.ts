@@ -28,7 +28,7 @@ import type { GlassStyle } from '@shared/types'
 export function resolveGlassStyle(
   userPref: GlassStyle,
   gpuTier: 'high' | 'medium' | 'low',
-  ambientActive: boolean
+  ambientActive: boolean,
 ): 'solid' | 'soft-blur' | 'fluid-glass' {
   // User forced a specific style (not auto)
   if (userPref !== 'auto') {

@@ -6,8 +6,8 @@
 // =============================================================================
 // Shows history of previously used prompts for quick reuse
 
-import { memo, useState, useMemo, useCallback, useEffect } from 'react'
-import { History, Search, Trash2, Clock, X } from 'lucide-react'
+import { Clock, History, Search, Trash2, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { aiConfigLearning, type PromptHistoryEntry } from '../../services/aiConfigLearning'
 
 interface PromptHistoryDropdownProps {
@@ -19,7 +19,7 @@ interface PromptHistoryDropdownProps {
 function PromptHistoryDropdownComponent({
   onSelect,
   isOpen,
-  onToggle
+  onToggle,
 }: PromptHistoryDropdownProps): JSX.Element {
   const [search, setSearch] = useState('')
 
@@ -28,7 +28,7 @@ function PromptHistoryDropdownComponent({
   const filteredHistory = useMemo(() => {
     if (!search.trim()) return history
     const lower = search.toLowerCase()
-    return history.filter(h => h.prompt.toLowerCase().includes(lower))
+    return history.filter((h) => h.prompt.toLowerCase().includes(lower))
   }, [history, search])
 
   const handleSelect = useCallback(
@@ -36,7 +36,7 @@ function PromptHistoryDropdownComponent({
       onSelect(entry.prompt)
       onToggle()
     },
-    [onSelect, onToggle]
+    [onSelect, onToggle],
   )
 
   const handleDelete = useCallback((id: string, e: React.MouseEvent) => {
@@ -76,12 +76,15 @@ function PromptHistoryDropdownComponent({
         <input
           type="text"
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           placeholder="Search history..."
           className="flex-1 bg-transparent text-xs gui-text outline-none"
           autoFocus
         />
-        <button onClick={onToggle} className="p-1 hover:bg-[var(--surface-panel-secondary)] rounded">
+        <button
+          onClick={onToggle}
+          className="p-1 hover:bg-[var(--surface-panel-secondary)] rounded"
+        >
           <X className="w-3 h-3 text-[var(--text-muted)]" />
         </button>
       </div>
@@ -94,7 +97,7 @@ function PromptHistoryDropdownComponent({
           </div>
         ) : (
           <div className="p-1 space-y-0.5">
-            {filteredHistory.map(entry => (
+            {filteredHistory.map((entry) => (
               <HistoryItem
                 key={entry.id}
                 entry={entry}
@@ -132,7 +135,7 @@ function HistoryItem({ entry, onSelect, onDelete }: HistoryItemProps): JSX.Eleme
         </div>
       </div>
       <button
-        onClick={e => onDelete(entry.id, e)}
+        onClick={(e) => onDelete(entry.id, e)}
         className="p-1 opacity-0 group-hover:opacity-100 hover:bg-[var(--surface-panel-secondary)] rounded"
       >
         <Trash2 className="w-3 h-3 text-[var(--text-secondary)]" />

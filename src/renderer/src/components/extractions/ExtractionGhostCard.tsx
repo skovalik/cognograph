@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useCallback } from 'react'
-import { FileText, CheckSquare, X } from 'lucide-react'
 import type { PendingExtraction } from '@shared/types'
+import { CheckSquare, FileText, X } from 'lucide-react'
+import { memo, useCallback } from 'react'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
 
 interface ExtractionGhostCardProps {
@@ -13,7 +13,7 @@ interface ExtractionGhostCardProps {
 
 function ExtractionGhostCardComponent({
   extraction,
-  onDragStart
+  onDragStart,
 }: ExtractionGhostCardProps): JSX.Element {
   const dismissExtraction = useWorkspaceStore((state) => state.dismissExtraction)
 
@@ -21,7 +21,7 @@ function ExtractionGhostCardComponent({
     (e: React.DragEvent) => {
       onDragStart(e, extraction)
     },
-    [extraction, onDragStart]
+    [extraction, onDragStart],
   )
 
   const handleDismiss = useCallback(
@@ -29,7 +29,7 @@ function ExtractionGhostCardComponent({
       e.stopPropagation()
       dismissExtraction(extraction.id)
     },
-    [extraction.id, dismissExtraction]
+    [extraction.id, dismissExtraction],
   )
 
   const Icon = extraction.type === 'task' ? CheckSquare : FileText

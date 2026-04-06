@@ -7,17 +7,22 @@
  * Tests for node CRUD operations in the workspace store.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { useWorkspaceStore, getNodeById } from '../workspaceStore'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  resetWorkspaceStore,
   getWorkspaceState,
+  resetWorkspaceStore,
+  seedEdge,
+  seedEdges,
   seedNode,
   seedNodes,
-  seedEdge,
-  seedEdges
 } from '../../../../test/storeUtils'
-import { createNoteNode, createTaskNode, createTestEdge, resetTestCounters } from '../../../../test/utils'
+import {
+  createNoteNode,
+  createTaskNode,
+  createTestEdge,
+  resetTestCounters,
+} from '../../../../test/utils'
+import { getNodeById, useWorkspaceStore } from '../workspaceStore'
 
 describe('workspaceStore - Node Operations', () => {
   beforeEach(() => {
@@ -119,15 +124,21 @@ describe('workspaceStore - Node Operations', () => {
       expect(node!.data.type).toBe('action')
     })
 
-    it.each(['note', 'conversation', 'task', 'project', 'artifact', 'workspace', 'text', 'action'] as const)(
-      'should create %s node with correct type',
-      (nodeType) => {
-        const { addNode } = useWorkspaceStore.getState()
-        const nodeId = addNode(nodeType, { x: 100, y: 200 })
-        const state = getWorkspaceState()
-        expect(state.nodes.find((n) => n.id === nodeId)?.type).toBe(nodeType)
-      }
-    )
+    it.each([
+      'note',
+      'conversation',
+      'task',
+      'project',
+      'artifact',
+      'workspace',
+      'text',
+      'action',
+    ] as const)('should create %s node with correct type', (nodeType) => {
+      const { addNode } = useWorkspaceStore.getState()
+      const nodeId = addNode(nodeType, { x: 100, y: 200 })
+      const state = getWorkspaceState()
+      expect(state.nodes.find((n) => n.id === nodeId)?.type).toBe(nodeType)
+    })
 
     it('should mark workspace as dirty after adding node', () => {
       const { addNode } = useWorkspaceStore.getState()
@@ -439,7 +450,7 @@ describe('workspaceStore - Node Operations', () => {
     it('should also clear edge selection', () => {
       useWorkspaceStore.setState({
         selectedNodeIds: ['note-1'],
-        selectedEdgeIds: ['edge-1']
+        selectedEdgeIds: ['edge-1'],
       })
 
       const { clearSelection } = useWorkspaceStore.getState()
@@ -592,10 +603,10 @@ describe('workspaceStore - Node Operations', () => {
         nodes: [
           createNoteNode('Note A', { id: 'a' }),
           createNoteNode('Note B', { id: 'b' }),
-          createTaskNode('todo', { id: 'c' })
+          createTaskNode('todo', { id: 'c' }),
         ],
         edges: [],
-        viewport: { x: 0, y: 0, zoom: 1 }
+        viewport: { x: 0, y: 0, zoom: 1 },
       } as Parameters<typeof loadWorkspace>[0])
 
       const state = getWorkspaceState()
@@ -612,10 +623,7 @@ describe('workspaceStore - Node Operations', () => {
 
     it('should be consistent after newWorkspace', () => {
       // Seed some nodes first
-      seedNodes([
-        createNoteNode('Note 1', { id: 'n1' }),
-        createNoteNode('Note 2', { id: 'n2' })
-      ])
+      seedNodes([createNoteNode('Note 1', { id: 'n1' }), createNoteNode('Note 2', { id: 'n2' })])
 
       const { newWorkspace } = useWorkspaceStore.getState()
       newWorkspace()
@@ -695,7 +703,7 @@ describe('workspaceStore - Node Operations', () => {
       seedNodes([note1, note2, task])
       seedEdges([
         createTestEdge('note-1', 'task-1', { id: 'e1' }),
-        createTestEdge('note-2', 'task-1', { id: 'e2' })
+        createTestEdge('note-2', 'task-1', { id: 'e2' }),
       ])
 
       // Verify initial state
@@ -712,5 +720,81 @@ describe('workspaceStore - Node Operations', () => {
       expect(edgesForTask!.length).toBe(1)
       expect(edgesForTask![0]).toBe('e2')
     })
+  })
+
+  describe('isDirty during drag', () => {
+    it('should NOT set isDirty during drag position changes', () => {
+      const { addNode, markClean, setDragging, onNodesChange } = useWorkspaceStore.getState()
+      addNode('note', { x: 0, y: 0 })
+      const nodeId = useWorkspaceStore.getState().nodes[0]?.id ?? ''
+      markClean()
+
+      // Simulate drag start
+      setDragging(true)
+
+      // Simulate position change during drag
+      onNodesChange([{ type: 'position', id: nodeId, position: { x: 100, y: 100 } }])
+
+      expect(useWorkspaceStore.getState().isDirty).toBe(false)
+
+      // Simulate drag end
+      setDragging(false)
+    })
+
+    it('should set isDirty for programmatic position changes (not during drag)', () => {
+      const { addNode, markClean, onNodesChange } = useWorkspaceStore.getState()
+      addNode('note', { x: 0, y: 0 })
+      const nodeId = useWorkspaceStore.getState().nodes[0]?.id ?? ''
+      markClean()
+
+      onNodesChange([{ type: 'position', id: nodeId, position: { x: 100, y: 100 } }])
+
+      expect(useWorkspaceStore.getState().isDirty).toBe(true)
+    })
+
+    it('should set isDirty in commitNodeDrag', () => {
+      const { addNode, markClean, setDragging, startNodeDrag, onNodesChange, commitNodeDrag } =
+        useWorkspaceStore.getState()
+      addNode('note', { x: 0, y: 0 })
+      const nodeId = useWorkspaceStore.getState().nodes[0]?.id ?? ''
+      markClean()
+
+      // Must wrap in setDragging so onNodesChange does NOT set isDirty
+      // — otherwise isDirty is already true before commitNodeDrag runs
+      setDragging(true)
+      startNodeDrag([nodeId])
+      onNodesChange([{ type: 'position', id: nodeId, position: { x: 100, y: 100 } }])
+      expect(useWorkspaceStore.getState().isDirty).toBe(false) // still false during drag
+      commitNodeDrag([nodeId])
+      setDragging(false)
+
+      expect(useWorkspaceStore.getState().isDirty).toBe(true) // commitNodeDrag set it
+    })
+  })
+
+  describe('spawn dimensions match component minimums', () => {
+    // These MIN values come from each node component's MIN_WIDTH/MIN_HEIGHT constants
+    const COMPONENT_MINIMUMS: Record<string, { width: number; height: number }> = {
+      note: { width: 300, height: 180 },
+      task: { width: 300, height: 200 },
+      artifact: { width: 300, height: 220 },
+      project: { width: 200, height: 180 },
+      conversation: { width: 280, height: 150 },
+      text: { width: 100, height: 30 },
+      action: { width: 220, height: 100 },
+      orchestrator: { width: 300, height: 200 },
+      workspace: { width: 280, height: 150 },
+    }
+
+    for (const [type, mins] of Object.entries(COMPONENT_MINIMUMS)) {
+      it(`${type} spawn dimensions should be >= component minimums`, () => {
+        const { addNode } = useWorkspaceStore.getState()
+        addNode(type as any, { x: 0, y: 0 })
+        const state = getWorkspaceState()
+        const node = state.nodes[state.nodes.length - 1]
+        expect(node?.width).toBeGreaterThanOrEqual(mins.width)
+        expect(node?.height).toBeGreaterThanOrEqual(mins.height)
+      })
+    }
   })
 })

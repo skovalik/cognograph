@@ -59,7 +59,7 @@ export const useSessionLinkStore = create<SessionLinkState>()((set, get) => ({
 
   unlinkSession: (sessionId) => {
     set((state) => ({
-      links: state.links.filter((l) => l.sessionId !== sessionId)
+      links: state.links.filter((l) => l.sessionId !== sessionId),
     }))
   },
 
@@ -72,20 +72,20 @@ export const useSessionLinkStore = create<SessionLinkState>()((set, get) => ({
     set((state) => ({
       pendingUnlinked: [
         ...state.pendingUnlinked,
-        { sessionId, workingDirectory, detectedAt: Date.now() }
-      ]
+        { sessionId, workingDirectory, detectedAt: Date.now() },
+      ],
     }))
   },
 
   dismissUnlinkedSession: (sessionId) => {
     set((state) => ({
-      pendingUnlinked: state.pendingUnlinked.filter((p) => p.sessionId !== sessionId)
+      pendingUnlinked: state.pendingUnlinked.filter((p) => p.sessionId !== sessionId),
     }))
   },
 
   setAutoCreateEnabled: (enabled) => {
     set({ autoCreateEnabled: enabled })
-  }
+  },
 }))
 
 // --- Selectors ---

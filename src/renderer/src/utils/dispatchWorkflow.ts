@@ -13,7 +13,7 @@
 // Integration with ContextMenu and workspaceStore happens during merge.
 // =============================================================================
 
-import type { TaskNodeData, ConversationNodeData } from '@shared/types'
+import type { ConversationNodeData, TaskNodeData } from '@shared/types'
 import type { EdgeData } from '@shared/types/edges'
 import type { Edge } from '@xyflow/react'
 
@@ -46,7 +46,7 @@ const DISPATCH_EDGE_COLOR = 'var(--accent)'
  */
 export function createDispatchNodeData(
   taskNode: TaskNodeData,
-  taskPosition: { x: number; y: number }
+  taskPosition: { x: number; y: number },
 ): {
   position: { x: number; y: number }
   data: Partial<ConversationNodeData> & { dispatchedFrom: string }
@@ -86,10 +86,7 @@ export function createDispatchNodeData(
  * @param conversationNodeId - Target node ID (the new conversation)
  * @returns A complete React Flow Edge object ready to be added to the graph
  */
-export function createDispatchEdge(
-  taskNodeId: string,
-  conversationNodeId: string
-): Edge<EdgeData> {
+export function createDispatchEdge(taskNodeId: string, conversationNodeId: string): Edge<EdgeData> {
   return {
     id: `${taskNodeId}-${conversationNodeId}`,
     type: 'custom',
@@ -123,10 +120,7 @@ export function createDispatchEdge(
  * @param contextChain - Array of context strings from connected nodes
  * @returns Formatted context string
  */
-export function buildDispatchContext(
-  taskNode: TaskNodeData,
-  contextChain: string[]
-): string {
+export function buildDispatchContext(taskNode: TaskNodeData, contextChain: string[]): string {
   const sections: string[] = []
 
   sections.push(`# Task: ${taskNode.title}`)

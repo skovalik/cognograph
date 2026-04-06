@@ -7,13 +7,13 @@
  * Used by ProjectNode and ArtifactNode.
  */
 
-import { memo, useCallback, useEffect, useMemo } from 'react'
 import { ChevronDown, ChevronRight, RefreshCw } from 'lucide-react'
-import { useFileListingStore, EXPAND_THRESHOLD_MS } from '../stores/fileListingStore'
-import { normalizeFileFilter, matchesFileFilter } from '../utils/fileIconMap'
-import { FileEntryRow } from './FileEntryRow'
-import { cn } from '../lib/utils'
 import * as path from 'path'
+import { memo, useCallback, useEffect, useMemo } from 'react'
+import { cn } from '../lib/utils'
+import { EXPAND_THRESHOLD_MS, useFileListingStore } from '../stores/fileListingStore'
+import { matchesFileFilter, normalizeFileFilter } from '../utils/fileIconMap'
+import { FileEntryRow } from './FileEntryRow'
 
 interface FilePreviewSectionProps {
   folderPath: string
@@ -51,28 +51,31 @@ function FilePreviewSectionComponent({
     if (folderPath) fetchListing(folderPath)
   }, [folderPath, fetchListing])
 
-  const normalizedFilter = useMemo(
-    () => normalizeFileFilter(fileFilter),
-    [fileFilter]
-  )
+  const normalizedFilter = useMemo(() => normalizeFileFilter(fileFilter), [fileFilter])
 
   const filteredEntries = useMemo(() => {
     if (!listing?.entries) return []
-    return listing.entries.filter((e) =>
-      e.type === 'directory' || matchesFileFilter(e.name, normalizedFilter)
+    return listing.entries.filter(
+      (e) => e.type === 'directory' || matchesFileFilter(e.name, normalizedFilter),
     )
   }, [listing?.entries, normalizedFilter])
 
   const displayEntries = filteredEntries.slice(0, maxEntries)
   const remaining = filteredEntries.length - displayEntries.length
-  const totalLabel = normalizedFilter.length > 0
-    ? `${filteredEntries.length} of ${listing?.total ?? 0}`
-    : `${listing?.total ?? 0}`
+  const totalLabel =
+    normalizedFilter.length > 0
+      ? `${filteredEntries.length} of ${listing?.total ?? 0}`
+      : `${listing?.total ?? 0}`
 
   if (!folderPath) return null
 
   return (
-    <div className={cn('border-t border-[var(--border-subtle,rgba(255,255,255,0.06))]', compact ? 'mt-1' : 'mt-2')}>
+    <div
+      className={cn(
+        'border-t border-[var(--border-subtle,rgba(255,255,255,0.06))]',
+        compact ? 'mt-1' : 'mt-2',
+      )}
+    >
       {/* Header */}
       <button
         className="flex items-center gap-1 w-full px-2 py-1 text-[10px] gui-text-secondary hover:gui-text transition-colors"
@@ -88,7 +91,10 @@ function FilePreviewSectionComponent({
         {fileListVisible && (
           <button
             className="ml-auto p-0.5 gui-button rounded hover:gui-text"
-            onClick={(e) => { e.stopPropagation(); handleRefresh() }}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleRefresh()
+            }}
             aria-label="Refresh file listing"
           >
             <RefreshCw className={cn('w-2.5 h-2.5', listing?.loading && 'animate-spin')} />
@@ -110,9 +116,7 @@ function FilePreviewSectionComponent({
               Loading files...
             </div>
           ) : listing?.error ? (
-            <div className="px-2 py-3 text-[10px] text-red-400 text-center">
-              {listing.error}
-            </div>
+            <div className="px-2 py-3 text-[10px] text-red-400 text-center">{listing.error}</div>
           ) : displayEntries.length === 0 ? (
             <div className="px-2 py-3 text-[10px] gui-text-secondary text-center">
               {listing?.entries.length === 0 ? 'Empty folder' : 'No matching files'}
@@ -125,7 +129,9 @@ function FilePreviewSectionComponent({
                   name={entry.name}
                   type={entry.type}
                   fullPath={path.join(folderPath, entry.name)}
-                  highlighted={highlightedFile ? path.join(folderPath, entry.name) === highlightedFile : false}
+                  highlighted={
+                    highlightedFile ? path.join(folderPath, entry.name) === highlightedFile : false
+                  }
                   compact={compact}
                 />
               ))}
@@ -134,7 +140,8 @@ function FilePreviewSectionComponent({
                   className="w-full px-2 py-1 text-[10px] gui-text-secondary hover:gui-text text-center transition-colors"
                   onClick={onExpandInLayers}
                 >
-                  ⋯ {remaining} more{normalizedFilter.length > 0 ? ` (${normalizedFilter.join(', ')})` : ''}
+                  ⋯ {remaining} more
+                  {normalizedFilter.length > 0 ? ` (${normalizedFilter.join(', ')})` : ''}
                 </button>
               )}
             </>

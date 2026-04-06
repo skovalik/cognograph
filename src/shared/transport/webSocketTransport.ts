@@ -195,7 +195,9 @@ export class WebSocketTransport implements Transport {
 
       try {
         const message = JSON.parse(
-          typeof event.data === 'string' ? event.data : new TextDecoder().decode(event.data as ArrayBuffer),
+          typeof event.data === 'string'
+            ? event.data
+            : new TextDecoder().decode(event.data as ArrayBuffer),
         ) as AgentMessage
 
         // Validate basic shape
@@ -252,7 +254,7 @@ export class WebSocketTransport implements Transport {
 
     // Exponential backoff with jitter
     const baseDelay = Math.min(
-      this.config.initialReconnectDelayMs * Math.pow(2, this.reconnectAttempts),
+      this.config.initialReconnectDelayMs * 2 ** this.reconnectAttempts,
       this.config.maxReconnectDelayMs,
     )
     const jitter = Math.random() * baseDelay * 0.3 // up to 30% jitter

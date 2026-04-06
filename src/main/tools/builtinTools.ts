@@ -14,33 +14,33 @@
  */
 
 import { buildTool } from './buildTool'
-import type { Tool, ToolResult } from './types'
 import {
-  CreateNodeSchema,
+  AddCommentSchema,
+  AddMemorySchema,
   BatchCreateSchema,
-  UpdateNodeSchema,
+  CreateNodeSchema,
+  DeleteMemorySchema,
   DeleteNodeSchema,
-  LinkNodesSchema,
-  UnlinkNodesSchema,
-  SearchNodesSchema,
-  GetNodeSchema,
-  GetInitialContextSchema,
+  EditFileSchema,
+  ExecuteCommandSchema,
   GetContextChainSchema,
+  GetInitialContextSchema,
+  GetMemorySchema,
+  GetNodeSchema,
   GetSelectionSchema,
   GetTodosSchema,
-  AddCommentSchema,
+  LinkNodesSchema,
+  ListDirectorySchema,
+  ListMemoriesSchema,
   MoveNodeSchema,
   ReadFileSchema,
-  WriteFileSchema,
-  EditFileSchema,
-  ListDirectorySchema,
   SearchFilesSchema,
-  ExecuteCommandSchema,
-  AddMemorySchema,
-  GetMemorySchema,
-  ListMemoriesSchema,
-  DeleteMemorySchema,
+  SearchNodesSchema,
+  UnlinkNodesSchema,
+  UpdateNodeSchema,
+  WriteFileSchema,
 } from './canonicalSchemas'
+import type { Tool, ToolResult } from './types'
 
 // ---------------------------------------------------------------------------
 // Dependency injection interface
@@ -127,11 +127,7 @@ function rendererResult(result: unknown): ToolResult {
 }
 
 /** Convert a FilesystemToolResult into a ToolResult */
-function fsResult(res: {
-  success: boolean
-  result?: unknown
-  error?: string
-}): ToolResult {
+function fsResult(res: { success: boolean; result?: unknown; error?: string }): ToolResult {
   if (!res.success) {
     return {
       content: [{ type: 'text', text: res.error ?? 'Unknown error' }],
@@ -154,10 +150,7 @@ function fsResult(res: {
  */
 export function createBuiltinTools(deps: BuiltinToolDeps): Tool[] {
   // Canvas helper — validates input, calls renderer, wraps result
-  function canvasTool(
-    name: string,
-    args: Record<string, unknown>,
-  ): Promise<unknown> {
+  function canvasTool(name: string, args: Record<string, unknown>): Promise<unknown> {
     return deps.executeInRenderer(name, args, deps.getCurrentConversationId())
   }
 
@@ -262,8 +255,7 @@ export function createBuiltinTools(deps: BuiltinToolDeps): Tool[] {
 
     buildTool({
       name: 'get_context_chain',
-      description:
-        'Get the context chain for the current conversation or a specific node.',
+      description: 'Get the context chain for the current conversation or a specific node.',
       inputSchema: GetContextChainSchema,
       isReadOnly: true,
       isConcurrencySafe: true,
@@ -367,9 +359,7 @@ export function createBuiltinTools(deps: BuiltinToolDeps): Tool[] {
       async call(input) {
         const args = ReadFileSchema.parse(input)
         const ctx = deps.getSecurityContext()
-        return fsResult(
-          deps.readFile(args.path, ctx.allowedPaths, args.startLine, args.endLine),
-        )
+        return fsResult(deps.readFile(args.path, ctx.allowedPaths, args.startLine, args.endLine))
       },
     }),
 
@@ -399,9 +389,7 @@ export function createBuiltinTools(deps: BuiltinToolDeps): Tool[] {
       async call(input) {
         const args = SearchFilesSchema.parse(input)
         const ctx = deps.getSecurityContext()
-        return fsResult(
-          deps.searchFiles(args.path, args.pattern, ctx.allowedPaths, args.fileGlob),
-        )
+        return fsResult(deps.searchFiles(args.path, args.pattern, ctx.allowedPaths, args.fileGlob))
       },
     }),
 
@@ -435,9 +423,7 @@ export function createBuiltinTools(deps: BuiltinToolDeps): Tool[] {
       async call(input) {
         const args = EditFileSchema.parse(input)
         const ctx = deps.getSecurityContext()
-        return fsResult(
-          deps.editFile(args.path, args.oldString, args.newString, ctx.allowedPaths),
-        )
+        return fsResult(deps.editFile(args.path, args.oldString, args.newString, ctx.allowedPaths))
       },
     }),
 
@@ -457,12 +443,7 @@ export function createBuiltinTools(deps: BuiltinToolDeps): Tool[] {
         const args = ExecuteCommandSchema.parse(input)
         const ctx = deps.getSecurityContext()
         return fsResult(
-          await deps.executeCommand(
-            args.command,
-            ctx.allowedPaths,
-            ctx.allowedCommands,
-            args.cwd,
-          ),
+          await deps.executeCommand(args.command, ctx.allowedPaths, ctx.allowedCommands, args.cwd),
         )
       },
     }),

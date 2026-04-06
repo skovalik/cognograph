@@ -1,9 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import React, { useState, useMemo } from 'react'
-import { ChevronDown, ChevronRight, CheckCircle, XCircle, StopCircle, PauseCircle } from 'lucide-react'
 import type { AgentRunSummary } from '@shared/types'
+import {
+  CheckCircle,
+  ChevronDown,
+  ChevronRight,
+  PauseCircle,
+  StopCircle,
+  XCircle,
+} from 'lucide-react'
+import type React from 'react'
+import { useMemo, useState } from 'react'
 import { CountUp } from '../ui/react-bits'
 
 interface AgentRunHistoryViewerProps {
@@ -21,9 +29,7 @@ interface AgentRunHistoryViewerProps {
  * - Status badges with icons
  * - Token/cost display with CountUp animation
  */
-export const AgentRunHistoryViewer: React.FC<AgentRunHistoryViewerProps> = ({
-  history
-}) => {
+export const AgentRunHistoryViewer: React.FC<AgentRunHistoryViewerProps> = ({ history }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [sortNewest, setSortNewest] = useState(true)
   const [expandedRuns, setExpandedRuns] = useState<Set<number>>(new Set())
@@ -71,7 +77,12 @@ export const AgentRunHistoryViewer: React.FC<AgentRunHistoryViewerProps> = ({
     if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
     if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
 
-    return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
   }
 
   const getStatusIcon = (status: AgentRunSummary['status']) => {
@@ -126,7 +137,9 @@ export const AgentRunHistoryViewer: React.FC<AgentRunHistoryViewerProps> = ({
               className="text-xs gui-text-secondary hover:gui-text-primary transition-colors flex items-center gap-1"
             >
               {sortNewest ? 'Newest First' : 'Oldest First'}
-              <ChevronDown className={`w-3 h-3 transition-transform ${sortNewest ? '' : 'rotate-180'}`} />
+              <ChevronDown
+                className={`w-3 h-3 transition-transform ${sortNewest ? '' : 'rotate-180'}`}
+              />
             </button>
           </div>
 
@@ -137,21 +150,32 @@ export const AgentRunHistoryViewer: React.FC<AgentRunHistoryViewerProps> = ({
                 {paginatedHistory.map((run, index) => {
                   const isExpanded = expandedRuns.has(index)
                   const duration = run.endedAt
-                    ? ((new Date(run.endedAt).getTime() - new Date(run.startedAt).getTime()) / 1000).toFixed(1)
+                    ? (
+                        (new Date(run.endedAt).getTime() - new Date(run.startedAt).getTime()) /
+                        1000
+                      ).toFixed(1)
                     : 'Running...'
 
                   return (
-                    <div key={index} className="border rounded p-2 bg-gray-500/5" role="article" aria-label={`Run from ${run.startedAt}`}>
+                    <div
+                      key={index}
+                      className="border rounded p-2 bg-gray-500/5"
+                      role="article"
+                      aria-label={`Run from ${run.startedAt}`}
+                    >
                       {/* Line 1: Time + Status */}
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs gui-text-secondary">{formatRelativeTime(run.startedAt)}</span>
+                        <span className="text-xs gui-text-secondary">
+                          {formatRelativeTime(run.startedAt)}
+                        </span>
                         {getStatusBadge(run.status)}
                       </div>
 
                       {/* Line 2: Stats */}
                       <div className="flex items-center gap-3 text-[10px] gui-text-muted mb-1">
                         <span>
-                          <CountUp value={run.inputTokens} duration={0.5} /> in / <CountUp value={run.outputTokens} duration={0.5} /> out
+                          <CountUp value={run.inputTokens} duration={0.5} /> in /{' '}
+                          <CountUp value={run.outputTokens} duration={0.5} /> out
                         </span>
                         <span>
                           $<CountUp value={run.costUSD} decimals={4} duration={0.5} />
@@ -159,13 +183,12 @@ export const AgentRunHistoryViewer: React.FC<AgentRunHistoryViewerProps> = ({
                       </div>
 
                       {/* Line 3: Duration */}
-                      <div className="text-[10px] gui-text-muted mb-1">
-                        Duration: {duration}s
-                      </div>
+                      <div className="text-[10px] gui-text-muted mb-1">Duration: {duration}s</div>
 
                       {/* Line 4: Tools */}
                       <div className="text-[10px] gui-text-muted mb-1">
-                        Tools: {run.toolsUsed && run.toolsUsed.length > 0 ? (
+                        Tools:{' '}
+                        {run.toolsUsed && run.toolsUsed.length > 0 ? (
                           run.toolsUsed.length > 3 ? (
                             <button
                               onClick={() => toggleRunExpanded(index)}
@@ -192,7 +215,8 @@ export const AgentRunHistoryViewer: React.FC<AgentRunHistoryViewerProps> = ({
                           )}
                           {run.status === 'completed' && run.stopReason && (
                             <div className="gui-text-secondary">
-                              Stop reason: <span className="gui-text-primary">{run.stopReason}</span>
+                              Stop reason:{' '}
+                              <span className="gui-text-primary">{run.stopReason}</span>
                             </div>
                           )}
                           {run.status === 'cancelled' && (
@@ -203,7 +227,10 @@ export const AgentRunHistoryViewer: React.FC<AgentRunHistoryViewerProps> = ({
                               <p className="gui-text-secondary mb-1">All tools used:</p>
                               <div className="flex flex-wrap gap-1">
                                 {run.toolsUsed.map((tool, i) => (
-                                  <span key={i} className="px-1.5 py-0.5 rounded bg-gray-500/20 text-[10px] gui-text-primary">
+                                  <span
+                                    key={i}
+                                    className="px-1.5 py-0.5 rounded bg-gray-500/20 text-[10px] gui-text-primary"
+                                  >
                                     {tool}
                                   </span>
                                 ))}
@@ -227,7 +254,9 @@ export const AgentRunHistoryViewer: React.FC<AgentRunHistoryViewerProps> = ({
           {totalPages > 1 && (
             <div className="px-2 py-2 border-t flex items-center justify-between text-xs text-[var(--text-muted)]">
               <span>
-                Showing {currentPage * pageSize + 1}-{Math.min((currentPage + 1) * pageSize, sortedHistory.length)} of {sortedHistory.length}
+                Showing {currentPage * pageSize + 1}-
+                {Math.min((currentPage + 1) * pageSize, sortedHistory.length)} of{' '}
+                {sortedHistory.length}
               </span>
               <div className="flex gap-1">
                 <button

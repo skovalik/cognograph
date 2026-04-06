@@ -1,6 +1,7 @@
 # Smart E2E Cognitive Testing System
 
-**Status:** Phase A implementation (Tier 1 + Tier 2)
+**Status:** Phase A implementation (Tier 1 + Tier 2)  
+**Plan:** `docs/plans/smart-e2e-cognitive-testing-system.md`
 
 ---
 
@@ -158,4 +159,6 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 ## References
 
+- Plan: `docs/plans/smart-e2e-cognitive-testing-system.md`
 - RL Validation: 79.75/100 average (Marcus 82, James 87, Ravi 72, Jake 78)
+- RL Confidence: P0, OPEN

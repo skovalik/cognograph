@@ -18,7 +18,8 @@ export type IncrementalParseEvent =
 export class IncrementalBatchParser {
   private buffer = ''
   private processedUpTo = 0
-  private phase: 'seeking-nodes' | 'in-nodes' | 'seeking-edges' | 'in-edges' | 'done' = 'seeking-nodes'
+  private phase: 'seeking-nodes' | 'in-nodes' | 'seeking-edges' | 'in-edges' | 'done' =
+    'seeking-nodes'
   private depth = 0
   private inString = false
   private escapeNext = false
@@ -36,9 +37,18 @@ export class IncrementalBatchParser {
       const ch = this.buffer[i]
 
       // Handle string escaping
-      if (this.escapeNext) { this.escapeNext = false; continue }
-      if (ch === '\\' && this.inString) { this.escapeNext = true; continue }
-      if (ch === '"') { this.inString = !this.inString; continue }
+      if (this.escapeNext) {
+        this.escapeNext = false
+        continue
+      }
+      if (ch === '\\' && this.inString) {
+        this.escapeNext = true
+        continue
+      }
+      if (ch === '"') {
+        this.inString = !this.inString
+        continue
+      }
       if (this.inString) continue // skip characters inside strings
 
       // Phase transitions
@@ -95,7 +105,7 @@ export class IncrementalBatchParser {
               const parsed = JSON.parse(objectStr)
               events.push({
                 type: this.phase === 'in-nodes' ? 'node' : 'edge',
-                data: parsed
+                data: parsed,
               })
             } catch {
               events.push({ type: 'error', message: `Failed to parse: ${objectStr.slice(0, 100)}` })

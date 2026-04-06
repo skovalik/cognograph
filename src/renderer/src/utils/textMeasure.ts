@@ -78,10 +78,7 @@ function parseFontSize(font: string): number {
  * @param text  The string to measure.
  * @param font  CSS font shorthand (default: `'14px Inter, sans-serif'`).
  */
-export function measureTextWidth(
-  text: string,
-  font: string = '14px Inter, sans-serif'
-): number {
+export function measureTextWidth(text: string, font: string = '14px Inter, sans-serif'): number {
   const ctx = getContext()
   if (ctx) {
     ctx.font = font
@@ -99,7 +96,7 @@ export const AUTO_FIT_CONSTRAINTS = {
   maxWidth: 600,
   minHeight: 60,
   maxHeight: 2400,
-  padding: 32 // 16px on each side
+  padding: 32, // 16px on each side
 } as const
 
 export const TYPE_BADGE_H = 20
@@ -125,7 +122,7 @@ export function calculateAutoFitDimensions(
   content?: string,
   headerHeight: number = 40,
   footerHeight: number = 36,
-  nodeWidth?: number
+  nodeWidth?: number,
 ): { width: number; height: number } {
   const constraints = AUTO_FIT_CONSTRAINTS
   const effectiveWidth = Math.min(constraints.maxWidth, nodeWidth ?? constraints.maxWidth)
@@ -141,7 +138,10 @@ export function calculateAutoFitDimensions(
 
   if (content) {
     // Strip HTML and measure plain text
-    const plainContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    const plainContent = content
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
 
     if (plainContent.length > 0) {
       // Estimate content dimensions
@@ -157,7 +157,7 @@ export function calculateAutoFitDimensions(
       contentHeight = effectiveLines * lineHeight
       contentWidth = Math.min(
         effectiveWidth,
-        Math.ceil(plainContent.length * 7.5) + constraints.padding
+        Math.ceil(plainContent.length * 7.5) + constraints.padding,
       )
     }
   }
@@ -165,15 +165,19 @@ export function calculateAutoFitDimensions(
   // Calculate final dimensions
   const width = Math.max(
     constraints.minWidth,
-    Math.min(constraints.maxWidth, Math.max(titleRequiredWidth, contentWidth))
+    Math.min(constraints.maxWidth, Math.max(titleRequiredWidth, contentWidth)),
   )
 
   const height = Math.max(
     constraints.minHeight,
     Math.min(
       constraints.maxHeight,
-      TYPE_BADGE_H + headerHeight + Math.max(contentHeight, MIN_BODY_H) + footerHeight + constraints.padding
-    )
+      TYPE_BADGE_H +
+        headerHeight +
+        Math.max(contentHeight, MIN_BODY_H) +
+        footerHeight +
+        constraints.padding,
+    ),
   )
 
   return { width, height }
@@ -192,7 +196,7 @@ export function calculateAutoFitDimensions(
  */
 export function measureContentDimensions(
   element: HTMLElement,
-  options: Partial<typeof AUTO_FIT_CONSTRAINTS> = {}
+  options: Partial<typeof AUTO_FIT_CONSTRAINTS> = {},
 ): { width: number; height: number } {
   const constraints = { ...AUTO_FIT_CONSTRAINTS, ...options }
 
@@ -215,11 +219,11 @@ export function measureContentDimensions(
   // Calculate dimensions with constraints
   const width = Math.max(
     constraints.minWidth,
-    Math.min(constraints.maxWidth, Math.ceil(rect.width + constraints.padding))
+    Math.min(constraints.maxWidth, Math.ceil(rect.width + constraints.padding)),
   )
   const height = Math.max(
     constraints.minHeight,
-    Math.min(constraints.maxHeight, Math.ceil(rect.height + constraints.padding))
+    Math.min(constraints.maxHeight, Math.ceil(rect.height + constraints.padding)),
   )
 
   return { width, height }

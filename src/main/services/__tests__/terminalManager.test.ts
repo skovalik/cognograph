@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // ---------------------------------------------------------------------------
 // Mock node-pty before importing the module under test
@@ -68,14 +68,14 @@ vi.mock('../claudeConfigWriter', () => ({
 
 // Import AFTER mocking
 import {
-  spawnTerminal,
-  writeTerminal,
-  resizeTerminal,
-  killTerminal,
-  killAll,
+  getAllSessions,
   getScrollback,
   getSession,
-  getAllSessions,
+  killAll,
+  killTerminal,
+  resizeTerminal,
+  spawnTerminal,
+  writeTerminal,
 } from '../terminalManager'
 
 // ---------------------------------------------------------------------------
@@ -302,8 +302,8 @@ describe('terminalManager', () => {
 
     expect(getSession('node-idle')!.status).toBe('running')
 
-    // Advance past the idle timeout
-    vi.advanceTimersByTime(31_000)
+    // Advance past the idle timeout (5 minutes)
+    vi.advanceTimersByTime(5 * 60_000 + 1_000)
 
     expect(getSession('node-idle')!.status).toBe('idle')
   })
@@ -313,19 +313,19 @@ describe('terminalManager', () => {
 
     await spawnTerminal({ nodeId: 'node-reset', sessionId: 'sess-reset' })
 
-    // Advance 20s (not enough to trigger idle)
-    vi.advanceTimersByTime(20_000)
+    // Advance 2 min (not enough to trigger 5-min idle)
+    vi.advanceTimersByTime(2 * 60_000)
     expect(getSession('node-reset')!.status).toBe('running')
 
     // New data arrives -> resets the timer
     storedOnDataCb?.('some data\n')
 
-    // Advance another 20s (still not 30s from last data)
-    vi.advanceTimersByTime(20_000)
+    // Advance another 4 min (still not 5 min from last data)
+    vi.advanceTimersByTime(4 * 60_000)
     expect(getSession('node-reset')!.status).toBe('running')
 
-    // Advance past the full 30s from last data
-    vi.advanceTimersByTime(11_000)
+    // Advance past the full 5 min from last data
+    vi.advanceTimersByTime(1 * 60_000 + 1_000)
     expect(getSession('node-reset')!.status).toBe('idle')
   })
 
@@ -458,11 +458,7 @@ describe('terminalManager', () => {
       await spawnTerminal({ nodeId: 'node-gb', sessionId: 'sess-gb', shell: 'git-bash' })
 
       // Should fall back to claude-code (cmd.exe /c claude)
-      expect(mockSpawn).toHaveBeenCalledWith(
-        'cmd.exe',
-        ['/c', 'claude'],
-        expect.any(Object),
-      )
+      expect(mockSpawn).toHaveBeenCalledWith('cmd.exe', ['/c', 'claude'], expect.any(Object))
     } finally {
       Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true })
     }
@@ -471,9 +467,7 @@ describe('terminalManager', () => {
   it('spawnTerminal with shell=git-bash uses found bash.exe path', async () => {
     const originalPlatform = process.platform
     Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
-    mockExistsSync.mockImplementation((p: string) =>
-      p === 'C:\\Program Files\\Git\\bin\\bash.exe'
-    )
+    mockExistsSync.mockImplementation((p: string) => p === 'C:\\Program Files\\Git\\bin\\bash.exe')
 
     try {
       await spawnTerminal({ nodeId: 'node-gb2', sessionId: 'sess-gb2', shell: 'git-bash' })
@@ -541,7 +535,7 @@ describe('terminalManager', () => {
     })
 
     // Allow async fire-and-forget to complete
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await new Promise((resolve) => setTimeout(resolve, 10))
 
     expect(writeClaudeConfig).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -570,13 +564,13 @@ describe('terminalManager', () => {
     })
 
     // Wait for config generation to set claudeConfigCwd
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await new Promise((resolve) => setTimeout(resolve, 10))
 
     // Trigger exit via the stored callback
     storedOnExitCb?.({ exitCode: 0 })
 
     // Allow async cleanup to run
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await new Promise((resolve) => setTimeout(resolve, 10))
 
     expect(cleanupClaudeConfig).toHaveBeenCalledWith('/test/cwd')
   })

@@ -8,8 +8,8 @@
  * placeholder text, character count, and ARIA labels.
  */
 
-import { memo, useRef, useEffect, useCallback, useState } from 'react'
-import { Wand2, Send, X } from 'lucide-react'
+import { Send, Wand2, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 
 interface PromptInputProps {
   value: string
@@ -32,7 +32,7 @@ function PromptInputComponent({
   placeholder = 'Describe what you want to create or change...',
   maxLength = MAX_PROMPT_LENGTH,
   isGenerating = false,
-  autoFocus = true
+  autoFocus = true,
 }: PromptInputProps): JSX.Element {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const [isFocused, setIsFocused] = useState(false)
@@ -64,7 +64,7 @@ function PromptInputComponent({
         onCancel()
       }
     },
-    [value, isGenerating, onSubmit, onCancel]
+    [value, isGenerating, onSubmit, onCancel],
   )
 
   const handleChange = useCallback(
@@ -74,7 +74,7 @@ function PromptInputComponent({
         onChange(newValue)
       }
     },
-    [onChange, maxLength]
+    [onChange, maxLength],
   )
 
   const charCount = value.length

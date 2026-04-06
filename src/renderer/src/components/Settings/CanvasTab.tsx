@@ -12,10 +12,10 @@
  * All changes apply immediately via the workspace store — no save button.
  */
 
-import { memo, useCallback, useState } from 'react'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { cn } from '@/lib/utils'
 import type { GridStyle } from '@shared/types'
+import { memo, useCallback, useState } from 'react'
+import { cn } from '@/lib/utils'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -193,11 +193,7 @@ function CanvasTabComponent(): JSX.Element {
         <label className="block text-[11px] font-medium text-[var(--text-secondary)] uppercase tracking-wider mb-2">
           Grid Color
         </label>
-        <ColorInput
-          value={canvasGridColor}
-          onChange={setCanvasGridColor}
-          label="grid color"
-        />
+        <ColorInput value={canvasGridColor} onChange={setCanvasGridColor} label="grid color" />
       </div>
     </div>
   )

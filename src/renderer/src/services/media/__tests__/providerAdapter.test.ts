@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, vi } from 'vitest'
-import { ProviderAdapter, type ImageGenParams, type MediaResult, type ProviderCapability } from '../providerAdapter'
+import { describe, expect, it, vi } from 'vitest'
+import {
+  type ImageGenParams,
+  type MediaResult,
+  ProviderAdapter,
+  type ProviderCapability,
+} from '../providerAdapter'
 
 // Concrete test adapter to exercise withRetry
 class TestAdapter extends ProviderAdapter {
@@ -31,9 +36,7 @@ describe('ProviderAdapter', () => {
   it('withRetry retries on 429 with backoff', async () => {
     const adapter = new TestAdapter('key', null)
     const error429 = Object.assign(new Error('rate limit'), { status: 429 })
-    const fn = vi.fn()
-      .mockRejectedValueOnce(error429)
-      .mockResolvedValue('ok')
+    const fn = vi.fn().mockRejectedValueOnce(error429).mockResolvedValue('ok')
     const result = await adapter.testRetry(fn, 3)
     expect(result).toBe('ok')
     expect(fn).toHaveBeenCalledTimes(2)
@@ -42,9 +45,7 @@ describe('ProviderAdapter', () => {
   it('withRetry retries on 500', async () => {
     const adapter = new TestAdapter('key', null)
     const error500 = Object.assign(new Error('server error'), { status: 500 })
-    const fn = vi.fn()
-      .mockRejectedValueOnce(error500)
-      .mockResolvedValue('ok')
+    const fn = vi.fn().mockRejectedValueOnce(error500).mockResolvedValue('ok')
     const result = await adapter.testRetry(fn, 3)
     expect(result).toBe('ok')
     expect(fn).toHaveBeenCalledTimes(2)

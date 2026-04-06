@@ -18,9 +18,9 @@
  *        import '@/stores/storeSyncBridge'
  */
 
-import { useWorkspaceStore } from './workspaceStore'
-import { useNodesStore } from './nodesStore'
 import { useEdgesStore } from './edgesStore'
+import { useNodesStore } from './nodesStore'
+import { useWorkspaceStore } from './workspaceStore'
 
 let _syncing = false
 
@@ -45,8 +45,8 @@ unsubscribers.push(
       withSyncGuard(() => {
         useNodesStore.getState().setNodes(nodes)
       })
-    }
-  )
+    },
+  ),
 )
 
 // workspaceStore.edges → edgesStore.edges
@@ -57,8 +57,8 @@ unsubscribers.push(
       withSyncGuard(() => {
         useEdgesStore.getState().setEdges(edges)
       })
-    }
-  )
+    },
+  ),
 )
 
 // nodesStore.nodes → workspaceStore (only the nodes array, mark dirty)
@@ -79,8 +79,8 @@ unsubscribers.push(
           useWorkspaceStore.setState({ nodes, nodeIndex, isDirty: true })
         }
       })
-    }
-  )
+    },
+  ),
 )
 
 // edgesStore.edges → workspaceStore (only the edges array, mark dirty)
@@ -105,8 +105,8 @@ unsubscribers.push(
           useWorkspaceStore.setState({ edges, edgesByTarget, isDirty: true })
         }
       })
-    }
-  )
+    },
+  ),
 )
 
 // Export a no-op to ensure this module gets imported

@@ -11,11 +11,11 @@
  * Proposals expire after configurable timeout (default 5 minutes).
  */
 
-import { create } from 'zustand'
-import type { Proposal, ProposedChange, ProposalStatus } from '@shared/types/bridge'
-import { DEFAULT_BRIDGE_SETTINGS } from '@shared/types/bridge'
-import { useWorkspaceStore } from './workspaceStore'
 import type { NodeData } from '@shared/types'
+import type { Proposal, ProposalStatus, ProposedChange } from '@shared/types/bridge'
+import { DEFAULT_BRIDGE_SETTINGS } from '@shared/types/bridge'
+import { create } from 'zustand'
+import { useWorkspaceStore } from './workspaceStore'
 
 // =============================================================================
 // GHOST ELEMENT TYPES
@@ -67,7 +67,11 @@ interface ProposalStoreState {
   approveChange: (proposalId: string, changeId: string) => void
   rejectChange: (proposalId: string, changeId: string) => void
   rejectProposal: (proposalId: string) => void
-  modifyChangePosition: (proposalId: string, changeId: string, position: { x: number; y: number }) => void
+  modifyChangePosition: (
+    proposalId: string,
+    changeId: string,
+    position: { x: number; y: number },
+  ) => void
   setActiveProposal: (proposalId: string | null) => void
   expireProposal: (proposalId: string) => void
   clearAllProposals: () => void
@@ -96,7 +100,8 @@ function generateGhosts(proposal: Proposal): {
           changeId: change.id,
           nodeType: change.nodeType || 'note',
           title: (change.nodeData?.title as string) || 'New Node',
-          previewContent: (change.nodeData?.description as string) || (change.nodeData?.content as string),
+          previewContent:
+            (change.nodeData?.description as string) || (change.nodeData?.content as string),
           agentName: change.agentName || 'Agent',
           isSelected: true,
         },
@@ -123,23 +128,16 @@ function generateGhosts(proposal: Proposal): {
 /** Remove all ghost elements associated with a proposal */
 function removeGhostsForProposal(
   proposalId: string,
-  state: Pick<ProposalStoreState, 'ghostNodes' | 'ghostEdges'>
+  state: Pick<ProposalStoreState, 'ghostNodes' | 'ghostEdges'>,
 ): { ghostNodes: GhostNodeElement[]; ghostEdges: GhostEdgeElement[] } {
   return {
-    ghostNodes: state.ghostNodes.filter(
-      n => n.data.proposalId !== proposalId
-    ),
-    ghostEdges: state.ghostEdges.filter(
-      e => e.data.proposalId !== proposalId
-    ),
+    ghostNodes: state.ghostNodes.filter((n) => n.data.proposalId !== proposalId),
+    ghostEdges: state.ghostEdges.filter((e) => e.data.proposalId !== proposalId),
   }
 }
 
 /** Apply a single approved change to the workspace store */
-function applyChange(
-  change: ProposedChange,
-  modifications?: Partial<ProposedChange>
-): void {
+function applyChange(change: ProposedChange, modifications?: Partial<ProposedChange>): void {
   const store = useWorkspaceStore.getState()
   const position = modifications?.position || change.position
 
@@ -221,7 +219,7 @@ export const useProposalStore = create<ProposalStoreState>((set, get) => ({
     if (!proposal) return
 
     // Apply selected changes via workspace store
-    const changesToApply = proposal.changes.filter(c => changeIds.includes(c.id))
+    const changesToApply = proposal.changes.filter((c) => changeIds.includes(c.id))
     for (const change of changesToApply) {
       applyChange(change, proposal.userModifications?.[change.id])
     }
@@ -238,19 +236,20 @@ export const useProposalStore = create<ProposalStoreState>((set, get) => ({
 
       // Remove ghost nodes/edges for approved changes
       const ghostNodes = state.ghostNodes.filter(
-        n => !(n.data.proposalId === proposalId && changeIds.includes(n.data.changeId))
+        (n) => !(n.data.proposalId === proposalId && changeIds.includes(n.data.changeId)),
       )
       const ghostEdges = state.ghostEdges.filter(
-        e => !(e.data.proposalId === proposalId && changeIds.includes(e.data.changeId))
+        (e) => !(e.data.proposalId === proposalId && changeIds.includes(e.data.changeId)),
       )
 
       return {
         proposals,
         ghostNodes,
         ghostEdges,
-        activeProposalId: allChangesApproved && state.activeProposalId === proposalId
-          ? null
-          : state.activeProposalId,
+        activeProposalId:
+          allChangesApproved && state.activeProposalId === proposalId
+            ? null
+            : state.activeProposalId,
       }
     })
   },
@@ -262,10 +261,10 @@ export const useProposalStore = create<ProposalStoreState>((set, get) => ({
   rejectChange: (proposalId: string, changeId: string): void => {
     set((state) => {
       const ghostNodes = state.ghostNodes.filter(
-        n => !(n.data.proposalId === proposalId && n.data.changeId === changeId)
+        (n) => !(n.data.proposalId === proposalId && n.data.changeId === changeId),
       )
       const ghostEdges = state.ghostEdges.filter(
-        e => !(e.data.proposalId === proposalId && e.data.changeId === changeId)
+        (e) => !(e.data.proposalId === proposalId && e.data.changeId === changeId),
       )
       return { ghostNodes, ghostEdges }
     })
@@ -298,10 +297,8 @@ export const useProposalStore = create<ProposalStoreState>((set, get) => ({
       proposals[proposalId] = { ...proposal, userModifications: modifications }
 
       // Also update ghost node position on canvas
-      const ghostNodes = state.ghostNodes.map(n =>
-        (n.data.proposalId === proposalId && n.data.changeId === changeId)
-          ? { ...n, position }
-          : n
+      const ghostNodes = state.ghostNodes.map((n) =>
+        n.data.proposalId === proposalId && n.data.changeId === changeId ? { ...n, position } : n,
       )
 
       return { proposals, ghostNodes }

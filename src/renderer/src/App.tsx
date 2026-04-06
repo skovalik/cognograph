@@ -38,6 +38,7 @@ import { ExtractionDragPreview, ExtractionPanel } from './components/extractions
 // ChatPanel import removed — chat is now rendered in-node (ConversationNode expanded mode)
 import { LeftSidebar } from './components/LeftSidebar'
 import { nodeTypes } from './components/nodes'
+import { iframeContentSizes } from './components/nodes/ArtifactNode'
 import { OfflineIndicatorCompact } from './components/OfflineIndicator'
 import { FirstRunSetup } from './components/onboarding/FirstRunSetup'
 import { WelcomeScreen } from './components/onboarding/WelcomeScreen'
@@ -115,7 +116,6 @@ const TemplatePicker = lazy(() =>
 
 import { DEFAULT_EDGE_DATA } from '@shared/types'
 import { v4 as uuidv4 } from 'uuid'
-import { FilterViewDropdown } from './components/FilterViewDropdown'
 import { ProgressIndicator } from './components/ProgressIndicator'
 import { getOnboardingTemplate } from './data/workspaceTemplates'
 
@@ -136,7 +136,6 @@ const KeyboardShortcutsHelp = lazy(() =>
   import('./components/KeyboardShortcutsHelp').then((m) => ({ default: m.KeyboardShortcutsHelp })),
 )
 
-import { useNodesStore } from './stores/nodesStore'
 import { getHistoryActionLabel, useWorkspaceStore } from './stores/workspaceStore'
 import './stores/storeSyncBridge' // Bidirectional sync: workspaceStore ↔ nodesStore/edgesStore
 import type { EdgeData, FontTheme, GuiColors, NodeData, WorkspaceNodeData } from '@shared/types'
@@ -148,10 +147,9 @@ import {
 } from '@shared/types'
 import type { Edge } from '@xyflow/react'
 import { Boxes, CheckSquare, Code, FileText, Folder, Link2, MessageSquare } from 'lucide-react'
-// Cloud components (DemoBanner, StorageWarning, WorkspaceManager) are not
-// included in the open-source build. See cognograph.app for the hosted version.
-import { SpatialRegionOverlay } from './components/action/SpatialRegionOverlay'
-import { SuggestedAutomations } from './components/action/SuggestedAutomations'
+// Cloud features disabled in open-source build (src/web/ not included)
+const DemoBanner = (() => null) as any
+const WorkspaceManager = ((_props: { isOpen: boolean; onClose: () => void }) => null) as any
 // NOTE: ProposalCard, CommandBar, and bridge/BridgeStatusBar are deferred to v0.3.0.
 // See docs/TODO-BRIDGE.md. Uncomment these imports when re-enabling.
 // import { ProposalCard } from './components/bridge/ProposalCard'
@@ -159,7 +157,6 @@ import { SuggestedAutomations } from './components/action/SuggestedAutomations'
 // import { BridgeStatusBar as BridgeStatusBarOld } from './components/bridge/BridgeStatusBar'
 import { BridgeStatusBar } from './components/BridgeStatusBar'
 import { CanvasTableOfContents } from './components/CanvasTableOfContents'
-import { CognitiveLoadMeter } from './components/CognitiveLoadMeter'
 import { ContextScopeBadge } from './components/ContextScopeBadge'
 import { CanvasDistrictOverlay } from './components/canvas/CanvasDistrictOverlay'
 import { EdgeGrammarLegend } from './components/EdgeGrammarLegend'
@@ -168,7 +165,6 @@ import { ConnectionStatus } from './components/Multiplayer'
 import { NodeHoverPreview } from './components/NodeHoverPreview'
 import { NotificationToast } from './components/NotificationToast'
 import { UserCursors } from './components/Presence/UserCursors'
-import { SessionReEntryPrompt } from './components/SessionReEntryPrompt'
 import { TooltipProvider } from './components/ui'
 import { DEFAULT_GUI_DARK, DEFAULT_GUI_LIGHT } from './constants/themePresets'
 import { useActionSubscription } from './hooks/useActionSubscription'
@@ -178,6 +174,7 @@ import { useOnboardingTooltips } from './hooks/useOnboardingTooltips'
 import { useScheduleService } from './hooks/useScheduleService'
 import { computeZoomPerfTier } from './hooks/useZoomPerformanceTier'
 import { disposeAgentEventReceiver, initAgentEventReceiver } from './services/agentEventReceiver'
+import { initSdkToolBridge } from './services/sdkToolBridge'
 import { useAIEditorStore } from './stores/aiEditorStore'
 import { initBridgeIPC, useBridgeStore } from './stores/bridgeStore'
 import { initCCBridgeListener } from './stores/ccBridgeStore'
@@ -196,7 +193,14 @@ import { SyncProviderWrapper, useSyncProvider } from './sync'
 import { resolveGlassStyle } from './utils/glassUtils'
 import { getGPUTier } from './utils/gpuDetection'
 import { layoutEvents } from './utils/layoutEvents'
-import { assignSpreadHandles, calculateOptimalHandles } from './utils/positionResolver'
+import { assignSpreadHandles } from './utils/positionResolver'
+import {
+  buildEdgePairSet,
+  findProximityTargets,
+  getNodeRect,
+  type ProximityTarget,
+} from './utils/proximityConnect'
+// getVisibleSpreadCount moved into positionResolver.ts for visibility-aware slot assignment
 import { filterParentProjects } from './utils/selectionUtils'
 // useWelcomeStore removed — welcome visibility is now derived from nodeCount + sessionDismissed
 import { matchesShortcut } from './utils/shortcuts'
@@ -362,14 +366,20 @@ function Canvas(): JSX.Element {
   const isTouch = useIsTouch()
 
   // Welcome screen visibility — show when canvas is empty (always-on empty state)
-  const nodeCount = useNodesStore((s) => s.nodes.length)
+  // Read nodeCount from workspaceStore directly (not useNodesStore) to avoid race condition:
+  // workspaceId and nodes update synchronously in the same set() call, but useNodesStore
+  // updates asynchronously via storeSyncBridge subscription. Reading from the async store
+  // causes a render frame where workspaceId has changed (resetting sessionDismissed) but
+  // nodeCount still reflects the OLD workspace — flashing the welcome screen over existing nodes.
+  const nodeCount = useWorkspaceStore((s) => s.nodes.length)
   const [sessionDismissed, setSessionDismissed] = useState(false)
 
   // Reset sessionDismissed when workspace changes
   const currentWorkspaceId = useWorkspaceStore((s) => s.workspaceId)
+  const workspaceName = useWorkspaceStore((s) => s.workspaceName)
   useEffect(() => {
     setSessionDismissed(false)
-  }, [currentWorkspaceId])
+  }, [])
 
   const mobileResponsive = getFlag('MOBILE_RESPONSIVE')
 
@@ -381,6 +391,12 @@ function Canvas(): JSX.Element {
 
   const showWelcome =
     nodeCount === 0 && !(isMobile && !mobileResponsive) && !sessionDismissed && !showFirstRunSetup
+
+  const hasExistingWorkspace = !!(
+    currentWorkspaceId &&
+    workspaceName &&
+    workspaceName !== 'Untitled Workspace'
+  )
 
   // iOS virtual keyboard avoidance — set CSS custom property for bottom offset
   useEffect(() => {
@@ -452,7 +468,7 @@ function Canvas(): JSX.Element {
 
   // Snap-to-guide state — use ref + counter to avoid full App re-render on every drag frame
   const snapGuidesRef = useRef<SnapGuide[]>([])
-  const [snapGuidesVersion, setSnapGuidesVersion] = useState(0)
+  const [_snapGuidesVersion, setSnapGuidesVersion] = useState(0)
   const snapGuides = snapGuidesRef.current
   const setSnapGuides = useCallback((guides: SnapGuide[]) => {
     const prev = snapGuidesRef.current
@@ -462,9 +478,14 @@ function Canvas(): JSX.Element {
     setSnapGuidesVersion((v) => v + 1)
   }, [])
   const snapResultRef = useRef<{ x: number; y: number } | null>(null)
+  const proximityTargetsRef = useRef<ProximityTarget[]>([])
+  const lastProximityCheckRef = useRef(0)
+  const isDraggingNodeRef = useRef(false)
+  const draggedNodeIdsRef = useRef<string[]>([])
+  const highlightedProximityRef = useRef<Set<string>>(new Set())
   const viewportRef = useRef<{ x: number; y: number; zoom: number }>({ x: 0, y: 0, zoom: 1 })
   const canvasContainerRef = useRef<HTMLDivElement>(null)
-  const [indicatorZoom, setIndicatorZoom] = useState(1)
+  const [_indicatorZoom, setIndicatorZoom] = useState(1)
   const lastIndicatorZoomRef = useRef(1)
 
   // Multiplayer presence
@@ -474,8 +495,8 @@ function Canvas(): JSX.Element {
   const hiddenNodeTypes = useWorkspaceStore((state) => state.hiddenNodeTypes)
   const edges = useWorkspaceStore((state) => state.edges) ?? []
   const themeSettings = useWorkspaceStore((state) => state.themeSettings)
-  const leftSidebarOpen = useWorkspaceStore((state) => state.leftSidebarOpen)
-  const leftSidebarWidth = useWorkspaceStore((state) => state.leftSidebarWidth)
+  const _leftSidebarOpen = useWorkspaceStore((state) => state.leftSidebarOpen)
+  const _leftSidebarWidth = useWorkspaceStore((state) => state.leftSidebarWidth)
 
   // Keyboard shortcut overrides (program-level)
   const keyboardOverrides = useProgramStore(selectKeyboardOverrides)
@@ -493,6 +514,59 @@ function Canvas(): JSX.Element {
   nodesRef.current = nodes
   const edgesRef = useRef(edges)
   edgesRef.current = edges
+
+  // Track previous edge IDs to detect newly added edges
+  const prevEdgeIdsRef = useRef<Set<string>>(new Set(edges.map((e) => e.id)))
+
+  // Assign spread handles when edges are added (covers linkPair, extractToNode, etc.)
+  useEffect(() => {
+    const currentIds = new Set(edges.map((e) => e.id))
+    const prevIds = prevEdgeIdsRef.current
+    const newEdges = edges.filter((e) => !prevIds.has(e.id))
+    prevEdgeIdsRef.current = currentIds
+
+    if (newEdges.length === 0) return
+
+    const timer = setTimeout(() => {
+      try {
+        const storeNodes = useWorkspaceStore.getState().nodes
+        const nodePositions = new Map<
+          string,
+          { x: number; y: number; width: number; height: number }
+        >()
+        for (const n of storeNodes) {
+          nodePositions.set(n.id, {
+            x: n.position.x,
+            y: n.position.y,
+            width: n.measured?.width ?? (n.width as number) ?? 280,
+            height: n.measured?.height ?? (n.height as number) ?? 140,
+          })
+        }
+
+        // assignSpreadHandles handles visibility-aware slot assignment internally
+        const spreadAssignments = assignSpreadHandles(newEdges, nodePositions)
+
+        const handleUpdates: Array<{
+          edgeId: string
+          sourceHandle: string
+          targetHandle: string
+        }> = []
+        for (const [edgeId, handles] of spreadAssignments) {
+          handleUpdates.push({
+            edgeId,
+            sourceHandle: handles.sourceHandle,
+            targetHandle: handles.targetHandle,
+          })
+        }
+        if (handleUpdates.length > 0) {
+          useWorkspaceStore.getState().updateEdgeHandlesBatch(handleUpdates)
+        }
+      } catch {
+        /* spread handle assignment non-critical */
+      }
+    }, 50)
+    return () => clearTimeout(timer)
+  }, [edges])
 
   // FPS counter (dev tool, toggled with Ctrl+Shift+F)
   const [showFps, setShowFps] = useState(false)
@@ -512,7 +586,8 @@ function Canvas(): JSX.Element {
   const [showExportDialog, setShowExportDialog] = useState(false)
   // Template picker visibility
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
-  // Workspace manager panel (cloud only — not in open-source build)
+  // Workspace manager panel visibility (web only)
+  const [showWorkspaceManager, setShowWorkspaceManager] = useState(false)
   // InlinePrompt state removed — V4 uses TopBar → BottomCommandBar
   // SelectionActionBar visibility and position (toggled with Tab when nodes selected)
   const [selectionActionBarOpen, setSelectionActionBarOpen] = useState(false)
@@ -590,6 +665,13 @@ function Canvas(): JSX.Element {
     return () => window.removeEventListener('open-template-picker', handler)
   }, [])
 
+  // Listen for open-workspace-manager events from Command Palette
+  useEffect(() => {
+    const handler = (): void => setShowWorkspaceManager(true)
+    window.addEventListener('open-workspace-manager', handler)
+    return () => window.removeEventListener('open-workspace-manager', handler)
+  }, [])
+
   // Initialize CC Bridge + Orchestrator + Spatial Bridge IPC listeners (Electron only)
   useEffect(() => {
     if (!(window as any).__ELECTRON__) return
@@ -661,6 +743,9 @@ function Canvas(): JSX.Element {
     initConsoleLogBridge().then((fn) => {
       cleanup = fn
     })
+    // Register SDK tool bridge so main-process Agent SDK tool calls
+    // (executeInRenderer IPC) reach the renderer's executeTool dispatcher
+    initSdkToolBridge()
     return () => {
       cleanup?.()
     }
@@ -701,6 +786,29 @@ function Canvas(): JSX.Element {
       cleanup()
       if (flushTimer) clearTimeout(flushTimer)
     }
+  }, [])
+
+  // Global terminal status change — keeps node.terminal.terminalState in sync
+  // with main process (running/idle/exited). Without this, renderer never learns
+  // about idle transitions and nodes stay visually "hot" after PTY goes quiet.
+  useEffect(() => {
+    if (!(window as any).__ELECTRON__) return
+    if (!window.api?.terminal?.onStatusChangeGlobal) return
+
+    const cleanup = window.api.terminal.onStatusChangeGlobal((nodeId: string, status: string) => {
+      const store = useWorkspaceStore.getState()
+      const node = store.nodes.find((n) => n.id === nodeId)
+      if (!node?.data?.terminal) return
+
+      const validStatus = status as 'running' | 'idle' | 'exited'
+      if (node.data.terminal.terminalState === validStatus) return
+
+      store.updateNode(nodeId, {
+        terminal: { ...node.data.terminal, terminalState: validStatus },
+      })
+    })
+
+    return () => cleanup()
   }, [])
 
   // Reset bridge + proposal state when workspace changes
@@ -844,13 +952,14 @@ function Canvas(): JSX.Element {
   const onEdgesChange = useWorkspaceStore((state) => state.onEdgesChange)
   const onConnect = useWorkspaceStore((state) => state.onConnect)
   const addEdge = useWorkspaceStore((state) => state.addEdge)
-  const deleteNodes = useWorkspaceStore((state) => state.deleteNodes)
+  const _deleteNodes = useWorkspaceStore((state) => state.deleteNodes)
   const softDeleteNodes = useWorkspaceStore((state) => state.softDeleteNodes)
   const deleteEdges = useWorkspaceStore((state) => state.deleteEdges)
   const reconnectEdge = useWorkspaceStore((state) => state.reconnectEdge)
   const selectedNodeIds = useWorkspaceStore((state) => state.selectedNodeIds)
   const selectedEdgeIds = useWorkspaceStore((state) => state.selectedEdgeIds)
   const clearSelection = useWorkspaceStore((state) => state.clearSelection)
+  const closeProperties = useWorkspaceStore((state) => state.closeProperties)
   const setSelectedNodes = useWorkspaceStore((state) => state.setSelectedNodes)
   const activeChatNodeId = useWorkspaceStore((state) => state.activeChatNodeId)
   // openChatNodeIds removed — chat is now rendered in-node
@@ -869,7 +978,7 @@ function Canvas(): JSX.Element {
 
   // PFD Phase 6C: Session interaction recording
   const recordInteraction = useWorkspaceStore((state) => state.recordInteraction)
-  const lastSessionNodeId = useWorkspaceStore((state) => state.lastSessionNodeId)
+  const _lastSessionNodeId = useWorkspaceStore((state) => state.lastSessionNodeId)
 
   // PFD Phase 7B: Calm Mode
   const calmMode = useWorkspaceStore((state) => state.calmMode)
@@ -892,7 +1001,7 @@ function Canvas(): JSX.Element {
   const pasteNodes = useWorkspaceStore((state) => state.pasteNodes)
   const getWorkspaceData = useWorkspaceStore((state) => state.getWorkspaceData)
   const markClean = useWorkspaceStore((state) => state.markClean)
-  const isDirty = useWorkspaceStore((state) => state.isDirty)
+  const setDragging = useWorkspaceStore((state) => state.setDragging)
   const newWorkspace = useWorkspaceStore((state) => state.newWorkspace)
   const loadWorkspace = useWorkspaceStore((state) => state.loadWorkspace)
   const setViewport = useWorkspaceStore((state) => state.setViewport)
@@ -1033,6 +1142,85 @@ function Canvas(): JSX.Element {
       }
     })
   }, [])
+
+  // Utility: highlight/unhighlight proximity target nodes during drag
+  const highlightProximityTargets = useCallback((targetIds: string[]) => {
+    const prev = highlightedProximityRef.current
+    const next = new Set(targetIds)
+
+    // Remove highlight from nodes no longer in proximity
+    for (const id of prev) {
+      if (!next.has(id)) {
+        const el = document.querySelector(`.react-flow__node[data-id="${id}"]`)
+        el?.classList.remove('proximity-target')
+      }
+    }
+
+    // Add highlight to new proximity nodes
+    for (const id of next) {
+      if (!prev.has(id)) {
+        const el = document.querySelector(`.react-flow__node[data-id="${id}"]`)
+        el?.classList.add('proximity-target')
+      }
+    }
+
+    highlightedProximityRef.current = next
+  }, [])
+
+  const clearProximityHighlights = useCallback(() => {
+    for (const id of highlightedProximityRef.current) {
+      const el = document.querySelector(`.react-flow__node[data-id="${id}"]`)
+      el?.classList.remove('proximity-target')
+    }
+    highlightedProximityRef.current.clear()
+    proximityTargetsRef.current = []
+  }, [])
+
+  // Window-level proximity detection for touch drag fallback.
+  // React Flow's onNodeDrag may not fire on touch because d3-drag calls
+  // stopImmediatePropagation on touch events. This window listener
+  // catches pointer events regardless of propagation.
+  useEffect(() => {
+    const handlePointerMoveForProximity = (event: PointerEvent): void => {
+      // Only check during active node drag (ref — sync, no stale closure)
+      if (!isDraggingNodeRef.current) return
+
+      const proximityEnabled =
+        useWorkspaceStore.getState().workspacePreferences?.enableProximityConnect ?? true
+      if (!proximityEnabled) return
+
+      // Throttle to 10fps — shared ref with handleNodeDrag, prevents double-fire
+      const now = Date.now()
+      if (now - lastProximityCheckRef.current < 100) return
+      lastProximityCheckRef.current = now
+
+      const currentNodes = nodesRef.current
+      const draggedIds = draggedNodeIdsRef.current
+      if (draggedIds.length === 0) return
+
+      // Get the primary dragged node — position from nodesRef is ~1 frame behind,
+      // which is acceptable at 100ms throttle (max ~16ms stale)
+      const primaryId = draggedIds[0]
+      const draggedNode = currentNodes.find((n) => n.id === primaryId)
+      if (!draggedNode) return
+      if ((draggedNode.data as NodeData).type === 'conversation') return
+
+      const draggedRect = getNodeRect(draggedNode as Node<NodeData>)
+      const edgePairs = buildEdgePairSet(useWorkspaceStore.getState().edges)
+      const targets = findProximityTargets(
+        draggedRect,
+        currentNodes as Node<NodeData>[],
+        draggedIds,
+        edgePairs,
+      )
+      proximityTargetsRef.current = targets
+      highlightProximityTargets(targets.map((t) => t.nodeId))
+    }
+
+    window.addEventListener('pointermove', handlePointerMoveForProximity)
+    return () => window.removeEventListener('pointermove', handlePointerMoveForProximity)
+  }, [highlightProximityTargets])
+  // highlightProximityTargets has [] deps so it's stable — this effect runs once
 
   // Compute combined edges including workspace member links
   const combinedEdges = useMemo(() => {
@@ -1261,7 +1449,7 @@ function Canvas(): JSX.Element {
   }, [lastCreatedNodeId, clearLastCreatedNodeId])
 
   // Instantiate and load the default onboarding workspace
-  const loadOnboardingWorkspace = useCallback((): void => {
+  const _loadOnboardingWorkspace = useCallback((): void => {
     const template = getOnboardingTemplate()
     if (!template) {
       newWorkspace()
@@ -1380,8 +1568,7 @@ function Canvas(): JSX.Element {
         } else {
           loadOnboardingOrBlank()
         }
-      } catch (error) {
-        console.error('Failed to load workspace:', error)
+      } catch (_error) {
         loadOnboardingOrBlank()
       }
       setIsReady(true)
@@ -1426,9 +1613,8 @@ function Canvas(): JSX.Element {
       } else {
         toast.error('Failed to save workspace')
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to save workspace')
-      console.error('Save error:', error)
     }
   }, [getWorkspaceData, markClean, syncProvider])
 
@@ -1441,7 +1627,7 @@ function Canvas(): JSX.Element {
   // Open workspace handler - web: opens workspace manager panel; desktop: shows file picker dialog
   const handleOpen = useCallback(async (): Promise<void> => {
     if (isWeb) {
-      // Cloud workspace manager not available in open-source build
+      setShowWorkspaceManager(true)
       return
     }
     try {
@@ -1463,11 +1649,10 @@ function Canvas(): JSX.Element {
         loadWorkspace(loadResult.data as Parameters<typeof loadWorkspace>[0])
         sciFiToast('Loaded workspace from file', 'success')
       } else {
-        toast.error('Failed to load: ' + (loadResult.error || 'Unknown error'))
+        toast.error(`Failed to load: ${loadResult.error || 'Unknown error'}`)
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to open workspace')
-      console.error('Open error:', error)
     }
   }, [loadWorkspace])
 
@@ -1494,11 +1679,10 @@ function Canvas(): JSX.Element {
         markClean()
         sciFiToast('Workspace saved to file', 'success')
       } else {
-        toast.error('Failed to save: ' + (result.error || 'Unknown error'))
+        toast.error(`Failed to save: ${result.error || 'Unknown error'}`)
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to save workspace')
-      console.error('Save As error:', error)
     }
   }, [getWorkspaceData, markClean])
 
@@ -1751,14 +1935,19 @@ function Canvas(): JSX.Element {
   // Node drag start handler - capture initial positions for undo/redo
   const handleNodeDragStart = useCallback(
     (_event: React.MouseEvent, node: { id: string }): void => {
+      setDragging(true)
       // Track all selected nodes if this node is selected, otherwise just this node
       const nodesToTrack = selectedNodeIds.includes(node.id) ? selectedNodeIds : [node.id]
       startNodeDrag(nodesToTrack)
+      isDraggingNodeRef.current = true
+      draggedNodeIdsRef.current = nodesToTrack
       snapResultRef.current = null
       setIsDraggingNode(true) // Pause physics during drag
       useUIStore.getState().setCanvasInteracting(true) // Throttle shader quality during drag
+      // Clear any lingering proximity highlights
+      clearProximityHighlights()
     },
-    [selectedNodeIds, startNodeDrag],
+    [selectedNodeIds, startNodeDrag, setDragging, clearProximityHighlights],
   )
 
   // Node drag handler - calculate snap guides during drag
@@ -1807,8 +1996,37 @@ function Canvas(): JSX.Element {
 
       setSnapGuides(result.guides)
       snapResultRef.current = result.snappedPosition
+
+      // ── Proximity auto-connect detection (throttled 10fps) ──
+      // V1 limitation: only checks primary (leader) dragged node rect, not all selected nodes
+      const proximityEnabled =
+        useWorkspaceStore.getState().workspacePreferences?.enableProximityConnect ?? true
+      if (proximityEnabled) {
+        const now = Date.now()
+        if (now - lastProximityCheckRef.current >= 100) {
+          lastProximityCheckRef.current = now
+
+          // Don't connect conversation-to-conversation
+          const draggedNode = currentNodes.find((n) => n.id === node.id)
+          if (draggedNode && (draggedNode.data as NodeData).type !== 'conversation') {
+            const draggedRect = {
+              x: node.position.x,
+              y: node.position.y,
+              width: (draggedNode.width as number) || draggedNode.measured?.width || 280,
+              height: (draggedNode.height as number) || draggedNode.measured?.height || 140,
+            }
+
+            const edgePairs = buildEdgePairSet(useWorkspaceStore.getState().edges)
+            const targets = findProximityTargets(draggedRect, currentNodes, draggedIds, edgePairs)
+            proximityTargetsRef.current = targets
+            highlightProximityTargets(targets.map((t) => t.nodeId))
+          } else {
+            highlightProximityTargets([])
+          }
+        }
+      }
     },
-    [selectedNodeIds],
+    [selectedNodeIds, setSnapGuides, highlightProximityTargets],
   )
 
   // Node drag stop handler - apply snap and check if dropped on a project
@@ -1869,7 +2087,9 @@ function Canvas(): JSX.Element {
           })
         }
 
+        // assignSpreadHandles now handles visibility-aware slot assignment internally
         const spreadAssignments = assignSpreadHandles(affectedEdges, nodePositions)
+
         const handleUpdates: Array<{ edgeId: string; sourceHandle: string; targetHandle: string }> =
           []
         for (const [edgeId, handles] of spreadAssignments) {
@@ -1953,6 +2173,51 @@ function Canvas(): JSX.Element {
         }
       })
 
+      // ── Proximity auto-connect: create edges to nearby conversation nodes ──
+      const proximityEnabled =
+        useWorkspaceStore.getState().workspacePreferences?.enableProximityConnect ?? true
+      if (proximityEnabled) {
+        const droppedNode = nodesRef.current.find((n) => n.id === node.id)
+        // Derive draggedNodeIds — same logic as project containment above
+        const draggedNodeIds = selectedNodeIds.includes(node.id) ? selectedNodeIds : [node.id]
+        if (droppedNode && (droppedNode.data as NodeData).type !== 'conversation') {
+          // Re-check proximity at final position (may differ from last throttled check)
+          const droppedRect = getNodeRect(droppedNode as Node<NodeData>)
+          const edgePairs = buildEdgePairSet(useWorkspaceStore.getState().edges)
+          const finalTargets = findProximityTargets(
+            droppedRect,
+            nodesRef.current as Node<NodeData>[],
+            draggedNodeIds,
+            edgePairs,
+          )
+
+          if (finalTargets.length > 0) {
+            const title = (droppedNode.data as NodeData).title || 'Node'
+            for (const target of finalTargets) {
+              addEdge({
+                source: node.id,
+                target: target.nodeId,
+                sourceHandle: null,
+                targetHandle: null,
+              })
+            }
+            // Single collapsed toast (not one per target)
+            if (finalTargets.length === 1) {
+              sciFiToast(`Connected "${title}" as context`, 'success', 2000)
+            } else {
+              sciFiToast(
+                `Connected "${title}" to ${finalTargets.length} conversations`,
+                'success',
+                2000,
+              )
+            }
+          }
+        }
+      }
+
+      // Always clear visual highlights
+      clearProximityHighlights()
+
       // PFD Phase 5B: Auto-grow spatial regions when nodes are dropped inside
       draggedIds.forEach((id) => {
         const draggedNode = nodesRef.current.find((n) => n.id === id)
@@ -1975,6 +2240,9 @@ function Canvas(): JSX.Element {
 
       // Resume physics after drag
       setIsDraggingNode(false)
+      isDraggingNodeRef.current = false
+      draggedNodeIdsRef.current = []
+      setDragging(false)
       useUIStore.getState().setCanvasInteracting(false) // Restore shader quality
     },
     [
@@ -1986,6 +2254,10 @@ function Canvas(): JSX.Element {
       updateNode,
       spatialRegions,
       autoGrowRegion,
+      setDragging,
+      setSnapGuides,
+      addEdge,
+      clearProximityHighlights,
     ],
   )
 
@@ -2042,6 +2314,7 @@ function Canvas(): JSX.Element {
           }
 
           let content: string
+          let fileDimensions: { width: number; height: number } | undefined
           if (isImage) {
             // Convert to base64 for images
             content = await new Promise<string>((resolve, reject) => {
@@ -2050,6 +2323,25 @@ function Canvas(): JSX.Element {
               reader.onerror = reject
               reader.readAsDataURL(file)
             })
+            // Extract native dimensions for proper node sizing
+            fileDimensions = await new Promise<{ width: number; height: number } | undefined>(
+              (resolve) => {
+                const img = new Image()
+                img.onload = () => {
+                  const chromeH = 88
+                  const chromeW = 24
+                  const maxW = 800
+                  const maxH = 600
+                  const scale = Math.min(1, maxW / img.naturalWidth, maxH / img.naturalHeight)
+                  resolve({
+                    width: Math.max(300, Math.round(img.naturalWidth * scale) + chromeW),
+                    height: Math.max(220, Math.round(img.naturalHeight * scale) + chromeH),
+                  })
+                }
+                img.onerror = () => resolve(undefined)
+                img.src = content
+              },
+            )
           } else {
             // Read as text for other files
             content = await file.text()
@@ -2058,6 +2350,7 @@ function Canvas(): JSX.Element {
           const nodeId = createArtifactFromFile(
             { name: file.name, content, isBase64: isImage },
             { x: position.x + offset.x, y: position.y + offset.y },
+            fileDimensions,
           )
           successCount++
 
@@ -2069,8 +2362,7 @@ function Canvas(): JSX.Element {
               setTimeout(() => nodeEl.classList.remove('node-just-created'), 800)
             }
           })
-        } catch (error) {
-          console.error('Error reading file:', error)
+        } catch (_error) {
           errorCount++
         }
       }
@@ -2182,8 +2474,15 @@ function Canvas(): JSX.Element {
   // ND-friendly: Fast creation without keyboard shortcuts or menus
   const handlePaneClick = useCallback(
     (event: React.MouseEvent): void => {
-      closeContextMenu()
+      // Don't close context menu if a long-press just fired (touch devices)
+      // The pane click fires as part of the touch-end sequence after long-press
+      if (Date.now() - longPressFiredRef.current > 500) {
+        closeContextMenu()
+      }
       setQuickConnectPopup(null)
+
+      // Deselect spatial regions on canvas click
+      useSpatialRegionStore.getState().selectRegion(null)
 
       // PFD Phase 5A: Collapse in-place expansion on canvas click
       if (inPlaceExpandedNodeId && event.button === 0) {
@@ -2279,9 +2578,13 @@ function Canvas(): JSX.Element {
     [screenToFlowPosition, openContextMenu, selectedNodeIds],
   )
 
+  // Track when a long-press fires to prevent handlePaneClick from immediately closing the context menu
+  const longPressFiredRef = useRef(0)
+
   // Long-press handler for touch devices — mirrors handleContextMenu logic
   const handleLongPress = useCallback(
     (position: { clientX: number; clientY: number }, target: HTMLElement) => {
+      longPressFiredRef.current = Date.now()
       const nodeElement = target.closest('[data-id]')
       const edgeElement = target.closest('.react-flow__edge')
 
@@ -2322,9 +2625,18 @@ function Canvas(): JSX.Element {
   )
 
   const longPressHandlers = useLongPress(handleLongPress, {
-    delay: 500,
-    moveThreshold: 10,
+    delay: 400,
+    moveThreshold: 25,
     enabled: isTouch && !demoMode,
+    onPressStart: (target) => {
+      const node = target.closest('[data-id]') as HTMLElement | null
+      if (node) node.classList.add('long-press-pending')
+    },
+    onPressCancel: () => {
+      document.querySelectorAll('.long-press-pending').forEach((el) => {
+        el.classList.remove('long-press-pending')
+      })
+    },
   })
 
   // Quick-connect: create node + edge when popup option is selected
@@ -2570,14 +2882,11 @@ function Canvas(): JSX.Element {
             case 'artifact': {
               const artifactContentType = nodeData.contentType as string
               if (artifactContentType === 'html') {
-                // Direct iframe measurement — bypasses text estimation entirely
-                const nodeEl = document.querySelector(`[data-id="${nodeId}"]`)
-                const iframe = nodeEl?.querySelector('iframe') as HTMLIFrameElement | null
-                if (iframe?.contentDocument?.body) {
-                  const body = iframe.contentDocument.body
-                  const scrollH = body.scrollHeight
-                  const scrollW = body.scrollWidth
+                // S4: Read cached sizes from postMessage (contentDocument blocked without allow-same-origin)
+                const cached = iframeContentSizes.get(nodeId)
+                if (cached) {
                   // Read current scale from the viewport container's CSS transform
+                  const nodeEl = document.querySelector(`[data-id="${nodeId}"]`)
                   const viewportDiv = nodeEl?.querySelector<HTMLElement>('[style*="scale"]')
                   const scaleMatch = viewportDiv?.style.transform?.match(/scale\(([\d.]+)\)/)
                   const scale = scaleMatch ? parseFloat(scaleMatch[1]) : 1.0
@@ -2585,8 +2894,8 @@ function Canvas(): JSX.Element {
                   const chromeW = 24 // padding + borders
                   items.push({
                     nodeId,
-                    width: Math.max(300, Math.round(scrollW * scale) + chromeW),
-                    height: Math.max(200, Math.round(scrollH * scale) + chromeH),
+                    width: Math.max(300, Math.round(cached.width * scale) + chromeW),
+                    height: Math.max(200, Math.round(cached.height * scale) + chromeH),
                   })
                   continue // skip calculateAutoFitDimensions
                 }
@@ -2926,7 +3235,7 @@ function Canvas(): JSX.Element {
 
       // Numbered bookmarks (1-9) — not customizable
       if (!isInputFocused && !(e.ctrlKey || e.metaKey)) {
-        const num = parseInt(e.key)
+        const num = parseInt(e.key, 10)
         if (num >= 1 && num <= 9) {
           e.preventDefault()
           if (e.shiftKey) {
@@ -3084,6 +3393,26 @@ function Canvas(): JSX.Element {
                 reader.readAsDataURL(file)
               })
 
+              // Extract native image dimensions for proper node sizing
+              const dimensions = await new Promise<{ width: number; height: number } | undefined>(
+                (resolve) => {
+                  const img = new Image()
+                  img.onload = () => {
+                    const chromeH = 88 // header ~48px + footer ~36px + borders
+                    const chromeW = 24
+                    const maxW = 800
+                    const maxH = 600
+                    const scale = Math.min(1, maxW / img.naturalWidth, maxH / img.naturalHeight)
+                    resolve({
+                      width: Math.max(300, Math.round(img.naturalWidth * scale) + chromeW),
+                      height: Math.max(220, Math.round(img.naturalHeight * scale) + chromeH),
+                    })
+                  }
+                  img.onerror = () => resolve(undefined)
+                  img.src = content
+                },
+              )
+
               // Derive a filename — clipboard images typically have no name
               const ext = file.type.split('/')[1] || 'png'
               const name =
@@ -3094,6 +3423,7 @@ function Canvas(): JSX.Element {
               const nodeId = createArtifactFromFile(
                 { name, content, isBase64: true },
                 { x: viewportCenter.x + offset.x, y: viewportCenter.y + offset.y },
+                dimensions,
               )
               successCount++
 
@@ -3105,8 +3435,7 @@ function Canvas(): JSX.Element {
                   setTimeout(() => nodeEl.classList.remove('node-just-created'), 800)
                 }
               })
-            } catch (error) {
-              console.error('Error reading pasted image:', error)
+            } catch (_error) {
               errorCount++
             }
           }
@@ -3148,10 +3477,8 @@ function Canvas(): JSX.Element {
   }, [
     selectedNodeIds,
     selectedEdgeIds,
-    deleteNodes,
     softDeleteNodes,
     deleteEdges,
-    clearSelection,
     undo,
     redo,
     copyNodes,
@@ -3174,13 +3501,8 @@ function Canvas(): JSX.Element {
     unlinkSelectedNodes,
     moveNodesForward,
     moveNodesBackward,
-    clearClipboard,
-    clipboardState,
     toggleFocusMode,
     focusModeNodeId,
-    setFocusModeNode,
-    inPlaceExpandedNodeId,
-    collapseInPlaceExpansion,
     toggleBookmark,
     bookmarkedNodeId,
     setNumberedBookmark,
@@ -3197,6 +3519,16 @@ function Canvas(): JSX.Element {
     fitView,
     zoomTo,
     updateNodeInternals,
+    updateNode,
+    toggleNodeCollapsed,
+    goBack,
+    themeSettings.mode,
+    getChildNodeIds,
+    animateNodeCreation,
+    goForward,
+    canGoForward,
+    canGoBack,
+    addAgentNode,
   ])
 
   // Canvas-level Escape: progressive exit (collapse > focus > clipboard > selection > zoom-out)
@@ -3237,9 +3569,45 @@ function Canvas(): JSX.Element {
     fitView,
   ])
 
+  // ═══ Mobile Properties Sheet: drag-to-resize + snap-dismiss ═══
+  const [mobilePropsHeight, setMobilePropsHeight] = useState<number | null>(null)
+  const mobilePropsRef = useRef<HTMLDivElement>(null)
+
+  const handlePropsDragStart = useCallback(
+    (e: React.TouchEvent) => {
+      const startY = e.touches[0].clientY
+      const startHeight = mobilePropsRef.current?.getBoundingClientRect().height ?? 300
+      const maxH = window.innerHeight - 140 // topbar + toolbar
+
+      const onMove = (ev: TouchEvent) => {
+        const deltaY = startY - ev.touches[0].clientY
+        const newH = Math.max(80, Math.min(maxH, startHeight + deltaY))
+        setMobilePropsHeight(newH)
+      }
+      const onEnd = () => {
+        document.removeEventListener('touchmove', onMove)
+        document.removeEventListener('touchend', onEnd)
+        // Snap: if dragged below 120px, dismiss
+        const currentH = mobilePropsRef.current?.getBoundingClientRect().height ?? 300
+        if (currentH < 120) {
+          closeProperties()
+          setMobilePropsHeight(null)
+        }
+      }
+      document.addEventListener('touchmove', onMove, { passive: true })
+      document.addEventListener('touchend', onEnd)
+    },
+    [closeProperties],
+  )
+
+  // Reset sheet height when selection changes
+  useEffect(() => {
+    setMobilePropsHeight(null)
+  }, [])
+
   return (
     <div className="h-screen w-screen relative flex flex-col overflow-hidden">
-      {/* DemoBanner: cloud-only, not in open-source build */}
+      {demoMode && <DemoBanner />}
       {/* Storage warning disabled for now */}
 
       <div
@@ -3346,6 +3714,8 @@ function Canvas(): JSX.Element {
           {/* Welcome Screen — full-screen onboarding overlay with chat input */}
           <WelcomeScreen
             visible={showWelcome}
+            hasExistingWorkspace={hasExistingWorkspace}
+            onDismiss={() => setSessionDismissed(true)}
             onComplete={async (savedInput) => {
               // Dismiss welcome immediately — don't wait for nodes
               setSessionDismissed(true)
@@ -3366,9 +3736,7 @@ function Canvas(): JSX.Element {
                 if (latest) {
                   useUIStore.getState().setActiveCommandId(latest.id)
                 }
-              } catch (err) {
-                console.error('[Welcome] Failed to execute first command:', err)
-              }
+              } catch (_err) {}
             }}
           />
 
@@ -3408,7 +3776,7 @@ function Canvas(): JSX.Element {
                 edgesReconnectable={true}
                 reconnectRadius={20}
                 onPaneClick={handlePaneClick}
-                onContextMenu={demoMode || isTouch ? undefined : handleContextMenu}
+                onContextMenu={demoMode ? undefined : handleContextMenu}
                 {...(isTouch && !demoMode ? longPressHandlers : {})}
                 onSelectionChange={handleSelectionChange}
                 onNodeClick={handleNodeClick}
@@ -3451,6 +3819,7 @@ function Canvas(): JSX.Element {
                 selectNodesOnDrag={false}
                 multiSelectionKeyCode="Shift"
                 selectionKeyCode={null}
+                zoomOnDoubleClick={false}
                 minZoom={0.1}
                 maxZoom={4}
                 proOptions={{ hideAttribution: true }}
@@ -3491,7 +3860,7 @@ function Canvas(): JSX.Element {
                 {!isMobile && minimapVisible && <CollapsibleMinimap />}
                 {/* ZoomIndicator + Fit View removed — V4 uses CanvasBadges ZoomBadge */}
                 <CanvasDistrictOverlay />
-                <SpatialRegionOverlay />
+                {/* SpatialRegionOverlay removed — regions disconnected from UI */}
                 <ExecutionStatusOverlay />
                 <ContextScopeBadge />
                 <NodeHoverPreview />
@@ -3684,6 +4053,7 @@ function Canvas(): JSX.Element {
               // V4: Will route to BottomCommandBar in Task 12
             }}
             onOpenThemeSettings={() => setShowThemeModal(true)}
+            hidden={showWelcome}
           />
 
           {/* Alignment toolbar - shows when multiple nodes selected */}
@@ -3769,8 +4139,19 @@ function Canvas(): JSX.Element {
             selectedNodeIds.length > 0 &&
             selectedEdgeIds.length === 0 &&
             workspacePreferences.propertiesDisplayMode === 'sidebar' && (
-              <div className="mobile-properties-sheet glass-soft pointer-events-auto">
-                <div className="mobile-command-sheet__handle" />
+              <div
+                ref={mobilePropsRef}
+                className="mobile-properties-sheet glass-soft pointer-events-auto"
+                style={
+                  mobilePropsHeight
+                    ? { height: `${mobilePropsHeight}px`, maxHeight: `${mobilePropsHeight}px` }
+                    : undefined
+                }
+              >
+                <div
+                  className="mobile-properties-sheet__handle"
+                  onTouchStart={handlePropsDragStart}
+                />
                 <PropertiesPanel compact />
               </div>
             )}
@@ -3817,7 +4198,6 @@ function Canvas(): JSX.Element {
           <ArtboardOverlay />
           <FocusModeHint />
 
-<<<<<<< HEAD
           <Suspense fallback={null}>
             <WorkflowProgress />
           </Suspense>
@@ -3876,7 +4256,11 @@ function Canvas(): JSX.Element {
             </Suspense>
           )}
 
-          {/* Workspace Manager: cloud-only, not in open-source build */}
+          {/* Workspace Manager */}
+          <WorkspaceManager
+            isOpen={showWorkspaceManager}
+            onClose={() => setShowWorkspaceManager(false)}
+          />
 
           {/* Welcome Overlay - DISABLED: replaced by default onboarding workspace (spec 2026-03-27) */}
           {/* {!isWeb && <WelcomeOverlay onOpenSettings={() => { setSettingsCategory('ai'); setShowSettingsModal(true) }} />} */}

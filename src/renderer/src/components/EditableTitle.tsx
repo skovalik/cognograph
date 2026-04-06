@@ -12,7 +12,7 @@
  * Used across all node types for inline title editing.
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { FormattedText } from './FormattedText'
 
 interface EditableTitleProps {
@@ -28,7 +28,7 @@ function EditableTitleComponent({
   onChange,
   className = '',
   placeholder = 'Untitled',
-  startEditing
+  startEditing,
 }: EditableTitleProps): JSX.Element {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(value)
@@ -58,12 +58,15 @@ function EditableTitleComponent({
   }, [isEditing])
 
   // Enter edit mode on double-click
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    setIsEditing(true)
-    setEditValue(value)
-  }, [value])
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      e.preventDefault()
+      setIsEditing(true)
+      setEditValue(value)
+    },
+    [value],
+  )
 
   // Save changes
   const handleSave = useCallback(() => {
@@ -81,15 +84,18 @@ function EditableTitleComponent({
   }, [value])
 
   // Handle key events
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleSave()
-    } else if (e.key === 'Escape') {
-      e.preventDefault()
-      handleCancel()
-    }
-  }, [handleSave, handleCancel])
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        handleSave()
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        handleCancel()
+      }
+    },
+    [handleSave, handleCancel],
+  )
 
   // Handle input change
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,11 +108,14 @@ function EditableTitleComponent({
   }, [handleSave])
 
   // Stop click propagation when editing to prevent node selection changes
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    if (isEditing) {
-      e.stopPropagation()
-    }
-  }, [isEditing])
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (isEditing) {
+        e.stopPropagation()
+      }
+    },
+    [isEditing],
+  )
 
   if (isEditing) {
     return (
@@ -123,7 +132,7 @@ function EditableTitleComponent({
         style={{
           color: 'inherit',
           font: 'inherit',
-          width: '100%'
+          width: '100%',
         }}
         placeholder={placeholder}
         aria-label="Node title"

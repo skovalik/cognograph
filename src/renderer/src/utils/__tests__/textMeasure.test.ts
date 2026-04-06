@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  measureTextWidth,
-  calculateAutoFitDimensions,
+  __resetContextForTesting,
   AUTO_FIT_CONSTRAINTS,
-  TYPE_BADGE_H,
+  calculateAutoFitDimensions,
   MIN_BODY_H,
-  __resetContextForTesting
+  measureTextWidth,
+  TYPE_BADGE_H,
 } from '../textMeasure'
 
 // ---------------------------------------------------------------------------
@@ -127,7 +127,7 @@ describe('calculateAutoFitDimensions', () => {
       'My Task Title',
       '<p>Some description text here</p>',
       40,
-      36
+      36,
     )
 
     // Snapshot within ±5%:
@@ -163,10 +163,7 @@ describe('calculateAutoFitDimensions', () => {
   })
 
   it('handles CJK text in title', () => {
-    const { width, height } = calculateAutoFitDimensions(
-      '日本語のタイトル',
-      '<p>内容テキスト</p>'
-    )
+    const { width, height } = calculateAutoFitDimensions('日本語のタイトル', '<p>内容テキスト</p>')
     expect(Number.isFinite(width)).toBe(true)
     expect(Number.isFinite(height)).toBe(true)
     expect(width).toBeGreaterThanOrEqual(AUTO_FIT_CONSTRAINTS.minWidth)
@@ -206,7 +203,7 @@ describe('heuristic fallback', () => {
   it('returns a positive width when Canvas is unavailable', () => {
     __resetContextForTesting()
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
-      null as unknown as CanvasRenderingContext2D
+      null as unknown as CanvasRenderingContext2D,
     )
 
     const w = measureTextWidth('Fallback test', '14px Inter, sans-serif')
@@ -218,7 +215,7 @@ describe('heuristic fallback', () => {
   it('heuristic handles CJK as full-width characters', () => {
     __resetContextForTesting()
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
-      null as unknown as CanvasRenderingContext2D
+      null as unknown as CanvasRenderingContext2D,
     )
 
     const latinW = measureTextWidth('AAAA', '14px sans-serif')

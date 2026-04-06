@@ -7,11 +7,11 @@
  * Helper functions for testing Zustand stores in Cognograph.
  */
 
-import { useWorkspaceStore } from '../renderer/src/stores/workspaceStore'
+import type { Edge, Node } from '@xyflow/react'
 import { useAIEditorStore } from '../renderer/src/stores/aiEditorStore'
+import { useWorkspaceStore } from '../renderer/src/stores/workspaceStore'
 import { invalidateContextCache } from '../renderer/src/utils/contextCache'
-import type { Node, Edge } from '@xyflow/react'
-import type { NodeData, EdgeData } from '../shared/types'
+import type { EdgeData, NodeData } from '../shared/types'
 
 // -----------------------------------------------------------------------------
 // Store Reset Utilities
@@ -27,7 +27,7 @@ import type { NodeData, EdgeData } from '../shared/types'
 export function resetWorkspaceStore(): void {
   // Clear the context cache to avoid stale results across tests
   invalidateContextCache()
-  
+
   // Don't use replace (second arg = true) as it removes functions
   useWorkspaceStore.setState({
     // Core data
@@ -86,7 +86,7 @@ export function resetWorkspaceStore(): void {
 
     // Sync
     syncMode: 'local' as const,
-    _syncSource: 'local' as const
+    _syncSource: 'local' as const,
   })
 }
 
@@ -112,7 +112,7 @@ export function resetAIEditorStore(): void {
     generationError: null,
     executionError: null,
     tempIdToRealId: new Map(),
-    useAgentMode: false
+    useAgentMode: false,
   })
 }
 
@@ -152,7 +152,7 @@ export function getAIEditorState() {
  */
 export function seedNode(node: Node<NodeData>): void {
   useWorkspaceStore.setState((state) => ({
-    nodes: [...state.nodes, node]
+    nodes: [...state.nodes, node],
   }))
 }
 
@@ -161,7 +161,7 @@ export function seedNode(node: Node<NodeData>): void {
  */
 export function seedNodes(nodes: Node<NodeData>[]): void {
   useWorkspaceStore.setState((state) => ({
-    nodes: [...state.nodes, ...nodes]
+    nodes: [...state.nodes, ...nodes],
   }))
 }
 
@@ -170,7 +170,7 @@ export function seedNodes(nodes: Node<NodeData>[]): void {
  */
 export function seedEdge(edge: Edge<EdgeData>): void {
   useWorkspaceStore.setState((state) => ({
-    edges: [...state.edges, edge]
+    edges: [...state.edges, edge],
   }))
 }
 
@@ -179,20 +179,17 @@ export function seedEdge(edge: Edge<EdgeData>): void {
  */
 export function seedEdges(edges: Edge<EdgeData>[]): void {
   useWorkspaceStore.setState((state) => ({
-    edges: [...state.edges, ...edges]
+    edges: [...state.edges, ...edges],
   }))
 }
 
 /**
  * Seed a complete workspace fixture.
  */
-export function seedWorkspace(fixture: {
-  nodes: Node<NodeData>[]
-  edges: Edge<EdgeData>[]
-}): void {
+export function seedWorkspace(fixture: { nodes: Node<NodeData>[]; edges: Edge<EdgeData>[] }): void {
   useWorkspaceStore.setState({
     nodes: fixture.nodes,
-    edges: fixture.edges
+    edges: fixture.edges,
   })
 }
 
@@ -209,7 +206,7 @@ export function getHistoryState() {
     history: state.history,
     historyIndex: state.historyIndex,
     canUndo: state.canUndo(),
-    canRedo: state.canRedo()
+    canRedo: state.canRedo(),
   }
 }
 
@@ -219,6 +216,6 @@ export function getHistoryState() {
 export function clearHistory(): void {
   useWorkspaceStore.setState({
     history: [],
-    historyIndex: -1
+    historyIndex: -1,
   })
 }

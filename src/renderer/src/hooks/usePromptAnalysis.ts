@@ -8,9 +8,9 @@
  * Uses pattern matching to detect keywords that indicate fix, refactor, organize, or generate modes.
  */
 
+import type { AIEditorMode } from '@shared/types'
 import { useMemo } from 'react'
 import { useDebounce } from './useDebounce'
-import type { AIEditorMode } from '@shared/types'
 
 export interface PromptAnalysis {
   inferredMode: AIEditorMode | null
@@ -34,7 +34,7 @@ const MODE_PATTERNS: Record<AIEditorMode, RegExp[]> = {
     /\bedit\b/i,
     /\bexpand\b/i,
     /\bsummarize\b/i,
-    /\bcontinue\b/i
+    /\bcontinue\b/i,
   ],
   refactor: [
     /\brefactor\b/i,
@@ -47,7 +47,7 @@ const MODE_PATTERNS: Record<AIEditorMode, RegExp[]> = {
     /\bconsolidate\b/i,
     /\bmodularize\b/i,
     /\bconvert\b/i,
-    /\btransform\b/i
+    /\btransform\b/i,
   ],
   organize: [
     /\borganize\b/i,
@@ -65,7 +65,7 @@ const MODE_PATTERNS: Record<AIEditorMode, RegExp[]> = {
     /\bcluster\b/i,
     /\bmove\b/i,
     /\breposition\b/i,
-    /\brearrange\b/i
+    /\brearrange\b/i,
   ],
   generate: [
     /\bcreate\b/i,
@@ -81,8 +81,8 @@ const MODE_PATTERNS: Record<AIEditorMode, RegExp[]> = {
     /\bextract\b/i,
     /\bspawn\b/i,
     /\bfork\b/i,
-    /\bbranch\b/i
-  ]
+    /\bbranch\b/i,
+  ],
 }
 
 // Autocomplete suggestions based on partial input
@@ -108,7 +108,7 @@ const COMPLETIONS: Record<string, string[]> = {
   bui: ['build a workflow for', 'build a project structure'],
   new: ['new project for', 'new conversation about', 'new task'],
   arr: ['arrange by priority', 'arrange chronologically', 'arrange in grid'],
-  arrange: ['arrange by priority', 'arrange chronologically', 'arrange in grid']
+  arrange: ['arrange by priority', 'arrange chronologically', 'arrange in grid'],
 }
 
 export function usePromptAnalysis(prompt: string): PromptAnalysis {
@@ -124,7 +124,7 @@ export function usePromptAnalysis(prompt: string): PromptAnalysis {
       fix: 0,
       refactor: 0,
       organize: 0,
-      generate: 0
+      generate: 0,
     }
 
     for (const [mode, patterns] of Object.entries(MODE_PATTERNS)) {
@@ -138,20 +138,22 @@ export function usePromptAnalysis(prompt: string): PromptAnalysis {
     // Find highest score
     const maxScore = Math.max(...Object.values(scores))
     if (maxScore === 0) {
-      return { inferredMode: null, confidence: 0, suggestions: generateSuggestions(debouncedPrompt) }
+      return {
+        inferredMode: null,
+        confidence: 0,
+        suggestions: generateSuggestions(debouncedPrompt),
+      }
     }
 
-    const inferredMode = (Object.entries(scores).find(
-      ([, score]) => score === maxScore
-    )?.[0] ?? null) as AIEditorMode | null
+    const inferredMode = (Object.entries(scores).find(([, score]) => score === maxScore)?.[0] ??
+      null) as AIEditorMode | null
 
     // Calculate confidence based on score and uniqueness
     const sortedScores = Object.values(scores).sort((a, b) => b - a)
     const secondHighest = sortedScores[1] ?? 0
 
     // Confidence is higher when there's a clear winner
-    const confidence =
-      maxScore > 0 ? Math.min(1, (maxScore - secondHighest + 1) / 3) : 0
+    const confidence = maxScore > 0 ? Math.min(1, (maxScore - secondHighest + 1) / 3) : 0
 
     // Generate suggestions based on partial input
     const suggestions = generateSuggestions(debouncedPrompt)
@@ -165,14 +167,9 @@ function generateSuggestions(prompt: string): string[] {
 
   // Look for matching completion prefixes
   for (const [prefix, suggestions] of Object.entries(COMPLETIONS)) {
-    if (
-      lowercasePrompt.startsWith(prefix) &&
-      lowercasePrompt.length <= prefix.length + 5
-    ) {
+    if (lowercasePrompt.startsWith(prefix) && lowercasePrompt.length <= prefix.length + 5) {
       // Filter to suggestions that match what user has typed
-      return suggestions.filter((s) =>
-        s.toLowerCase().startsWith(lowercasePrompt)
-      )
+      return suggestions.filter((s) => s.toLowerCase().startsWith(lowercasePrompt))
     }
   }
 

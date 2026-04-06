@@ -12,8 +12,8 @@
  * This version uses `framer-motion` which is already installed in the project.
  */
 
-import { useRef, useEffect, useCallback } from 'react'
-import { useMotionValue, useSpring, useInView } from 'framer-motion'
+import { useInView, useMotionValue, useSpring } from 'framer-motion'
+import { useCallback, useEffect, useRef } from 'react'
 import { cn } from '../../../lib/utils'
 
 export interface CountUpProps {
@@ -102,7 +102,9 @@ export function CountUp({
     }, delay * 1000)
 
     const durationTimeoutId = setTimeout(
-      () => { onEnd?.() },
+      () => {
+        onEnd?.()
+      },
       (delay + duration) * 1000,
     )
 

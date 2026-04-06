@@ -79,7 +79,7 @@ export class PersistentQueue<T extends Record<string, unknown>> {
   async enqueue(data: T): Promise<void> {
     const entry: QueueEntry<T> = {
       timestamp: Date.now(),
-      data
+      data,
     }
 
     try {
@@ -129,7 +129,10 @@ export class PersistentQueue<T extends Record<string, unknown>> {
 
           // Discard entries older than TTL
           if (now - entry.timestamp > this.TTL_MS) {
-            console.warn(`[PersistentQueue] Discarding stale entry (>${Math.floor(this.TTL_MS / 86400000)} days old):`, file)
+            console.warn(
+              `[PersistentQueue] Discarding stale entry (>${Math.floor(this.TTL_MS / 86400000)} days old):`,
+              file,
+            )
             await fs.unlink(filePath)
             continue
           }
@@ -170,7 +173,9 @@ export class PersistentQueue<T extends Record<string, unknown>> {
 
       // Check queue size limit
       if (sorted.length > this.MAX_QUEUE_SIZE) {
-        console.warn(`[PersistentQueue] Queue exceeds ${this.MAX_QUEUE_SIZE} entries, evicting oldest`)
+        console.warn(
+          `[PersistentQueue] Queue exceeds ${this.MAX_QUEUE_SIZE} entries, evicting oldest`,
+        )
         const toEvict = sorted.splice(0, sorted.length - this.MAX_QUEUE_SIZE)
         for (const entry of toEvict) {
           if (entry._filePath) {
@@ -221,7 +226,9 @@ export class PersistentQueue<T extends Record<string, unknown>> {
     const memoryEntries = Array.from(this.inMemoryFallback.values())
     for (const entry of memoryEntries) {
       try {
-        const key = this.deduplicateBy ? String(entry.data[this.deduplicateBy]) : String(entry.timestamp)
+        const key = this.deduplicateBy
+          ? String(entry.data[this.deduplicateBy])
+          : String(entry.timestamp)
         const safeKey = key.replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 64)
         const filename = `${entry.timestamp}-${safeKey}.json`
         const filePath = join(this.queueDir, filename)

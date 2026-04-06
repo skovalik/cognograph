@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import type { SyncProvider } from './SyncProvider'
-import type { Doc as YDoc } from 'yjs'
 import type { Awareness } from 'y-protocols/awareness'
+import type { Doc as YDoc } from 'yjs'
+import type { SyncProvider } from './SyncProvider'
 
 /**
  * CollaborativeSyncProvider extends SyncProvider with Yjs-specific capabilities.

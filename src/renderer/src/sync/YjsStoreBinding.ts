@@ -13,17 +13,17 @@
  * The `_syncSource` flag on the store prevents infinite observer loops.
  */
 
+import type { EdgeData, NodeData } from '@shared/types'
+import type { Edge, Node } from '@xyflow/react'
 import * as Y from 'yjs'
-import type { Node, Edge } from '@xyflow/react'
-import type { NodeData, EdgeData } from '@shared/types'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import {
-  nodeToYMap,
-  yMapToNode,
   edgeToYMap,
+  nodeToYMap,
+  objectToYMap,
   yMapToEdge,
+  yMapToNode,
   yMapToWorkspaceMeta,
-  objectToYMap
 } from './yjs-utils'
 
 export class YjsStoreBinding {
@@ -63,7 +63,7 @@ export class YjsStoreBinding {
         if (this.suppressOutbound) return
         this.handleStoreChange(current.nodes, current.edges, previous.nodes, previous.edges)
       },
-      { equalityFn: (a, b) => a.nodes === b.nodes && a.edges === b.edges }
+      { equalityFn: (a, b) => a.nodes === b.nodes && a.edges === b.edges },
     )
   }
 
@@ -97,7 +97,7 @@ export class YjsStoreBinding {
 
   private handleYNodesChange = (events: Y.YEvent<Y.Map<unknown>>[]): void => {
     // Skip if this change originated from our own store → Y.Doc flow
-    if (events.some(e => e.transaction.origin === 'store-binding')) return
+    if (events.some((e) => e.transaction.origin === 'store-binding')) return
 
     this.suppressOutbound = true
     try {
@@ -115,7 +115,7 @@ export class YjsStoreBinding {
   }
 
   private handleYEdgesChange = (events: Y.YEvent<Y.Array<unknown>>[]): void => {
-    if (events.some(e => e.transaction.origin === 'store-binding')) return
+    if (events.some((e) => e.transaction.origin === 'store-binding')) return
 
     this.suppressOutbound = true
     try {
@@ -133,7 +133,7 @@ export class YjsStoreBinding {
   }
 
   private handleYMetaChange = (events: Y.YEvent<Y.Map<unknown>>[]): void => {
-    if (events.some(e => e.transaction.origin === 'store-binding')) return
+    if (events.some((e) => e.transaction.origin === 'store-binding')) return
 
     this.suppressOutbound = true
     try {
@@ -157,12 +157,12 @@ export class YjsStoreBinding {
     currentNodes: Node<NodeData>[],
     currentEdges: Edge<EdgeData>[],
     previousNodes: Node<NodeData>[],
-    previousEdges: Edge<EdgeData>[]
+    previousEdges: Edge<EdgeData>[],
   ): void {
     this.doc.transact(() => {
       // --- Nodes diff ---
-      const currentNodeIds = new Set(currentNodes.map(n => n.id))
-      const previousNodeIds = new Set(previousNodes.map(n => n.id))
+      const currentNodeIds = new Set(currentNodes.map((n) => n.id))
+      const previousNodeIds = new Set(previousNodes.map((n) => n.id))
 
       // Added nodes
       for (const node of currentNodes) {
@@ -179,7 +179,7 @@ export class YjsStoreBinding {
       }
 
       // Build Map for O(1) lookups
-      const previousNodeMap = new Map(previousNodes.map(n => [n.id, n]))
+      const previousNodeMap = new Map(previousNodes.map((n) => [n.id, n]))
 
       // Updated nodes (position or data changed)
       for (const node of currentNodes) {
@@ -244,13 +244,13 @@ export class YjsStoreBinding {
       }
 
       // --- Edges diff ---
-      const currentEdgeIds = new Set(currentEdges.map(e => e.id))
-      const previousEdgeIds = new Set(previousEdges.map(e => e.id))
+      const currentEdgeIds = new Set(currentEdges.map((e) => e.id))
+      const previousEdgeIds = new Set(previousEdges.map((e) => e.id))
 
       // Find edges to add/remove
-      const edgesToAdd = currentEdges.filter(e => !previousEdgeIds.has(e.id))
+      const edgesToAdd = currentEdges.filter((e) => !previousEdgeIds.has(e.id))
       const edgeIdsToRemove = new Set(
-        previousEdges.filter(e => !currentEdgeIds.has(e.id)).map(e => e.id)
+        previousEdges.filter((e) => !currentEdgeIds.has(e.id)).map((e) => e.id),
       )
 
       // Remove edges (iterate backwards to maintain indices)
@@ -279,7 +279,7 @@ export class YjsStoreBinding {
       }
 
       // Build Map for O(1) previous edge lookups
-      const previousEdgeMap = new Map(previousEdges.map(e => [e.id, e]))
+      const previousEdgeMap = new Map(previousEdges.map((e) => [e.id, e]))
 
       // Update existing edges (data changed)
       for (const edge of currentEdges) {
@@ -321,14 +321,16 @@ export class YjsStoreBinding {
   /**
    * Push workspace settings to Y.Doc.
    */
-  updateWorkspaceMeta(data: Partial<{
-    propertySchema: unknown
-    contextSettings: unknown
-    themeSettings: unknown
-    workspacePreferences: unknown
-    layersSortMode: string
-    manualLayerOrder: string[] | null
-  }>): void {
+  updateWorkspaceMeta(
+    data: Partial<{
+      propertySchema: unknown
+      contextSettings: unknown
+      themeSettings: unknown
+      workspacePreferences: unknown
+      layersSortMode: string
+      manualLayerOrder: string[] | null
+    }>,
+  ): void {
     this.doc.transact(() => {
       if (data.propertySchema !== undefined) {
         this.yMeta.set('propertySchema', JSON.stringify(data.propertySchema))

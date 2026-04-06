@@ -15,9 +15,9 @@ export type ZoomPerfTier = 'full' | 'reduced' | 'minimal'
 const THRESHOLDS = {
   // Zoom OUT past these -> enter tier
   // Raised from 0.34/0.14 — lag starts at 50% with many nodes on canvas
-  enter: { reduced: 0.55, minimal: 0.20 },
+  enter: { reduced: 0.55, minimal: 0.2 },
   // Zoom IN past these -> leave tier
-  leave: { reduced: 0.60, minimal: 0.25 },
+  leave: { reduced: 0.6, minimal: 0.25 },
 }
 
 /**

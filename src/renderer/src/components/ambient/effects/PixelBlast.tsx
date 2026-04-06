@@ -1,46 +1,47 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import React, { useEffect, useRef } from 'react';
-import * as THREE from 'three';
-import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
+import type React from 'react'
+import { useEffect, useRef } from 'react'
+import * as THREE from 'three'
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality'
 
-type PixelBlastVariant = 'square' | 'circle' | 'triangle' | 'diamond';
+type PixelBlastVariant = 'square' | 'circle' | 'triangle' | 'diamond'
 
 type PixelBlastProps = {
-  variant?: PixelBlastVariant;
-  pixelSize?: number;
-  color?: string;
-  className?: string;
-  style?: React.CSSProperties;
-  antialias?: boolean;
-  patternScale?: number;
-  patternDensity?: number;
-  pixelSizeJitter?: number;
-  enableRipples?: boolean;
-  rippleIntensityScale?: number;
-  rippleThickness?: number;
-  rippleSpeed?: number;
-  autoPauseOffscreen?: boolean;
-  speed?: number;
-  transparent?: boolean;
-  edgeFade?: number;
-  qualityRef?: React.RefObject<AdaptiveQualityState>;
-  reportFrame?: () => void;
-};
+  variant?: PixelBlastVariant
+  pixelSize?: number
+  color?: string
+  className?: string
+  style?: React.CSSProperties
+  antialias?: boolean
+  patternScale?: number
+  patternDensity?: number
+  pixelSizeJitter?: number
+  enableRipples?: boolean
+  rippleIntensityScale?: number
+  rippleThickness?: number
+  rippleSpeed?: number
+  autoPauseOffscreen?: boolean
+  speed?: number
+  transparent?: boolean
+  edgeFade?: number
+  qualityRef?: React.RefObject<AdaptiveQualityState>
+  reportFrame?: () => void
+}
 
 const SHAPE_MAP: Record<PixelBlastVariant, number> = {
   square: 0,
   circle: 1,
   triangle: 2,
-  diamond: 3
-};
+  diamond: 3,
+}
 
 const VERTEX_SRC = `
 void main() {
   gl_Position = vec4(position, 1.0);
 }
-`;
+`
 const FRAGMENT_SRC = `
 precision highp float;
 
@@ -206,9 +207,9 @@ void main(){
 
   fragColor = vec4(srgbColor, M);
 }
-`;
+`
 
-const MAX_CLICKS = 10;
+const MAX_CLICKS = 10
 
 const PixelBlast: React.FC<PixelBlastProps> = ({
   variant = 'square',
@@ -231,84 +232,85 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
   qualityRef,
   reportFrame: reportFrameFn,
 }) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const visibilityRef = useRef({ visible: true });
-  const speedRef = useRef(speed);
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const visibilityRef = useRef({ visible: true })
+  const speedRef = useRef(speed)
 
   const threeRef = useRef<{
-    renderer: THREE.WebGLRenderer;
-    scene: THREE.Scene;
-    camera: THREE.OrthographicCamera;
-    material: THREE.ShaderMaterial;
-    clock: THREE.Clock;
-    clickIx: number;
+    renderer: THREE.WebGLRenderer
+    scene: THREE.Scene
+    camera: THREE.OrthographicCamera
+    material: THREE.ShaderMaterial
+    clock: THREE.Clock
+    clickIx: number
     uniforms: {
-      uResolution: { value: THREE.Vector2 };
-      uTime: { value: number };
-      uColor: { value: THREE.Color };
-      uClickPos: { value: THREE.Vector2[] };
-      uClickTimes: { value: Float32Array };
-      uShapeType: { value: number };
-      uPixelSize: { value: number };
-      uScale: { value: number };
-      uDensity: { value: number };
-      uPixelJitter: { value: number };
-      uEnableRipples: { value: number };
-      uRippleSpeed: { value: number };
-      uRippleThickness: { value: number };
-      uRippleIntensity: { value: number };
-      uEdgeFade: { value: number };
-    };
-    resizeObserver?: ResizeObserver;
-    raf?: number;
-    quad?: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>;
-    timeOffset?: number;
-    onPointerDown?: (e: PointerEvent) => void;
-  } | null>(null);
+      uResolution: { value: THREE.Vector2 }
+      uTime: { value: number }
+      uColor: { value: THREE.Color }
+      uClickPos: { value: THREE.Vector2[] }
+      uClickTimes: { value: Float32Array }
+      uShapeType: { value: number }
+      uPixelSize: { value: number }
+      uScale: { value: number }
+      uDensity: { value: number }
+      uPixelJitter: { value: number }
+      uEnableRipples: { value: number }
+      uRippleSpeed: { value: number }
+      uRippleThickness: { value: number }
+      uRippleIntensity: { value: number }
+      uEdgeFade: { value: number }
+    }
+    resizeObserver?: ResizeObserver
+    raf?: number
+    quad?: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>
+    timeOffset?: number
+    onPointerDown?: (e: PointerEvent) => void
+  } | null>(null)
 
-  const prevAntialiasRef = useRef<boolean | null>(null);
+  const prevAntialiasRef = useRef<boolean | null>(null)
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    speedRef.current = speed;
+    const container = containerRef.current
+    if (!container) return
+    speedRef.current = speed
 
     // Only antialias requires a full WebGL context rebuild
-    const mustReinit = !threeRef.current || prevAntialiasRef.current !== antialias;
+    const mustReinit = !threeRef.current || prevAntialiasRef.current !== antialias
 
     if (mustReinit) {
       if (threeRef.current) {
-        const t = threeRef.current;
-        t.resizeObserver?.disconnect();
-        cancelAnimationFrame(t.raf!);
-        if (t.onPointerDown) window.removeEventListener('pointerdown', t.onPointerDown);
-        t.quad?.geometry.dispose();
-        t.material.dispose();
-        t.renderer.dispose();
-        if (t.renderer.domElement.parentElement === container) container.removeChild(t.renderer.domElement);
-        threeRef.current = null;
+        const t = threeRef.current
+        t.resizeObserver?.disconnect()
+        cancelAnimationFrame(t.raf!)
+        if (t.onPointerDown) window.removeEventListener('pointerdown', t.onPointerDown)
+        t.quad?.geometry.dispose()
+        t.material.dispose()
+        t.renderer.dispose()
+        if (t.renderer.domElement.parentElement === container)
+          container.removeChild(t.renderer.domElement)
+        threeRef.current = null
       }
 
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement('canvas')
       const renderer = new THREE.WebGLRenderer({
         canvas,
         antialias,
         alpha: true,
-        powerPreference: 'high-performance'
-      });
-      renderer.domElement.style.width = '100%';
-      renderer.domElement.style.height = '100%';
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-      container.appendChild(renderer.domElement);
-      if (transparent) renderer.setClearAlpha(0);
-      else renderer.setClearColor(0x000000, 1);
+        powerPreference: 'high-performance',
+      })
+      renderer.domElement.style.width = '100%'
+      renderer.domElement.style.height = '100%'
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+      container.appendChild(renderer.domElement)
+      if (transparent) renderer.setClearAlpha(0)
+      else renderer.setClearColor(0x000000, 1)
 
       const uniforms = {
         uResolution: { value: new THREE.Vector2(0, 0) },
         uTime: { value: 0 },
         uColor: { value: new THREE.Color(color) },
         uClickPos: {
-          value: Array.from({ length: MAX_CLICKS }, () => new THREE.Vector2(-1, -1))
+          value: Array.from({ length: MAX_CLICKS }, () => new THREE.Vector2(-1, -1)),
         },
         uClickTimes: { value: new Float32Array(MAX_CLICKS) },
         uShapeType: { value: SHAPE_MAP[variant] ?? 0 },
@@ -320,11 +322,11 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
         uRippleSpeed: { value: rippleSpeed },
         uRippleThickness: { value: rippleThickness },
         uRippleIntensity: { value: rippleIntensityScale },
-        uEdgeFade: { value: edgeFade }
-      };
+        uEdgeFade: { value: edgeFade },
+      }
 
-      const scene = new THREE.Scene();
-      const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      const scene = new THREE.Scene()
+      const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
       const material = new THREE.ShaderMaterial({
         vertexShader: VERTEX_SRC,
         fragmentShader: FRAGMENT_SRC,
@@ -332,61 +334,61 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
         transparent: true,
         depthTest: false,
         depthWrite: false,
-        glslVersion: THREE.GLSL3
-      });
-      const quadGeom = new THREE.PlaneGeometry(2, 2);
-      const quad = new THREE.Mesh(quadGeom, material);
-      scene.add(quad);
+        glslVersion: THREE.GLSL3,
+      })
+      const quadGeom = new THREE.PlaneGeometry(2, 2)
+      const quad = new THREE.Mesh(quadGeom, material)
+      scene.add(quad)
 
-      const clock = new THREE.Clock();
+      const clock = new THREE.Clock()
       const setSize = () => {
-        const w = container.clientWidth || 1;
-        const h = container.clientHeight || 1;
-        renderer.setSize(w, h, false);
-        uniforms.uResolution.value.set(renderer.domElement.width, renderer.domElement.height);
-        uniforms.uPixelSize.value = pixelSize * renderer.getPixelRatio();
-      };
-      setSize();
-      const ro = new ResizeObserver(setSize);
-      ro.observe(container);
+        const w = container.clientWidth || 1
+        const h = container.clientHeight || 1
+        renderer.setSize(w, h, false)
+        uniforms.uResolution.value.set(renderer.domElement.width, renderer.domElement.height)
+        uniforms.uPixelSize.value = pixelSize * renderer.getPixelRatio()
+      }
+      setSize()
+      const ro = new ResizeObserver(setSize)
+      ro.observe(container)
 
       const randomFloat = (): number => {
         if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
-          const u32 = new Uint32Array(1);
-          window.crypto.getRandomValues(u32);
-          return u32[0] / 0xffffffff;
+          const u32 = new Uint32Array(1)
+          window.crypto.getRandomValues(u32)
+          return u32[0] / 0xffffffff
         }
-        return Math.random();
-      };
-      const timeOffset = randomFloat() * 1000;
+        return Math.random()
+      }
+      const timeOffset = randomFloat() * 1000
 
       // Ripple click handler — attached to window because the ambient
       // layer container has pointer-events:none.
       const onPointerDown = (e: PointerEvent) => {
-        const rect = renderer.domElement.getBoundingClientRect();
-        const scaleX = renderer.domElement.width / rect.width;
-        const scaleY = renderer.domElement.height / rect.height;
-        const fx = (e.clientX - rect.left) * scaleX;
-        const fy = (rect.height - (e.clientY - rect.top)) * scaleY;
-        const ix = threeRef.current?.clickIx ?? 0;
-        uniforms.uClickPos.value[ix].set(fx, fy);
-        uniforms.uClickTimes.value[ix] = uniforms.uTime.value;
-        if (threeRef.current) threeRef.current.clickIx = (ix + 1) % MAX_CLICKS;
-      };
-      window.addEventListener('pointerdown', onPointerDown, { passive: true });
+        const rect = renderer.domElement.getBoundingClientRect()
+        const scaleX = renderer.domElement.width / rect.width
+        const scaleY = renderer.domElement.height / rect.height
+        const fx = (e.clientX - rect.left) * scaleX
+        const fy = (rect.height - (e.clientY - rect.top)) * scaleY
+        const ix = threeRef.current?.clickIx ?? 0
+        uniforms.uClickPos.value[ix].set(fx, fy)
+        uniforms.uClickTimes.value[ix] = uniforms.uTime.value
+        if (threeRef.current) threeRef.current.clickIx = (ix + 1) % MAX_CLICKS
+      }
+      window.addEventListener('pointerdown', onPointerDown, { passive: true })
 
-      let raf = 0;
-      let frameCount = 0;
+      let raf = 0
+      let frameCount = 0
       const animate = () => {
-        raf = requestAnimationFrame(animate);
-        if (autoPauseOffscreen && !visibilityRef.current.visible) return;
-        if (qualityRef?.current && !qualityRef.current.shouldRender) return;
-        if (reportFrameFn) reportFrameFn();
-        if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
-        uniforms.uTime.value = timeOffset + clock.getElapsedTime() * speedRef.current;
-        renderer.render(scene, camera);
-      };
-      raf = requestAnimationFrame(animate);
+        raf = requestAnimationFrame(animate)
+        if (autoPauseOffscreen && !visibilityRef.current.visible) return
+        if (qualityRef?.current && !qualityRef.current.shouldRender) return
+        if (reportFrameFn) reportFrameFn()
+        if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return
+        uniforms.uTime.value = timeOffset + clock.getElapsedTime() * speedRef.current
+        renderer.render(scene, camera)
+      }
+      raf = requestAnimationFrame(animate)
 
       threeRef.current = {
         renderer,
@@ -401,40 +403,41 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
         quad,
         timeOffset,
         onPointerDown,
-      };
+      }
     } else {
       // Hot-update uniforms without rebuilding the WebGL context
-      const t = threeRef.current!;
-      t.uniforms.uShapeType.value = SHAPE_MAP[variant] ?? 0;
-      t.uniforms.uPixelSize.value = pixelSize * t.renderer.getPixelRatio();
-      t.uniforms.uColor.value.set(color);
-      t.uniforms.uScale.value = patternScale;
-      t.uniforms.uDensity.value = patternDensity;
-      t.uniforms.uPixelJitter.value = pixelSizeJitter;
-      t.uniforms.uEnableRipples.value = enableRipples ? 1 : 0;
-      t.uniforms.uRippleIntensity.value = rippleIntensityScale;
-      t.uniforms.uRippleThickness.value = rippleThickness;
-      t.uniforms.uRippleSpeed.value = rippleSpeed;
-      t.uniforms.uEdgeFade.value = edgeFade;
-      if (transparent) t.renderer.setClearAlpha(0);
-      else t.renderer.setClearColor(0x000000, 1);
+      const t = threeRef.current!
+      t.uniforms.uShapeType.value = SHAPE_MAP[variant] ?? 0
+      t.uniforms.uPixelSize.value = pixelSize * t.renderer.getPixelRatio()
+      t.uniforms.uColor.value.set(color)
+      t.uniforms.uScale.value = patternScale
+      t.uniforms.uDensity.value = patternDensity
+      t.uniforms.uPixelJitter.value = pixelSizeJitter
+      t.uniforms.uEnableRipples.value = enableRipples ? 1 : 0
+      t.uniforms.uRippleIntensity.value = rippleIntensityScale
+      t.uniforms.uRippleThickness.value = rippleThickness
+      t.uniforms.uRippleSpeed.value = rippleSpeed
+      t.uniforms.uEdgeFade.value = edgeFade
+      if (transparent) t.renderer.setClearAlpha(0)
+      else t.renderer.setClearColor(0x000000, 1)
     }
 
-    prevAntialiasRef.current = antialias;
+    prevAntialiasRef.current = antialias
 
     return () => {
-      if (threeRef.current && mustReinit) return;
-      if (!threeRef.current) return;
-      const t = threeRef.current;
-      t.resizeObserver?.disconnect();
-      cancelAnimationFrame(t.raf!);
-      if (t.onPointerDown) window.removeEventListener('pointerdown', t.onPointerDown);
-      t.quad?.geometry.dispose();
-      t.material.dispose();
-      t.renderer.dispose();
-      if (t.renderer.domElement.parentElement === container) container.removeChild(t.renderer.domElement);
-      threeRef.current = null;
-    };
+      if (threeRef.current && mustReinit) return
+      if (!threeRef.current) return
+      const t = threeRef.current
+      t.resizeObserver?.disconnect()
+      cancelAnimationFrame(t.raf!)
+      if (t.onPointerDown) window.removeEventListener('pointerdown', t.onPointerDown)
+      t.quad?.geometry.dispose()
+      t.material.dispose()
+      t.renderer.dispose()
+      if (t.renderer.domElement.parentElement === container)
+        container.removeChild(t.renderer.domElement)
+      threeRef.current = null
+    }
   }, [
     antialias,
     pixelSize,
@@ -450,8 +453,8 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
     autoPauseOffscreen,
     variant,
     color,
-    speed
-  ]);
+    speed,
+  ])
 
   return (
     <div
@@ -460,7 +463,7 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
       style={style}
       aria-label="PixelBlast interactive background"
     />
-  );
-};
+  )
+}
 
-export default PixelBlast;
+export default PixelBlast

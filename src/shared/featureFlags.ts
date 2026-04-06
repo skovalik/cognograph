@@ -71,10 +71,7 @@ function envOverride(flag: FeatureFlagName): boolean | undefined {
   try {
     // Environment variables use SCREAMING_SNAKE with a prefix
     const envKey = `COGNOGRAPH_FF_${flag}`
-    const value =
-      typeof process !== 'undefined' && process.env
-        ? process.env[envKey]
-        : undefined
+    const value = typeof process !== 'undefined' && process.env ? process.env[envKey] : undefined
 
     if (value === undefined) return undefined
     return value === '1' || value.toLowerCase() === 'true'

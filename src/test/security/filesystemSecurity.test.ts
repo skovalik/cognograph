@@ -13,19 +13,19 @@
  * 6. Normal file within allowed paths → allowed (regression check)
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import * as fs from 'fs'
-import * as path from 'path'
 import * as os from 'os'
+import * as path from 'path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  validatePath,
-  validateCommand,
-  isRegexSafe,
-  isProtectedPath,
-  readFile,
-  writeFile,
   editFile,
+  isProtectedPath,
+  isRegexSafe,
+  readFile,
   searchFiles,
+  validateCommand,
+  validatePath,
+  writeFile,
 } from '../../main/agent/filesystemTools'
 
 // ---------------------------------------------------------------------------
@@ -74,7 +74,9 @@ describe('Symlink Security (0.1a)', () => {
       fs.symlinkSync(secretFile, symlinkPath)
     } catch {
       // Symlink creation may fail without admin on Windows — skip gracefully
-      console.warn('Skipping symlink test — symlink creation requires elevated privileges on this platform')
+      console.warn(
+        'Skipping symlink test — symlink creation requires elevated privileges on this platform',
+      )
       return
     }
 
@@ -94,7 +96,9 @@ describe('Symlink Security (0.1a)', () => {
     try {
       fs.symlinkSync(secretDir, symlinkPath, 'dir')
     } catch {
-      console.warn('Skipping directory symlink test — symlink creation requires elevated privileges on this platform')
+      console.warn(
+        'Skipping directory symlink test — symlink creation requires elevated privileges on this platform',
+      )
       return
     }
 
@@ -113,7 +117,9 @@ describe('Symlink Security (0.1a)', () => {
     try {
       fs.symlinkSync(targetFile, symlinkPath)
     } catch {
-      console.warn('Skipping symlink test — symlink creation requires elevated privileges on this platform')
+      console.warn(
+        'Skipping symlink test — symlink creation requires elevated privileges on this platform',
+      )
       return
     }
 
@@ -137,7 +143,9 @@ describe('Trusted Symlink Targets (0.1a)', () => {
     try {
       fs.symlinkSync(mcpFile, symlinkPath)
     } catch {
-      console.warn('Skipping trusted symlink test — symlink creation requires elevated privileges on this platform')
+      console.warn(
+        'Skipping trusted symlink test — symlink creation requires elevated privileges on this platform',
+      )
       return
     }
 
@@ -158,7 +166,9 @@ describe('Trusted Symlink Targets (0.1a)', () => {
     try {
       fs.symlinkSync(untrustedFile, symlinkPath)
     } catch {
-      console.warn('Skipping untrusted symlink test — symlink creation requires elevated privileges on this platform')
+      console.warn(
+        'Skipping untrusted symlink test — symlink creation requires elevated privileges on this platform',
+      )
       return
     }
 
@@ -271,8 +281,12 @@ describe('ReDoS Pattern Detection (0.1h)', () => {
 
 describe('Protected Paths (0.1l)', () => {
   it('should detect .cognograph/ as protected', () => {
-    expect(isProtectedPath('/home/user/project/.cognograph/config.json')).toBe('.cognograph/ directory')
-    expect(isProtectedPath('C:\\Users\\me\\project\\.cognograph\\settings.json')).toBe('.cognograph/ directory')
+    expect(isProtectedPath('/home/user/project/.cognograph/config.json')).toBe(
+      '.cognograph/ directory',
+    )
+    expect(isProtectedPath('C:\\Users\\me\\project\\.cognograph\\settings.json')).toBe(
+      '.cognograph/ directory',
+    )
   })
 
   it('should detect .mcp.json as protected', () => {

@@ -7,23 +7,23 @@
  * Tests for undo/redo functionality in the workspace store.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { useWorkspaceStore } from '../workspaceStore'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  resetWorkspaceStore,
-  getWorkspaceState,
+  clearHistory,
   getHistoryState,
+  getWorkspaceState,
+  resetWorkspaceStore,
+  seedEdge,
   seedNode,
   seedNodes,
-  seedEdge,
-  clearHistory
 } from '../../../../test/storeUtils'
 import {
   createNoteNode,
   createTaskNode,
   createTestEdge,
-  resetTestCounters
+  resetTestCounters,
 } from '../../../../test/utils'
+import { useWorkspaceStore } from '../workspaceStore'
 
 describe('workspaceStore - Undo/Redo', () => {
   beforeEach(() => {
@@ -164,7 +164,7 @@ describe('workspaceStore - Undo/Redo', () => {
       undo()
 
       expect((getWorkspaceState().nodes[0]!.data as { content: string }).content).toBe(
-        'Original content'
+        'Original content',
       )
     })
   })

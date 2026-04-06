@@ -13,14 +13,14 @@
  */
 
 import { ipcMain } from 'electron'
+import type { OrchestratorNodeData } from '../shared/types/nodes'
 import {
-  startOrchestration,
-  pauseOrchestration,
-  resumeOrchestration,
   abortOrchestration,
   getActiveRuns,
+  pauseOrchestration,
+  resumeOrchestration,
+  startOrchestration,
 } from './services/orchestratorService'
-import type { OrchestratorNodeData } from '../shared/types/nodes'
 
 export function registerOrchestratorHandlers(): void {
   ipcMain.handle(
@@ -48,7 +48,7 @@ export function registerOrchestratorHandlers(): void {
       }
 
       return startOrchestration(orchestratorId, stubData, parentOrchestrationId)
-    }
+    },
   )
 
   ipcMain.handle('orchestrator:pause', async (_event, orchestratorId: string) => {

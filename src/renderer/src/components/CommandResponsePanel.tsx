@@ -7,6 +7,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { useUIStore } from '../stores/uiStore'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { requestFitView } from '../utils/layoutEvents'
@@ -63,6 +64,32 @@ function CommandResponsePanelComponent(): JSX.Element {
   const setSelectedNodes = useWorkspaceStore((s) => s.setSelectedNodes)
   const threadRef = useRef<HTMLDivElement>(null)
   const activeCommandId = useUIStore((s) => s.activeCommandId)
+  const isMobile = useIsMobile()
+  const panelRef = useRef<HTMLDivElement>(null)
+  const [mobileHeight, setMobileHeight] = useState<number | null>(null)
+
+  // Touch-drag resize for mobile bottom sheet
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (!isMobile) return
+      const startY = e.touches[0].clientY
+      const startHeight = panelRef.current?.getBoundingClientRect().height ?? 200
+      const maxH = window.innerHeight - 72 // toolbar height
+
+      const onMove = (ev: TouchEvent) => {
+        const deltaY = startY - ev.touches[0].clientY
+        const newH = Math.max(120, Math.min(maxH, startHeight + deltaY))
+        setMobileHeight(newH)
+      }
+      const onEnd = () => {
+        document.removeEventListener('touchmove', onMove)
+        document.removeEventListener('touchend', onEnd)
+      }
+      document.addEventListener('touchmove', onMove, { passive: true })
+      document.addEventListener('touchend', onEnd)
+    },
+    [isMobile],
+  )
 
   // Derive a key that changes on both new entries AND streaming content updates.
   // This ensures we auto-scroll during agent narration streaming, not just on new entries.
@@ -92,8 +119,9 @@ function CommandResponsePanelComponent(): JSX.Element {
     useWorkspaceStore.getState().updateCommandLogEntry(latestRunning.id, { status: 'cancelled' })
   }, [latestRunning])
 
-  // Collapsed: just the toggle button
+  // Collapsed: just the toggle button (hidden on mobile — accessed via Toolbar Log button)
   if (!responsePanelOpen) {
+    if (isMobile) return null
     return (
       <button
         type="button"
@@ -109,9 +137,19 @@ function CommandResponsePanelComponent(): JSX.Element {
 
   return (
     <div
+      ref={panelRef}
       className="cmd-response-panel glass-soft"
-      style={leftSidebarOpen ? { left: `${leftSidebarWidth + 16}px` } : undefined}
+      style={{
+        ...(leftSidebarOpen && !isMobile ? { left: `${leftSidebarWidth + 16}px` } : {}),
+        ...(isMobile && mobileHeight
+          ? { height: `${mobileHeight}px`, maxHeight: `${mobileHeight}px` }
+          : {}),
+      }}
     >
+      {/* Mobile drag handle — touch to resize */}
+      {isMobile && (
+        <div className="cmd-response-panel__drag-handle" onTouchStart={handleTouchStart} />
+      )}
       {/* Header: toggle + cancel */}
       <div className="cmd-response-panel__header">
         <button
@@ -166,7 +204,10 @@ function CommandResponsePanelComponent(): JSX.Element {
               {/* Response body — only if narration exists */}
               {entry.narration && (
                 <div className="cmd-response-panel__entry-response">
-                  <div className="prose prose-sm prose-invert max-w-none">
+                  <div
+                    className="prose prose-sm max-w-none"
+                    style={{ color: 'var(--text-primary)' }}
+                  >
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{entry.narration}</ReactMarkdown>
                   </div>
                   {/* Affected node links */}
@@ -197,8 +238,11 @@ function CommandResponsePanelComponent(): JSX.Element {
               {/* Thinking indicator with elapsed timer for running entries */}
               {entry.status === 'running' && (
                 <div className="cmd-response-panel__entry-thinking">
-                  <div className="cmd-response-panel__thinking-dot" />
-                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  <Loader2
+                    className="w-3.5 h-3.5 animate-spin"
+                    style={{ color: 'var(--accent-glow)' }}
+                  />
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                     {entry.narration ? 'Working' : 'Generating'}...
                   </span>
                   <ElapsedTimer startTime={entry.timestamp} />

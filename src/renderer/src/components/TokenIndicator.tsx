@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
-import { useAIEditorStore } from '../stores/aiEditorStore'
+import { memo } from 'react'
 import { useIsExtracting } from '../stores'
+import { useAIEditorStore } from '../stores/aiEditorStore'
 
 export const TokenIndicator = memo(function TokenIndicator() {
   const isGenerating = useAIEditorStore((s) => s.isGeneratingPlan)
@@ -31,7 +31,7 @@ export const TokenIndicator = memo(function TokenIndicator() {
           style={{
             background: 'rgba(0, 0, 0, 0.75)',
             backdropFilter: 'blur(4px)',
-            border: '1px solid rgba(139, 92, 246, 0.3)'
+            border: '1px solid rgba(139, 92, 246, 0.3)',
           }}
         >
           <Loader2 className="w-3.5 h-3.5 text-purple-400 animate-spin" />

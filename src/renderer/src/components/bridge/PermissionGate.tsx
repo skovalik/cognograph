@@ -9,6 +9,7 @@
  * Shows the tool name and full input for review.
  */
 
+import { Bot } from 'lucide-react'
 import { memo } from 'react'
 import {
   AlertDialog,
@@ -21,7 +22,6 @@ import {
   AlertDialogTitle,
 } from '../ui/alert-dialog'
 import { Card } from '../ui/card'
-import { Bot } from 'lucide-react'
 
 interface PermissionGateProps {
   agentName: string
@@ -54,7 +54,10 @@ function PermissionGateComponent({
         </AlertDialogHeader>
 
         <Card className="p-3 text-xs font-mono" style={{ background: 'var(--surface-panel)' }}>
-          <pre className="whitespace-pre-wrap overflow-auto max-h-[200px]" style={{ color: 'var(--text-primary)' }}>
+          <pre
+            className="whitespace-pre-wrap overflow-auto max-h-[200px]"
+            style={{ color: 'var(--text-primary)' }}
+          >
             {JSON.stringify(toolInput, null, 2)}
           </pre>
         </Card>

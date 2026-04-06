@@ -6,17 +6,17 @@
  *
  * Manages PTY lifecycle: spawn, write, resize, kill. Maintains a rolling scrollback
  * buffer (5000 lines) per session for replay when xterm.js remounts. Tracks session
- * status (running / idle / exited) with a 30-second idle timeout.
+ * status (running / idle / exited) with a 5-minute idle timeout.
  *
  * node-pty is a native module — it must be installed and rebuilt for the target
  * Electron version via electron-rebuild. Until then, tests mock the module entirely.
  */
 
-import { buildContextForNode, writeContextFile, getContextFilePath, getWorkspaceFilePath } from './contextWriter'
-import { writeClaudeConfig, cleanupClaudeConfig } from './claudeConfigWriter'
 import { existsSync } from 'fs'
 import type { TerminalShell } from '../../shared/types/nodes'
 import { getSafeEnv, mergeSafeEnv } from '../utils/safeEnv'
+import { cleanupClaudeConfig, writeClaudeConfig } from './claudeConfigWriter'
+import { buildContextForNode, getContextFilePath, writeContextFile } from './contextWriter'
 
 // node-pty is a native C++ addon. We lazy-load it so the app doesn't crash
 // on startup if it's not installed. The import only fires when spawnTerminal()
@@ -69,12 +69,18 @@ export type TerminalDataForwarder = (nodeId: string, data: string) => void
 /** Callback signature for forwarding PTY exit events (e.g. to renderer via IPC). */
 export type TerminalExitForwarder = (nodeId: string, exitCode: number) => void
 
+/** Callback signature for forwarding PTY status transitions (running/idle/exited). */
+export type TerminalStatusForwarder = (
+  nodeId: string,
+  status: 'running' | 'idle' | 'exited',
+) => void
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const SCROLLBACK_LIMIT = 5000
-const IDLE_TIMEOUT_MS = 30_000
+const IDLE_TIMEOUT_MS = 5 * 60_000 // 5 minutes — 30s was too aggressive for dev terminals
 // ---------------------------------------------------------------------------
 // Shell resolution
 // ---------------------------------------------------------------------------
@@ -100,9 +106,11 @@ function resolveShell(shell: TerminalShell | undefined, isWindows: boolean): She
           'C:\\Program Files (x86)\\Git\\bin\\bash.exe',
         ]
         // existsSync imported at top of file — this runs once at spawn time
-        const found = candidates.find(p => existsSync(p))
+        const found = candidates.find((p) => existsSync(p))
         if (!found) {
-          console.warn('[TerminalManager] Git Bash not found at standard paths, falling back to Claude Code')
+          console.warn(
+            '[TerminalManager] Git Bash not found at standard paths, falling back to Claude Code',
+          )
           return resolveShell('claude-code', isWindows)
         }
         return { executable: found, args: ['--login'], injectContext: false }
@@ -146,6 +154,7 @@ function resolveShell(shell: TerminalShell | undefined, isWindows: boolean): She
 const sessions: Map<string, TerminalSession> = new Map()
 let dataForwarder: TerminalDataForwarder | null = null
 let exitForwarder: TerminalExitForwarder | null = null
+let statusForwarder: TerminalStatusForwarder | null = null
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -159,9 +168,11 @@ let exitForwarder: TerminalExitForwarder | null = null
 export function setEventForwarders(
   onData: TerminalDataForwarder,
   onExit: TerminalExitForwarder,
+  onStatusChange?: TerminalStatusForwarder,
 ): void {
   dataForwarder = onData
   exitForwarder = onExit
+  statusForwarder = onStatusChange ?? null
 }
 
 /**
@@ -175,6 +186,12 @@ export function setEventForwarders(
  * Hooks onData (scrollback + idle timer) and onExit (status update).
  */
 export async function spawnTerminal(config: SpawnConfig): Promise<TerminalSession> {
+  // Idempotency guard — return existing session if still alive.
+  // React 18 StrictMode double-mounts useEffect, calling spawn twice.
+  // Without this guard, two PTYs stream to the same nodeId → doubled output.
+  const existing = sessions.get(config.nodeId)
+  if (existing && existing.status !== 'exited') return existing
+
   const {
     nodeId,
     sessionId,
@@ -190,19 +207,14 @@ export async function spawnTerminal(config: SpawnConfig): Promise<TerminalSessio
   const isWindows = process.platform === 'win32'
   const { executable, args, injectContext } = resolveShell(requestedShell, isWindows)
 
-  // Resolve workspace ID — prefer the one passed from renderer (always current),
-  // fall back to settings.json (may be stale if workspace was switched).
-  // Must resolve BEFORE the context/config promise so writeClaudeConfig gets the ID.
-  let workspaceId = passedWorkspaceId || ''
+  // Require explicit workspace ID from renderer — never fall back to settings.json
+  // which can be stale if the user switched workspaces. Without a valid workspace ID,
+  // the MCP server would load the wrong workspace, creating nodes in the wrong canvas.
+  const workspaceId = passedWorkspaceId || ''
   if (!workspaceId) {
-    try {
-      const wsPath = await getWorkspaceFilePath()
-      if (wsPath) {
-        workspaceId = wsPath.split(/[/\\]/).pop()?.replace('.json', '') ?? ''
-      }
-    } catch {
-      // Non-fatal
-    }
+    console.warn(
+      '[Terminal] No workspaceId passed from renderer — MCP tools will not have workspace context',
+    )
   }
 
   // --- Context injection + Claude Code MCP config (fire-and-forget) ---
@@ -215,28 +227,29 @@ export async function spawnTerminal(config: SpawnConfig): Promise<TerminalSessio
   // Full context/CLAUDE.md injection is only for dedicated Claude Code shells,
   // but .mcp.json is written for ALL shells so MCP tools are always available.
   let contextAndConfigPromise: Promise<string | null> = Promise.resolve(null)
-  {
-    contextAndConfigPromise = buildContextForNode(nodeId)
-      .then(async (ctx) => {
-        await writeContextFile(ctx)
-        // Write .mcp.json + CLAUDE.md in the terminal's working directory
-        const configResult = await writeClaudeConfig({
-          nodeId,
-          cwd,
-          nodeTitle: nodeTitle || `Terminal ${nodeId.slice(0, 8)}`,
-          contextMarkdown: ctx.markdown,
-          workspaceId,
-        })
-        if (!configResult.success) {
-          console.warn('[TerminalManager] Claude config write failed (non-fatal):', configResult.error)
-        }
-        return configResult.success ? cwd : null
+  contextAndConfigPromise = buildContextForNode(nodeId)
+    .then(async (ctx) => {
+      await writeContextFile(ctx)
+      // Write .mcp.json + CLAUDE.md in the terminal's working directory
+      const configResult = await writeClaudeConfig({
+        nodeId,
+        cwd,
+        nodeTitle: nodeTitle || `Terminal ${nodeId.slice(0, 8)}`,
+        contextMarkdown: ctx.markdown,
+        workspaceId,
       })
-      .catch(err => {
-        console.warn('[TerminalManager] Context/config write failed (non-fatal):', err)
-        return null
-      })
-  }
+      if (!configResult.success) {
+        console.warn(
+          '[TerminalManager] Claude config write failed (non-fatal):',
+          configResult.error,
+        )
+      }
+      return configResult.success ? cwd : null
+    })
+    .catch((err) => {
+      console.warn('[TerminalManager] Context/config write failed (non-fatal):', err)
+      return null
+    })
 
   // Build safe env from allowlist, then merge user-provided + Cognograph-specific vars.
   // This prevents leaking secrets (API keys, DB URLs) from parent process.env.
@@ -278,11 +291,13 @@ export async function spawnTerminal(config: SpawnConfig): Promise<TerminalSessio
   }
 
   // Track the config directory for cleanup (resolves after PTY is already running)
-  contextAndConfigPromise.then(configCwd => {
-    session.claudeConfigCwd = configCwd
-  }).catch(() => {
-    // contextAndConfigPromise already catches internally and returns null -- this is belt-and-suspenders
-  })
+  contextAndConfigPromise
+    .then((configCwd) => {
+      session.claudeConfigCwd = configCwd
+    })
+    .catch(() => {
+      // contextAndConfigPromise already catches internally and returns null -- this is belt-and-suspenders
+    })
 
   // --- Idle timeout ---
   resetIdleTimer(session)
@@ -294,6 +309,7 @@ export async function spawnTerminal(config: SpawnConfig): Promise<TerminalSessio
     // Any data means the session is active
     if (session.status === 'idle') {
       session.status = 'running'
+      statusForwarder?.(nodeId, 'running')
     }
 
     resetIdleTimer(session)
@@ -305,6 +321,7 @@ export async function spawnTerminal(config: SpawnConfig): Promise<TerminalSessio
   // --- onExit: mark exited, clean up timer + config files + forward to renderer ---
   ptyProcess.onExit(({ exitCode }) => {
     session.status = 'exited'
+    statusForwarder?.(nodeId, 'exited')
     clearIdleTimer(session)
 
     // Clean up generated .mcp.json + CLAUDE.md
@@ -312,7 +329,7 @@ export async function spawnTerminal(config: SpawnConfig): Promise<TerminalSessio
     if (session.claudeConfigCwd) {
       const configCwd = session.claudeConfigCwd
       session.claudeConfigCwd = null
-      cleanupClaudeConfig(configCwd).catch(err => {
+      cleanupClaudeConfig(configCwd).catch((err) => {
         console.warn('[TerminalManager] Config cleanup failed (non-fatal):', err)
       })
     }
@@ -322,6 +339,10 @@ export async function spawnTerminal(config: SpawnConfig): Promise<TerminalSessio
   })
 
   sessions.set(nodeId, session)
+
+  // Fire initial status so renderer starts in sync (renderer creates nodes with 'idle' default)
+  statusForwarder?.(nodeId, 'running')
+
   return session
 }
 
@@ -364,7 +385,7 @@ export function killTerminal(nodeId: string): void {
   if (session.claudeConfigCwd) {
     const configCwd = session.claudeConfigCwd
     session.claudeConfigCwd = null
-    cleanupClaudeConfig(configCwd).catch(err => {
+    cleanupClaudeConfig(configCwd).catch((err) => {
       console.warn('[TerminalManager] Config cleanup failed (non-fatal):', err)
     })
   }
@@ -450,6 +471,7 @@ function resetIdleTimer(session: TerminalSession): void {
   session.idleTimeout = setTimeout(() => {
     if (session.status === 'running') {
       session.status = 'idle'
+      statusForwarder?.(session.nodeId, 'idle')
     }
   }, IDLE_TIMEOUT_MS)
 }

@@ -8,9 +8,9 @@
  * Shows operation count, confirmation on click, disabled during execution.
  */
 
-import { memo, useState, useCallback } from 'react'
-import { Play, Loader2, CheckCircle, AlertTriangle } from 'lucide-react'
 import type { MutationPlan } from '@shared/types'
+import { AlertTriangle, CheckCircle, Loader2, Play } from 'lucide-react'
+import { memo, useCallback, useState } from 'react'
 
 interface ApplyButtonProps {
   plan: MutationPlan
@@ -23,14 +23,14 @@ function ApplyButtonComponent({
   plan,
   onApply,
   isExecuting = false,
-  disabled = false
+  disabled = false,
 }: ApplyButtonProps): JSX.Element {
   const [showConfirm, setShowConfirm] = useState(false)
   const [hasApplied, setHasApplied] = useState(false)
 
   const operationCount = plan.operations.length
   const hasWarnings = plan.warnings && plan.warnings.length > 0
-  const hasErrors = plan.warnings?.some(w => w.level === 'error')
+  const hasErrors = plan.warnings?.some((w) => w.level === 'error')
 
   // Handle click - show confirmation or apply directly
   const handleClick = useCallback(() => {
@@ -77,7 +77,9 @@ function ApplyButtonComponent({
         <div className="confirm-overlay">
           <div className="confirm-message">
             <AlertTriangle className="warning-icon" />
-            <span>Plan has {plan.warnings?.length} warning{plan.warnings?.length !== 1 ? 's' : ''}</span>
+            <span>
+              Plan has {plan.warnings?.length} warning{plan.warnings?.length !== 1 ? 's' : ''}
+            </span>
           </div>
           <div className="confirm-actions">
             <button className="cancel-btn" onClick={handleCancel}>
@@ -105,7 +107,8 @@ function ApplyButtonComponent({
           {state === 'executing' && 'Applying...'}
           {state === 'success' && 'Applied!'}
           {state === 'error' && 'Cannot Apply'}
-          {(state === 'ready' || state === 'confirm') && `Apply ${operationCount} Change${operationCount !== 1 ? 's' : ''}`}
+          {(state === 'ready' || state === 'confirm') &&
+            `Apply ${operationCount} Change${operationCount !== 1 ? 's' : ''}`}
         </span>
       </button>
 

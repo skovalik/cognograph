@@ -10,9 +10,9 @@
  * - "Show more" toggle for long diffs
  */
 
-import { memo, useState, useMemo } from 'react'
-import { FileText, ChevronDown, ChevronUp } from 'lucide-react'
 import type { EditDisplay } from '@shared/transport/types'
+import { ChevronDown, ChevronUp, FileText } from 'lucide-react'
+import { memo, useMemo, useState } from 'react'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -85,10 +85,7 @@ export const EditPermissionCard = memo(function EditPermissionCard({
       {/* File path */}
       <div className="flex items-center gap-1.5 mb-1">
         <FileText className="w-3 h-3 text-blue-400 flex-shrink-0" />
-        <span
-          className="text-[10px] font-mono text-blue-300 truncate"
-          title={filePath}
-        >
+        <span className="text-[10px] font-mono text-blue-300 truncate" title={filePath}>
           {shortPath(filePath)}
         </span>
       </div>
@@ -101,13 +98,14 @@ export const EditPermissionCard = memo(function EditPermissionCard({
               key={i}
               className={`
                 px-1.5 py-px
-                ${line.type === 'addition'
-                  ? 'bg-emerald-500/15 text-emerald-300'
-                  : line.type === 'deletion'
-                    ? 'bg-red-500/15 text-red-300'
-                    : line.type === 'header'
-                      ? 'text-white/30 bg-white/5'
-                      : 'text-white/50'
+                ${
+                  line.type === 'addition'
+                    ? 'bg-emerald-500/15 text-emerald-300'
+                    : line.type === 'deletion'
+                      ? 'bg-red-500/15 text-red-300'
+                      : line.type === 'header'
+                        ? 'text-white/30 bg-white/5'
+                        : 'text-white/50'
                 }
               `}
             >
@@ -135,7 +133,8 @@ export const EditPermissionCard = memo(function EditPermissionCard({
             ) : (
               <>
                 <ChevronDown className="w-2.5 h-2.5" />
-                {lines.length - MAX_VISIBLE_LINES} more line{lines.length - MAX_VISIBLE_LINES !== 1 ? 's' : ''}
+                {lines.length - MAX_VISIBLE_LINES} more line
+                {lines.length - MAX_VISIBLE_LINES !== 1 ? 's' : ''}
               </>
             )}
           </button>

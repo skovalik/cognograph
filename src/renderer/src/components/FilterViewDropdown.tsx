@@ -8,11 +8,11 @@
  * "Just show me the tasks" or "Hide all notes" for focused work.
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react'
-import { Filter, Eye, EyeOff, ChevronDown } from 'lucide-react'
-import { useWorkspaceStore } from '../stores/workspaceStore'
 import type { NodeData } from '@shared/types'
-import { escapeManager, EscapePriority } from '../utils/EscapeManager'
+import { ChevronDown, Eye, EyeOff, Filter } from 'lucide-react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { useWorkspaceStore } from '../stores/workspaceStore'
+import { EscapePriority, escapeManager } from '../utils/EscapeManager'
 
 // Node type display info
 const NODE_TYPES: Array<{ type: NodeData['type']; label: string; color: string }> = [
@@ -24,7 +24,7 @@ const NODE_TYPES: Array<{ type: NodeData['type']; label: string; color: string }
   { type: 'workspace', label: 'Workspaces', color: 'var(--node-workspace)' },
   { type: 'text', label: 'Text', color: 'var(--node-text)' },
   { type: 'action', label: 'Actions', color: 'var(--node-action)' },
-  { type: 'orchestrator', label: 'Orchestrators', color: 'var(--node-orchestrator)' }
+  { type: 'orchestrator', label: 'Orchestrators', color: 'var(--node-orchestrator)' },
 ]
 
 function FilterViewDropdownComponent(): JSX.Element {
@@ -38,10 +38,13 @@ function FilterViewDropdownComponent(): JSX.Element {
   const nodes = useWorkspaceStore((state) => state.nodes)
 
   // Count nodes by type
-  const nodeCounts = nodes.reduce((acc, node) => {
-    acc[node.data.type] = (acc[node.data.type] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+  const nodeCounts = nodes.reduce(
+    (acc, node) => {
+      acc[node.data.type] = (acc[node.data.type] || 0) + 1
+      return acc
+    },
+    {} as Record<string, number>,
+  )
 
   // How many types are hidden
   const hiddenCount = hiddenNodeTypes.size
@@ -69,9 +72,12 @@ function FilterViewDropdownComponent(): JSX.Element {
     return () => escapeManager.unregister('popover-filter-view')
   }, [isOpen])
 
-  const handleToggle = useCallback((type: NodeData['type']) => {
-    toggleNodeTypeVisibility(type)
-  }, [toggleNodeTypeVisibility])
+  const handleToggle = useCallback(
+    (type: NodeData['type']) => {
+      toggleNodeTypeVisibility(type)
+    },
+    [toggleNodeTypeVisibility],
+  )
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -81,12 +87,17 @@ function FilterViewDropdownComponent(): JSX.Element {
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs transition-colors border gui-panel-bg"
         style={{
           color: hasHidden ? 'var(--gui-accent-secondary)' : 'var(--gui-text-secondary)',
-          backgroundColor: hasHidden ? 'color-mix(in srgb, var(--gui-accent-secondary) 15%, transparent)' : undefined,
-          borderColor: hasHidden ? 'color-mix(in srgb, var(--gui-accent-secondary) 40%, transparent)' : 'var(--gui-border-subtle)'
+          backgroundColor: hasHidden
+            ? 'color-mix(in srgb, var(--gui-accent-secondary) 15%, transparent)'
+            : undefined,
+          borderColor: hasHidden
+            ? 'color-mix(in srgb, var(--gui-accent-secondary) 40%, transparent)'
+            : 'var(--gui-border-subtle)',
         }}
         onMouseEnter={(e) => {
           if (!hasHidden) {
-            e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--gui-text-primary) 5%, transparent)'
+            e.currentTarget.style.backgroundColor =
+              'color-mix(in srgb, var(--gui-text-primary) 5%, transparent)'
           }
         }}
         onMouseLeave={(e) => {
@@ -94,10 +105,16 @@ function FilterViewDropdownComponent(): JSX.Element {
             e.currentTarget.style.backgroundColor = ''
           }
         }}
-        title={hasHidden ? `${hiddenCount} type${hiddenCount !== 1 ? 's' : ''} hidden` : 'Filter node types'}
+        title={
+          hasHidden
+            ? `${hiddenCount} type${hiddenCount !== 1 ? 's' : ''} hidden`
+            : 'Filter node types'
+        }
       >
         <Filter className="w-3.5 h-3.5" style={{ color: 'inherit' }} />
-        <span className="hidden sm:inline" style={{ color: 'inherit' }}>Filter</span>
+        <span className="hidden sm:inline" style={{ color: 'inherit' }}>
+          Filter
+        </span>
         {hasHidden && (
           <span
             className="px-1 py-0.5 rounded text-[10px] font-medium"
@@ -106,7 +123,10 @@ function FilterViewDropdownComponent(): JSX.Element {
             {hiddenCount}
           </span>
         )}
-        <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} style={{ color: 'inherit' }} />
+        <ChevronDown
+          className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          style={{ color: 'inherit' }}
+        />
       </button>
 
       {/* Dropdown menu - opens ABOVE since button is at bottom of screen */}
@@ -114,7 +134,7 @@ function FilterViewDropdownComponent(): JSX.Element {
         <div
           className="absolute bottom-full left-0 mb-1 w-52 glass-soft rounded-lg overflow-hidden shadow-xl animate-fade-in gui-z-dropdowns"
           style={{
-            border: '1px solid var(--gui-border-subtle)'
+            border: '1px solid var(--gui-border-subtle)',
           }}
         >
           {/* Header */}
@@ -183,7 +203,7 @@ function FilterViewDropdownComponent(): JSX.Element {
                     className="text-[10px] px-1.5 py-0.5 rounded"
                     style={{
                       backgroundColor: 'var(--gui-bg-tertiary)',
-                      color: 'var(--gui-text-muted)'
+                      color: 'var(--gui-text-muted)',
                     }}
                   >
                     {count}

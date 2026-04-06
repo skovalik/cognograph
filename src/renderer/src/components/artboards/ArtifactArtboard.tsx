@@ -11,30 +11,25 @@
  * Task 21 of the design-system-v3 implementation plan.
  */
 
-import { memo, useState, useMemo, useCallback } from 'react'
+import type { ArtifactContentType, ArtifactFile, ArtifactNodeData, NodeData } from '@shared/types'
 import {
+  Box,
   Code,
-  FileText,
-  Image,
-  FileJson,
-  Table,
-  Globe,
-  GitBranch,
   Eye,
   FileCode,
   FileDiff,
+  FileJson,
+  FileText,
+  GitBranch,
+  Globe,
   History,
+  Image,
+  Table,
   Video,
   Volume2,
-  Box,
 } from 'lucide-react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { useNodesStore } from '../../stores/nodesStore'
-import type {
-  ArtifactNodeData,
-  ArtifactContentType,
-  ArtifactFile,
-  NodeData,
-} from '@shared/types'
 
 // =============================================================================
 // Types
@@ -116,13 +111,11 @@ function getContentTypeLabel(contentType: ArtifactContentType, customType?: stri
  */
 function getActiveContent(
   nodeData: ArtifactNodeData,
-  overrideFileId?: string
+  overrideFileId?: string,
 ): { content: string; contentType: ArtifactContentType; language?: string; filename?: string } {
   if (nodeData.files && nodeData.files.length > 0) {
     const targetId = overrideFileId || nodeData.activeFileId
-    const activeFile = targetId
-      ? nodeData.files.find((f) => f.id === targetId)
-      : nodeData.files[0]
+    const activeFile = targetId ? nodeData.files.find((f) => f.id === targetId) : nodeData.files[0]
 
     if (activeFile) {
       return {
@@ -218,10 +211,7 @@ function FileTabs({
   activeFileId: string
   onFileChange: (fileId: string) => void
 }): JSX.Element {
-  const sortedFiles = useMemo(
-    () => [...files].sort((a, b) => a.order - b.order),
-    [files]
-  )
+  const sortedFiles = useMemo(() => [...files].sort((a, b) => a.order - b.order), [files])
 
   return (
     <div
@@ -337,7 +327,10 @@ function PreviewPanel({
   if (contentType === 'code' || contentType === 'json' || contentType === 'csv') {
     return (
       <div className="h-full overflow-auto">
-        <div className="flex items-center gap-2 px-4 py-1.5 shrink-0" style={{ borderBottom: '1px solid var(--gui-border)' }}>
+        <div
+          className="flex items-center gap-2 px-4 py-1.5 shrink-0"
+          style={{ borderBottom: '1px solid var(--gui-border)' }}
+        >
           {getContentTypeIcon(contentType)}
           <span className="text-[10px] font-medium" style={{ color: 'var(--gui-text-muted)' }}>
             {getContentTypeLabel(contentType)}
@@ -372,13 +365,7 @@ function PreviewPanel({
 }
 
 /** Source tab — full-width editor placeholder (Monaco integration point) */
-function SourcePanel({
-  content,
-  language,
-}: {
-  content: string
-  language?: string
-}): JSX.Element {
+function SourcePanel({ content, language }: { content: string; language?: string }): JSX.Element {
   return (
     <div className="h-full flex flex-col">
       <div
@@ -415,11 +402,7 @@ function SourcePanel({
 }
 
 /** Diff tab — side-by-side diff placeholder */
-function DiffPanel({
-  nodeData,
-}: {
-  nodeData: ArtifactNodeData
-}): JSX.Element {
+function DiffPanel({ nodeData }: { nodeData: ArtifactNodeData }): JSX.Element {
   const currentVersion = nodeData.version
   const prevVersion = nodeData.versionHistory?.length
     ? nodeData.versionHistory[nodeData.versionHistory.length - 1]
@@ -462,8 +445,17 @@ function DiffPanel({
       </div>
       <div className="flex-1 flex overflow-hidden">
         {/* Previous version */}
-        <div className="flex-1 flex flex-col overflow-hidden" style={{ borderRight: '1px solid var(--gui-border)' }}>
-          <div className="px-3 py-1 text-[10px] font-medium shrink-0" style={{ color: 'var(--gui-text-muted)', backgroundColor: 'color-mix(in srgb, #ef4444 8%, transparent)' }}>
+        <div
+          className="flex-1 flex flex-col overflow-hidden"
+          style={{ borderRight: '1px solid var(--gui-border)' }}
+        >
+          <div
+            className="px-3 py-1 text-[10px] font-medium shrink-0"
+            style={{
+              color: 'var(--gui-text-muted)',
+              backgroundColor: 'color-mix(in srgb, #ef4444 8%, transparent)',
+            }}
+          >
             v{prevVersion.version} &mdash; {new Date(prevVersion.timestamp).toLocaleString()}
           </div>
           <pre
@@ -481,7 +473,13 @@ function DiffPanel({
         </div>
         {/* Current version */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-3 py-1 text-[10px] font-medium shrink-0" style={{ color: 'var(--gui-text-muted)', backgroundColor: 'color-mix(in srgb, #22c55e 8%, transparent)' }}>
+          <div
+            className="px-3 py-1 text-[10px] font-medium shrink-0"
+            style={{
+              color: 'var(--gui-text-muted)',
+              backgroundColor: 'color-mix(in srgb, #22c55e 8%, transparent)',
+            }}
+          >
             v{currentVersion} &mdash; current
           </div>
           <pre
@@ -503,18 +501,17 @@ function DiffPanel({
 }
 
 /** History tab — version timeline */
-function HistoryPanel({
-  nodeData,
-}: {
-  nodeData: ArtifactNodeData
-}): JSX.Element {
+function HistoryPanel({ nodeData }: { nodeData: ArtifactNodeData }): JSX.Element {
   const history = nodeData.versionHistory ?? []
 
   return (
     <div className="p-4 overflow-auto h-full">
       <div className="flex items-center gap-2 mb-3">
         <History className="w-3.5 h-3.5" style={{ color: 'var(--gui-text-muted)' }} />
-        <span className="text-[10px] uppercase font-medium tracking-wider" style={{ color: 'var(--gui-text-muted)' }}>
+        <span
+          className="text-[10px] uppercase font-medium tracking-wider"
+          style={{ color: 'var(--gui-text-muted)' }}
+        >
           Version History
         </span>
         <span
@@ -561,42 +558,43 @@ function HistoryPanel({
           </div>
 
           {/* Previous versions (newest first) */}
-          {[...history].reverse().slice(0, 10).map((v, i) => (
-            <div
-              key={`${v.version}-${i}`}
-              className="flex items-center gap-3 px-3 py-2 rounded-md text-xs transition-colors duration-150"
-              style={{
-                backgroundColor: 'color-mix(in srgb, var(--gui-bg-tertiary) 50%, transparent)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--gui-bg-tertiary)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  'color-mix(in srgb, var(--gui-bg-tertiary) 50%, transparent)'
-              }}
-            >
-              <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ backgroundColor: 'var(--gui-text-muted)', opacity: 0.4 }}
-              />
-              <span style={{ color: 'var(--gui-text-secondary)' }}>
-                v{v.version}
-              </span>
-              <span
-                className="text-[10px] capitalize px-1.5 py-0.5 rounded"
+          {[...history]
+            .reverse()
+            .slice(0, 10)
+            .map((v, i) => (
+              <div
+                key={`${v.version}-${i}`}
+                className="flex items-center gap-3 px-3 py-2 rounded-md text-xs transition-colors duration-150"
                 style={{
-                  color: 'var(--gui-text-muted)',
-                  backgroundColor: 'color-mix(in srgb, var(--gui-bg-secondary) 60%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--gui-bg-tertiary) 50%, transparent)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--gui-bg-tertiary)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    'color-mix(in srgb, var(--gui-bg-tertiary) 50%, transparent)'
                 }}
               >
-                {v.changeSource}
-              </span>
-              <span className="text-[10px] ml-auto" style={{ color: 'var(--gui-text-muted)' }}>
-                {new Date(v.timestamp).toLocaleString()}
-              </span>
-            </div>
-          ))}
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: 'var(--gui-text-muted)', opacity: 0.4 }}
+                />
+                <span style={{ color: 'var(--gui-text-secondary)' }}>v{v.version}</span>
+                <span
+                  className="text-[10px] capitalize px-1.5 py-0.5 rounded"
+                  style={{
+                    color: 'var(--gui-text-muted)',
+                    backgroundColor: 'color-mix(in srgb, var(--gui-bg-secondary) 60%, transparent)',
+                  }}
+                >
+                  {v.changeSource}
+                </span>
+                <span className="text-[10px] ml-auto" style={{ color: 'var(--gui-text-muted)' }}>
+                  {new Date(v.timestamp).toLocaleString()}
+                </span>
+              </div>
+            ))}
         </div>
       )}
     </div>
@@ -684,17 +682,10 @@ function ArtifactArtboardComponent({ nodeId }: ArtifactArtboardProps): JSX.Eleme
           />
         )}
         {activeTab === 'source' && (
-          <SourcePanel
-            content={activeContent.content}
-            language={activeContent.language}
-          />
+          <SourcePanel content={activeContent.content} language={activeContent.language} />
         )}
-        {activeTab === 'diff' && (
-          <DiffPanel nodeData={nodeData} />
-        )}
-        {activeTab === 'history' && (
-          <HistoryPanel nodeData={nodeData} />
-        )}
+        {activeTab === 'diff' && <DiffPanel nodeData={nodeData} />}
+        {activeTab === 'history' && <HistoryPanel nodeData={nodeData} />}
       </div>
     </div>
   )

@@ -11,10 +11,10 @@
 
 const INJECTION_PATTERNS = [
   // Role/system prompt hijacking
-  /^SYSTEM:\s*/gmi,
-  /^HUMAN:\s*/gmi,
-  /^ASSISTANT:\s*/gmi,
-  /^<\|?(system|user|assistant)\|?>/gmi,
+  /^SYSTEM:\s*/gim,
+  /^HUMAN:\s*/gim,
+  /^ASSISTANT:\s*/gim,
+  /^<\|?(system|user|assistant)\|?>/gim,
   // Instruction override attempts
   /ignore\s+(all\s+)?previous\s+instructions/gi,
   /disregard\s+(all\s+)?prior\s+(instructions|context)/gi,

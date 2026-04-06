@@ -45,9 +45,7 @@ export function DateField({ label, value, onChange }: DateFieldProps): JSX.Eleme
 
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-[11px] text-[var(--text-secondary)] shrink-0">
-        {label}
-      </span>
+      <span className="text-[11px] text-[var(--text-secondary)] shrink-0">{label}</span>
       <input
         type="date"
         value={inputValue}

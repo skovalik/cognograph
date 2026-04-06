@@ -8,22 +8,18 @@
  * from the main process and updates renderer stores.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
-import { useSessionStatsStore } from '../../stores/sessionStatsStore'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetWorkspaceStore, seedNode } from '../../../../test/storeUtils'
 import { createConversationNode, resetTestCounters } from '../../../../test/utils'
-import {
-  __test__,
-  trackCreatedNode,
-  trackCreatedEdge,
-} from '../agentEventReceiver'
+import { useSessionStatsStore } from '../../stores/sessionStatsStore'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 import type {
-  ToolStartPayload,
-  ToolResultPayload,
-  NodeCreatedPayload,
   AgentCompletePayload,
+  NodeCreatedPayload,
+  ToolResultPayload,
+  ToolStartPayload,
 } from '../agentEventReceiver'
+import { __test__, trackCreatedEdge, trackCreatedNode } from '../agentEventReceiver'
 
 const {
   handleToolStart,
@@ -60,7 +56,7 @@ describe('agentEventReceiver', () => {
       handleToolStart(payload)
 
       const store = useWorkspaceStore.getState()
-      const node = store.nodes.find(n => n.id === CONV_ID)
+      const node = store.nodes.find((n) => n.id === CONV_ID)
       const messages = (node?.data as any)?.messages ?? []
       const toolMsg = messages.find((m: any) => m.role === 'tool_use')
 
@@ -85,7 +81,7 @@ describe('agentEventReceiver', () => {
       handleToolResult(payload)
 
       const store = useWorkspaceStore.getState()
-      const node = store.nodes.find(n => n.id === CONV_ID)
+      const node = store.nodes.find((n) => n.id === CONV_ID)
       const messages = (node?.data as any)?.messages ?? []
       const resultMsg = messages.find((m: any) => m.role === 'tool_result')
 
@@ -108,7 +104,7 @@ describe('agentEventReceiver', () => {
       handleToolResult(payload)
 
       const store = useWorkspaceStore.getState()
-      const node = store.nodes.find(n => n.id === CONV_ID)
+      const node = store.nodes.find((n) => n.id === CONV_ID)
       const messages = (node?.data as any)?.messages ?? []
       const resultMsg = messages.find((m: any) => m.role === 'tool_result')
 

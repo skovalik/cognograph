@@ -7,15 +7,15 @@
  * Helper functions for writing tests in Cognograph.
  */
 
-import type { Node, Edge } from '@xyflow/react'
 import type {
-  NodeData,
   ConversationNodeData,
+  EdgeData,
+  NodeData,
   NoteNodeData,
-  TaskNodeData,
   ProjectNodeData,
-  EdgeData
+  TaskNodeData,
 } from '@shared/types'
+import type { Edge, Node } from '@xyflow/react'
 
 // -----------------------------------------------------------------------------
 // Node Factories
@@ -29,7 +29,7 @@ let nodeIdCounter = 0
  */
 export function createTestNode<T extends NodeData>(
   type: T['type'],
-  overrides: Partial<Node<T>> & { data?: Partial<T> } = {}
+  overrides: Partial<Node<T>> & { data?: Partial<T> } = {},
 ): Node<T> {
   const id = overrides.id ?? `test-node-${++nodeIdCounter}`
   const position = overrides.position ?? { x: 0, y: 0 }
@@ -37,7 +37,7 @@ export function createTestNode<T extends NodeData>(
   const baseData = {
     type,
     createdAt: Date.now(),
-    updatedAt: Date.now()
+    updatedAt: Date.now(),
   }
 
   let data: T
@@ -50,7 +50,7 @@ export function createTestNode<T extends NodeData>(
         title: 'Test Conversation',
         messages: [],
         provider: 'anthropic',
-        ...overrides.data
+        ...overrides.data,
       } as unknown as T
       break
 
@@ -60,7 +60,7 @@ export function createTestNode<T extends NodeData>(
         type: 'note',
         title: 'Test Note',
         content: 'Test note content',
-        ...overrides.data
+        ...overrides.data,
       } as unknown as T
       break
 
@@ -71,7 +71,7 @@ export function createTestNode<T extends NodeData>(
         title: 'Test Task',
         description: 'Test task description',
         status: 'pending',
-        ...overrides.data
+        ...overrides.data,
       } as unknown as T
       break
 
@@ -82,7 +82,7 @@ export function createTestNode<T extends NodeData>(
         title: 'Test Project',
         description: 'Test project description',
         childNodeIds: [],
-        ...overrides.data
+        ...overrides.data,
       } as unknown as T
       break
 
@@ -93,7 +93,7 @@ export function createTestNode<T extends NodeData>(
         title: 'Test Artifact',
         content: 'Test artifact content',
         contentType: 'text/plain',
-        ...overrides.data
+        ...overrides.data,
       } as unknown as T
       break
 
@@ -104,7 +104,7 @@ export function createTestNode<T extends NodeData>(
         title: 'Test Workspace',
         description: 'Test workspace',
         includedNodeIds: [],
-        ...overrides.data
+        ...overrides.data,
       } as unknown as T
       break
 
@@ -113,7 +113,7 @@ export function createTestNode<T extends NodeData>(
         ...baseData,
         type: 'text',
         content: 'Test text content',
-        ...overrides.data
+        ...overrides.data,
       } as unknown as T
       break
 
@@ -129,7 +129,7 @@ export function createTestNode<T extends NodeData>(
     type,
     position,
     data,
-    ...restOverrides
+    ...restOverrides,
   } as Node<T>
 }
 
@@ -138,7 +138,7 @@ export function createTestNode<T extends NodeData>(
  */
 export function createConversationNode(
   messages: Array<{ role: 'user' | 'assistant'; content: string }> = [],
-  overrides: Partial<Node<ConversationNodeData>> = {}
+  overrides: Partial<Node<ConversationNodeData>> = {},
 ): Node<ConversationNodeData> {
   const data = {
     type: 'conversation' as const,
@@ -148,15 +148,15 @@ export function createConversationNode(
       id: `msg-${i}`,
       role: m.role,
       content: m.content,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     })),
     createdAt: Date.now(),
     updatedAt: Date.now(),
-    ...overrides.data
+    ...overrides.data,
   }
   return createTestNode<ConversationNodeData>('conversation', {
     ...overrides,
-    data: data as unknown as ConversationNodeData & Partial<ConversationNodeData>
+    data: data as unknown as ConversationNodeData & Partial<ConversationNodeData>,
   })
 }
 
@@ -165,7 +165,7 @@ export function createConversationNode(
  */
 export function createNoteNode(
   content: string = 'Test note',
-  overrides: Partial<Node<NoteNodeData>> = {}
+  overrides: Partial<Node<NoteNodeData>> = {},
 ): Node<NoteNodeData> {
   const data = {
     type: 'note' as const,
@@ -173,11 +173,11 @@ export function createNoteNode(
     content,
     createdAt: Date.now(),
     updatedAt: Date.now(),
-    ...overrides.data
+    ...overrides.data,
   }
   return createTestNode<NoteNodeData>('note', {
     ...overrides,
-    data: data as unknown as NoteNodeData & Partial<NoteNodeData>
+    data: data as unknown as NoteNodeData & Partial<NoteNodeData>,
   })
 }
 
@@ -186,7 +186,7 @@ export function createNoteNode(
  */
 export function createTaskNode(
   status: 'todo' | 'in-progress' | 'done' = 'todo',
-  overrides: Partial<Node<TaskNodeData>> = {}
+  overrides: Partial<Node<TaskNodeData>> = {},
 ): Node<TaskNodeData> {
   const data = {
     type: 'task' as const,
@@ -195,11 +195,11 @@ export function createTaskNode(
     status,
     createdAt: Date.now(),
     updatedAt: Date.now(),
-    ...overrides.data
+    ...overrides.data,
   }
   return createTestNode<TaskNodeData>('task', {
     ...overrides,
-    data: data as unknown as TaskNodeData & Partial<TaskNodeData>
+    data: data as unknown as TaskNodeData & Partial<TaskNodeData>,
   })
 }
 
@@ -208,7 +208,7 @@ export function createTaskNode(
  */
 export function createProjectNode(
   childNodeIds: string[] = [],
-  overrides: Partial<Node<ProjectNodeData>> = {}
+  overrides: Partial<Node<ProjectNodeData>> = {},
 ): Node<ProjectNodeData> {
   const data = {
     type: 'project' as const,
@@ -217,11 +217,11 @@ export function createProjectNode(
     childNodeIds,
     createdAt: Date.now(),
     updatedAt: Date.now(),
-    ...overrides.data
+    ...overrides.data,
   }
   return createTestNode<ProjectNodeData>('project', {
     ...overrides,
-    data: data as unknown as ProjectNodeData & Partial<ProjectNodeData>
+    data: data as unknown as ProjectNodeData & Partial<ProjectNodeData>,
   })
 }
 
@@ -230,7 +230,7 @@ export function createProjectNode(
  */
 export function createWorkspaceNode(
   includedNodeIds: string[] = [],
-  overrides: Partial<Node<NodeData>> = {}
+  overrides: Partial<Node<NodeData>> = {},
 ): Node<NodeData> {
   const data = {
     type: 'workspace' as const,
@@ -239,11 +239,11 @@ export function createWorkspaceNode(
     includedNodeIds,
     createdAt: Date.now(),
     updatedAt: Date.now(),
-    ...overrides.data
+    ...overrides.data,
   }
   return createTestNode('workspace', {
     ...overrides,
-    data
+    data,
   })
 }
 
@@ -252,7 +252,7 @@ export function createWorkspaceNode(
  */
 export function createArtifactNode(
   content: string = 'Test artifact content',
-  overrides: Partial<Node<NodeData>> = {}
+  overrides: Partial<Node<NodeData>> = {},
 ): Node<NodeData> {
   const data = {
     type: 'artifact' as const,
@@ -262,11 +262,11 @@ export function createArtifactNode(
     language: 'plaintext',
     createdAt: Date.now(),
     updatedAt: Date.now(),
-    ...overrides.data
+    ...overrides.data,
   }
   return createTestNode('artifact', {
     ...overrides,
-    data
+    data,
   })
 }
 
@@ -275,18 +275,18 @@ export function createArtifactNode(
  */
 export function createTextNode(
   content: string = 'Test text content',
-  overrides: Partial<Node<NodeData>> = {}
+  overrides: Partial<Node<NodeData>> = {},
 ): Node<NodeData> {
   const data = {
     type: 'text' as const,
     content,
     createdAt: Date.now(),
     updatedAt: Date.now(),
-    ...overrides.data
+    ...overrides.data,
   }
   return createTestNode('text', {
     ...overrides,
-    data
+    data,
   })
 }
 
@@ -302,7 +302,7 @@ let edgeIdCounter = 0
 export function createTestEdge(
   source: string,
   target: string,
-  overrides: Omit<Partial<Edge<EdgeData>>, 'data'> & { data?: Partial<EdgeData> } = {}
+  overrides: Omit<Partial<Edge<EdgeData>>, 'data'> & { data?: Partial<EdgeData> } = {},
 ): Edge<EdgeData> {
   const { data: dataOverrides, ...restOverrides } = overrides
   return {
@@ -313,9 +313,9 @@ export function createTestEdge(
       direction: 'unidirectional',
       weight: 1,
       active: true,
-      ...dataOverrides
+      ...dataOverrides,
     },
-    ...restOverrides
+    ...restOverrides,
   }
 }
 
@@ -341,31 +341,31 @@ export function createWorkspaceFixture(): {
   const conversation = createConversationNode(
     [
       { role: 'user', content: 'Hello' },
-      { role: 'assistant', content: 'Hi there!' }
+      { role: 'assistant', content: 'Hi there!' },
     ],
-    { id: 'conv-1', position: { x: 0, y: 0 } }
+    { id: 'conv-1', position: { x: 0, y: 0 } },
   )
 
   const note = createNoteNode('Important context for the conversation', {
     id: 'note-1',
-    position: { x: -200, y: 0 }
+    position: { x: -200, y: 0 },
   })
 
   const task = createTaskNode('todo', {
     id: 'task-1',
-    position: { x: 200, y: 0 }
+    position: { x: 200, y: 0 },
   })
 
   const project = createProjectNode(['conv-1', 'note-1'], {
     id: 'project-1',
-    position: { x: 0, y: -200 }
+    position: { x: 0, y: -200 },
   })
 
   const nodes: Node<NodeData>[] = [conversation, note, task, project]
 
   const edges: Edge<EdgeData>[] = [
     createTestEdge('note-1', 'conv-1', { id: 'edge-note-conv' }),
-    createTestEdge('conv-1', 'task-1', { id: 'edge-conv-task' })
+    createTestEdge('conv-1', 'task-1', { id: 'edge-conv-task' }),
   ]
 
   return { nodes, edges }
@@ -377,7 +377,7 @@ export function createWorkspaceFixture(): {
 export async function waitFor(
   condition: () => boolean,
   timeout = 1000,
-  interval = 50
+  interval = 50,
 ): Promise<void> {
   const start = Date.now()
   while (!condition()) {

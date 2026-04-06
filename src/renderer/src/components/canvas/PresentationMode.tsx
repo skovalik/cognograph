@@ -13,10 +13,10 @@
 //   1. If any region has presentationOrder set, sort by that (ascending)
 //   2. Otherwise, sort by x-position (left to right)
 
-import { memo, useCallback, useEffect, useState } from 'react'
-import { useReactFlow } from '@xyflow/react'
-import { useSpatialRegionStore } from '../../stores/spatialRegionStore'
 import type { SpatialRegion } from '@shared/actionTypes'
+import { useReactFlow } from '@xyflow/react'
+import { memo, useCallback, useEffect, useState } from 'react'
+import { useSpatialRegionStore } from '../../stores/spatialRegionStore'
 
 // ---------------------------------------------------------------------------
 // Props
@@ -33,7 +33,10 @@ export interface PresentationModeProps {
 // Component
 // ---------------------------------------------------------------------------
 
-function PresentationModeComponent({ isActive, onClose }: PresentationModeProps): JSX.Element | null {
+function PresentationModeComponent({
+  isActive,
+  onClose,
+}: PresentationModeProps): JSX.Element | null {
   const { fitBounds } = useReactFlow()
   const getRegionsForPresentation = useSpatialRegionStore((s) => s.getRegionsForPresentation)
 
@@ -60,12 +63,12 @@ function PresentationModeComponent({ isActive, onClose }: PresentationModeProps)
           x: slide.bounds.x,
           y: slide.bounds.y,
           width: slide.bounds.width,
-          height: slide.bounds.height
+          height: slide.bounds.height,
         },
-        { duration: 300, padding: 0.1 }
+        { duration: 300, padding: 0.1 },
       )
     },
-    [slides, fitBounds]
+    [slides, fitBounds],
   )
 
   // Fit to first slide on activation
@@ -136,7 +139,7 @@ function PresentationModeComponent({ isActive, onClose }: PresentationModeProps)
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.15) 100%)'
+          background: 'radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.15) 100%)',
         }}
       />
 
@@ -150,7 +153,7 @@ function PresentationModeComponent({ isActive, onClose }: PresentationModeProps)
           fontSize: '14px',
           fontWeight: 500,
           minWidth: '240px',
-          justifyContent: 'center'
+          justifyContent: 'center',
         }}
         data-testid="presentation-hud"
       >
@@ -162,7 +165,13 @@ function PresentationModeComponent({ isActive, onClose }: PresentationModeProps)
           className="p-1 rounded hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d="M10 12L6 8L10 4"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </button>
 
@@ -190,7 +199,13 @@ function PresentationModeComponent({ isActive, onClose }: PresentationModeProps)
           className="p-1 rounded hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d="M6 4L10 8L6 12"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </button>
 
@@ -205,7 +220,12 @@ function PresentationModeComponent({ isActive, onClose }: PresentationModeProps)
           data-testid="presentation-exit"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path
+              d="M4 4L12 12M12 4L4 12"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
       </div>
@@ -214,7 +234,7 @@ function PresentationModeComponent({ isActive, onClose }: PresentationModeProps)
       <div
         className="absolute top-4 right-4 text-white/40 text-xs pointer-events-none"
         style={{
-          animation: 'fadeOut 3s ease-in forwards'
+          animation: 'fadeOut 3s ease-in forwards',
         }}
       >
         ESC to exit &middot; Arrow keys to navigate

@@ -8,17 +8,17 @@
  * Allows filling in placeholder values before pasting.
  */
 
-import { memo, useState, useCallback, useMemo, useEffect } from 'react'
-import { X, Clipboard, Link2, Layers } from 'lucide-react'
+import type { EdgeData, HistoryAction, NodeData } from '@shared/types'
+import type { Edge, Node } from '@xyflow/react'
 import { useReactFlow } from '@xyflow/react'
-import { useTemplateStore, usePasteModalState } from '../../stores/templateStore'
+import { Clipboard, Layers, Link2, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { usePasteModalState, useTemplateStore } from '../../stores/templateStore'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
+import { resolveDatePlaceholder, validatePlaceholderValues } from '../../utils/placeholderParser'
 import { applyTemplate, createConnectionEdge } from '../../utils/templateUtils'
-import { validatePlaceholderValues, resolveDatePlaceholder } from '../../utils/placeholderParser'
 import { PlaceholderForm } from './PlaceholderForm'
 import { TemplatePreview } from './TemplatePreview'
-import type { Node, Edge } from '@xyflow/react'
-import type { NodeData, EdgeData, HistoryAction } from '@shared/types'
 
 // -----------------------------------------------------------------------------
 // Component
@@ -48,7 +48,7 @@ function PasteTemplateModalComponent(): JSX.Element | null {
   const [placeholderValues, setPlaceholderValues] = useState<Record<string, string>>({})
   const [connectToNode, setConnectToNode] = useState<string | null>(null)
   const [connectionDirection, setConnectionDirection] = useState<'to-template' | 'from-template'>(
-    'to-template'
+    'to-template',
   )
   const [error, setError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
@@ -127,7 +127,7 @@ function PasteTemplateModalComponent(): JSX.Element | null {
         const rootRealId = result.templateNodeIdToRealId.get(rootTemplateNodeId)
         if (rootRealId) {
           connectionEdge = createConnectionEdge(rootRealId, connectToNode, {
-            direction: connectionDirection
+            direction: connectionDirection,
           })
         }
       }
@@ -147,18 +147,18 @@ function PasteTemplateModalComponent(): JSX.Element | null {
         const historyActions: HistoryAction[] = [
           ...result.nodes.map((node) => ({
             type: 'ADD_NODE' as const,
-            node: JSON.parse(JSON.stringify(node))
+            node: JSON.parse(JSON.stringify(node)),
           })),
           ...result.edges.map((edge) => ({
             type: 'ADD_EDGE' as const,
-            edge: JSON.parse(JSON.stringify(edge))
-          }))
+            edge: JSON.parse(JSON.stringify(edge)),
+          })),
         ]
 
         if (connectionEdge) {
           historyActions.push({
             type: 'ADD_EDGE' as const,
-            edge: JSON.parse(JSON.stringify(connectionEdge))
+            edge: JSON.parse(JSON.stringify(connectionEdge)),
           })
         }
 
@@ -174,7 +174,7 @@ function PasteTemplateModalComponent(): JSX.Element | null {
           edges: newEdges,
           history: finalHistory,
           historyIndex: finalHistory.length - 1,
-          isDirty: true
+          isDirty: true,
         }
       })
 
@@ -201,7 +201,7 @@ function PasteTemplateModalComponent(): JSX.Element | null {
     incrementUsage,
     addToLastUsed,
     handleClose,
-    fitView
+    fitView,
   ])
 
   if (!open || !context || !template) return null
@@ -240,7 +240,9 @@ function PasteTemplateModalComponent(): JSX.Element | null {
               <p className="text-xs text-[var(--text-muted)] mt-2">
                 {template.nodes.length} node{template.nodes.length !== 1 ? 's' : ''}
                 {template.edges.length > 0 && (
-                  <>, {template.edges.length} connection{template.edges.length !== 1 ? 's' : ''}</>
+                  <>
+                    , {template.edges.length} connection{template.edges.length !== 1 ? 's' : ''}
+                  </>
                 )}
               </p>
             </div>
@@ -249,7 +251,9 @@ function PasteTemplateModalComponent(): JSX.Element | null {
           {/* Placeholders */}
           {hasPlaceholders && (
             <div className="space-y-3 pt-3 border-t border-[var(--border-subtle)]">
-              <h4 className="text-sm font-medium text-[var(--text-secondary)]">Fill in placeholders</h4>
+              <h4 className="text-sm font-medium text-[var(--text-secondary)]">
+                Fill in placeholders
+              </h4>
               <PlaceholderForm
                 placeholders={template.placeholders}
                 values={placeholderValues}

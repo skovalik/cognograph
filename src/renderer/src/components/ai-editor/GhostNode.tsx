@@ -8,9 +8,19 @@
  * Used in the AI Editor preview to show where new nodes will be placed.
  */
 
-import { memo } from 'react'
-import { MessageSquare, FileText, CheckSquare, FolderKanban, FileCode2, Boxes, Zap, Type, Workflow } from 'lucide-react'
 import type { NodeData } from '@shared/types'
+import {
+  Boxes,
+  CheckSquare,
+  FileCode2,
+  FileText,
+  FolderKanban,
+  MessageSquare,
+  Type,
+  Workflow,
+  Zap,
+} from 'lucide-react'
+import { memo } from 'react'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 
 // Ghost node data
@@ -24,7 +34,10 @@ interface GhostNodeProps {
   data: GhostNodeData
 }
 
-const typeIcons: Record<NodeData['type'], React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
+const typeIcons: Record<
+  NodeData['type'],
+  React.ComponentType<{ className?: string; style?: React.CSSProperties }>
+> = {
   conversation: MessageSquare,
   note: FileText,
   task: CheckSquare,
@@ -33,7 +46,7 @@ const typeIcons: Record<NodeData['type'], React.ComponentType<{ className?: stri
   workspace: Boxes,
   action: Zap,
   text: Type,
-  orchestrator: Workflow
+  orchestrator: Workflow,
 }
 
 const typeLabels: Record<NodeData['type'], string> = {
@@ -45,7 +58,7 @@ const typeLabels: Record<NodeData['type'], string> = {
   workspace: 'Workspace',
   action: 'Action',
   text: 'Text',
-  orchestrator: 'Orchestrator'
+  orchestrator: 'Orchestrator',
 }
 
 const typeColors: Record<NodeData['type'], string> = {
@@ -57,7 +70,7 @@ const typeColors: Record<NodeData['type'], string> = {
   workspace: '#ef4444',
   action: '#f97316',
   text: '#6b7280',
-  orchestrator: '#8b5cf6'
+  orchestrator: '#8b5cf6',
 }
 
 function GhostNodeComponent({ data }: GhostNodeProps): JSX.Element {
@@ -72,7 +85,7 @@ function GhostNodeComponent({ data }: GhostNodeProps): JSX.Element {
       className={`ghost-node ${reducedMotion ? 'reduced-motion' : ''}`}
       style={{
         borderColor: color,
-        backgroundColor: `${color}10`
+        backgroundColor: `${color}10`,
       }}
     >
       <div className="ghost-node-header" style={{ borderBottomColor: `${color}40` }}>

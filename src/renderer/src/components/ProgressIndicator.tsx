@@ -8,17 +8,20 @@
  * Knowing something is happening (and how far along) provides comfort.
  */
 
-import { memo } from 'react'
 import { Loader2 } from 'lucide-react'
+import { memo } from 'react'
 import { create } from 'zustand'
 
 // Store for global progress state
 interface ProgressState {
-  operations: Map<string, {
-    label: string
-    progress?: number // 0-100, undefined for indeterminate
-    startTime: number
-  }>
+  operations: Map<
+    string,
+    {
+      label: string
+      progress?: number // 0-100, undefined for indeterminate
+      startTime: number
+    }
+  >
   start: (id: string, label: string) => void
   update: (id: string, progress: number) => void
   complete: (id: string) => void
@@ -27,32 +30,35 @@ interface ProgressState {
 export const useProgressStore = create<ProgressState>((set) => ({
   operations: new Map(),
 
-  start: (id, label) => set((state) => {
-    const newOps = new Map(state.operations)
-    newOps.set(id, { label, startTime: Date.now() })
-    return { operations: newOps }
-  }),
+  start: (id, label) =>
+    set((state) => {
+      const newOps = new Map(state.operations)
+      newOps.set(id, { label, startTime: Date.now() })
+      return { operations: newOps }
+    }),
 
-  update: (id, progress) => set((state) => {
-    const op = state.operations.get(id)
-    if (!op) return state
-    const newOps = new Map(state.operations)
-    newOps.set(id, { ...op, progress })
-    return { operations: newOps }
-  }),
+  update: (id, progress) =>
+    set((state) => {
+      const op = state.operations.get(id)
+      if (!op) return state
+      const newOps = new Map(state.operations)
+      newOps.set(id, { ...op, progress })
+      return { operations: newOps }
+    }),
 
-  complete: (id) => set((state) => {
-    const newOps = new Map(state.operations)
-    newOps.delete(id)
-    return { operations: newOps }
-  })
+  complete: (id) =>
+    set((state) => {
+      const newOps = new Map(state.operations)
+      newOps.delete(id)
+      return { operations: newOps }
+    }),
 }))
 
 // Helper functions for easy use
 export const progress = {
   start: (id: string, label: string) => useProgressStore.getState().start(id, label),
   update: (id: string, progress: number) => useProgressStore.getState().update(id, progress),
-  complete: (id: string) => useProgressStore.getState().complete(id)
+  complete: (id: string) => useProgressStore.getState().complete(id),
 }
 
 function ProgressIndicatorComponent(): JSX.Element | null {
@@ -65,14 +71,12 @@ function ProgressIndicatorComponent(): JSX.Element | null {
   const [id, op] = entries[entries.length - 1]
 
   return (
-    <div
-      className="fixed bottom-4 right-4 gui-z-panels animate-fade-in"
-    >
+    <div className="fixed bottom-4 right-4 gui-z-panels animate-fade-in">
       <div
         className="flex items-center gap-3 px-4 py-3 rounded-lg shadow-xl min-w-[200px]"
         style={{
           backgroundColor: 'var(--gui-bg-secondary)',
-          border: '1px solid var(--gui-border-subtle)'
+          border: '1px solid var(--gui-border-subtle)',
         }}
       >
         {/* Spinner */}
@@ -83,10 +87,7 @@ function ProgressIndicatorComponent(): JSX.Element | null {
 
         {/* Label and progress */}
         <div className="flex-1 min-w-0">
-          <div
-            className="text-sm truncate"
-            style={{ color: 'var(--gui-text-primary)' }}
-          >
+          <div className="text-sm truncate" style={{ color: 'var(--gui-text-primary)' }}>
             {op.label}
           </div>
 
@@ -101,7 +102,7 @@ function ProgressIndicatorComponent(): JSX.Element | null {
                   className="h-full rounded-full transition-all duration-300"
                   style={{
                     width: `${op.progress}%`,
-                    backgroundColor: 'var(--gui-accent-primary)'
+                    backgroundColor: 'var(--gui-accent-primary)',
                   }}
                 />
               </div>
@@ -121,7 +122,7 @@ function ProgressIndicatorComponent(): JSX.Element | null {
             className="text-[10px] px-1.5 py-0.5 rounded"
             style={{
               backgroundColor: 'var(--gui-bg-tertiary)',
-              color: 'var(--gui-text-muted)'
+              color: 'var(--gui-text-muted)',
             }}
           >
             +{operations.size - 1}

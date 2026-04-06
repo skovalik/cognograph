@@ -11,24 +11,29 @@
  * store integration.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { getWorkspaceState, resetWorkspaceStore, seedNode } from '../../../../test/storeUtils'
+import {
+  createConversationNode,
+  createNoteNode,
+  createTaskNode,
+  resetTestCounters,
+} from '../../../../test/utils'
 import { extractFromNode } from '../extractionService'
-import { resetWorkspaceStore, getWorkspaceState, seedNode } from '../../../../test/storeUtils'
-import { createNoteNode, createConversationNode, createTaskNode, resetTestCounters } from '../../../../test/utils'
 
 // Mock window.api.llm.extract
 const mockExtract = vi.fn()
 vi.stubGlobal('window', {
   api: {
     llm: {
-      extract: mockExtract
-    }
-  }
+      extract: mockExtract,
+    },
+  },
 })
 
 // Mock sciFiToast to avoid UI side effects
 vi.mock('@renderer/utils/toast', () => ({
-  sciFiToast: vi.fn()
+  sciFiToast: vi.fn(),
 }))
 
 describe('extractionService', () => {
@@ -69,18 +74,20 @@ describe('extractionService', () => {
               description: 'As discussed in meeting',
               confidence: 0.8,
               priority: 'medium',
-              tags: ['feature']
-            }
-          ]
-        })
+              tags: ['feature'],
+            },
+          ],
+        }),
       })
 
       await extractFromNode('note-1')
 
       expect(mockExtract).toHaveBeenCalledOnce()
-      expect(mockExtract).toHaveBeenCalledWith(expect.objectContaining({
-        userPrompt: expect.stringContaining('Meeting notes')
-      }))
+      expect(mockExtract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userPrompt: expect.stringContaining('Meeting notes'),
+        }),
+      )
     })
 
     it('should add extracted items as pending extractions', async () => {
@@ -97,10 +104,10 @@ describe('extractionService', () => {
               description: 'Bug in authentication flow',
               confidence: 0.9,
               priority: 'high',
-              tags: ['bug', 'auth']
-            }
-          ]
-        })
+              tags: ['bug', 'auth'],
+            },
+          ],
+        }),
       })
 
       await extractFromNode('note-1')
@@ -125,7 +132,7 @@ describe('extractionService', () => {
               description: 'Very uncertain',
               confidence: 0.2, // Below 0.3 threshold
               priority: 'low',
-              tags: []
+              tags: [],
             },
             {
               type: 'note',
@@ -133,10 +140,10 @@ describe('extractionService', () => {
               description: 'High confidence',
               confidence: 0.8,
               priority: 'medium',
-              tags: []
-            }
-          ]
-        })
+              tags: [],
+            },
+          ],
+        }),
       })
 
       await extractFromNode('note-1')
@@ -153,7 +160,7 @@ describe('extractionService', () => {
 
       mockExtract.mockResolvedValue({
         success: false,
-        error: 'API error'
+        error: 'API error',
       })
 
       // Should not throw
@@ -169,7 +176,7 @@ describe('extractionService', () => {
 
       mockExtract.mockResolvedValue({
         success: true,
-        data: 'not valid json'
+        data: 'not valid json',
       })
 
       // Should not throw
@@ -185,7 +192,7 @@ describe('extractionService', () => {
 
       mockExtract.mockResolvedValue({
         success: true,
-        data: JSON.stringify({ extractions: [] })
+        data: JSON.stringify({ extractions: [] }),
       })
 
       await extractFromNode('note-1')
@@ -205,7 +212,7 @@ describe('extractionService', () => {
         isExtractingDuringCall = getWorkspaceState().isExtracting
         return {
           success: true,
-          data: JSON.stringify({ extractions: [] })
+          data: JSON.stringify({ extractions: [] }),
         }
       })
 
@@ -222,9 +229,12 @@ describe('extractionService', () => {
       const conv = createConversationNode(
         [
           { role: 'user', content: 'Can you help me plan the project?' },
-          { role: 'assistant', content: 'Sure! Here are the key tasks: 1. Setup, 2. Development, 3. Testing' }
+          {
+            role: 'assistant',
+            content: 'Sure! Here are the key tasks: 1. Setup, 2. Development, 3. Testing',
+          },
         ],
-        { id: 'conv-1' }
+        { id: 'conv-1' },
       )
       seedNode(conv)
 
@@ -234,16 +244,18 @@ describe('extractionService', () => {
           extractions: [
             { type: 'task', title: 'Setup', description: '', confidence: 0.8, tags: [] },
             { type: 'task', title: 'Development', description: '', confidence: 0.8, tags: [] },
-            { type: 'task', title: 'Testing', description: '', confidence: 0.8, tags: [] }
-          ]
-        })
+            { type: 'task', title: 'Testing', description: '', confidence: 0.8, tags: [] },
+          ],
+        }),
       })
 
       await extractFromNode('conv-1')
 
-      expect(mockExtract).toHaveBeenCalledWith(expect.objectContaining({
-        userPrompt: expect.stringContaining('Can you help me plan')
-      }))
+      expect(mockExtract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userPrompt: expect.stringContaining('Can you help me plan'),
+        }),
+      )
 
       const state = getWorkspaceState()
       expect(state.pendingExtractions).toHaveLength(3)
@@ -258,16 +270,18 @@ describe('extractionService', () => {
         success: true,
         data: JSON.stringify({
           extractions: [
-            { type: 'task', title: 'Subtask A', description: '', confidence: 0.7, tags: [] }
-          ]
-        })
+            { type: 'task', title: 'Subtask A', description: '', confidence: 0.7, tags: [] },
+          ],
+        }),
       })
 
       await extractFromNode('task-1')
 
-      expect(mockExtract).toHaveBeenCalledWith(expect.objectContaining({
-        userPrompt: expect.stringContaining('Main task with subtasks')
-      }))
+      expect(mockExtract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userPrompt: expect.stringContaining('Main task with subtasks'),
+        }),
+      )
     })
 
     it('should handle JSON wrapped in markdown code blocks', async () => {
@@ -276,7 +290,7 @@ describe('extractionService', () => {
 
       mockExtract.mockResolvedValue({
         success: true,
-        data: '```json\n{"extractions": [{"type": "note", "title": "Test", "description": "", "confidence": 0.8, "tags": []}]}\n```'
+        data: '```json\n{"extractions": [{"type": "note", "title": "Test", "description": "", "confidence": 0.8, "tags": []}]}\n```',
       })
 
       await extractFromNode('note-1')
@@ -294,9 +308,9 @@ describe('extractionService', () => {
         success: true,
         data: JSON.stringify({
           extractions: [
-            { type: 'note', title: 'Extracted', description: '', confidence: 0.8, tags: [] }
-          ]
-        })
+            { type: 'note', title: 'Extracted', description: '', confidence: 0.8, tags: [] },
+          ],
+        }),
       })
 
       await extractFromNode('note-1')

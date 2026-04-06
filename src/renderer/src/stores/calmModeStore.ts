@@ -44,15 +44,15 @@ export const useCalmModeStore = create<CalmModeStore>((set) => ({
 
   incrementCalmLevel: (): void => {
     set((state) => ({
-      calmLevel: Math.min(3, state.calmLevel + 1) as CalmLevel
+      calmLevel: Math.min(3, state.calmLevel + 1) as CalmLevel,
     }))
   },
 
   decrementCalmLevel: (): void => {
     set((state) => ({
-      calmLevel: Math.max(0, state.calmLevel - 1) as CalmLevel
+      calmLevel: Math.max(0, state.calmLevel - 1) as CalmLevel,
     }))
-  }
+  },
 }))
 
 // --- Selectors (pure functions, exported for use and testing) ---------------

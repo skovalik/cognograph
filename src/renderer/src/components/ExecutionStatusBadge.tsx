@@ -80,16 +80,8 @@ function ErrorShape(): JSX.Element {
       fill="none"
       aria-hidden="true"
     >
-      <path
-        d="M6 1L11 10.5H1L6 1Z"
-        fill="var(--accent-red, #ef4444)"
-      />
-      <path
-        d="M6 5V7"
-        stroke="white"
-        strokeWidth={1.5}
-        strokeLinecap="round"
-      />
+      <path d="M6 1L11 10.5H1L6 1Z" fill="var(--accent-red, #ef4444)" />
+      <path d="M6 5V7" stroke="white" strokeWidth={1.5} strokeLinecap="round" />
       <circle cx={6} cy={8.5} r={0.7} fill="white" />
     </svg>
   )

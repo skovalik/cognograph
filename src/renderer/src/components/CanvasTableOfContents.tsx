@@ -6,12 +6,12 @@
 // spatial memory fails ("I know I wrote it but can't find it on canvas").
 // Triggered by Ctrl+Shift+T or command palette.
 
-import { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react'
-import { useReactFlow } from '@xyflow/react'
-import { X, Search, ArrowUpDown } from 'lucide-react'
-import { useWorkspaceStore } from '../stores/workspaceStore'
 import type { NoteMode } from '@shared/types'
-import { escapeManager, EscapePriority } from '../utils/EscapeManager'
+import { useReactFlow } from '@xyflow/react'
+import { ArrowUpDown, Search, X } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useWorkspaceStore } from '../stores/workspaceStore'
+import { EscapePriority, escapeManager } from '../utils/EscapeManager'
 
 type SortMode = 'recent' | 'alpha' | 'type'
 
@@ -25,7 +25,7 @@ const NOTE_MODE_LABELS: Record<NoteMode, string> = {
   page: 'Page',
   component: 'Component',
   'content-model': 'Content Model',
-  'wp-config': 'WP Config'
+  'wp-config': 'WP Config',
 }
 
 interface CanvasTableOfContentsProps {
@@ -58,8 +58,8 @@ function CanvasTableOfContentsComponent({ onClose }: CanvasTableOfContentsProps)
     const searchLower = search.toLowerCase()
 
     return nodes
-      .filter(n => !n.data.isArchived)
-      .filter(n => {
+      .filter((n) => !n.data.isArchived)
+      .filter((n) => {
         if (typeFilter && n.data.type !== typeFilter) return false
         if (!search) return true
         const title = ((n.data as { title?: string }).title || '').toLowerCase()
@@ -84,28 +84,30 @@ function CanvasTableOfContentsComponent({ onClose }: CanvasTableOfContentsProps)
 
   // Unique types for filter
   const availableTypes = useMemo(() => {
-    const types = new Set(nodes.filter(n => !n.data.isArchived).map(n => n.data.type))
+    const types = new Set(nodes.filter((n) => !n.data.isArchived).map((n) => n.data.type))
     return Array.from(types).sort()
   }, [nodes])
 
-  const handleJumpToNode = useCallback((nodeId: string) => {
-    const node = nodes.find(n => n.id === nodeId)
-    if (!node?.position) return
+  const handleJumpToNode = useCallback(
+    (nodeId: string) => {
+      const node = nodes.find((n) => n.id === nodeId)
+      if (!node?.position) return
 
-    const width = (node.data as { width?: number }).width || 280
-    const height = (node.data as { height?: number }).height || 140
-    setCenter(
-      node.position.x + width / 2,
-      node.position.y + height / 2,
-      { zoom: 1, duration: 300 }
-    )
-    setSelectedNodes([nodeId])
-    recordInteraction(nodeId, 'select')
-    onClose()
-  }, [nodes, setCenter, setSelectedNodes, recordInteraction, onClose])
+      const width = (node.data as { width?: number }).width || 280
+      const height = (node.data as { height?: number }).height || 140
+      setCenter(node.position.x + width / 2, node.position.y + height / 2, {
+        zoom: 1,
+        duration: 300,
+      })
+      setSelectedNodes([nodeId])
+      recordInteraction(nodeId, 'select')
+      onClose()
+    },
+    [nodes, setCenter, setSelectedNodes, recordInteraction, onClose],
+  )
 
   const cycleSortMode = useCallback(() => {
-    setSortMode(prev => prev === 'recent' ? 'alpha' : prev === 'alpha' ? 'type' : 'recent')
+    setSortMode((prev) => (prev === 'recent' ? 'alpha' : prev === 'alpha' ? 'type' : 'recent'))
   }, [])
 
   return (
@@ -131,7 +133,12 @@ function CanvasTableOfContentsComponent({ onClose }: CanvasTableOfContentsProps)
           />
         </div>
         <div className="canvas-toc__filters">
-          <button className="canvas-toc__sort-btn" onClick={cycleSortMode} title={`Sort: ${sortMode}`} aria-label={`Sort by ${sortMode}`}>
+          <button
+            className="canvas-toc__sort-btn"
+            onClick={cycleSortMode}
+            title={`Sort: ${sortMode}`}
+            aria-label={`Sort by ${sortMode}`}
+          >
             <ArrowUpDown className="w-3.5 h-3.5" />
             <span>{sortMode === 'recent' ? 'Recent' : sortMode === 'alpha' ? 'A-Z' : 'Type'}</span>
           </button>
@@ -141,20 +148,25 @@ function CanvasTableOfContentsComponent({ onClose }: CanvasTableOfContentsProps)
             onChange={(e) => setTypeFilter(e.target.value || null)}
           >
             <option value="">All types</option>
-            {availableTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
+            {availableTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
             ))}
           </select>
         </div>
       </div>
 
       <div className="canvas-toc__list">
-        {filteredNodes.map(node => {
+        {filteredNodes.map((node) => {
           const title = (node.data as { title?: string }).title || 'Untitled'
           const noteMode = (node.data as { noteMode?: NoteMode }).noteMode
           const wordCount = (() => {
             const content = (node.data as { content?: string }).content || ''
-            const plain = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+            const plain = content
+              .replace(/<[^>]*>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim()
             return plain ? plain.split(/\s+/).length : 0
           })()
 
@@ -173,9 +185,7 @@ function CanvasTableOfContentsComponent({ onClose }: CanvasTableOfContentsProps)
                   {NOTE_MODE_LABELS[noteMode] || noteMode}
                 </span>
               )}
-              {wordCount > 0 && (
-                <span className="canvas-toc__item-words">{wordCount}w</span>
-              )}
+              {wordCount > 0 && <span className="canvas-toc__item-words">{wordCount}w</span>}
             </button>
           )
         })}

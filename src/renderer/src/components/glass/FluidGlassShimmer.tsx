@@ -120,7 +120,7 @@ function FluidGlassShimmerInner({ forceRender = false }: FluidGlassShimmerProps)
         pointerEvents: 'none',
         borderRadius: 'inherit',
         mixBlendMode: 'overlay',
-        opacity: 0.4
+        opacity: 0.4,
       }}
       aria-hidden="true"
     />

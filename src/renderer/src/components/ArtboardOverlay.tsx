@@ -15,19 +15,19 @@
  * indicating the Cmd/Ctrl+Enter shortcut for discoverability.
  */
 
-import { memo, useEffect, useState, useCallback, type CSSProperties } from 'react'
-import { X, Maximize2 } from 'lucide-react'
+import type { NodeData } from '@shared/types'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useUIStore } from '../stores/uiStore'
+import { Maximize2, X } from 'lucide-react'
+import { type CSSProperties, memo, useCallback, useEffect, useState } from 'react'
 import { useNodesStore } from '../stores/nodesStore'
 import { useSelectionStore } from '../stores/selectionStore'
-import type { NodeData } from '@shared/types'
-import { ConversationArtboard } from './artboards/ConversationArtboard'
+import { useUIStore } from '../stores/uiStore'
 import { ArtifactArtboard } from './artboards/ArtifactArtboard'
-import { TaskArtboard } from './artboards/TaskArtboard'
-import { ProjectArtboard } from './artboards/ProjectArtboard'
-import { OrchestratorArtboard } from './artboards/OrchestratorArtboard'
+import { ConversationArtboard } from './artboards/ConversationArtboard'
 import { NoteArtboard } from './artboards/NoteArtboard'
+import { OrchestratorArtboard } from './artboards/OrchestratorArtboard'
+import { ProjectArtboard } from './artboards/ProjectArtboard'
+import { TaskArtboard } from './artboards/TaskArtboard'
 import { TextArtboard } from './artboards/TextArtboard'
 
 // =============================================================================
@@ -47,9 +47,7 @@ function ArtboardOverlayComponent(): JSX.Element | null {
   const exitArtboard = useUIStore((s) => s.exitArtboard)
   const nodes = useNodesStore((s) => s.nodes)
 
-  const activeNode = artboardNodeId
-    ? nodes.find((n) => n.id === artboardNodeId)
-    : null
+  const activeNode = artboardNodeId ? nodes.find((n) => n.id === artboardNodeId) : null
 
   const nodeData = activeNode?.data as NodeData | undefined
   const title = nodeData?.title || 'Untitled'
@@ -66,7 +64,7 @@ function ArtboardOverlayComponent(): JSX.Element | null {
         handleClose()
       }
     },
-    [handleClose]
+    [handleClose],
   )
 
   // Node type display label
@@ -83,7 +81,7 @@ function ArtboardOverlayComponent(): JSX.Element | null {
           className="fixed inset-0 flex items-center justify-center"
           style={{
             zIndex: 9000,
-            pointerEvents: 'auto'
+            pointerEvents: 'auto',
           }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -97,23 +95,25 @@ function ArtboardOverlayComponent(): JSX.Element | null {
             style={{
               backgroundColor: 'rgba(0, 0, 0, 0.4)',
               backdropFilter: 'blur(1px)',
-              WebkitBackdropFilter: 'blur(1px)'
+              WebkitBackdropFilter: 'blur(1px)',
             }}
           />
 
           {/* Artboard panel */}
           <motion.div
             className="relative glass-soft"
-            style={{
-              width: '60vw',
-              maxWidth: '1200px',
-              minWidth: '400px',
-              maxHeight: '80vh',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column'
-            } as CSSProperties}
+            style={
+              {
+                width: '60vw',
+                maxWidth: '1200px',
+                minWidth: '400px',
+                maxHeight: '80vh',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+              } as CSSProperties
+            }
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
@@ -123,20 +123,17 @@ function ArtboardOverlayComponent(): JSX.Element | null {
             <div
               className="flex items-center justify-between px-5 py-3 shrink-0"
               style={{
-                borderBottom: '1px solid var(--gui-border)'
+                borderBottom: '1px solid var(--gui-border)',
               }}
             >
               <div className="flex items-center gap-3">
-                <Maximize2
-                  className="w-4 h-4"
-                  style={{ color: typeColor }}
-                />
+                <Maximize2 className="w-4 h-4" style={{ color: typeColor }} />
                 <div className="flex items-center gap-2">
                   <span
                     className="text-[10px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider"
                     style={{
                       backgroundColor: `color-mix(in srgb, ${typeColor} 15%, transparent)`,
-                      color: typeColor
+                      color: typeColor,
                     }}
                   >
                     {typeLabel}
@@ -155,7 +152,7 @@ function ArtboardOverlayComponent(): JSX.Element | null {
                   className="text-[10px] px-1.5 py-0.5 rounded"
                   style={{
                     backgroundColor: 'var(--gui-bg-secondary)',
-                    color: 'var(--gui-text-muted)'
+                    color: 'var(--gui-text-muted)',
                   }}
                 >
                   Esc
@@ -165,7 +162,7 @@ function ArtboardOverlayComponent(): JSX.Element | null {
                   className="p-1.5 rounded-md transition-colors duration-150"
                   style={{
                     color: 'var(--gui-text-muted)',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = 'var(--gui-bg-tertiary)'
@@ -183,10 +180,7 @@ function ArtboardOverlayComponent(): JSX.Element | null {
             </div>
 
             {/* Content area — per-type artboard panels */}
-            <div
-              className="flex-1 overflow-hidden"
-              style={{ minHeight: '300px' }}
-            >
+            <div className="flex-1 overflow-hidden" style={{ minHeight: '300px' }}>
               {renderArtboardContent(nodeType, artboardNodeId!, title, typeLabel, typeColor)}
             </div>
           </motion.div>
@@ -214,8 +208,7 @@ function FocusModeHintComponent(): JSX.Element | null {
   const artboardNodeId = useUIStore((s) => s.artboardNodeId)
   const [visible, setVisible] = useState(false)
 
-  const singleSelectedId =
-    selectedNodeIds.length === 1 ? selectedNodeIds[0] : null
+  const singleSelectedId = selectedNodeIds.length === 1 ? selectedNodeIds[0] : null
   const shouldShow = singleSelectedId !== null && artboardNodeId === null
 
   useEffect(() => {
@@ -254,7 +247,7 @@ function FocusModeHintComponent(): JSX.Element | null {
           backgroundColor: 'color-mix(in srgb, var(--gui-bg-tertiary) 95%, transparent)',
           border: '1px solid var(--gui-border)',
           color: 'var(--gui-text-muted)',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
         }}
       >
         {shortcutText}
@@ -279,7 +272,7 @@ function renderArtboardContent(
   nodeId: string,
   title: string,
   typeLabel: string,
-  typeColor: string
+  typeColor: string,
 ): JSX.Element {
   switch (nodeType) {
     case 'conversation':
@@ -303,10 +296,7 @@ function renderArtboardContent(
           style={{ color: 'var(--gui-text-muted)' }}
         >
           <div className="text-center">
-            <Maximize2
-              className="w-12 h-12 mx-auto mb-4 opacity-30"
-              style={{ color: typeColor }}
-            />
+            <Maximize2 className="w-12 h-12 mx-auto mb-4 opacity-30" style={{ color: typeColor }} />
             <p className="text-sm mb-1" style={{ color: 'var(--gui-text-primary)' }}>
               Artboard Mode
             </p>

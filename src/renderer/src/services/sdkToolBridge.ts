@@ -38,9 +38,9 @@ export function initSdkToolBridge(): void {
       } catch (error: any) {
         ;(window as any).api.sdkTool.sendResult(data.id, {
           success: false,
-          error: error.message || 'Tool execution failed'
+          error: error.message || 'Tool execution failed',
         })
       }
-    }
+    },
   )
 }

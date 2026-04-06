@@ -10,12 +10,12 @@
  * Phase 4B UX-A11Y: Keyboard navigation and ARIA attributes.
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-  findNearestInDirection,
   arrowToDirection,
+  type Direction,
+  findNearestInDirection,
   type NodeCandidate,
-  type Direction
 } from '../useSpatialNavigation'
 
 // =============================================================================
@@ -64,7 +64,7 @@ describe('findNearestInDirection', () => {
     { id: 'A', centerX: 0, centerY: 100 },
     { id: 'B', centerX: 100, centerY: 0 },
     { id: 'C', centerX: 200, centerY: 100 },
-    { id: 'D', centerX: 100, centerY: 200 }
+    { id: 'D', centerX: 100, centerY: 200 },
   ]
 
   const originX = 100
@@ -94,14 +94,14 @@ describe('findNearestInDirection', () => {
     // All candidates to the right
     const rightOnly: NodeCandidate[] = [
       { id: 'X', centerX: 300, centerY: 100 },
-      { id: 'Y', centerX: 400, centerY: 100 }
+      { id: 'Y', centerX: 400, centerY: 100 },
     ]
     expect(findNearestInDirection(originX, originY, rightOnly, 'left')).toBeNull()
   })
 
   it('ignores candidates within dead zone (10px)', () => {
     const tooClose: NodeCandidate[] = [
-      { id: 'close', centerX: 105, centerY: 100 } // only 5px to the right — in dead zone
+      { id: 'close', centerX: 105, centerY: 100 }, // only 5px to the right — in dead zone
     ]
     expect(findNearestInDirection(originX, originY, tooClose, 'right')).toBeNull()
   })
@@ -112,7 +112,7 @@ describe('findNearestInDirection', () => {
     // F is farther but directly aligned
     const candidates: NodeCandidate[] = [
       { id: 'E', centerX: 150, centerY: 140 }, // close but angled (50 right, 40 down)
-      { id: 'F', centerX: 250, centerY: 100 }  // far but perfectly aligned
+      { id: 'F', centerX: 250, centerY: 100 }, // far but perfectly aligned
     ]
     // E fails the cone test: abs(dy=40) is NOT < abs(dx=50), so it IS in the cone
     // E score: dist + 2*abs(dy) = sqrt(50^2 + 40^2) + 2*40 = ~64.03 + 80 = ~144
@@ -130,7 +130,7 @@ describe('findNearestInDirection', () => {
   it('selects the closest when multiple nodes are aligned', () => {
     const aligned: NodeCandidate[] = [
       { id: 'near', centerX: 200, centerY: 100 },
-      { id: 'far', centerX: 400, centerY: 100 }
+      { id: 'far', centerX: 400, centerY: 100 },
     ]
     expect(findNearestInDirection(originX, originY, aligned, 'right')).toBe('near')
   })
@@ -138,15 +138,13 @@ describe('findNearestInDirection', () => {
   it('rejects candidates outside the 90-degree cone', () => {
     // Candidate is more "down" than "right" — doesn't pass the cone test for 'right'
     const offCone: NodeCandidate[] = [
-      { id: 'diagonal', centerX: 130, centerY: 200 } // dx=30, dy=100: abs(dy) > abs(dx)
+      { id: 'diagonal', centerX: 130, centerY: 200 }, // dx=30, dy=100: abs(dy) > abs(dx)
     ]
     expect(findNearestInDirection(originX, originY, offCone, 'right')).toBeNull()
   })
 
   it('handles negative coordinates correctly', () => {
-    const negCandidates: NodeCandidate[] = [
-      { id: 'neg', centerX: -100, centerY: 0 }
-    ]
+    const negCandidates: NodeCandidate[] = [{ id: 'neg', centerX: -100, centerY: 0 }]
     expect(findNearestInDirection(0, 0, negCandidates, 'left')).toBe('neg')
   })
 })

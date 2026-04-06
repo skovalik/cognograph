@@ -15,9 +15,9 @@
  * 5. User presses Escape or releases Shift → cancels drag
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
-import { escapeManager, EscapePriority } from '../utils/EscapeManager'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { EscapePriority, escapeManager } from '../utils/EscapeManager'
 
 export interface ShiftDragState {
   isActive: boolean
@@ -36,7 +36,7 @@ const initialState: ShiftDragState = {
   sourcePosition: null,
   cursorPosition: null,
   targetNodeId: null,
-  isValidTarget: false
+  isValidTarget: false,
 }
 
 interface UseShiftDragEdgeCreationOptions {
@@ -46,7 +46,7 @@ interface UseShiftDragEdgeCreationOptions {
 
 export function useShiftDragEdgeCreation({
   onEdgeCreate,
-  existingEdges
+  existingEdges,
 }: UseShiftDragEdgeCreationOptions) {
   const [state, setState] = useState<ShiftDragState>(initialState)
   const { getNodes, screenToFlowPosition } = useReactFlow()
@@ -64,10 +64,10 @@ export function useShiftDragEdgeCreation({
       return existingEdges.some(
         (e) =>
           (e.source === sourceId && e.target === targetId) ||
-          (e.source === targetId && e.target === sourceId)
+          (e.source === targetId && e.target === sourceId),
       )
     },
-    [existingEdges]
+    [existingEdges],
   )
 
   // Find node under cursor position (in screen coordinates)
@@ -91,7 +91,7 @@ export function useShiftDragEdgeCreation({
       }
       return null
     },
-    [getNodes, screenToFlowPosition]
+    [getNodes, screenToFlowPosition],
   )
 
   // Get node center position in flow coordinates
@@ -106,10 +106,10 @@ export function useShiftDragEdgeCreation({
 
       return {
         x: node.position.x + width / 2,
-        y: node.position.y + height / 2
+        y: node.position.y + height / 2,
       }
     },
-    [getNodes]
+    [getNodes],
   )
 
   // Start the shift+drag edge creation
@@ -126,10 +126,10 @@ export function useShiftDragEdgeCreation({
         sourcePosition: sourcePos,
         cursorPosition: flowPos,
         targetNodeId: null,
-        isValidTarget: false
+        isValidTarget: false,
       })
     },
-    [getNodeCenter, screenToFlowPosition]
+    [getNodeCenter, screenToFlowPosition],
   )
 
   // Update cursor position during drag
@@ -150,10 +150,10 @@ export function useShiftDragEdgeCreation({
         ...s,
         cursorPosition: flowPos,
         targetNodeId,
-        isValidTarget
+        isValidTarget,
       }))
     },
-    [screenToFlowPosition, findNodeAtPosition, edgeExists]
+    [screenToFlowPosition, findNodeAtPosition, edgeExists],
   )
 
   // End the drag and potentially create edge
@@ -200,7 +200,7 @@ export function useShiftDragEdgeCreation({
 
       // Check if clicking on interactive elements inside nodes
       const interactive = (e.target as HTMLElement).closest(
-        'input, textarea, button, [contenteditable], .tiptap, .ProseMirror'
+        'input, textarea, button, [contenteditable], .tiptap, .ProseMirror',
       )
       if (interactive) return
 
@@ -268,6 +268,6 @@ export function useShiftDragEdgeCreation({
   // No longer need handleNodeMouseDown since we use global event listener
   return {
     state,
-    reset
+    reset,
   }
 }

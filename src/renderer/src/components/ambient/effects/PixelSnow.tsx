@@ -1,25 +1,26 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import React, { useEffect, useRef, useMemo, useCallback } from 'react';
+import type React from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import {
-  Scene,
-  OrthographicCamera,
-  WebGLRenderer,
-  PlaneGeometry,
-  ShaderMaterial,
+  Color,
   Mesh,
+  OrthographicCamera,
+  PlaneGeometry,
+  Scene,
+  ShaderMaterial,
   Vector2,
   Vector3,
-  Color
-} from 'three';
-import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality';
+  WebGLRenderer,
+} from 'three'
+import type { AdaptiveQualityState } from '../../../hooks/useAdaptiveQuality'
 
 const vertexShader = `
 void main() {
   gl_Position = vec4(position, 1.0);
 }
-`;
+`
 
 const fragmentShader = `
 precision mediump float;
@@ -179,26 +180,26 @@ void main() {
 
   gl_FragColor = vec4(0.0);
 }
-`;
+`
 
 interface PixelSnowProps {
-  color?: string;
-  flakeSize?: number;
-  minFlakeSize?: number;
-  pixelResolution?: number;
-  speed?: number;
-  depthFade?: number;
-  farPlane?: number;
-  brightness?: number;
-  gamma?: number;
-  density?: number;
-  variant?: 'square' | 'round' | 'snowflake';
-  direction?: number;
-  isDark?: boolean;
-  className?: string;
-  style?: React.CSSProperties;
-  qualityRef?: React.RefObject<AdaptiveQualityState>;
-  reportFrame?: () => void;
+  color?: string
+  flakeSize?: number
+  minFlakeSize?: number
+  pixelResolution?: number
+  speed?: number
+  depthFade?: number
+  farPlane?: number
+  brightness?: number
+  gamma?: number
+  density?: number
+  variant?: 'square' | 'round' | 'snowflake'
+  direction?: number
+  isDark?: boolean
+  className?: string
+  style?: React.CSSProperties
+  qualityRef?: React.RefObject<AdaptiveQualityState>
+  reportFrame?: () => void
 }
 
 export default function PixelSnow({
@@ -220,78 +221,78 @@ export default function PixelSnow({
   qualityRef,
   reportFrame: reportFrameFn,
 }: PixelSnowProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const animationRef = useRef<number>(0);
-  const isVisibleRef = useRef(true);
-  const rendererRef = useRef<WebGLRenderer | null>(null);
-  const materialRef = useRef<ShaderMaterial | null>(null);
-  const resizeTimeoutRef = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null)
+  const animationRef = useRef<number>(0)
+  const isVisibleRef = useRef(true)
+  const rendererRef = useRef<WebGLRenderer | null>(null)
+  const materialRef = useRef<ShaderMaterial | null>(null)
+  const resizeTimeoutRef = useRef<number | null>(null)
 
   // Memoize shader variant value
   const variantValue = useMemo(() => {
-    return variant === 'round' ? 1.0 : variant === 'snowflake' ? 2.0 : 0.0;
-  }, [variant]);
+    return variant === 'round' ? 1.0 : variant === 'snowflake' ? 2.0 : 0.0
+  }, [variant])
 
   // Memoize color conversion
   const colorVector = useMemo(() => {
-    const threeColor = new Color(color);
-    return new Vector3(threeColor.r, threeColor.g, threeColor.b);
-  }, [color]);
+    const threeColor = new Color(color)
+    return new Vector3(threeColor.r, threeColor.g, threeColor.b)
+  }, [color])
 
   // Debounced resize handler
   const handleResize = useCallback(() => {
     if (resizeTimeoutRef.current) {
-      clearTimeout(resizeTimeoutRef.current);
+      clearTimeout(resizeTimeoutRef.current)
     }
     resizeTimeoutRef.current = window.setTimeout(() => {
-      const container = containerRef.current;
-      const renderer = rendererRef.current;
-      const material = materialRef.current;
-      if (!container || !renderer || !material) return;
+      const container = containerRef.current
+      const renderer = rendererRef.current
+      const material = materialRef.current
+      if (!container || !renderer || !material) return
 
-      const w = container.offsetWidth;
-      const h = container.offsetHeight;
-      renderer.setSize(w, h);
-      material.uniforms.uResolution.value.set(w, h);
-    }, 100);
-  }, []);
+      const w = container.offsetWidth
+      const h = container.offsetHeight
+      renderer.setSize(w, h)
+      material.uniforms.uResolution.value.set(w, h)
+    }, 100)
+  }, [])
 
   // Visibility observer
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const container = containerRef.current
+    if (!container) return
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        isVisibleRef.current = entry.isIntersecting;
+        isVisibleRef.current = entry.isIntersecting
       },
-      { threshold: 0 }
-    );
+      { threshold: 0 },
+    )
 
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, []);
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [])
 
   // Main Three.js setup - only runs once
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const container = containerRef.current
+    if (!container) return
 
-    const scene = new Scene();
-    const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    const scene = new Scene()
+    const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1)
     const renderer = new WebGLRenderer({
       antialias: false,
       alpha: true,
       powerPreference: 'high-performance',
       stencil: false,
-      depth: false
-    });
+      depth: false,
+    })
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(container.offsetWidth, container.offsetHeight);
-    renderer.setClearColor(0x000000, 0);
-    container.appendChild(renderer.domElement);
-    rendererRef.current = renderer;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.setSize(container.offsetWidth, container.offsetHeight)
+    renderer.setClearColor(0x000000, 0)
+    container.appendChild(renderer.domElement)
+    rendererRef.current = renderer
 
     const material = new ShaderMaterial({
       vertexShader,
@@ -311,68 +312,68 @@ export default function PixelSnow({
         uDensity: { value: density },
         uVariant: { value: variantValue },
         uDirection: { value: (direction * Math.PI) / 180 },
-        uIsDark: { value: isDark ? 1 : 0 }
+        uIsDark: { value: isDark ? 1 : 0 },
       },
-      transparent: true
-    });
-    materialRef.current = material;
+      transparent: true,
+    })
+    materialRef.current = material
 
-    const geometry = new PlaneGeometry(2, 2);
-    scene.add(new Mesh(geometry, material));
+    const geometry = new PlaneGeometry(2, 2)
+    scene.add(new Mesh(geometry, material))
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', handleResize)
 
-    const startTime = performance.now();
-    let frameCount = 0;
+    const startTime = performance.now()
+    let frameCount = 0
     const animate = () => {
-      animationRef.current = requestAnimationFrame(animate);
-      if (qualityRef?.current && !qualityRef.current.shouldRender) return;
-      if (reportFrameFn) reportFrameFn();
-      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return;
+      animationRef.current = requestAnimationFrame(animate)
+      if (qualityRef?.current && !qualityRef.current.shouldRender) return
+      if (reportFrameFn) reportFrameFn()
+      if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return
 
       // Only render if visible
       if (isVisibleRef.current) {
-        material.uniforms.uTime.value = (performance.now() - startTime) * 0.001;
-        renderer.render(scene, camera);
+        material.uniforms.uTime.value = (performance.now() - startTime) * 0.001
+        renderer.render(scene, camera)
       }
-    };
-    animate();
+    }
+    animate()
 
     return () => {
-      cancelAnimationFrame(animationRef.current);
-      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationRef.current)
+      window.removeEventListener('resize', handleResize)
       if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current);
+        clearTimeout(resizeTimeoutRef.current)
       }
       if (container.contains(renderer.domElement)) {
-        container.removeChild(renderer.domElement);
+        container.removeChild(renderer.domElement)
       }
-      renderer.dispose();
-      geometry.dispose();
-      material.dispose();
-      rendererRef.current = null;
-      materialRef.current = null;
-    };
-  }, [handleResize]); // Only recreate scene when handleResize changes
+      renderer.dispose()
+      geometry.dispose()
+      material.dispose()
+      rendererRef.current = null
+      materialRef.current = null
+    }
+  }, [handleResize]) // Only recreate scene when handleResize changes
 
   // Update material uniforms when props change
   useEffect(() => {
-    const material = materialRef.current;
-    if (!material) return;
+    const material = materialRef.current
+    if (!material) return
 
-    material.uniforms.uFlakeSize.value = flakeSize;
-    material.uniforms.uMinFlakeSize.value = minFlakeSize;
-    material.uniforms.uPixelResolution.value = pixelResolution;
-    material.uniforms.uSpeed.value = speed;
-    material.uniforms.uDepthFade.value = depthFade;
-    material.uniforms.uFarPlane.value = farPlane;
-    material.uniforms.uBrightness.value = brightness;
-    material.uniforms.uGamma.value = gamma;
-    material.uniforms.uDensity.value = density;
-    material.uniforms.uVariant.value = variantValue;
-    material.uniforms.uDirection.value = (direction * Math.PI) / 180;
-    material.uniforms.uColor.value.copy(colorVector);
-    material.uniforms.uIsDark.value = isDark ? 1 : 0;
+    material.uniforms.uFlakeSize.value = flakeSize
+    material.uniforms.uMinFlakeSize.value = minFlakeSize
+    material.uniforms.uPixelResolution.value = pixelResolution
+    material.uniforms.uSpeed.value = speed
+    material.uniforms.uDepthFade.value = depthFade
+    material.uniforms.uFarPlane.value = farPlane
+    material.uniforms.uBrightness.value = brightness
+    material.uniforms.uGamma.value = gamma
+    material.uniforms.uDensity.value = density
+    material.uniforms.uVariant.value = variantValue
+    material.uniforms.uDirection.value = (direction * Math.PI) / 180
+    material.uniforms.uColor.value.copy(colorVector)
+    material.uniforms.uIsDark.value = isDark ? 1 : 0
   }, [
     flakeSize,
     minFlakeSize,
@@ -386,8 +387,8 @@ export default function PixelSnow({
     variantValue,
     direction,
     colorVector,
-    isDark
-  ]);
+    isDark,
+  ])
 
   return (
     <div
@@ -395,5 +396,5 @@ export default function PixelSnow({
       className={`absolute inset-0 w-full h-full transform-gpu will-change-transform backface-hidden ${className}`}
       style={style}
     />
-  );
+  )
 }

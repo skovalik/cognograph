@@ -20,14 +20,14 @@ export const SESSION_ACCENT_COLORS = [
   '#6366f1', // indigo
 ] as const
 
-export type SessionAccentColor = typeof SESSION_ACCENT_COLORS[number]
+export type SessionAccentColor = (typeof SESSION_ACCENT_COLORS)[number]
 
 /**
  * Get next available color (round-robin based on active session count).
  * Prefers unused colors; falls back to round-robin when all 8 are taken.
  */
 export function getNextSessionColor(usedColors: string[]): string {
-  const available = SESSION_ACCENT_COLORS.filter(c => !usedColors.includes(c))
+  const available = SESSION_ACCENT_COLORS.filter((c) => !usedColors.includes(c))
   return available.length > 0
     ? available[0]
     : SESSION_ACCENT_COLORS[usedColors.length % SESSION_ACCENT_COLORS.length]

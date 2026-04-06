@@ -10,13 +10,26 @@
  * Pulses via CSS animation to distinguish from real nodes.
  */
 
-import { memo, useCallback } from 'react'
 import type { NodeProps } from '@xyflow/react'
-import { Check, X, GripVertical, Bot, FileText, CheckSquare, MessageSquare, Folder, Globe, Type, Zap, Cog } from 'lucide-react'
+import {
+  Bot,
+  Check,
+  CheckSquare,
+  Cog,
+  FileText,
+  Folder,
+  Globe,
+  GripVertical,
+  MessageSquare,
+  Type,
+  X,
+  Zap,
+} from 'lucide-react'
+import { memo, useCallback } from 'react'
+import { cn } from '../../lib/utils'
+import { useProposalStore } from '../../stores/proposalStore'
 import { Button } from '../ui/Button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
-import { useProposalStore } from '../../stores/proposalStore'
-import { cn } from '../../lib/utils'
 
 // Node type -> icon mapping
 const NODE_TYPE_ICONS: Record<string, typeof FileText> = {
@@ -57,28 +70,36 @@ interface GhostNodeData {
 
 function GhostNodeComponent({ id, data }: NodeProps): JSX.Element {
   const ghostData = data as unknown as GhostNodeData
-  const approveChange = useProposalStore(s => s.approveChange)
-  const rejectChange = useProposalStore(s => s.rejectChange)
+  const approveChange = useProposalStore((s) => s.approveChange)
+  const rejectChange = useProposalStore((s) => s.rejectChange)
 
   const nodeColor = NODE_TYPE_COLORS[ghostData.nodeType] || '#94a3b8'
   const NodeIcon = NODE_TYPE_ICONS[ghostData.nodeType] || FileText
 
-  const handleApprove = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    approveChange(ghostData.proposalId, ghostData.changeId)
-  }, [approveChange, ghostData.proposalId, ghostData.changeId])
+  const handleApprove = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      approveChange(ghostData.proposalId, ghostData.changeId)
+    },
+    [approveChange, ghostData.proposalId, ghostData.changeId],
+  )
 
-  const handleReject = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    rejectChange(ghostData.proposalId, ghostData.changeId)
-  }, [rejectChange, ghostData.proposalId, ghostData.changeId])
+  const handleReject = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      rejectChange(ghostData.proposalId, ghostData.changeId)
+    },
+    [rejectChange, ghostData.proposalId, ghostData.changeId],
+  )
 
   return (
     <div
       className="ghost-node"
-      style={{
-        '--ghost-color': nodeColor,
-      } as React.CSSProperties}
+      style={
+        {
+          '--ghost-color': nodeColor,
+        } as React.CSSProperties
+      }
     >
       {/* Drag handle */}
       <div className="ghost-node-drag-handle">
@@ -95,10 +116,7 @@ function GhostNodeComponent({ id, data }: NodeProps): JSX.Element {
 
       {/* Preview content */}
       {ghostData.previewContent && (
-        <p
-          className="text-[10px] line-clamp-3 mb-2"
-          style={{ color: 'var(--text-muted)' }}
-        >
+        <p className="text-[10px] line-clamp-3 mb-2" style={{ color: 'var(--text-muted)' }}>
           {ghostData.previewContent}
         </p>
       )}

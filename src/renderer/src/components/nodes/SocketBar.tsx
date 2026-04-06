@@ -8,10 +8,10 @@
  * Shows round socket icons on sides where connections exist.
  */
 
-import { memo, useMemo } from 'react'
-import { useViewport } from '@xyflow/react'
-import { useEdgesStore, useSelectionStore } from '../../stores'
 import type { EdgeData } from '@shared/types'
+import { useViewport } from '@xyflow/react'
+import { memo, useMemo } from 'react'
+import { useEdgesStore, useSelectionStore } from '../../stores'
 
 interface SocketBarProps {
   nodeId: string
@@ -68,7 +68,7 @@ function SocketBarComponent({ nodeId, position, nodeColor }: SocketBarProps): JS
           isSource,
           isActive: edgeData?.active !== false,
           isBidirectional: edgeData?.direction === 'bidirectional',
-          color: edgeData?.color || nodeColor
+          color: edgeData?.color || nodeColor,
         })
       }
     })
@@ -89,7 +89,7 @@ function SocketBarComponent({ nodeId, position, nodeColor }: SocketBarProps): JS
     display: 'flex',
     gap: '2px',
     pointerEvents: 'all',
-    zIndex: 10
+    zIndex: 10,
   }
 
   switch (position) {
@@ -148,18 +148,16 @@ function SocketBarComponent({ nodeId, position, nodeColor }: SocketBarProps): JS
               backgroundColor: conn.isActive ? conn.color : 'transparent',
               borderColor: conn.color,
               opacity: conn.isActive ? 1 : 0.4,
-              boxShadow: isSelected
-                ? `0 0 6px ${conn.color}`
-                : undefined
+              boxShadow: isSelected ? `0 0 6px ${conn.color}` : undefined,
             }}
             onMouseEnter={(e) => {
               if (!isSelected) {
-                (e.currentTarget as HTMLElement).style.boxShadow = `0 0 8px ${conn.color}80`
+                ;(e.currentTarget as HTMLElement).style.boxShadow = `0 0 8px ${conn.color}80`
               }
             }}
             onMouseLeave={(e) => {
               if (!isSelected) {
-                (e.currentTarget as HTMLElement).style.boxShadow = 'none'
+                ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
               }
             }}
             title={`${conn.isSource ? 'Outgoing' : 'Incoming'} connection${conn.isBidirectional ? ' (bidirectional)' : ''}`}
@@ -169,10 +167,10 @@ function SocketBarComponent({ nodeId, position, nodeColor }: SocketBarProps): JS
               className="block w-full h-full flex items-center justify-center text-white"
               style={{
                 fontSize: `${arrowFontSize}px`,
-                lineHeight: 1
+                lineHeight: 1,
               }}
             >
-              {conn.isBidirectional ? '↔' : (conn.isSource ? '→' : '←')}
+              {conn.isBidirectional ? '↔' : conn.isSource ? '→' : '←'}
             </span>
           </button>
         )
@@ -183,7 +181,7 @@ function SocketBarComponent({ nodeId, position, nodeColor }: SocketBarProps): JS
           style={{
             width: handleSize,
             height: handleSize,
-            fontSize: `${arrowFontSize}px`
+            fontSize: `${arrowFontSize}px`,
           }}
           title={`${hiddenCount} more connection${hiddenCount > 1 ? 's' : ''}`}
         >
@@ -205,7 +203,11 @@ interface NodeSocketBarsProps {
   enabled?: boolean
 }
 
-function NodeSocketBarsComponent({ nodeId, nodeColor, enabled = true }: NodeSocketBarsProps): JSX.Element | null {
+function NodeSocketBarsComponent({
+  nodeId,
+  nodeColor,
+  enabled = true,
+}: NodeSocketBarsProps): JSX.Element | null {
   if (!enabled) return null
 
   return (

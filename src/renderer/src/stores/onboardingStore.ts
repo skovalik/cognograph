@@ -72,12 +72,11 @@ export const useOnboardingStore = create<OnboardingState>()(
           return { step: Math.max(0, targetStep) }
         }),
 
-      setSelectedTemplate: (templateId: string | null) =>
-        set({ selectedTemplate: templateId }),
+      setSelectedTemplate: (templateId: string | null) => set({ selectedTemplate: templateId }),
 
       skip: () => set({ completed: true }),
 
-      reset: () => set({ step: 0, completed: false, selectedTemplate: null })
+      reset: () => set({ step: 0, completed: false, selectedTemplate: null }),
     }),
     {
       name: 'cognograph.onboarding',
@@ -85,10 +84,10 @@ export const useOnboardingStore = create<OnboardingState>()(
       partialize: (state) => ({
         step: state.step,
         completed: state.completed,
-        selectedTemplate: state.selectedTemplate
-      })
-    }
-  )
+        selectedTemplate: state.selectedTemplate,
+      }),
+    },
+  ),
 )
 
 // =============================================================================

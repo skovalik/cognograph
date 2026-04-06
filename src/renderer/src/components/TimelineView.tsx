@@ -11,12 +11,12 @@
  * Does NOT modify actual node positions - purely a visualization overlay.
  */
 
-import { memo, useState, useMemo, useCallback } from 'react'
-import { Clock, X, Calendar, Activity, ChevronLeft, ChevronRight } from 'lucide-react'
-import { useReactFlow } from '@xyflow/react'
-import { useWorkspaceStore } from '../stores/workspaceStore'
-import type { Node } from '@xyflow/react'
 import type { NodeData } from '@shared/types'
+import type { Node } from '@xyflow/react'
+import { useReactFlow } from '@xyflow/react'
+import { Activity, Calendar, ChevronLeft, ChevronRight, Clock, X } from 'lucide-react'
+import { memo, useCallback, useMemo, useState } from 'react'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 // Time groupings
 type TimeGroup = 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'older'
@@ -27,7 +27,7 @@ const TIME_GROUP_LABELS: Record<TimeGroup, string> = {
   thisWeek: 'This Week',
   lastWeek: 'Last Week',
   thisMonth: 'This Month',
-  older: 'Older'
+  older: 'Older',
 }
 
 // Node type colors
@@ -39,7 +39,7 @@ const NODE_COLORS: Record<string, string> = {
   artifact: 'var(--node-artifact)',
   workspace: 'var(--node-workspace)',
   text: 'var(--node-text)',
-  action: 'var(--node-action)'
+  action: 'var(--node-action)',
 }
 
 interface TimelineViewProps {
@@ -97,19 +97,22 @@ function TimelineViewComponent({ isOpen, onClose }: TimelineViewProps): JSX.Elem
   const [expandedGroup, setExpandedGroup] = useState<TimeGroup | null>('today')
 
   // Get timestamp for sorting
-  const getTimestamp = useCallback((node: Node<NodeData>): number => {
-    if (sortBy === 'modified') {
-      // Check nodeUpdatedAt map first
-      const updated = nodeUpdatedAt.get(node.id)
-      if (updated) return updated
-      // Fall back to data timestamps
-      const data = node.data as { updatedAt?: number; createdAt?: number }
-      return data.updatedAt || data.createdAt || 0
-    }
-    // Created time
-    const data = node.data as { createdAt?: number }
-    return data.createdAt || 0
-  }, [sortBy, nodeUpdatedAt])
+  const getTimestamp = useCallback(
+    (node: Node<NodeData>): number => {
+      if (sortBy === 'modified') {
+        // Check nodeUpdatedAt map first
+        const updated = nodeUpdatedAt.get(node.id)
+        if (updated) return updated
+        // Fall back to data timestamps
+        const data = node.data as { updatedAt?: number; createdAt?: number }
+        return data.updatedAt || data.createdAt || 0
+      }
+      // Created time
+      const data = node.data as { createdAt?: number }
+      return data.createdAt || 0
+    },
+    [sortBy, nodeUpdatedAt],
+  )
 
   // Group and sort nodes by time
   const groupedNodes = useMemo(() => {
@@ -119,10 +122,10 @@ function TimelineViewComponent({ isOpen, onClose }: TimelineViewProps): JSX.Elem
       thisWeek: [],
       lastWeek: [],
       thisMonth: [],
-      older: []
+      older: [],
     }
 
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       const timestamp = getTimestamp(node)
       if (timestamp === 0) return // Skip nodes without timestamps
 
@@ -131,7 +134,7 @@ function TimelineViewComponent({ isOpen, onClose }: TimelineViewProps): JSX.Elem
     })
 
     // Sort each group by timestamp (most recent first)
-    Object.keys(groups).forEach(key => {
+    Object.keys(groups).forEach((key) => {
       groups[key as TimeGroup].sort((a, b) => b.timestamp - a.timestamp)
     })
 
@@ -139,23 +142,33 @@ function TimelineViewComponent({ isOpen, onClose }: TimelineViewProps): JSX.Elem
   }, [nodes, getTimestamp])
 
   // Navigate to node on canvas
-  const handleNodeClick = useCallback((node: Node<NodeData>) => {
-    const x = node.position.x + ((node.width || 280) / 2)
-    const y = node.position.y + ((node.height || 120) / 2)
-    setCenter(x, y, { duration: 300, zoom: 1 })
-    setSelectedNodes([node.id])
-    onClose()
-  }, [setCenter, setSelectedNodes, onClose])
+  const handleNodeClick = useCallback(
+    (node: Node<NodeData>) => {
+      const x = node.position.x + (node.width || 280) / 2
+      const y = node.position.y + (node.height || 120) / 2
+      setCenter(x, y, { duration: 300, zoom: 1 })
+      setSelectedNodes([node.id])
+      onClose()
+    },
+    [setCenter, setSelectedNodes, onClose],
+  )
 
   // Toggle group expansion
   const toggleGroup = useCallback((group: TimeGroup) => {
-    setExpandedGroup(prev => prev === group ? null : group)
+    setExpandedGroup((prev) => (prev === group ? null : group))
   }, [])
 
   if (!isOpen) return null
 
-  const groupOrder: TimeGroup[] = ['today', 'yesterday', 'thisWeek', 'lastWeek', 'thisMonth', 'older']
-  const hasNodes = nodes.some(n => getTimestamp(n) > 0)
+  const groupOrder: TimeGroup[] = [
+    'today',
+    'yesterday',
+    'thisWeek',
+    'lastWeek',
+    'thisMonth',
+    'older',
+  ]
+  const hasNodes = nodes.some((n) => getTimestamp(n) > 0)
 
   return (
     <div
@@ -166,7 +179,7 @@ function TimelineViewComponent({ isOpen, onClose }: TimelineViewProps): JSX.Elem
       <div
         className="w-[700px] max-h-[80vh] rounded-lg overflow-hidden animate-scale-in glass-soft"
         style={{
-          border: '1px solid var(--gui-border-subtle)'
+          border: '1px solid var(--gui-border-subtle)',
         }}
       >
         {/* Header */}
@@ -189,7 +202,10 @@ function TimelineViewComponent({ isOpen, onClose }: TimelineViewProps): JSX.Elem
                 className={`px-2 py-1 rounded transition-colors ${
                   sortBy === 'modified' ? 'bg-white/10' : 'hover:bg-white/5'
                 }`}
-                style={{ color: sortBy === 'modified' ? 'var(--gui-accent-primary)' : 'var(--gui-text-muted)' }}
+                style={{
+                  color:
+                    sortBy === 'modified' ? 'var(--gui-accent-primary)' : 'var(--gui-text-muted)',
+                }}
               >
                 <Activity className="w-3.5 h-3.5 inline mr-1" />
                 Modified
@@ -199,7 +215,10 @@ function TimelineViewComponent({ isOpen, onClose }: TimelineViewProps): JSX.Elem
                 className={`px-2 py-1 rounded transition-colors ${
                   sortBy === 'created' ? 'bg-white/10' : 'hover:bg-white/5'
                 }`}
-                style={{ color: sortBy === 'created' ? 'var(--gui-accent-primary)' : 'var(--gui-text-muted)' }}
+                style={{
+                  color:
+                    sortBy === 'created' ? 'var(--gui-accent-primary)' : 'var(--gui-text-muted)',
+                }}
               >
                 <Calendar className="w-3.5 h-3.5 inline mr-1" />
                 Created
@@ -220,7 +239,7 @@ function TimelineViewComponent({ isOpen, onClose }: TimelineViewProps): JSX.Elem
         <div className="p-4 overflow-y-auto max-h-[calc(80vh-60px)]">
           {hasNodes ? (
             <div className="space-y-2">
-              {groupOrder.map(group => {
+              {groupOrder.map((group) => {
                 const items = groupedNodes[group]
                 if (items.length === 0) return null
 
@@ -234,18 +253,27 @@ function TimelineViewComponent({ isOpen, onClose }: TimelineViewProps): JSX.Elem
                       className="flex items-center gap-2 w-full px-2 py-1.5 rounded hover:bg-white/5 transition-colors"
                     >
                       {isExpanded ? (
-                        <ChevronLeft className="w-4 h-4 rotate-[-90deg]" style={{ color: 'var(--gui-text-muted)' }} />
+                        <ChevronLeft
+                          className="w-4 h-4 rotate-[-90deg]"
+                          style={{ color: 'var(--gui-text-muted)' }}
+                        />
                       ) : (
-                        <ChevronRight className="w-4 h-4" style={{ color: 'var(--gui-text-muted)' }} />
+                        <ChevronRight
+                          className="w-4 h-4"
+                          style={{ color: 'var(--gui-text-muted)' }}
+                        />
                       )}
-                      <span className="text-sm font-medium" style={{ color: 'var(--gui-text-primary)' }}>
+                      <span
+                        className="text-sm font-medium"
+                        style={{ color: 'var(--gui-text-primary)' }}
+                      >
                         {TIME_GROUP_LABELS[group]}
                       </span>
                       <span
                         className="text-xs px-1.5 py-0.5 rounded"
                         style={{
                           backgroundColor: 'var(--gui-bg-tertiary)',
-                          color: 'var(--gui-text-muted)'
+                          color: 'var(--gui-text-muted)',
                         }}
                       >
                         {items.length}
@@ -257,7 +285,8 @@ function TimelineViewComponent({ isOpen, onClose }: TimelineViewProps): JSX.Elem
                       <div className="ml-6 mt-1 space-y-1">
                         {items.map(({ node, timestamp }) => {
                           const data = node.data
-                          const title = 'title' in data ? (data.title as string) : `Untitled ${data.type}`
+                          const title =
+                            'title' in data ? (data.title as string) : `Untitled ${data.type}`
 
                           return (
                             <button

@@ -8,8 +8,8 @@
  * glassmorphic ArtboardOverlay (Cmd/Ctrl+Enter).
  */
 
-export { TaskArtboard } from './TaskArtboard'
-export { ProjectArtboard } from './ProjectArtboard'
-export { OrchestratorArtboard } from './OrchestratorArtboard'
 export { NoteArtboard } from './NoteArtboard'
+export { OrchestratorArtboard } from './OrchestratorArtboard'
+export { ProjectArtboard } from './ProjectArtboard'
+export { TaskArtboard } from './TaskArtboard'
 export { TextArtboard } from './TextArtboard'

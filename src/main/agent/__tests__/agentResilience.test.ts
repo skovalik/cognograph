@@ -7,7 +7,7 @@
  * - 1.5c: Pre-persist user message before API call
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -16,8 +16,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const mockStoreData = new Map<string, unknown>()
 const mockStore = {
   get: vi.fn((key: string, fallback?: unknown) => mockStoreData.get(key) ?? fallback),
-  set: vi.fn((key: string, value: unknown) => { mockStoreData.set(key, value) }),
-  delete: vi.fn((key: string) => { mockStoreData.delete(key) }),
+  set: vi.fn((key: string, value: unknown) => {
+    mockStoreData.set(key, value)
+  }),
+  delete: vi.fn((key: string) => {
+    mockStoreData.delete(key)
+  }),
 }
 
 vi.mock('electron-store', () => ({
@@ -27,9 +31,7 @@ vi.mock('electron-store', () => ({
 vi.mock('electron', () => ({
   ipcMain: { handle: vi.fn() },
   BrowserWindow: {
-    getAllWindows: vi.fn().mockReturnValue([
-      { webContents: { send: vi.fn() } },
-    ]),
+    getAllWindows: vi.fn().mockReturnValue([{ webContents: { send: vi.fn() } }]),
   },
   safeStorage: {
     isEncryptionAvailable: vi.fn().mockReturnValue(false),
@@ -150,7 +152,7 @@ describe('Pre-Persist User Message (1.5c)', () => {
         conversationId,
         message,
         requestId,
-      })
+      }),
     )
     expect(mockStoreData.has(pendingKey)).toBe(true)
   })
@@ -202,13 +204,13 @@ describe('Pre-Persist User Message (1.5c)', () => {
     ]
 
     // Replicate the logic from claudeAgent.ts
-    const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')
+    const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')
     expect(lastUserMessage).toEqual({ role: 'user', content: 'second message' })
   })
 
   it('handles empty messages array gracefully', () => {
     const messages: Array<{ role: string; content: unknown }> = []
-    const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')
+    const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')
     expect(lastUserMessage).toBeUndefined()
   })
 
@@ -217,7 +219,7 @@ describe('Pre-Persist User Message (1.5c)', () => {
       { role: 'assistant', content: 'I am an assistant' },
       { role: 'system', content: 'system message' },
     ]
-    const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')
+    const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')
     expect(lastUserMessage).toBeUndefined()
   })
 })

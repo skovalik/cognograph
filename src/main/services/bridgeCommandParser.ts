@@ -13,13 +13,13 @@
  * Optimization #7: Simple commands resolved locally without LLM.
  */
 
+import crypto from 'crypto'
 import type {
   BridgeCommand,
   CommandIntent,
-  ProposedChange,
   Proposal,
+  ProposedChange,
 } from '../../shared/types/bridge'
-import crypto from 'crypto'
 
 // =============================================================================
 // SYSTEM PROMPT FOR CANVAS AGENT
@@ -81,7 +81,7 @@ export interface WorkspaceContext {
 function generateSimpleProposal(
   intent: CommandIntent,
   rawText: string,
-  context: WorkspaceContext
+  context: WorkspaceContext,
 ): {
   parsed: BridgeCommand['parsed']
   proposalId: string
@@ -93,7 +93,9 @@ function generateSimpleProposal(
   switch (intent) {
     case 'create-node': {
       // Extract node type and title from text
-      const match = rawText.match(/(?:create|add|new)\s+(?:a\s+)?(note|task|conversation|project|text|action)\s+(?:about\s+|called\s+|named\s+)?(.+)/i)
+      const match = rawText.match(
+        /(?:create|add|new)\s+(?:a\s+)?(note|task|conversation|project|text|action)\s+(?:about\s+|called\s+|named\s+)?(.+)/i,
+      )
       const nodeType = match?.[1]?.toLowerCase() || 'note'
       const title = match?.[2]?.trim() || 'New Node'
 
@@ -106,18 +108,20 @@ function generateSimpleProposal(
           explanation: `Creating a new ${nodeType} node: "${title}"`,
         },
         proposalId,
-        changes: [{
-          id: crypto.randomUUID(),
-          type: 'create-node',
-          nodeType,
-          nodeData: { title },
-          position: {
-            x: center.x + (Math.random() * 100 - 50),
-            y: center.y + (Math.random() * 100 - 50),
+        changes: [
+          {
+            id: crypto.randomUUID(),
+            type: 'create-node',
+            nodeType,
+            nodeData: { title },
+            position: {
+              x: center.x + (Math.random() * 100 - 50),
+              y: center.y + (Math.random() * 100 - 50),
+            },
+            agentNodeId: 'command-bar',
+            agentName: 'Command Bar',
           },
-          agentNodeId: 'command-bar',
-          agentName: 'Command Bar',
-        }],
+        ],
       }
     }
     case 'set-policy': {
@@ -158,7 +162,7 @@ function generateSimpleProposal(
 
 export async function parseCommand(
   rawText: string,
-  workspaceContext: WorkspaceContext
+  workspaceContext: WorkspaceContext,
 ): Promise<{
   parsed: BridgeCommand['parsed']
   proposalId: string
@@ -173,18 +177,19 @@ export async function parseCommand(
     const result = generateSimpleProposal(intent, rawText, workspaceContext)
 
     // Create proposal object if there are changes
-    const proposal: Proposal | undefined = result.changes.length > 0
-      ? {
-          id: result.proposalId,
-          status: 'pending',
-          changes: result.changes,
-          createdAt: Date.now(),
-          source: {
-            type: 'command-bar',
-            commandText: rawText,
-          },
-        }
-      : undefined
+    const proposal: Proposal | undefined =
+      result.changes.length > 0
+        ? {
+            id: result.proposalId,
+            status: 'pending',
+            changes: result.changes,
+            createdAt: Date.now(),
+            source: {
+              type: 'command-bar',
+              commandText: rawText,
+            },
+          }
+        : undefined
 
     return { ...result, proposal }
   }
@@ -201,9 +206,10 @@ export async function parseCommand(
         confidence: intent === 'unknown' ? 0.1 : 0.3,
         targets: [],
         parameters: {},
-        explanation: intent === 'unknown'
-          ? 'Command not recognized. Try "Create a note about..." or "Set up a workflow for..."'
-          : `Complex "${intent}" command requires AI interpretation (not yet connected)`,
+        explanation:
+          intent === 'unknown'
+            ? 'Command not recognized. Try "Create a note about..." or "Set up a workflow for..."'
+            : `Complex "${intent}" command requires AI interpretation (not yet connected)`,
       },
       proposalId: crypto.randomUUID(),
       changes: [],

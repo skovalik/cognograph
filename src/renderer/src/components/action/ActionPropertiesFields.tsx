@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { memo, useCallback, useState, useRef } from 'react'
+import type {
+  ActionCondition,
+  ActionNodeData,
+  ActionStep,
+  ActionTrigger,
+} from '@shared/actionTypes'
 import { Power } from 'lucide-react'
-import type { ActionNodeData } from '@shared/actionTypes'
-import type { ActionTrigger, ActionCondition, ActionStep } from '@shared/actionTypes'
-import { TriggerConfig } from './TriggerConfig'
-import { ConditionList } from './ConditionList'
+import { memo, useCallback, useRef, useState } from 'react'
 import { ActionStepList } from './ActionStepList'
 import { AIConfigButton } from './AIConfigButton'
-import { TemplateSelector } from './TemplateSelector'
+import { ConditionList } from './ConditionList'
 import { PromptHistoryDropdown } from './PromptHistoryDropdown'
+import { TemplateSelector } from './TemplateSelector'
+import { TriggerConfig } from './TriggerConfig'
 
 interface ActionPropertiesFieldsProps {
   nodeId: string
@@ -18,63 +22,85 @@ interface ActionPropertiesFieldsProps {
   onChange: (field: string, value: unknown) => void
 }
 
-function ActionPropertiesFieldsComponent({ nodeId, data, onChange }: ActionPropertiesFieldsProps): JSX.Element {
+function ActionPropertiesFieldsComponent({
+  nodeId,
+  data,
+  onChange,
+}: ActionPropertiesFieldsProps): JSX.Element {
   const [isTemplateSelectorOpen, setIsTemplateSelectorOpen] = useState(false)
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const descriptionRef = useRef<HTMLTextAreaElement>(null)
 
-  const handleTriggerChange = useCallback((trigger: ActionTrigger) => {
-    onChange('trigger', trigger)
-  }, [onChange])
+  const handleTriggerChange = useCallback(
+    (trigger: ActionTrigger) => {
+      onChange('trigger', trigger)
+    },
+    [onChange],
+  )
 
-  const handleConditionsChange = useCallback((conditions: ActionCondition[]) => {
-    onChange('conditions', conditions)
-  }, [onChange])
+  const handleConditionsChange = useCallback(
+    (conditions: ActionCondition[]) => {
+      onChange('conditions', conditions)
+    },
+    [onChange],
+  )
 
-  const handleStepsChange = useCallback((actions: ActionStep[]) => {
-    onChange('actions', actions)
-  }, [onChange])
+  const handleStepsChange = useCallback(
+    (actions: ActionStep[]) => {
+      onChange('actions', actions)
+    },
+    [onChange],
+  )
 
   const handleToggleEnabled = useCallback(() => {
     onChange('enabled', !data.enabled)
   }, [data.enabled, onChange])
 
-  const handleApplyAIConfig = useCallback((config: {
-    trigger: ActionTrigger
-    conditions: ActionCondition[]
-    actions: ActionStep[]
-    title?: string
-  }) => {
-    // Batch all config updates into a single onChange call
-    // The _batch field signals PropertiesPanel to merge all properties at once
-    onChange('_batch', {
-      trigger: config.trigger,
-      conditions: config.conditions,
-      actions: config.actions,
-      ...(config.title && { title: config.title })
-    })
-  }, [onChange])
+  const handleApplyAIConfig = useCallback(
+    (config: {
+      trigger: ActionTrigger
+      conditions: ActionCondition[]
+      actions: ActionStep[]
+      title?: string
+    }) => {
+      // Batch all config updates into a single onChange call
+      // The _batch field signals PropertiesPanel to merge all properties at once
+      onChange('_batch', {
+        trigger: config.trigger,
+        conditions: config.conditions,
+        actions: config.actions,
+        ...(config.title && { title: config.title }),
+      })
+    },
+    [onChange],
+  )
 
-  const handleSelectTemplate = useCallback((template: string) => {
-    onChange('description', template)
-    setIsTemplateSelectorOpen(false)
-    // Focus and highlight placeholders
-    requestAnimationFrame(() => {
-      if (descriptionRef.current) {
-        descriptionRef.current.focus()
-        const match = template.match(/\[([^\]]+)\]/)
-        if (match?.index !== undefined) {
-          descriptionRef.current.setSelectionRange(match.index, match.index + match[0].length)
+  const handleSelectTemplate = useCallback(
+    (template: string) => {
+      onChange('description', template)
+      setIsTemplateSelectorOpen(false)
+      // Focus and highlight placeholders
+      requestAnimationFrame(() => {
+        if (descriptionRef.current) {
+          descriptionRef.current.focus()
+          const match = template.match(/\[([^\]]+)\]/)
+          if (match?.index !== undefined) {
+            descriptionRef.current.setSelectionRange(match.index, match.index + match[0].length)
+          }
         }
-      }
-    })
-  }, [onChange])
+      })
+    },
+    [onChange],
+  )
 
-  const handleSelectFromHistory = useCallback((prompt: string) => {
-    onChange('description', prompt)
-    setIsHistoryOpen(false)
-    requestAnimationFrame(() => descriptionRef.current?.focus())
-  }, [onChange])
+  const handleSelectFromHistory = useCallback(
+    (prompt: string) => {
+      onChange('description', prompt)
+      setIsHistoryOpen(false)
+      requestAnimationFrame(() => descriptionRef.current?.focus())
+    },
+    [onChange],
+  )
 
   return (
     <div className="space-y-4">

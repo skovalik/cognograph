@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { useState, useEffect, useRef, memo } from 'react'
 import { ZoomIn, ZoomOut } from 'lucide-react'
+import { memo, useEffect, useRef, useState } from 'react'
 
 /**
  * Zoom level indicator component
@@ -57,21 +57,16 @@ function ZoomIndicatorComponent({ zoom }: ZoomIndicatorProps): JSX.Element | nul
   // Map zoom to marker position (0.25 to 2.0 range)
   const markerPosition = Math.min(100, Math.max(0, ((zoom - 0.25) / 1.75) * 100))
 
-  const className = [
-    'zoom-indicator',
-    visible && !fading && 'visible',
-    fading && 'fading'
-  ].filter(Boolean).join(' ')
+  const className = ['zoom-indicator', visible && !fading && 'visible', fading && 'fading']
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <div className={className}>
       <ZoomIcon className="zoom-indicator__icon" />
       <span className="zoom-indicator__value">{zoomPercent}%</span>
       <div className="zoom-indicator__bar">
-        <div
-          className="zoom-indicator__marker"
-          style={{ left: `${markerPosition}%` }}
-        />
+        <div className="zoom-indicator__marker" style={{ left: `${markerPosition}%` }} />
       </div>
     </div>
   )

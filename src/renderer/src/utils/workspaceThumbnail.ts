@@ -11,8 +11,8 @@
  * Visual recognition without reading file names.
  */
 
-import type { Node } from '@xyflow/react'
 import type { NodeData } from '@shared/types'
+import type { Node } from '@xyflow/react'
 
 // Default node colors (fallback if theme not available)
 const DEFAULT_NODE_COLORS: Record<string, string> = {
@@ -23,7 +23,7 @@ const DEFAULT_NODE_COLORS: Record<string, string> = {
   artifact: '#9B4AFF',
   workspace: '#4AFFFF',
   text: '#AAAAAA',
-  action: '#FF9B4A'
+  action: '#FF9B4A',
 }
 
 interface ThumbnailOptions {
@@ -39,14 +39,14 @@ interface ThumbnailOptions {
  */
 export function generateWorkspaceThumbnail(
   nodes: Node<NodeData>[],
-  options: ThumbnailOptions = {}
+  options: ThumbnailOptions = {},
 ): string {
   const {
     width = 200,
     height = 150,
     padding = 10,
     backgroundColor = '#0d0d14',
-    nodeColors = DEFAULT_NODE_COLORS
+    nodeColors = DEFAULT_NODE_COLORS,
   } = options
 
   if (nodes.length === 0) {
@@ -65,15 +65,17 @@ export function generateWorkspaceThumbnail(
   const scale = Math.min(scaleX, scaleY, 1) // Don't scale up
 
   // Generate SVG elements for each node
-  const nodeElements = nodes.map(node => {
-    const x = padding + (node.position.x - bounds.minX) * scale
-    const y = padding + (node.position.y - bounds.minY) * scale
-    const nodeWidth = Math.max(4, (node.width || 280) * scale)
-    const nodeHeight = Math.max(3, (node.height || 120) * scale)
-    const color = nodeColors[node.data.type] || '#666666'
+  const nodeElements = nodes
+    .map((node) => {
+      const x = padding + (node.position.x - bounds.minX) * scale
+      const y = padding + (node.position.y - bounds.minY) * scale
+      const nodeWidth = Math.max(4, (node.width || 280) * scale)
+      const nodeHeight = Math.max(3, (node.height || 120) * scale)
+      const color = nodeColors[node.data.type] || '#666666'
 
-    return `<rect x="${x}" y="${y}" width="${nodeWidth}" height="${nodeHeight}" fill="${color}" rx="2" opacity="0.8"/>`
-  }).join('\n    ')
+      return `<rect x="${x}" y="${y}" width="${nodeWidth}" height="${nodeHeight}" fill="${color}" rx="2" opacity="0.8"/>`
+    })
+    .join('\n    ')
 
   // Generate SVG
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
@@ -96,7 +98,7 @@ export function svgToDataUrl(svg: string): string {
  */
 export function generateThumbnailDataUrl(
   nodes: Node<NodeData>[],
-  options?: ThumbnailOptions
+  options?: ThumbnailOptions,
 ): string {
   const svg = generateWorkspaceThumbnail(nodes, options)
   return svgToDataUrl(svg)
@@ -118,7 +120,7 @@ function calculateBounds(nodes: Node<NodeData>[]): {
   let maxX = -Infinity
   let maxY = -Infinity
 
-  nodes.forEach(node => {
+  nodes.forEach((node) => {
     const nodeWidth = node.width || 280
     const nodeHeight = node.height || 120
 
@@ -141,20 +143,16 @@ function calculateBounds(nodes: Node<NodeData>[]): {
     maxX,
     maxY,
     width: maxX - minX,
-    height: maxY - minY
+    height: maxY - minY,
   }
 }
 
 /**
  * Generate empty state thumbnail
  */
-function generateEmptyThumbnail(
-  width: number,
-  height: number,
-  backgroundColor: string
-): string {
+function generateEmptyThumbnail(width: number, height: number, backgroundColor: string): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <rect width="${width}" height="${height}" fill="${backgroundColor}"/>
-  <text x="${width/2}" y="${height/2}" text-anchor="middle" fill="#666666" font-size="12" font-family="system-ui">Empty</text>
+  <text x="${width / 2}" y="${height / 2}" text-anchor="middle" fill="#666666" font-size="12" font-family="system-ui">Empty</text>
 </svg>`
 }

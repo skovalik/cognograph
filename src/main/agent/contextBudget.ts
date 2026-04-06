@@ -18,8 +18,8 @@
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { estimateTokens } from './tokenEstimation'
 import { logger } from '../utils/logger'
+import { estimateTokens } from './tokenEstimation'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -167,10 +167,7 @@ export class ContextBudgetManager {
    * @param additionalTokens - Estimated tokens for the next operation
    * @returns BudgetCheckResult indicating whether the operation is allowed
    */
-  checkBudget(
-    conversationId: string,
-    additionalTokens: number,
-  ): BudgetCheckResult {
+  checkBudget(conversationId: string, additionalTokens: number): BudgetCheckResult {
     const currentAggregate = this.getAggregateTokens()
     const projectedAggregate = currentAggregate + additionalTokens
 
@@ -221,9 +218,7 @@ export class ContextBudgetManager {
   private _freezeOldest(excludeConversationId: string): number {
     // Sort entries by lastActiveAt ascending (oldest first)
     const candidates = [...this._entries.values()]
-      .filter(
-        (e) => e.conversationId !== excludeConversationId && !e.frozen,
-      )
+      .filter((e) => e.conversationId !== excludeConversationId && !e.frozen)
       .sort((a, b) => a.lastActiveAt - b.lastActiveAt)
 
     let frozenCount = 0
@@ -235,7 +230,7 @@ export class ContextBudgetManager {
 
       logger.debug(
         `[ContextBudget] Froze conversation ${entry.conversationId} ` +
-        `(${entry.tokenCount} tokens, last active ${new Date(entry.lastActiveAt).toISOString()})`,
+          `(${entry.tokenCount} tokens, last active ${new Date(entry.lastActiveAt).toISOString()})`,
       )
 
       // Check if we're back under threshold
@@ -259,9 +254,7 @@ export class ContextBudgetManager {
    */
   spillToDisk(conversationId: string, content: string): SpillResult {
     if (!this._workspacePath) {
-      throw new Error(
-        '[ContextBudget] Cannot spill: no workspace path configured.',
-      )
+      throw new Error('[ContextBudget] Cannot spill: no workspace path configured.')
     }
 
     const tempDir = path.join(this._workspacePath, '.cognograph', 'temp')
@@ -279,9 +272,7 @@ export class ContextBudgetManager {
     const verified = fs.existsSync(spillPath)
 
     if (!verified) {
-      logger.warn(
-        `[ContextBudget] Spill file verification FAILED for ${spillPath}`,
-      )
+      logger.warn(`[ContextBudget] Spill file verification FAILED for ${spillPath}`)
     }
 
     // Update the entry
@@ -295,7 +286,7 @@ export class ContextBudgetManager {
 
     logger.debug(
       `[ContextBudget] Spilled conversation ${conversationId} to ${spillPath} ` +
-      `(${content.length} chars, verified: ${verified})`,
+        `(${content.length} chars, verified: ${verified})`,
     )
 
     return { spillPath, preview, verified }
@@ -374,9 +365,7 @@ export class ContextBudgetManager {
           }
         }
 
-        logger.debug(
-          `[ContextBudget] Pruned ${pruned} spill file(s) from ${tempDir}`,
-        )
+        logger.debug(`[ContextBudget] Pruned ${pruned} spill file(s) from ${tempDir}`)
       }
     } catch {
       // Temp dir may not exist — that's fine
@@ -454,12 +443,12 @@ export function recordContextError(
   if (shouldSurface) {
     logger.warn(
       `[ContextBudget] Context error surfaced after ${state.retryCount} retries ` +
-      `for conversation ${conversationId}: ${errorMessage}`,
+        `for conversation ${conversationId}: ${errorMessage}`,
     )
   } else {
     logger.debug(
       `[ContextBudget] Context error withheld (retry ${state.retryCount}/${MAX_CONTEXT_RETRIES}) ` +
-      `for conversation ${conversationId}: ${errorMessage}`,
+        `for conversation ${conversationId}: ${errorMessage}`,
     )
   }
 
@@ -476,9 +465,7 @@ export function clearContextErrorState(conversationId: string): void {
 /**
  * Get the current error retry state for a conversation.
  */
-export function getContextErrorState(
-  conversationId: string,
-): ErrorRetryState | undefined {
+export function getContextErrorState(conversationId: string): ErrorRetryState | undefined {
   return _errorRetryStates.get(conversationId)
 }
 
