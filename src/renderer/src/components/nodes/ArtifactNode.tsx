@@ -310,8 +310,11 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   // The iframe injects a ResizeObserver that posts 'artifact-resize' messages.
   // This replaces contentDocument access which requires allow-same-origin.
   useEffect(() => {
-    if (nodeData.contentType !== 'html' || !nodeData.content || htmlIframeAutoSizedRef.current)
-      return
+    if (
+      (nodeData.contentType !== 'html' && nodeData.contentType !== 'svg') ||
+      !nodeData.content ||
+      htmlIframeAutoSizedRef.current
+    ) return
     const iframe = htmlIframeRef.current
     if (!iframe) return
 
@@ -620,9 +623,15 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   const firstFile = files[0]
   const activeFileId = nodeData.activeFileId || (firstFile ? firstFile.id : undefined)
 
-  // Detect HTML content by contentType or fallback to language
+  // SVG stored as data URI should render as <img>, not through iframe srcdoc
+  const isSvgDataUri =
+    activeContent.contentType === 'svg' &&
+    activeContent.content?.startsWith('data:')
+
+  // Detect HTML/SVG-markup content for iframe srcdoc rendering
   const isHtmlContent =
     activeContent.contentType === 'html' ||
+    (activeContent.contentType === 'svg' && !isSvgDataUri) ||
     (activeContent.contentType === 'code' && activeContent.language === 'html')
 
   // Sanitize HTML content for safe srcdoc rendering (S4: DOMPurify + postMessage sizing)
@@ -1335,7 +1344,7 @@ new ResizeObserver(function() {
                       title={nodeData.title}
                       metadata={nodeData.metadata}
                     />
-                  ) : activeContent.contentType === 'image' && activeContent.content ? (
+                  ) : (activeContent.contentType === 'image' || isSvgDataUri) && activeContent.content ? (
                     <div className="relative flex-1" style={{ minHeight: 0 }}>
                       <img
                         src={activeContent.content}
