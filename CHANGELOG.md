@@ -16,6 +16,7 @@ All notable changes to Cognograph are documented in this file.
 
 ### Fixed
 - SVG artifacts now render visually (data URI SVGs as `<img>`, raw SVG markup via iframe)
+- Markdown artifacts render with proper text wrapping and formatting (was raw `<pre>` dump)
 - Case-sensitive import (`EscapeManager`) for Linux builds
 - CI: `--publish never` prevents `GH_TOKEN` requirement during build
 - CI: `build:mcp` step added (MCP CLI was missing from prior releases)
