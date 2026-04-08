@@ -11,7 +11,7 @@
  * active handler fires. Lower-priority handlers are suppressed.
  *
  * Priority order (highest to lowest):
- *   modal > dialog > popover > presentation > artboard > canvas
+ *   modal > dialog > popover > presentation > canvas
  *
  * Usage:
  *   import { escapeManager, EscapePriority } from '../utils/EscapeManager'
@@ -34,7 +34,6 @@
 
 export enum EscapePriority {
   CANVAS = 0,
-  ARTBOARD = 10,
   PRESENTATION = 20,
   POPOVER = 30,
   DIALOG = 40,

@@ -192,8 +192,6 @@ export type {
 export {
   selectActiveChatNodeId,
   selectActivePanel,
-  selectArtboardNodeId,
-  selectIsArtboardActive,
   selectIsNodeExpanded,
   selectIsNodePinned,
   selectLeftSidebarOpen,

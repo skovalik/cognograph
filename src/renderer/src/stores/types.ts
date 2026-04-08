@@ -153,9 +153,6 @@ export interface UIState {
   pinnedWindows: PinnedWindow[]
   nextPinnedZIndex: number
 
-  // Artboard mode
-  artboardNodeId: string | null
-
   // Keyboard navigation
   keyboardNavActive: boolean
 

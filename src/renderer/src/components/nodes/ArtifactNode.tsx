@@ -76,7 +76,6 @@ import { NodePropertyControls } from './NodePropertyControls'
 import { PreviewToolbar } from './PreviewToolbar'
 import { NodeSocketBars } from './SocketBar'
 import { SpreadHandles } from './SpreadHandles'
-import { StreamingMarkdown } from '../StreamingMarkdown'
 import { StructuredContentPreview } from './StructuredContentPreview'
 
 // TypeScript interface for node styles with CSS custom properties
@@ -315,7 +314,8 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
       (nodeData.contentType !== 'html' && nodeData.contentType !== 'svg') ||
       !nodeData.content ||
       htmlIframeAutoSizedRef.current
-    ) return
+    )
+      return
     const iframe = htmlIframeRef.current
     if (!iframe) return
 
@@ -626,8 +626,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
 
   // SVG stored as data URI should render as <img>, not through iframe srcdoc
   const isSvgDataUri =
-    activeContent.contentType === 'svg' &&
-    activeContent.content?.startsWith('data:')
+    activeContent.contentType === 'svg' && activeContent.content?.startsWith('data:')
 
   // Detect HTML/SVG-markup content for iframe srcdoc rendering
   const isHtmlContent =
@@ -1345,7 +1344,8 @@ new ResizeObserver(function() {
                       title={nodeData.title}
                       metadata={nodeData.metadata}
                     />
-                  ) : (activeContent.contentType === 'image' || isSvgDataUri) && activeContent.content ? (
+                  ) : (activeContent.contentType === 'image' || isSvgDataUri) &&
+                    activeContent.content ? (
                     <div className="relative flex-1" style={{ minHeight: 0 }}>
                       <img
                         src={activeContent.content}
@@ -1424,25 +1424,6 @@ new ResizeObserver(function() {
                           title="Double-click to interact with HTML preview"
                         />
                       )}
-                    </div>
-                  ) : (activeContent.contentType === 'markdown' || activeContent.contentType === 'text') && activeContent.content ? (
-                    <div
-                      className="overflow-auto p-3 rounded flex-1 prose prose-sm prose-invert max-w-none"
-                      style={{
-                        backgroundColor: 'var(--node-bg-secondary)',
-                        color: 'var(--node-text-secondary)',
-                        overscrollBehavior: 'contain',
-                        wordBreak: 'break-word',
-                        overflowWrap: 'break-word',
-                        minHeight: 0,
-                      }}
-                    >
-                      <StreamingMarkdown
-                        content={activeContent.content}
-                        isStreaming={false}
-                        inlineCodeClasses="bg-white/10 px-1 py-0.5 rounded text-xs"
-                        copyButtonClasses="absolute top-2 right-2 text-xs opacity-50 hover:opacity-100"
-                      />
                     </div>
                   ) : (
                     <pre

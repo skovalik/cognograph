@@ -70,7 +70,7 @@ interface WorkspaceEdge {
 }
 
 /** Workspace data shape (subset of WorkspaceData) */
-interface WorkspaceSnapshot {
+export interface WorkspaceSnapshot {
   nodes: WorkspaceNode[]
   edges: WorkspaceEdge[]
 }

@@ -82,7 +82,7 @@ import { PinnedWindowsContainer } from './components/PinnedWindow'
 const AIEditorModal = lazy(() => import('./components/ai-editor/AIEditorModal'))
 const AIEditorPreview = lazy(() => import('./components/ai-editor/AIEditorPreview'))
 const SelectionActionBar = lazy(() => import('./components/ai-editor/SelectionActionBar'))
-const AISidebar = lazy(() => import('./components/ai-editor/AISidebar'))
+
 const AmbientEffectLayer = lazy(() => import('./components/ambient/AmbientEffectLayer'))
 
 import { LivingGrid } from './effects/LivingGrid'
@@ -126,11 +126,9 @@ const TimelineView = lazy(() =>
   import('./components/TimelineView').then((m) => ({ default: m.TimelineView })),
 )
 
-import { ArtboardOverlay, FocusModeHint } from './components/ArtboardOverlay'
 // EmptyCanvasHint removed — WelcomeScreen is the always-on empty-canvas state
 import { FocusModeIndicator } from './components/FocusModeIndicator'
 import { useShortcutHelpStore } from './components/KeyboardShortcutsHelp'
-import { useArtboardMode } from './hooks/useArtboardMode'
 
 const KeyboardShortcutsHelp = lazy(() =>
   import('./components/KeyboardShortcutsHelp').then((m) => ({ default: m.KeyboardShortcutsHelp })),
@@ -147,9 +145,8 @@ import {
 } from '@shared/types'
 import type { Edge } from '@xyflow/react'
 import { Boxes, CheckSquare, Code, FileText, Folder, Link2, MessageSquare } from 'lucide-react'
-// Cloud features disabled in open-source build (src/web/ not included)
-const DemoBanner = (() => null) as any
-const WorkspaceManager = ((_props: { isOpen: boolean; onClose: () => void }) => null) as any
+import { DemoBanner } from '../../web/components/DemoBanner'
+import { WorkspaceManager } from '../../web/components/WorkspaceManager'
 // NOTE: ProposalCard, CommandBar, and bridge/BridgeStatusBar are deferred to v0.3.0.
 // See docs/TODO-BRIDGE.md. Uncomment these imports when re-enabling.
 // import { ProposalCard } from './components/bridge/ProposalCard'
@@ -190,14 +187,17 @@ import { cleanupStoreSyncBridge } from './stores/storeSyncBridge'
 import { useTemplateStore } from './stores/templateStore'
 import { useUIStore } from './stores/uiStore'
 import { SyncProviderWrapper, useSyncProvider } from './sync'
+import { useBridgeResponder } from './sync/BridgeResponder'
 import { resolveGlassStyle } from './utils/glassUtils'
 import { getGPUTier } from './utils/gpuDetection'
 import { layoutEvents } from './utils/layoutEvents'
 import { assignSpreadHandles } from './utils/positionResolver'
 import {
   buildEdgePairSet,
+  edgeToEdgeDistance,
   findProximityTargets,
   getNodeRect,
+  PROXIMITY_THRESHOLD,
   type ProximityTarget,
 } from './utils/proximityConnect'
 // getVisibleSpreadCount moved into positionResolver.ts for visibility-aware slot assignment
@@ -592,8 +592,7 @@ function Canvas(): JSX.Element {
   // SelectionActionBar visibility and position (toggled with Tab when nodes selected)
   const [selectionActionBarOpen, setSelectionActionBarOpen] = useState(false)
   const [selectionActionBarPosition, setSelectionActionBarPosition] = useState({ x: 0, y: 0 })
-  // AISidebar visibility (toggled with Ctrl+Shift+A)
-  const [aiSidebarOpen, setAiSidebarOpen] = useState(false)
+  // AISidebar removed — persistent chat + command response panel replaced it
   // Mouse position ref for InlinePrompt/SelectionActionBar positioning
   const mousePositionRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
   const fpsRef = useRef({ frames: 0, lastTime: performance.now(), fps: 0 })
@@ -751,8 +750,8 @@ function Canvas(): JSX.Element {
     }
   }, [])
 
-  // Global terminal output tee — persists across artboard open/close so node cards
-  // always show fresh terminal preview lines, even when TerminalPanel is unmounted
+  // Global terminal output tee — node cards always show fresh terminal preview lines,
+  // even when TerminalPanel is unmounted
   useEffect(() => {
     if (!(window as any).__ELECTRON__) return
     if (!window.api?.terminal?.onDataGlobal) return
@@ -952,6 +951,7 @@ function Canvas(): JSX.Element {
   const onEdgesChange = useWorkspaceStore((state) => state.onEdgesChange)
   const onConnect = useWorkspaceStore((state) => state.onConnect)
   const addEdge = useWorkspaceStore((state) => state.addEdge)
+  const addEdgesBatch = useWorkspaceStore((state) => state.addEdgesBatch)
   const _deleteNodes = useWorkspaceStore((state) => state.deleteNodes)
   const softDeleteNodes = useWorkspaceStore((state) => state.softDeleteNodes)
   const deleteEdges = useWorkspaceStore((state) => state.deleteEdges)
@@ -1044,8 +1044,7 @@ function Canvas(): JSX.Element {
   const openContextMenu = useContextMenuStore((state) => state.open)
   const closeContextMenu = useContextMenuStore((state) => state.close)
 
-  // AI Editor
-  const openAIEditor = useAIEditorStore((state) => state.openModal)
+  // AI Editor (modal still used by command palette + context menu)
   const isAIEditorOpen = useAIEditorStore((state) => state.isOpen)
 
   // Command Palette
@@ -1063,8 +1062,8 @@ function Canvas(): JSX.Element {
   // Schedule service - emits schedule-tick events for action nodes with cron triggers
   useScheduleService()
 
-  // Artboard mode - Cmd/Ctrl+Enter to expand selected node into editing panel
-  useArtboardMode()
+  // MCP bridge responder — handles bridge queries from main process (MCP→renderer IPC)
+  useBridgeResponder()
 
   // Contextual onboarding tooltips - shows tips on first-time actions
   const { activeTooltip, dismiss: dismissTooltip } = useOnboardingTooltips()
@@ -1913,23 +1912,46 @@ function Canvas(): JSX.Element {
     }
   }, [connectionTarget])
 
-  // Custom onConnect that uses the calculated closest handle
+  // Custom onConnect — bulk: if source is in a multi-selection, connect ALL selected to target
   const handleConnect = useCallback(
     (connection: Connection): void => {
       // If Ctrl was held, don't auto-connect - let quick-connect popup handle it
       if (lastConnectionCtrlRef.current) return
 
-      // Let React Flow's native hit-test provide the correct handle (including spread handles)
-      onConnect(connection)
+      const currentSelectedIds = useWorkspaceStore.getState().selectedNodeIds
 
-      // Visual + audio feedback for successful connection
-      playSound('connect')
-      if (connection.source && connection.target) {
-        const edgeId = `${connection.source}-${connection.target}`
-        animateEdgeCreation(edgeId)
+      // Bulk connect: source is in a multi-selection (2+ nodes)
+      if (
+        currentSelectedIds.length >= 2 &&
+        connection.source &&
+        connection.target &&
+        currentSelectedIds.includes(connection.source)
+      ) {
+        const bulkConnections: Connection[] = currentSelectedIds
+          .filter((id) => id !== connection.target) // no self-loops
+          .map((id) => ({
+            source: id,
+            target: connection.target!,
+            sourceHandle: null,
+            targetHandle: null,
+          }))
+        const count = addEdgesBatch(bulkConnections)
+        if (count > 0) {
+          playSound('connect')
+          for (const conn of bulkConnections) {
+            animateEdgeCreation(`${conn.source}-${conn.target}`)
+          }
+        }
+      } else {
+        // Single-edge path (unchanged)
+        onConnect(connection)
+        playSound('connect')
+        if (connection.source && connection.target) {
+          animateEdgeCreation(`${connection.source}-${connection.target}`)
+        }
       }
     },
-    [onConnect, animateEdgeCreation],
+    [onConnect, addEdgesBatch, animateEdgeCreation],
   )
 
   // Node drag start handler - capture initial positions for undo/redo
@@ -2174,43 +2196,57 @@ function Canvas(): JSX.Element {
       })
 
       // ── Proximity auto-connect: create edges to nearby conversation nodes ──
+      // Bulk: connects ALL selected non-conversation nodes, not just the leader.
+      // Uses inline proximity logic (not findProximityTargets) because the utility
+      // checks edges per-group — bulk needs per-node edge checks.
       const proximityEnabled =
         useWorkspaceStore.getState().workspacePreferences?.enableProximityConnect ?? true
       if (proximityEnabled) {
-        const droppedNode = nodesRef.current.find((n) => n.id === node.id)
-        // Derive draggedNodeIds — same logic as project containment above
         const draggedNodeIds = selectedNodeIds.includes(node.id) ? selectedNodeIds : [node.id]
-        if (droppedNode && (droppedNode.data as NodeData).type !== 'conversation') {
-          // Re-check proximity at final position (may differ from last throttled check)
-          const droppedRect = getNodeRect(droppedNode as Node<NodeData>)
-          const edgePairs = buildEdgePairSet(useWorkspaceStore.getState().edges)
-          const finalTargets = findProximityTargets(
-            droppedRect,
-            nodesRef.current as Node<NodeData>[],
-            draggedNodeIds,
-            edgePairs,
-          )
+        const freshNodes = nodesRef.current as Node<NodeData>[]
+        const edgePairs = buildEdgePairSet(useWorkspaceStore.getState().edges)
+        const draggedIdSet = new Set(draggedNodeIds)
 
-          if (finalTargets.length > 0) {
-            const title = (droppedNode.data as NodeData).title || 'Node'
-            for (const target of finalTargets) {
-              addEdge({
-                source: node.id,
-                target: target.nodeId,
+        const bulkConnections: Connection[] = []
+        for (const draggedId of draggedNodeIds) {
+          const draggedNode = freshNodes.find((n) => n.id === draggedId)
+          if (!draggedNode) continue
+          if ((draggedNode.data as NodeData).type === 'conversation') continue
+
+          const draggedRect = getNodeRect(draggedNode as Node<NodeData>)
+          for (const candidate of freshNodes) {
+            if (draggedIdSet.has(candidate.id)) continue
+            if ((candidate.data as NodeData).type !== 'conversation') continue
+            // Per-node edge check (not per-group)
+            if (
+              edgePairs.has(`${draggedId}-${candidate.id}`) ||
+              edgePairs.has(`${candidate.id}-${draggedId}`)
+            )
+              continue
+            const dist = edgeToEdgeDistance(draggedRect, getNodeRect(candidate as Node<NodeData>))
+            if (dist <= PROXIMITY_THRESHOLD) {
+              bulkConnections.push({
+                source: draggedId,
+                target: candidate.id,
                 sourceHandle: null,
                 targetHandle: null,
               })
             }
-            // Single collapsed toast (not one per target)
-            if (finalTargets.length === 1) {
-              sciFiToast(`Connected "${title}" as context`, 'success', 2000)
-            } else {
-              sciFiToast(
-                `Connected "${title}" to ${finalTargets.length} conversations`,
-                'success',
-                2000,
-              )
-            }
+          }
+        }
+
+        if (bulkConnections.length > 0) {
+          addEdgesBatch(bulkConnections)
+          playSound('connect')
+          const uniqueTargets = new Set(bulkConnections.map((c) => c.target))
+          if (bulkConnections.length === 1) {
+            sciFiToast('Connected as context', 'success', 2000)
+          } else {
+            sciFiToast(
+              `Connected ${bulkConnections.length} edges to ${uniqueTargets.size} conversation${uniqueTargets.size > 1 ? 's' : ''}`,
+              'success',
+              2000,
+            )
           }
         }
       }
@@ -2256,7 +2292,7 @@ function Canvas(): JSX.Element {
       autoGrowRegion,
       setDragging,
       setSnapGuides,
-      addEdge,
+      addEdgesBatch,
       clearProximityHighlights,
     ],
   )
@@ -3022,10 +3058,7 @@ function Canvas(): JSX.Element {
         e.preventDefault()
         openTemplateBrowser()
       }
-      if (m('openAIEditor') && !isInputFocused) {
-        e.preventDefault()
-        openAIEditor()
-      }
+      // openAIEditor shortcut removed — AI Editor reachable via command palette (Ctrl+K)
       if (m('saveAsTemplate') && !isInputFocused) {
         e.preventDefault()
         if (selectedNodeIds.length > 0) {
@@ -3061,10 +3094,7 @@ function Canvas(): JSX.Element {
           sciFiToast('Select nodes first to save as template', 'warning')
         }
       }
-      if (m('toggleAISidebar') && !isInputFocused) {
-        e.preventDefault()
-        setAiSidebarOpen((prev) => !prev)
-      }
+      // toggleAISidebar removed — persistent chat + command response panel replaced it
 
       // --- Quick node creation (Shift+letter) ---
       if (!isInputFocused) {
@@ -3495,7 +3525,6 @@ function Canvas(): JSX.Element {
     toggleLeftSidebar,
     openTemplateBrowser,
     openSaveTemplateModal,
-    openAIEditor,
     openPalette,
     linkAllNodes,
     unlinkSelectedNodes,
@@ -3684,10 +3713,6 @@ function Canvas(): JSX.Element {
             onNew={handleNew}
             onOpen={handleOpen}
             onOpenThemeSettings={() => setShowThemeModal(true)}
-            onToggleAISidebar={() => setAiSidebarOpen((prev) => !prev)}
-            onOpenInlinePrompt={() => {
-              // Will route to BottomCommandBar in Task 12
-            }}
           />
 
           {/* Contextual action bar — Generate/Modify/Preview for selected nodes (V4.1) */}
@@ -3864,9 +3889,9 @@ function Canvas(): JSX.Element {
                 <ExecutionStatusOverlay />
                 <ContextScopeBadge />
                 <NodeHoverPreview />
-                {/* SessionReEntryPrompt disabled — removed per Stefan's request */}
+                {/* SessionReEntryPrompt disabled */}
                 {showCanvasTOC && <CanvasTableOfContents onClose={() => setShowCanvasTOC(false)} />}
-                {/* CognitiveLoadMeter hidden per Stefan's request */}
+                {/* CognitiveLoadMeter hidden */}
                 {!isMobile && showEdgeLegend && (
                   <EdgeGrammarLegend onClose={() => setShowEdgeLegend(false)} />
                 )}
@@ -4048,10 +4073,6 @@ function Canvas(): JSX.Element {
             onSaveAs={handleSaveAs}
             onNew={handleNew}
             onOpen={handleOpen}
-            onToggleAISidebar={() => setAiSidebarOpen((prev) => !prev)}
-            onOpenInlinePrompt={() => {
-              // V4: Will route to BottomCommandBar in Task 12
-            }}
             onOpenThemeSettings={() => setShowThemeModal(true)}
             hidden={showWelcome}
           />
@@ -4194,10 +4215,6 @@ function Canvas(): JSX.Element {
           {/* Pinned Windows (nodes popped out as floating windows) */}
           <PinnedWindowsContainer />
 
-          {/* Artboard Mode — full-viewport editing overlay (Cmd/Ctrl+Enter) */}
-          <ArtboardOverlay />
-          <FocusModeHint />
-
           <Suspense fallback={null}>
             <WorkflowProgress />
           </Suspense>
@@ -4215,12 +4232,7 @@ function Canvas(): JSX.Element {
             </Suspense>
           )}
 
-          {/* AI Sidebar (Ctrl+Shift+A) */}
-          {!demoMode && (
-            <Suspense fallback={null}>
-              <AISidebar isOpen={aiSidebarOpen} onClose={() => setAiSidebarOpen(false)} />
-            </Suspense>
-          )}
+          {/* AI Sidebar removed — persistent chat + command response panel replaced it */}
 
           {/* Command Palette */}
           <Suspense fallback={null}>

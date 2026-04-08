@@ -517,10 +517,13 @@ function ChatPanelComponent({
     if (!apiKey) {
       let hasSession = false
       try {
-        // Cloud features disabled in open-source build
-        throw new Error('No cloud auth in open-source build')
+        const mod = await import('../../../web/lib/supabase')
+        if (mod.supabase) {
+          const { data } = await mod.supabase.auth.getSession()
+          hasSession = !!data.session
+        }
       } catch {
-        /* Electron / open-source — no supabase */
+        /* Electron — no supabase */
       }
       if (!hasSession) {
         toast.error(`Please set your ${llmSettings.provider} API key first`)

@@ -159,8 +159,8 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
         const currentId = useWorkspaceStore.getState().workspaceId
         if (data.id === currentId) {
           const prevNodeCount = useWorkspaceStore.getState().nodes.length
-          logger.log('[SyncProvider] External change detected, reloading workspace')
-          useWorkspaceStore.getState().loadWorkspace(data)
+          logger.log('[SyncProvider] External change detected, merging workspace')
+          useWorkspaceStore.getState().mergeExternalWorkspace(data)
 
           // If new nodes appeared (e.g., from CLI Claude creating via MCP),
           // debounce auto-fit so rapid file changes settle before we resize.

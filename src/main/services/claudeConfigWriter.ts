@@ -58,6 +58,10 @@ export interface ClaudeConfigInput {
   contextMarkdown?: string
   /** Active workspace ID from renderer — constructs workspace path directly */
   workspaceId?: string
+  /** MCP↔Renderer bridge port (if bridge is active) */
+  bridgePort?: number
+  /** MCP↔Renderer bridge bearer token (if bridge is active) */
+  bridgeToken?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -99,7 +103,13 @@ interface MCPConfig {
   [key: string]: unknown
 }
 
-function buildMCPConfig(mcpBinaryPath: string, workspacePath: string, nodeId: string): MCPConfig {
+function buildMCPConfig(
+  mcpBinaryPath: string,
+  workspacePath: string,
+  nodeId: string,
+  bridgePort?: number,
+  bridgeToken?: string,
+): MCPConfig {
   return {
     mcpServers: {
       cognograph: {
@@ -107,6 +117,13 @@ function buildMCPConfig(mcpBinaryPath: string, workspacePath: string, nodeId: st
         args: [mcpBinaryPath, '--workspace-path', workspacePath],
         env: {
           COGNOGRAPH_NODE_ID: nodeId,
+          // Bridge connection (if bridge is active)
+          ...(bridgePort
+            ? {
+                COGNOGRAPH_BRIDGE_PORT: String(bridgePort),
+                COGNOGRAPH_BRIDGE_TOKEN: bridgeToken,
+              }
+            : {}),
         },
       },
     },
@@ -205,7 +222,15 @@ ${COGNOGRAPH_SECTION_END}`
  * Returns paths to both files for cleanup on terminal exit.
  */
 export async function writeClaudeConfig(input: ClaudeConfigInput): Promise<ClaudeConfigResult> {
-  const { nodeId, cwd, nodeTitle = 'Terminal', contextMarkdown = '', workspaceId } = input
+  const {
+    nodeId,
+    cwd,
+    nodeTitle = 'Terminal',
+    contextMarkdown = '',
+    workspaceId,
+    bridgePort,
+    bridgeToken,
+  } = input
 
   const mcpConfigPath = join(cwd, '.mcp.json')
   const claudeMdPath = join(cwd, 'CLAUDE.md')
@@ -248,7 +273,7 @@ export async function writeClaudeConfig(input: ClaudeConfigInput): Promise<Claud
     const mcpBinaryPath = getMCPBinaryPath()
 
     // Generate .mcp.json -- merge with existing if present
-    const mcpConfig = buildMCPConfig(mcpBinaryPath, workspacePath, nodeId)
+    const mcpConfig = buildMCPConfig(mcpBinaryPath, workspacePath, nodeId, bridgePort, bridgeToken)
     let finalMcpConfig: MCPConfig = mcpConfig
 
     try {

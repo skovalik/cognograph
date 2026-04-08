@@ -12,11 +12,19 @@
  * Electron version via electron-rebuild. Until then, tests mock the module entirely.
  */
 
-import { existsSync } from 'fs'
+import { existsSync, promises as fsp } from 'fs'
+import { join } from 'path'
 import type { TerminalShell } from '../../shared/types/nodes'
 import { getSafeEnv, mergeSafeEnv } from '../utils/safeEnv'
 import { cleanupClaudeConfig, writeClaudeConfig } from './claudeConfigWriter'
-import { buildContextForNode, getContextFilePath, writeContextFile } from './contextWriter'
+import type { WorkspaceSnapshot } from './contextWriter'
+import {
+  buildContextForNode,
+  getAppPath,
+  getContextFilePath,
+  writeContextFile,
+} from './contextWriter'
+import { getBridgeConfig, isBridgeRunning, startBridge } from './mcpBridge'
 
 // node-pty is a native C++ addon. We lazy-load it so the app doesn't crash
 // on startup if it's not installed. The import only fires when spawnTerminal()
@@ -217,6 +225,21 @@ export async function spawnTerminal(config: SpawnConfig): Promise<TerminalSessio
     )
   }
 
+  // --- MCP↔Renderer bridge (lazy start) ---
+  // Start the bridge HTTP server on first terminal spawn so MCP CLI can route
+  // mutations through the renderer's Zustand store instead of the filesystem.
+  // Must happen before writeClaudeConfig so bridge port/token are available.
+  if (workspaceId && !isBridgeRunning()) {
+    try {
+      await startBridge(workspaceId)
+    } catch (err) {
+      console.warn(
+        '[TerminalManager] Bridge start failed (non-fatal, MCP falls back to file):',
+        err,
+      )
+    }
+  }
+
   // --- Context injection + Claude Code MCP config (fire-and-forget) ---
   // Only inject Cognograph context for Claude Code shells.
   // Other shells get a plain spawn with no context file or env vars.
@@ -226,17 +249,44 @@ export async function spawnTerminal(config: SpawnConfig): Promise<TerminalSessio
   // Always write MCP config so `claude` typed manually in any shell picks up Cognograph tools.
   // Full context/CLAUDE.md injection is only for dedicated Claude Code shells,
   // but .mcp.json is written for ALL shells so MCP tools are always available.
+  const bridgeConfig = getBridgeConfig()
   let contextAndConfigPromise: Promise<string | null> = Promise.resolve(null)
-  contextAndConfigPromise = buildContextForNode(nodeId)
+  contextAndConfigPromise = (async () => {
+    // Build workspace override from the correct workspace file.
+    // Don't use loadCurrentWorkspaceSnapshot() — it reads settings.json → lastWorkspaceId
+    // which may point to a different/previous workspace.
+    let workspaceOverride: WorkspaceSnapshot | null = null
+    if (workspaceId) {
+      try {
+        const workspacePath = join(getAppPath('userData'), 'workspaces', `${workspaceId}.json`)
+        const raw = await fsp.readFile(workspacePath, 'utf-8')
+        const data = JSON.parse(raw)
+        workspaceOverride = { nodes: data.nodes ?? [], edges: data.edges ?? [] }
+      } catch {
+        // Workspace file not yet saved to disk — pass empty workspace.
+        // CRITICAL: pass empty object, NOT undefined/null. If we pass null,
+        // buildContextForNode falls through to loadCurrentWorkspaceSnapshot()
+        // which reads settings.json → stale lastWorkspaceId → WRONG workspace.
+        // Empty object is truthy, so the ?? fallback at contextWriter.ts:675
+        // will NOT trigger. (Verified by RL pass 13-14)
+        workspaceOverride = { nodes: [], edges: [] }
+      }
+    } else {
+      // No workspaceId at all — use empty workspace rather than stale settings.json
+      workspaceOverride = { nodes: [], edges: [] }
+    }
+    return buildContextForNode(nodeId, workspaceOverride)
+  })()
     .then(async (ctx) => {
       await writeContextFile(ctx)
-      // Write .mcp.json + CLAUDE.md in the terminal's working directory
       const configResult = await writeClaudeConfig({
         nodeId,
         cwd,
         nodeTitle: nodeTitle || `Terminal ${nodeId.slice(0, 8)}`,
         contextMarkdown: ctx.markdown,
         workspaceId,
+        bridgePort: bridgeConfig?.port,
+        bridgeToken: bridgeConfig?.token,
       })
       if (!configResult.success) {
         console.warn(
@@ -274,6 +324,7 @@ export async function spawnTerminal(config: SpawnConfig): Promise<TerminalSessio
     rows,
     cwd,
     env: mergedEnv,
+    useConpty: false, // Win10 19045 ConPTY has duplicate output bugs; winpty is reliable
   })
 
   const session: TerminalSession = {
@@ -440,24 +491,16 @@ export function getAllSessions(): Map<string, TerminalSession> {
 // ---------------------------------------------------------------------------
 
 /**
- * Append data to the rolling scrollback buffer.
- * Splits by newlines, trims from front if over SCROLLBACK_LIMIT.
+ * Append raw PTY data to the rolling scrollback buffer.
+ * Stores chunks verbatim — replay uses terminal.write() (not writeln) to
+ * faithfully reproduce original output without inserting spurious newlines.
  */
 function appendToScrollback(session: TerminalSession, data: string): void {
-  const lines = data.split('\n')
+  session.scrollbackBuffer.push(data)
 
-  // If the last element is empty (data ended with \n), drop it to avoid
-  // accumulating empty strings.
-  if (lines.length > 0 && lines[lines.length - 1] === '') {
-    lines.pop()
-  }
-
-  session.scrollbackBuffer.push(...lines)
-
-  // Trim from front if over limit
-  if (session.scrollbackBuffer.length > SCROLLBACK_LIMIT) {
-    const excess = session.scrollbackBuffer.length - SCROLLBACK_LIMIT
-    session.scrollbackBuffer.splice(0, excess)
+  // Trim oldest chunks when over limit
+  while (session.scrollbackBuffer.length > SCROLLBACK_LIMIT) {
+    session.scrollbackBuffer.shift()
   }
 }
 

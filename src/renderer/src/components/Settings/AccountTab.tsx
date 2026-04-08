@@ -10,23 +10,10 @@
 
 import { CreditCard, Database, ExternalLink, Loader2, Star, User } from 'lucide-react'
 import { memo, useEffect } from 'react'
-// Cloud features disabled in open-source build (src/web/ not included)
-const createCheckoutSession = async (_id: string) => {}
-const getCustomerPortalUrl = async (): Promise<string> => ''
-const CREDIT_BUNDLES: { id: string; label: string }[] = []
-const formatCreditBalance = (_cents: number): string => '$0.00'
-const isAuthEnabled = (): boolean => false
-const useBillingStore = () => ({
-  tier: 'free' as const,
-  status: 'inactive',
-  creditBalanceCents: 0,
-  currentPeriodEnd: null as string | null,
-  foundingMember: false,
-  storageUsedBytes: 0,
-  storageLimitBytes: 0,
-  loading: false,
-  fetchBilling: async () => {},
-})
+import { createCheckoutSession, getCustomerPortalUrl } from '../../../../web/lib/billingService'
+import { CREDIT_BUNDLES, formatCreditBalance } from '../../../../web/lib/creditService'
+import { isAuthEnabled } from '../../../../web/lib/supabase'
+import { useBillingStore } from '../../../../web/stores/billingStore'
 
 function AccountTabComponent(): JSX.Element {
   const {

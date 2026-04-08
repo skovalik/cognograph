@@ -113,8 +113,6 @@ function BottomCommandBarComponent(): JSX.Element | null {
   const defaultLLMId = useConnectorStore((s) => s.defaultLLMId)
   const connectors = useConnectorStore((s) => s.connectors)
   const defaultConnector = connectors.find((c) => c.id === defaultLLMId) ?? null
-  const artboardNodeId = useUIStore((s) => s.artboardNodeId)
-
   const [input, setInput] = useState('')
   const [isExecuting, setIsExecuting] = useState(false)
   const [attachedFile, setAttachedFile] = useState<{
@@ -292,11 +290,9 @@ function BottomCommandBarComponent(): JSX.Element | null {
   // ── Terminal dispatch ──
   const dispatchToTerminal = useCallback(
     (cmd: string) => {
-      // Find the active terminal node — prefer the artboard node, else first conversation node
+      // Find the active terminal node — prefer first conversation node
       const terminalNodeId =
-        artboardNodeId ??
-        nodes.find((n) => (n.data as NodeData).type === 'conversation')?.id ??
-        null
+        nodes.find((n) => (n.data as NodeData).type === 'conversation')?.id ?? null
 
       if (!terminalNodeId) {
         sciFiToast('No active terminal found', 'error', 2000)
@@ -313,7 +309,7 @@ function BottomCommandBarComponent(): JSX.Element | null {
         sciFiToast('Terminal requires the desktop app', 'info', 2000)
       }
     },
-    [artboardNodeId, nodes],
+    [nodes],
   )
 
   // ── Submit ──

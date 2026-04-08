@@ -199,7 +199,9 @@ function handleCreateNode(provider: MCPSyncProvider, args: ToolArgs): unknown {
   }
 }
 
-function handleAddComment(provider: MCPSyncProvider, args: ToolArgs): unknown {
+async function handleAddComment(provider: MCPSyncProvider, args: ToolArgs): Promise<unknown> {
+  await provider.reload() // Refresh cache before read-modify-write
+
   const id = args.id as string
   if (!id) throw new Error("'id' is required")
 
@@ -930,6 +932,8 @@ async function handleGetInitialContext(
   }
 
   try {
+    // Force re-read from disk — Windows fs.watch misses atomic writes (rename)
+    await provider.reload()
     invalidateBFSCaches()
     const context = await buildContextForNode(
       nodeId,

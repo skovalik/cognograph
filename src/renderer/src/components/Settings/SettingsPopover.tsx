@@ -16,8 +16,7 @@ import { useMemo, useState } from 'react'
 import { Popover, PopoverContent } from '@/components/ui/popover'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-// Cloud features disabled in open-source build (src/web/ not included)
-const isAuthEnabled = (): boolean => false
+import { isAuthEnabled } from '../../../../web/lib/supabase'
 import { getAvailableMediaTools } from '../../services/media/agentToolRegistry'
 import { hasTerminalAccess } from '../../utils/terminalAccess'
 import { AccountTab } from './AccountTab'

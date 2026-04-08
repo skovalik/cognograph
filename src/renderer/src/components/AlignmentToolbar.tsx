@@ -239,7 +239,7 @@ function AlignmentToolbarComponent(): JSX.Element | null {
         {/* Layout dropdown menu */}
         {showLayoutMenu && (
           <div
-            className="absolute bottom-full mb-2 left-0 rounded-lg border shadow-xl py-1 min-w-[180px]"
+            className="absolute top-full mt-2 left-0 rounded-lg border shadow-xl py-1 min-w-[180px]"
             style={{
               backgroundColor: 'var(--gui-panel-bg-secondary)',
               borderColor: 'var(--gui-border)',

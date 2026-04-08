@@ -310,6 +310,12 @@ interface WorkspaceState {
 
   // Actions - Nodes
   addNode: (type: NodeData['type'], position: { x: number; y: number }) => string
+  addNodeWithId: (
+    id: string,
+    type: NodeData['type'],
+    data: Record<string, unknown>,
+    position: { x: number; y: number },
+  ) => void
   addAgentNode: (position: { x: number; y: number }) => string
   updateNode: (nodeId: string, data: Partial<NodeData>) => void
   updateBulkNodes: (nodeIds: string[], data: Partial<NodeData>) => void
@@ -360,6 +366,7 @@ interface WorkspaceState {
 
   // Actions - Edges
   addEdge: (connection: Connection) => void
+  addEdgesBatch: (connections: Connection[]) => number
   updateEdge: (edgeId: string, data: Partial<EdgeData>, options?: { skipHistory?: boolean }) => void
   updateEdgeHandlesBatch: (
     updates: Array<{ edgeId: string; sourceHandle: string; targetHandle: string }>,
@@ -476,6 +483,7 @@ interface WorkspaceState {
   // Actions - Workspace
   newWorkspace: () => void
   loadWorkspace: (data: WorkspaceData) => void
+  mergeExternalWorkspace: (data: WorkspaceData) => void
   getWorkspaceData: () => WorkspaceData
   updateWorkspaceName: (name: string) => void
   setViewport: (viewport: { x: number; y: number; zoom: number }) => void
@@ -1111,6 +1119,88 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         }, 300) // Match animation duration in animations.css
 
         return id
+      },
+
+      addNodeWithId: (id, type, data, position) => {
+        let baseData: NodeData
+        let dimensions = { width: 380, height: 140 }
+
+        switch (type) {
+          case 'conversation':
+            baseData = createConversationData()
+            dimensions = { width: 380, height: 180 }
+            break
+          case 'project': {
+            const projectColor = get().themeSettings?.nodeColors?.project || '#64748b'
+            baseData = createProjectData(projectColor)
+            dimensions = { width: 420, height: 320 }
+            break
+          }
+          case 'note':
+            baseData = createNoteData()
+            dimensions = { width: 380, height: 200 }
+            break
+          case 'task':
+            baseData = createTaskData()
+            dimensions = { width: 380, height: 220 }
+            break
+          case 'artifact':
+            baseData = createArtifactData()
+            dimensions = { width: 420, height: 280 }
+            break
+          case 'workspace':
+            baseData = createWorkspaceData()
+            dimensions = { width: 400, height: 260 }
+            break
+          case 'text':
+            baseData = createTextData()
+            dimensions = { width: 280, height: 120 }
+            break
+          case 'action':
+            baseData = createActionData()
+            dimensions = { width: 340, height: 180 }
+            break
+          case 'orchestrator':
+            baseData = createOrchestratorData()
+            dimensions = { width: 400, height: 320 }
+            break
+          default:
+            throw new Error(`Unknown node type: ${type}`)
+        }
+
+        const mergedData = { ...baseData, ...data } as NodeData
+
+        set((state) => {
+          const typeDefaults = state.propertySchema?.defaults?.[type]
+          if (typeDefaults) {
+            for (const [key, value] of Object.entries(typeDefaults)) {
+              if (value !== undefined && value !== null && value !== '') {
+                if (key in mergedData) {
+                  ;(mergedData as Record<string, unknown>)[key] = value
+                } else {
+                  if (!mergedData.properties) mergedData.properties = {}
+                  ;(mergedData.properties as Record<string, unknown>)[key] = value
+                }
+              }
+            }
+          }
+
+          const maxZ = state.nodes.reduce((max, n) => Math.max(max, n.zIndex || 0), 0)
+
+          const node: Node<NodeData> = {
+            id,
+            type,
+            position,
+            data: mergedData,
+            width: dimensions.width,
+            height: dimensions.height,
+            zIndex: maxZ + 1,
+          }
+
+          state.nodes.push(node)
+          state.isDirty = true
+          rebuildNodeIndex(state)
+        })
       },
 
       /**
@@ -2211,6 +2301,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       addEdge: (connection) => {
         if (!connection.source || !connection.target) return
+        if (connection.source === connection.target) return // prevent self-loops
 
         // Check if both nodes share the same parentId (intra-project edge)
         const state = get()
@@ -2281,6 +2372,64 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             }
           })
         }, 450)
+      },
+
+      addEdgesBatch: (connections) => {
+        if (connections.length === 0) return 0
+        const state = get()
+        const newEdges: Edge<EdgeData>[] = []
+
+        for (const conn of connections) {
+          if (!conn.source || !conn.target) continue
+          if (conn.source === conn.target) continue
+          const edgeId = `${conn.source}-${conn.target}`
+          const reverseId = `${conn.target}-${conn.source}`
+          // Check existing edges AND edges already in this batch
+          const exists =
+            state.edges.some(
+              (e) =>
+                e.id === edgeId ||
+                e.id === reverseId ||
+                (e.source === conn.source && e.target === conn.target) ||
+                (e.source === conn.target && e.target === conn.source),
+            ) || newEdges.some((e) => e.id === edgeId || e.id === reverseId)
+          if (exists) continue
+
+          const sourceNode = state.nodes.find((n) => n.id === conn.source)
+          const outgoingEdgeColor = (sourceNode?.data as ContextMetadata | undefined)
+            ?.outgoingEdgeColor
+          newEdges.push({
+            id: edgeId,
+            type: 'custom',
+            source: conn.source,
+            target: conn.target,
+            sourceHandle: conn.sourceHandle,
+            targetHandle: conn.targetHandle,
+            data: { ...DEFAULT_EDGE_DATA, color: outgoingEdgeColor },
+          })
+        }
+
+        if (newEdges.length > 0) {
+          set((s) => {
+            for (const edge of newEdges) s.edges.push(edge)
+            s.history = s.history.slice(0, s.historyIndex + 1)
+            s.history.push({
+              type: 'BATCH',
+              actions: newEdges.map((edge) => ({
+                type: 'ADD_EDGE',
+                edge: JSON.parse(JSON.stringify(edge)),
+              })),
+            } as HistoryAction)
+            s.historyIndex++
+            s.isDirty = true
+            if (s.history.length > 100) {
+              s.history = s.history.slice(-100)
+              s.historyIndex = s.history.length - 1
+            }
+          })
+          setTimeout(() => get().evaluateAllNodeActivations(), 0)
+        }
+        return newEdges.length
       },
 
       updateEdge: (edgeId, data, options) => {
@@ -2374,16 +2523,42 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           state.selectedEdgeIds = state.selectedEdgeIds.filter((id) => !edgeIds.includes(id))
           state.isDirty = true
 
-          deleted.forEach((edge) => {
+          // Batch history: single undo for multi-edge deletion
+          if (deleted.length === 1) {
             state.history = state.history.slice(0, state.historyIndex + 1)
-            state.history.push({ type: 'DELETE_EDGE', edge: JSON.parse(JSON.stringify(edge)) })
+            state.history.push({
+              type: 'DELETE_EDGE',
+              edge: JSON.parse(JSON.stringify(deleted[0])),
+            })
             state.historyIndex++
-          })
+          } else if (deleted.length > 1) {
+            state.history = state.history.slice(0, state.historyIndex + 1)
+            state.history.push({
+              type: 'BATCH',
+              actions: deleted.map((edge) => ({
+                type: 'DELETE_EDGE',
+                edge: JSON.parse(JSON.stringify(edge)),
+              })),
+            } as HistoryAction)
+            state.historyIndex++
+          }
           if (state.history.length > 100) {
             state.history = state.history.slice(-100)
             state.historyIndex = state.history.length - 1
           }
+          // Rebuild edge index inline (not just via subscriber) to ensure
+          // React Flow's controlled mode picks up the removal immediately
+          rebuildEdgesByTarget(state)
         })
+
+        // Also push removal through React Flow's onEdgesChange to sync its
+        // internal state — direct state.edges mutation can desync controlled mode
+        const removeChanges: EdgeChange[] = edgeIds.map((id) => ({
+          type: 'remove' as const,
+          id,
+        }))
+        get().onEdgesChange(removeChanges)
+
         // Audit hooks: edge deleted (non-critical)
         for (const eid of edgeIdsToAudit) {
           try {
@@ -4168,6 +4343,63 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
         // Spatial regions disconnected — clear any stale data on load
         useSpatialRegionStore.getState().loadRegions([])
+      },
+
+      mergeExternalWorkspace: (incoming) => {
+        set((state) => {
+          const incomingNodeMap = new Map(incoming.nodes.map((n) => [n.id, n]))
+          const currentNodeIds = new Set(state.nodes.map((n) => n.id))
+
+          const mergedExisting = state.nodes.map((node) => {
+            const incomingNode = incomingNodeMap.get(node.id)
+            if (!incomingNode) return node
+
+            return {
+              ...node,
+              position: node.position,
+              measured: node.measured,
+              width: node.width,
+              height: node.height,
+              data: node.data,
+            }
+          })
+
+          const newNodes = incoming.nodes.filter((n) => !currentNodeIds.has(n.id))
+          state.nodes = migrateWorkspaceNodes([...mergedExisting, ...newNodes])
+
+          const currentEdgeIds = new Set(state.edges.map((e) => e.id))
+          const newEdges: Edge<EdgeData>[] = incoming.edges
+            .filter((e) => !currentEdgeIds.has(e.id))
+            .map((edge) => {
+              let { sourceHandle, targetHandle } = edge
+              if (sourceHandle?.includes('-target')) {
+                sourceHandle = sourceHandle.replace('-target', '-source')
+              }
+              if (targetHandle?.includes('-source')) {
+                targetHandle = targetHandle.replace('-source', '-target')
+              }
+              const edgeData = edge.data || { ...DEFAULT_EDGE_DATA }
+              const migratedData = migrateEdgeStrength(edgeData)
+              return {
+                ...edge,
+                sourceHandle,
+                targetHandle,
+                type: edge.type || 'custom',
+                data: migratedData,
+              }
+            })
+
+          state.edges = [...state.edges, ...newEdges]
+
+          if (incoming.name && incoming.name !== state.workspaceName) {
+            state.workspaceName = incoming.name
+          }
+
+          state.isDirty = true
+
+          rebuildNodeIndex(state)
+          rebuildEdgesByTarget(state)
+        })
       },
 
       getWorkspaceData: () => {

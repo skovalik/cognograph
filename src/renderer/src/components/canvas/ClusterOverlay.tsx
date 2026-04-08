@@ -138,8 +138,12 @@ export const ClusterOverlay = memo(function ClusterOverlay(): JSX.Element | null
   const isUltraFar = zoomLevel === 'ultra-far'
 
   // Convert React Flow nodes/edges to clusterEngine format
+  // Stable empty arrays prevent useEffect re-firing on every drag frame
+  const EMPTY_POSITIONS: NodePosition[] = useMemo(() => [], [])
+  const EMPTY_EDGES: EdgeInfo[] = useMemo(() => [], [])
+
   const nodePositions: NodePosition[] = useMemo(() => {
-    if (!isUltraFar) return []
+    if (!isUltraFar) return EMPTY_POSITIONS
     return rfNodes.map((node: Node) => ({
       id: node.id,
       x: node.position.x,
@@ -147,15 +151,15 @@ export const ClusterOverlay = memo(function ClusterOverlay(): JSX.Element | null
       type: (node.data as { type?: string })?.type || node.type || 'text',
       status: (node.data as { status?: string })?.status,
     }))
-  }, [rfNodes, isUltraFar])
+  }, [rfNodes, isUltraFar, EMPTY_POSITIONS])
 
   const edgeInfos: EdgeInfo[] = useMemo(() => {
-    if (!isUltraFar) return []
+    if (!isUltraFar) return EMPTY_EDGES
     return rfEdges.map((edge: Edge) => ({
       source: edge.source,
       target: edge.target,
     }))
-  }, [rfEdges, isUltraFar])
+  }, [rfEdges, isUltraFar, EMPTY_EDGES])
 
   // Debounced cluster computation
   useEffect(() => {

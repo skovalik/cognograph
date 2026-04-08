@@ -77,6 +77,7 @@ function makeProvider(
     load: vi.fn().mockResolvedValue(undefined),
     close: vi.fn(),
     flush: vi.fn().mockResolvedValue(undefined),
+    reload: vi.fn().mockResolvedValue(undefined),
   } as MCPSyncProvider
 }
 
@@ -183,5 +184,41 @@ describe('handleGetInitialContext', () => {
     expect(result.entryCount).toBe(2)
     expect(result.markdown).toContain('Direct Note')
     expect(result.markdown).toContain('Deep Note')
+  })
+})
+
+describe('provider.reload() regression', () => {
+  beforeEach(() => {
+    invalidateBFSCaches()
+    mockMkdir.mockClear()
+    mockWriteFile.mockClear()
+    mockReadFile.mockClear()
+  })
+
+  it('does not crash on provider.reload() (regression: FileSyncProvider fallback)', async () => {
+    const provider = makeProvider(
+      [{ id: 'term-1', data: { type: 'conversation', title: 'Terminal' } }],
+      [],
+    )
+    const result = (await handleToolCall(provider, 'get_initial_context', {
+      nodeId: 'term-1',
+    })) as any
+
+    expect(result.error).toBeUndefined()
+    expect(provider.reload).toHaveBeenCalled()
+  })
+
+  it('does not crash on provider.reload() during add_comment', async () => {
+    const provider = makeProvider(
+      [{ id: 'node-1', data: { type: 'note', title: 'Note', content: '' } }],
+      [],
+    )
+    const result = (await handleToolCall(provider, 'add_comment', {
+      id: 'node-1',
+      text: 'test comment',
+    })) as any
+
+    expect(result.success).toBe(true)
+    expect(provider.reload).toHaveBeenCalled()
   })
 })

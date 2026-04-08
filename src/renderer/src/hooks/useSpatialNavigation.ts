@@ -7,7 +7,7 @@
  * Arrow keys move selection to the nearest node in a cardinal direction
  * (based on spatial position, not DOM order). Tab cycles through connected
  * nodes (follows edges). Shift+Arrow extends selection (multi-select).
- * Enter opens (activates) the selected node via artboard mode.
+ * Enter activates the selected node.
  *
  * Algorithm: For each arrow direction, filter nodes in a 90-degree cone
  * from the current selection's center, score by distance + off-axis penalty,
@@ -306,18 +306,13 @@ export function useSpatialNavigation(): { keyboardNavActive: boolean } {
     [panToNode, setKeyboardNavActive],
   )
 
-  // Enter key: activate (open) the selected node via artboard mode
+  // Enter key: activate (open) the selected node — placeholder for future activation logic
   const handleEnterActivate = useCallback(() => {
     const selectedIds = selectedNodeIdsRef.current
     if (selectedIds.length !== 1) return false
 
-    const nodeId = selectedIds[0]!
-    const { artboardNodeId, enterArtboard } = useUIStore.getState()
-    // Don't re-enter if already in artboard mode
-    if (artboardNodeId) return false
-
-    enterArtboard(nodeId)
-    return true
+    // No-op for now — artboard mode removed
+    return false
   }, [])
 
   // Register keyboard listener
@@ -352,9 +347,7 @@ export function useSpatialNavigation(): { keyboardNavActive: boolean } {
         }
       }
 
-      // Enter (no modifiers): activate selected node via artboard mode.
-      // Ctrl/Cmd+Enter is handled by useArtboardMode — we handle plain Enter here
-      // for keyboard-first navigation flow (select with arrows, open with Enter).
+      // Enter (no modifiers): activate selected node.
       if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
         if (handleEnterActivate()) {
           e.preventDefault()

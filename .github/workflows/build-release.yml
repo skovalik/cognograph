@@ -1,13 +1,10 @@
-name: Build & Release (Unsigned)
+name: Build & Release
 
 on:
   push:
     tags:
-      - 'v*.*.*'  # Trigger on version tags like v0.1.0
-  workflow_dispatch:  # Allow manual trigger from GitHub Actions tab
-
-permissions:
-  contents: write  # Required for creating releases and uploading assets
+      - 'v*.*.*'  # Trigger on version tags like v1.5.3
+  workflow_dispatch:  # Allow manual trigger
 
 jobs:
   build:
@@ -36,21 +33,56 @@ jobs:
         continue-on-error: true
 
       - name: Type check
-        run: npm run typecheck:node
-        continue-on-error: true
+        run: npm run typecheck
 
-      - name: Build MCP CLI
-        run: npm run build:mcp
-
-      # ============ Build (Unsigned) ============
-      - name: Build (macOS - unsigned)
+      # ============ macOS Signing Setup ============
+      - name: Import Apple Certificate (macOS only)
         if: matrix.os == 'macos-latest'
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          # Create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          # Import certificate from secrets
+          echo -n "$CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+
+          # Create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certificate to keychain
+          security import $CERTIFICATE_PATH -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # Enable codesigning
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+      # ============ Build & Sign ============
+      - name: Build & Sign (macOS)
+        if: matrix.os == 'macos-latest'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npm run build:mac
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: Build (Windows - unsigned)
+      - name: Build & Sign (Windows)
         if: matrix.os == 'windows-latest'
+        env:
+          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          # For DigiCert KeyLocker cloud signing:
+          # SM_API_KEY: ${{ secrets.SM_API_KEY }}
+          # SM_CLIENT_CERT_FILE_BASE64: ${{ secrets.SM_CLIENT_CERT_FILE_BASE64 }}
+          # SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
+          # SM_CODE_SIGNING_CERT_SHA1_HASH: ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}
         run: npm run build:win
 
       - name: Build (Linux - no signing required)
@@ -84,6 +116,12 @@ jobs:
           path: |
             release/*/Cognograph-*.AppImage
             release/*/Cognograph-*.deb
+
+      # ============ Cleanup (macOS) ============
+      - name: Cleanup keychain (macOS only)
+        if: always() && matrix.os == 'macos-latest'
+        run: |
+          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
 
   # ============ Create GitHub Release ============
   release:

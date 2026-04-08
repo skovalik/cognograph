@@ -45,6 +45,7 @@ export interface WorkspaceFileData {
 
 export interface MCPSyncProvider {
   load(): Promise<void>
+  reload(): Promise<void>
   close(): void
   getWorkspaceId(): string
   getWorkspaceName(): string
@@ -95,6 +96,29 @@ export class FileSyncProvider implements MCPSyncProvider {
     this.workspaceData = data
     this.populateMaps(data)
     this.startWatcher()
+  }
+
+  async reload(): Promise<void> {
+    // Safety: skip reload when mutations are pending or persist is in-flight.
+    // Mirrors the file watcher guards at lines 391-393.
+    // Without this, reload() could clobber the lastReloadNodeIds baseline
+    // while mcpMutatedNodeIds still references the old baseline — causing
+    // doPersist() to silently drop in-flight mutations.
+    if (this.dirty || this.debounceTimer || this.persisting) return
+
+    try {
+      const content = await fs.readFile(this.filePath, 'utf-8')
+      const data = JSON.parse(content) as WorkspaceFileData
+      this.workspaceData = data
+      this.populateMaps(data)
+      // populateMaps() resets lastReloadNodeIds/Edges (lines 251-252),
+      // establishing a new disk baseline for the merge strategy.
+      // Do NOT clear mcpMutatedNodeIds — they track real mutations that
+      // haven't been persisted yet. doPersist() uses both sets together.
+    } catch {
+      // File may be mid-write or inaccessible — keep existing in-memory state
+      // (matches watcher error handling at lines 404-406)
+    }
   }
 
   close(): void {

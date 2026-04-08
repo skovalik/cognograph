@@ -25,11 +25,12 @@ LICENSE was overwritten from AGPL-3.0 + Defensive Patent Pledge to MIT and nobod
 - This is NOT MIT (permissive) — AGPL is copyleft
 - Defensive Patent Pledge protects users from patent assertion
 
-**License checklist:**
-- [ ] `LICENSE` contains AGPL-3.0 + Defensive Patent Pledge
-- [ ] `package.json` says `"AGPL-3.0-only"`
+**Cross-repo sync checklist (when touching license):**
+- [ ] LICENSE files match across repos
+- [ ] PATENTS files match across repos
+- [ ] Both `package.json` say `"AGPL-3.0-only"`
 - [ ] `package-lock.json` root entry says `"AGPL-3.0-only"` (stale after `npm install`)
-- [ ] README License section matches
+- [ ] Both README License sections match
 
 ---
 
@@ -458,6 +459,8 @@ Plan/roadmap documents (like `docs/NEXT_PHASE_PLAN.md`) describe features as "ne
 2. **After implementing:** Update the plan doc immediately — add `✅ DONE` inline, update status tables.
 3. **On session end:** Review which plan items you touched and update their status.
 4. **Standard markers:** `✅ DONE`, `🟡 PARTIAL`, `❌ REMAINING`, `⏳ DEFERRED`
+
+See also: project-level instructions for plan drift prevention.
 
 ---
 

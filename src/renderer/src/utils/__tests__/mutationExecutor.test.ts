@@ -6,6 +6,7 @@
  *
  * Tests for executeMutationPlan — the two-pass execution engine
  * that applies AI-generated plans to the workspace store.
+ * (Plan-Preview-Apply pipeline)
  *
  * Two-pass execution:
  * 1. Pass 1: Create all nodes (establish tempId → realId mapping)

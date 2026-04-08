@@ -767,6 +767,14 @@ export interface BridgeAPI {
   onInsights: (callback: (insights: unknown[]) => void) => () => void
   onSnapshotRequest: (callback: (requestId: string) => void) => () => void
   respondSnapshot: (requestId: string, snapshot: unknown) => void
+  /** Register handler for bridge queries from main process (MCP bridge).
+   *  Uses removeAllListeners before registering to prevent double-fire in
+   *  React StrictMode / HMR (matches onSnapshotRequest pattern). */
+  onBridgeQuery: (
+    callback: (data: { requestId: string; type: string; params: Record<string, unknown> }) => void,
+  ) => void
+  /** Send bridge query response back to main process */
+  sendBridgeResponse: (requestId: string, result: unknown) => void
 }
 
 export interface NotionAPI {
@@ -1201,6 +1209,23 @@ const api: ElectronAPI = {
     /** Respond to a snapshot request from main process */
     respondSnapshot: (requestId: string, snapshot: unknown) =>
       ipcRenderer.send('bridge:snapshot-response', requestId, snapshot),
+    /** Register handler for bridge queries from main process (MCP bridge).
+     *  Uses removeAllListeners before registering to prevent double-fire in
+     *  React StrictMode / HMR (matches onSnapshotRequest pattern). */
+    onBridgeQuery: (
+      callback: (data: {
+        requestId: string
+        type: string
+        params: Record<string, unknown>
+      }) => void,
+    ) => {
+      ipcRenderer.removeAllListeners('bridge:query')
+      ipcRenderer.on('bridge:query', (_event, data) => callback(data))
+    },
+    /** Send bridge query response back to main process */
+    sendBridgeResponse: (requestId: string, result: unknown) => {
+      ipcRenderer.send('bridge:response', { requestId, result })
+    },
   },
   notion: {
     testConnection: () => ipcRenderer.invoke('notion:testConnection'),

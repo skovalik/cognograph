@@ -4,15 +4,7 @@
 
 You're managing context across dozens of tabs, re-explaining what the AI should already know, losing threads between conversations that should be connected. Every AI tool treats context as invisible plumbing. System prompts. Config files. Conversation history you can't see or organize.
 
-Cognograph makes it spatial. Put your thinking on a canvas. Connect two nodes and the AI reads both. Your layout becomes your prompt engineering.
-
-No system prompts. No config files. Drag, connect, talk.
-
-<p align="center">
-  <a href="cognograph-screenshots/01-brand-artifacts-canvas.png"><img src="cognograph-screenshots/01-brand-artifacts-canvas.png" alt="Cognograph canvas with brand artifacts and connected nodes" width="90%"></a>
-</p>
-
-**[Try it now](https://canvas.cognograph.app)** (browser) | Clone and run locally (Electron) | Patent pending
+Try it: **[cognograph.app/workspace](https://cognograph.app/workspace)** (browser) or clone and run locally (Electron).
 
 ---
 
@@ -31,15 +23,17 @@ It's been my daily driver for months. Turns out spatial thinking isn't a neurodi
 
 ---
 
-## Context Injection Cuts Compute Cost Up to 80% in My Testing
+## Spatial Graph Traversal Cuts API Costs Up to 80%
 
 When you connect nodes on the canvas, Cognograph walks the graph via breadth-first traversal and assembles only the relevant context for each AI call. Connected nodes become the AI's working memory. Notes become reference material, tasks become constraints, projects define scope. You send what matters, not everything.
 
 By explicitly linking what's relevant instead of dumping entire conversation histories, you avoid hallucination-inducing bloat and dramatically reduce token usage. The spatial layout isn't decoration. It's a token optimization layer.
 
-### Use Your Claude Account, Not an API Key
+Flat-rate AI subscriptions are dying. The context windows are too expensive to subsidize. Cognograph's spatial graph injects what's connected, so your per-call token usage drops whether you're on a paid API or running local models.
 
-Terminal nodes spawn an embedded CLI where Claude Code runs with full MCP tool access to your canvas. Use your existing Claude Pro subscription. No separate API billing. Chat and Agent modes support API keys from Anthropic, OpenAI, Google, OpenRouter, and Ollama for direct calls. Three interaction modes, one canvas.
+### Bring Your Own Key. Or No Key at All.
+
+Chat and Agent modes take API keys from Anthropic, OpenAI, Google, and OpenRouter. Terminal nodes spawn an embedded CLI with full MCP tool access to your canvas. Or skip the API: connect Ollama for local inference with Llama, Mistral, Phi, or any GGUF model. Three interaction modes, one canvas. Switch providers per node.
 
 ### Your Data Stays on Your Machine
 
@@ -51,7 +45,7 @@ No account required. No telemetry. Workspaces save as local JSON files. API keys
 
 ### Browser (no install)
 
-Go to **[canvas.cognograph.app](https://canvas.cognograph.app)**. Your data stays in IndexedDB.
+Go to **[cognograph.app/workspace](https://cognograph.app/workspace)** and paste an API key when prompted. Your data stays in your browser (IndexedDB).
 
 ### Local (Electron)
 
@@ -62,7 +56,7 @@ npm install
 npm run dev
 ```
 
-Requires Node.js 20+. Bring your own API key, connect Ollama for local inference, or use Terminal mode with your Claude Pro account.
+Requires Node.js 20+. Bring your own API key, connect Ollama for local inference, or use Terminal mode with any CLI agent.
 
 ---
 
@@ -137,8 +131,8 @@ All three read context from connected nodes. Switch between them mid-project.
 | OpenAI | API key (GPT-4o, o1, o3) |
 | Google Gemini | API key (Gemini Pro, Flash) |
 | OpenRouter | API key (access to 100+ models) |
-| Ollama | Local (llama, mistral, phi, any GGUF model) |
-| Claude Pro | Via Terminal mode (your existing subscription) |
+| Ollama | Local, air-gapped (Llama, Mistral, Phi, any GGUF model) |
+| CLI Agents | Via Terminal mode (Claude Code, Aider, or any CLI tool) |
 
 Each conversation can use a different provider. Set per-node or use workspace defaults.
 
@@ -148,7 +142,33 @@ Each conversation can use a different provider. Set per-node or use workspace de
 
 Patent pending (4 provisional applications, February 2026). Defensive Patent Pledge: Cognograph will not assert patents against any party unless that party first asserts patent claims against Cognograph, its users, or contributors.
 
-The four families cover graph-based context assembly, spatial agent orchestration, position-based trigger activation, and transactional plan-preview-apply. These protect the community, not restrict it.
+---
+
+## Project Structure
+
+```
+src/
+├── main/           # Electron main process (IPC, LLM calls, MCP server, agent SDK)
+├── preload/        # IPC bridge (type-safe API surface)
+├── renderer/       # React app
+│   ├── components/ # UI components + 9 node types
+│   ├── stores/     # Zustand stores (47 stores)
+│   ├── services/   # Chat tools, agent tools, layout pipeline
+│   ├── sync/       # File sync, auto-save, workspace persistence
+│   └── utils/      # Layout algorithms, node sizing, context builder
+├── plugins/        # Plugin system (Notion, etc.)
+└── shared/         # Types shared across all processes
+```
+
+---
+
+## The Story
+
+I have ASD and severe combined-type ADHD. Files in folders don't work for me. Linear chat doesn't work for me. I need to see everything spatially, with connections I can trace with my eyes.
+
+When I started working with AI daily -- dozens of conversations, research, code, planning -- I hit a wall. 47 tabs. Context lost between them. Redoing work because I couldn't find where I'd already done it. The tools weren't built for how I think.
+
+Cognograph started as a tool for my own brain. It's been my daily driver for months.
 
 ---
 

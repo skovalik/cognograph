@@ -132,6 +132,7 @@ import {
   registerGraphIntelligenceHandlers,
   registerSnapshotResponseHandler,
 } from './services/graphIntelligence'
+import { stopBridge as stopMcpBridge } from './services/mcpBridge'
 import { workflowSync } from './services/notionSync'
 import { registerNotionHandlers } from './services/registerNotionHandlers'
 import { registerTerminalHandlers } from './services/registerTerminalHandlers'
@@ -765,13 +766,14 @@ app.on('window-all-closed', () => {
   }
 })
 
-// Clean up activity watcher, dispatch server, terminals, and MCP client connections on quit
+// Clean up activity watcher, dispatch server, terminals, bridge, and MCP client connections on quit
 app.on('before-quit', () => {
   // Abort all active agent requests (Phase B1 — Final-8)
   abortAllRequests()
   stopActivityWatcher()
   stopDispatchServer()
   killAllTerminals()
+  stopMcpBridge() // Closes bridge HTTP server, deletes port file
   disconnectAllMCPServers().catch((err) => {
     console.error('[MCPClient] Error during shutdown cleanup:', err)
   })

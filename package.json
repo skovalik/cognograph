@@ -1,6 +1,6 @@
 {
   "name": "cognograph",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Spatial canvas for AI workflow orchestration",
   "type": "module",
   "main": "./out/main/index.js",
@@ -52,7 +52,6 @@
     "validate:deps": "knip",
     "validate": "npm run typecheck && npm run validate:arch && npm run validate:deps",
     "postinstall": "electron-rebuild",
-    "prepare": "husky",
     "build:win": "npm run build && electron-builder --win --publish never",
     "build:mac": "npm run build && electron-builder --mac --publish never",
     "build:linux": "npm run build && electron-builder --linux --publish never",
@@ -185,21 +184,13 @@
     "electron-vite": "^2.3.0",
     "esbuild": "^0.24.2",
     "fake-indexeddb": "^6.2.5",
-    "husky": "^9.1.7",
     "jsdom": "^27.4.0",
     "knip": "^5.82.1",
-    "lint-staged": "^16.2.7",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
     "tsx": "^4.21.0",
     "typescript": "^5.6.3",
     "vite": "^5.4.10",
     "vitest": "^4.0.18"
-  },
-  "lint-staged": {
-    "*.{ts,tsx}": [
-      "biome format --write --no-errors-on-unmatched",
-      "biome check --write --no-errors-on-unmatched --only=assist/source/organizeImports"
-    ]
   }
 }

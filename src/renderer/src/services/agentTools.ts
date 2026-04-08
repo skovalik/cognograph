@@ -583,8 +583,8 @@ const MEMORY_TOOLS: AgentToolDefinition[] = [
  * finds artifact nodes with filePath properties, and extracts parent directories.
  *
  * Spatial topology controls agent permissions. Connect a folder artifact →
- * agent can access that folder. Disconnect it → access revoked.
- * No configuration UI needed.
+ * agent can access that folder.
+ * Disconnect it → access revoked. No configuration UI needed.
  */
 export function derivePathsFromContext(agentNodeId: string): string[] {
   const { nodes, edges } = useWorkspaceStore.getState()

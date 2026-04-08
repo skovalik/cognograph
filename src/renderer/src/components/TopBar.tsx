@@ -41,10 +41,8 @@ import {
 } from 'lucide-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
-// Cloud features disabled in open-source build (src/web/ not included)
-const ElementBadge = ((_props: { name: string | null; size: number; avatarUrl?: string | null }) => null) as any
-const isAuthEnabled = (): boolean => false
-const supabase: any = null
+import ElementBadge from '../../../web/components/ElementBadge'
+import { isAuthEnabled, supabase } from '../../../web/lib/supabase'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useMultiplayer } from '../hooks/useMultiplayer'
 import { selectLeftSidebarTab, useUIStore } from '../stores/uiStore'

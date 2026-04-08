@@ -6,8 +6,11 @@ node_modules/
 *.lnk
 workplace saves/
 shader*.png
-patent-*.png
-p1-fig*.png
+# Draft figures
+*.draft.png
+
+# Internal backups
+src/web/landing-backup-pre-orchestration/
 
 # Build output
 dist/
@@ -66,6 +69,7 @@ e2e/test-results/
 .env.test
 .worktrees/
 %SystemDrive%/
+supabase/.temp/
 
 # Secrets vault
 .secrets/

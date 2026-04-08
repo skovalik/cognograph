@@ -64,10 +64,6 @@ interface UIActions {
   restorePinnedWindow: (nodeId: string) => void
   bringPinnedWindowToFront: (nodeId: string) => void
 
-  // Artboard mode
-  enterArtboard: (nodeId: string) => void
-  exitArtboard: () => void
-
   // Keyboard navigation
   setKeyboardNavActive: (active: boolean) => void
 
@@ -127,9 +123,6 @@ const initialUIState: UIState = {
   // Pinned windows
   pinnedWindows: [],
   nextPinnedZIndex: 1000,
-
-  // Artboard mode
-  artboardNodeId: null,
 
   // Keyboard navigation
   keyboardNavActive: false,
@@ -376,22 +369,6 @@ export const useUIStore = create<UIStore>()(
       },
 
       // -------------------------------------------------------------------------
-      // Artboard Mode (can implement directly)
-      // -------------------------------------------------------------------------
-
-      enterArtboard: (nodeId) => {
-        set((state) => {
-          state.artboardNodeId = nodeId
-        })
-      },
-
-      exitArtboard: () => {
-        set((state) => {
-          state.artboardNodeId = null
-        })
-      },
-
-      // -------------------------------------------------------------------------
       // Keyboard Navigation
       // -------------------------------------------------------------------------
 
@@ -524,16 +501,6 @@ export const selectPinnedWindows = (state: UIStore) => state.pinnedWindows
  */
 export const selectIsNodePinned = (nodeId: string) => (state: UIStore) =>
   state.pinnedWindows.some((w) => w.nodeId === nodeId)
-
-/**
- * Get artboard node ID (null when not in artboard mode)
- */
-export const selectArtboardNodeId = (state: UIStore) => state.artboardNodeId
-
-/**
- * Check if artboard mode is active
- */
-export const selectIsArtboardActive = (state: UIStore) => state.artboardNodeId !== null
 
 /**
  * Get keyboard navigation active state

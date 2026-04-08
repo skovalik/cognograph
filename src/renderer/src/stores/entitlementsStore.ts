@@ -91,8 +91,15 @@ export const useEntitlementsStore = create<EntitlementsState>()(
           // Try Supabase auth first (web/cloud mode)
           let authHeader: string | null = null
           try {
-            // Cloud features disabled in open-source build
-            throw new Error('No cloud auth in open-source build')
+            const { supabase } = await import('../../../web/lib/supabase')
+            if (supabase) {
+              const {
+                data: { session },
+              } = await supabase.auth.getSession()
+              if (session?.access_token) {
+                authHeader = `Bearer ${session.access_token}`
+              }
+            }
           } catch {
             // Supabase not available (Electron / open-source mode) — try workspace token
           }

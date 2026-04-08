@@ -2,6 +2,18 @@
 
 All notable changes to Cognograph are documented in this file.
 
+## [0.2.2] - 2026-04-08
+
+### Changed
+- README and marketing copy: removed all Claude subscription claims ("Use your Claude subscription", "No API key needed") — Anthropic banned flat-rate subscriptions for third-party agent frameworks (2026-04-04)
+- BYOK (Bring Your Own Key) + Ollama-first messaging across all public-facing copy
+- Provider table: "Claude Pro" row replaced with "CLI Agents" (Claude Code, Aider, etc.)
+
+### Fixed
+- Terminal context regression: camelCase→kebab-case bridge type mismatch (13 query types never worked), missing `reload()` on FileSyncProvider, stale workspace path on spawn, test mock hiding RC1
+- MCP bridge: added `mcpBridge.ts` HTTP bridge service, `bridgeE2e.test.ts` + `mcpBridge.test.ts` contract tests
+- Context writer: content hash consistency fix
+
 ## [0.2.1] - 2026-04-06
 
 ### Added

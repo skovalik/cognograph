@@ -4,7 +4,7 @@
 **Test Type:** Blind Cognitive Proxy (AI Vision)
 **States Evaluated:** 10
 **Total Cost:** $0.20
-**Test System:** Smart E2E Cognitive Testing
+**Source:** Smart E2E Tier 2 evaluation
 
 ---
 

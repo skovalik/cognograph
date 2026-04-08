@@ -110,7 +110,7 @@ test.describe('Mobile Viewport', () => {
   })
 
   test('M5: page allows user scaling (WCAG)', async ({ page }) => {
-    // After Workstream 6, viewport should NOT have user-scalable=no
+    // Viewport should allow user scaling (WCAG)
     const viewport = await page.locator('meta[name="viewport"]').getAttribute('content')
     expect(viewport).not.toContain('user-scalable=no')
     expect(viewport).not.toContain('maximum-scale=1')

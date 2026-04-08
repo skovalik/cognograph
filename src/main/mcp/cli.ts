@@ -7,6 +7,8 @@
 
 import { existsSync, statSync } from 'fs'
 import { join, resolve } from 'path'
+import { BridgeSyncProvider } from './bridgeProvider'
+import type { MCPSyncProvider } from './provider'
 import { FileSyncProvider } from './provider'
 import { createMCPServer } from './server'
 
@@ -76,15 +78,43 @@ async function main(): Promise<void> {
 
   console.error(`[MCP] Loading workspace: ${workspacePath}`)
 
-  // Create provider and load workspace
-  const provider = new FileSyncProvider(workspacePath)
-  try {
-    await provider.load()
-  } catch (loadErr) {
-    console.error(`[MCP] FATAL: Failed to load workspace: ${loadErr}`)
-    console.error(`[MCP] Workspace path: ${workspacePath}`)
-    console.error('[MCP] The workspace file may be corrupted, locked, or inaccessible.')
-    process.exit(1)
+  // Bridge detection: prefer bridge over file-based sync
+  let provider: MCPSyncProvider
+
+  const bridgePort = process.env.COGNOGRAPH_BRIDGE_PORT
+  const bridgeToken = process.env.COGNOGRAPH_BRIDGE_TOKEN
+
+  if (bridgePort && bridgeToken) {
+    const port = parseInt(bridgePort, 10)
+    const bridge = new BridgeSyncProvider(port, bridgeToken)
+    try {
+      // Health check — verify bridge is alive before committing
+      await bridge.load()
+      provider = bridge
+      console.error('[MCP] Connected to bridge on port', port)
+    } catch (err) {
+      console.error('[MCP] Bridge connection failed, falling back to file:', err)
+      provider = new FileSyncProvider(workspacePath)
+      try {
+        await provider.load()
+      } catch (loadErr) {
+        console.error(`[MCP] FATAL: Failed to load workspace: ${loadErr}`)
+        console.error(`[MCP] Workspace path: ${workspacePath}`)
+        console.error('[MCP] The workspace file may be corrupted, locked, or inaccessible.')
+        process.exit(1)
+      }
+    }
+  } else {
+    // No bridge configured — use file-based sync (backward compatible)
+    provider = new FileSyncProvider(workspacePath)
+    try {
+      await provider.load()
+    } catch (loadErr) {
+      console.error(`[MCP] FATAL: Failed to load workspace: ${loadErr}`)
+      console.error(`[MCP] Workspace path: ${workspacePath}`)
+      console.error('[MCP] The workspace file may be corrupted, locked, or inaccessible.')
+      process.exit(1)
+    }
   }
 
   console.error(

@@ -20,17 +20,8 @@ import {
   Trash2,
 } from 'lucide-react'
 import { memo, useCallback, useEffect, useState } from 'react'
-// Cloud features disabled in open-source build (src/web/ not included)
-const isAuthEnabled = (): boolean => false
-type ApiKeyEntry = { id: string; key: string; provider: string; lastFour: string }
-const useApiKeyStore = (selector: (s: any) => any) => selector({
-  keys: [] as ApiKeyEntry[],
-  loading: false,
-  fetchKeys: async () => {},
-  addKey: async () => false,
-  removeKey: async () => false,
-  testKey: async () => false,
-})
+import { isAuthEnabled } from '../../../../web/lib/supabase'
+import { type ApiKeyEntry, useApiKeyStore } from '../../../../web/stores/apiKeyStore'
 
 // ---------------------------------------------------------------------------
 // Provider definitions
