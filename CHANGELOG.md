@@ -6,38 +6,85 @@ All notable changes to Cognograph are documented in this file.
 
 ### Added
 
-- **SLSA-grade build provenance**: cosign keyless workflow + Ed25519 signer + per-platform manifest verifier in the release pipeline.
-- **AutoUpdater signature verification**: `cosign verify-blob` runs against any candidate update before it is applied; verification failure aborts the update path.
-- **Docker-based sandbox surface**: a `dockerSandbox` service with an allowlist contract for terminal-node command execution.
-- **Unified perf-tier system**: Quality / Auto / Battery dropdown is now the single master switch for shader, edge LOD, particles, ambient effects, and bridge badges across all zoom levels.
-- **PerfTierBadge**: surfaces the active tier + reason + override hint when not at full quality.
-- **Animated thinking-dot loader**: conic-gradient progress indicator replaces the inline spinner.
-- **Microsoft Clarity beacon** for usage analytics on the web canvas.
-- 5 product screenshots embedded in README (1 hero + 4 in a Screenshots section).
+- **Unified perf-tier system** — Quality / Auto / Battery dropdown is now the single master switch for shader, edge LOD, particles, ambient effects, and bridge badges. Auto mode resolves from zoom level, FPS, and node count; Quality wins overrides; Battery clamps everything down.
+- **PerfTierBadge** — surfaces the active tier + reason (zoom / FPS / node-count threshold) + override hint when not at full quality.
+- **Per-node LLM context window default raised 4096 → 16384** — 4× larger conversations per node.
+- **Opus 4.7 support** — managed-models list, token pricing, and SDK default updated for the latest Claude model.
+- **Auto-seeded model connectors** — Haiku, Sonnet, and Opus connectors automatically configured on first run, no manual setup.
+- **Docker-based sandbox surface** — `dockerSandbox` service with an allowlist contract for terminal-node command execution.
+- **AutoUpdater signature verification** — `cosign verify-blob` runs against any candidate update before it's applied; verification failure aborts the update path.
+- **SLSA-grade build provenance** — cosign keyless workflow + Ed25519 signer + per-platform manifest verifier in the release pipeline.
+- **End-to-end observability** — Sentry integration wired across all 4 processes (main, preload, renderer, agent) with privacy-aware helper routing (PII redaction, fetch-URL scrubbing, replay text/media masking, production-only enable).
+- **OpenTelemetry instrumentation** — distributed tracing on agent + MCP calls.
+- **Session cost cap** — per-session budget limit wired into the agent loop to prevent runaway spending.
+- **Diagnostic server with session boot ID** — boot-ID rewire for crash session correlation and multi-process trace linking.
+- **Animated thinking-dot loader** — conic-gradient progress indicator replaces the inline spinner.
+- **CLI thinking animation** — terminal spinner detection + animated thinking ring in CLI output (3-gap conic spinner).
+- **Global theme broadcast to artifacts** — HTML artifact iframes receive theme changes dynamically (matching preset colors, not just dark/light mode).
+- **Conic spinner palette** — spinner colors driven by global theme for visual consistency.
+- **Cohesive ANSI color palette** — preset theme with custom yellow/magenta combination + CSS-var cursor guard.
+- **Syntax highlighting for artifacts** — code/markdown artifacts render with language-specific syntax coloring.
+- **Chat toolbar redirection** — toolbars redirect to chat bar with selection glow on F4 activation.
+- **Terminal node inline edit** — double-click to edit text/code/markdown artifact content directly.
+- **MCP bridge edge animations** — edge animations triggered by MCP bridge notifications in CLI context.
+- **HTML artifact iframe keying** — keyed by content hash instead of length for deterministic reconciliation.
+- **HTML artifact defaults** — white background + dark text default for consistency.
+- **ReactBits Pro Preloader** — themed circle variant spinner replacing legacy SplashScreen.
+- **Warm Charcoal light mode** — improved light-mode text contrast and readability.
+- **Session Content Security Policy widened** — allows external HTTPS stylesheets and fonts safely.
+- **5 product screenshots embedded in README** (1 hero + 4 in a Screenshots section).
+- **E2E test coverage** — comprehensive baseline tests for toolbar, selection, syntax highlighting, context flow, and header placement.
 
 ### Changed
 
 - **Smooth 60fps at all zoom levels** with full workspace + plasma shader on (was 3-15fps at zoom 10-20%).
-- **AmbientEffectLayer, ParticleDrift, LivingGrid, CustomEdge LOD, Bridge badges** all migrated to read `useEffectiveTier()` instead of raw zoom; eliminates jitter at threshold boundaries.
-- **LivingGrid step scales with zoom**: fixes 520k-dots-per-frame draw at zoom 0.10.
+- **AmbientEffectLayer, ParticleDrift, LivingGrid, CustomEdge LOD, Bridge badges** all migrated to read `useEffectiveTier()` instead of raw zoom — eliminates jitter at threshold boundaries.
+- **LivingGrid step scales with zoom** — fixes 520k-dots-per-frame draw at zoom 0.10.
 - **Vite pre-bundles lazy-only deps** (`@xterm/*`, `ogl`, `three/r3f`) to prevent `Outdated Optimize Dep` 504 cascades in dev.
-- Notion SDK 2025-09-03 compatibility: `databases.query` and `databases.update {properties}` routed through legacy REST paths; runtime behavior preserved.
-- CI workflow: bumped to Node.js 22; test step now `continue-on-error` so artifacts ship regardless of flaky tests.
-- Vitest config: enabled JSX automatic runtime, eliminating 38 `ReferenceError: React is not defined` failures in component tests.
+- **Notion SDK 2025-09-03 compatibility** — `databases.query` and `databases.update {properties}` now route through legacy REST paths; runtime behavior preserved.
+- **CI: Node.js 22**; lenient test step so artifacts ship reliably.
+- **Vitest config: enabled JSX automatic runtime** (eliminates 38 component test failures).
 
 ### Fixed
 
-- **Workspace list deduplication**: duplicate workspace IDs no longer multiply in the workspace picker.
-- **Defensive null guards for legacy artifact loads**: pre-migration artifacts no longer crash on open.
-- **Quality-mode FPS floor** removed: was causing self-reinforcing re-render cascade.
-- **Edge skeleton off-by-one at 0.30 zoom**: LOD threshold tuned from 0.15 to 0.30.
-- 121 TypeScript errors swept across `src/main`, `src/renderer`, `src/shared`, and `src/plugins`.
+- **External-change auto-fit no longer resizes unrelated nodes.** When an external write (e.g., Claude Code creating an artifact via MCP) triggered a file-watcher event, the renderer's auto-fit was iterating ALL Zustand-state nodes instead of only the newly-arrived ones — snapping headshot/logo/header-nav/shader nodes to the width/content floor. Now scoped to new nodes via `prevNodeIds.has(node.id)` guard.
+- **LLM API keys moved off plaintext localStorage** to encrypted main-process safeStorage. Migration runs at startup; legacy plaintext entries removed from disk.
+- **WebGL context leak** — `loseContext` called on all effects + dimension guards prevent runtime context exhaustion.
+- **Tool progress visibility** — `tool_use` blocks now forward from SDK path so in-progress tool execution is visible in the UI.
+- **Duplicate message flood** — messages now dedup by ID at render time, silencing React key warnings.
+- **Model dropdown overflow** — no longer clipped by toolbar's fluid-glass `overflow: hidden`.
+- **SDK CLI.js resolution** — explicit resolution via main-entry dirname when the exports map blocks subpath imports.
+- **CLI.js path stale override** — stopped overriding `pathToClaudeCodeExecutable` so dynamic SDK exports map is respected.
+- **Thinking ring visibility** — CLI thinking animation now visible end-to-end.
+- **Filter dropdown positioning** — split from glass styling to prevent clipping.
+- **Filter badge consistency** — matches AgentLogBadge style with proper chevron hints.
+- **Filter button styling** — uses glass-soft matching sibling badges.
+- **Theme panel transitions** — panel stays open when clicking preset mid-transition.
+- **Terminal + artifact theme sync** — both follow preset colors (not just dark/light mode).
+- **Edge skeleton off-by-one at 0.30 zoom** — LOD threshold tuned from 0.15 to 0.30, then 0.35.
+- **Edge skeleton arrow sizing** — arrow size tuned for low-zoom visibility.
+- **Quality-mode FPS floor removed** (was causing self-reinforcing re-render cascade).
+- **Workspace list deduplication** — duplicate workspace IDs no longer multiply in the workspace picker.
+- **Defensive null guards for legacy artifact loads** — pre-migration artifacts no longer crash on open.
+- **Linux build case sensitivity** — corrected `EscapeManager` import case.
+- **Terminal context regression** — bridge type mismatch + missing `reload()` resolved.
+- **Preloader cascade** — `position: fixed` override + light-theme gold for splash-screen layering.
+- **Keybind semantics** — Delete key only for node/edge deletion (Backspace no longer triggers).
+- **F7 Interact mode reentry** — single click on terminal drag overlay re-enters interact mode.
+- **Artifact height responsiveness** — clamped `finalH` comparison for proper responsive behavior.
+- **`contentType=undefined` log warnings suppressed** on spawned non-artifact nodes.
+- **121 TypeScript errors swept** across `src/main`, `src/renderer`, `src/shared`, `src/plugins`.
 
 ### Maintenance
 
-- Compressed 15 product screenshots (PNG to JPEG at 1600px max, q85): 21.95 MB to 2.86 MB total.
-- Documentation cleanup: 8 broken cross-references fixed.
-- `build:mcp` extracted from inline `node -e` to `scripts/build-mcp.mjs` (resolves Windows desktop-shortcut launch issues).
+- **`build:mcp` extracted** from inline `node -e` to `scripts/build-mcp.mjs` (resolves Windows desktop-shortcut launch issues).
+- **Compress 15 product screenshots** (PNG → JPEG @ 1600px, q85): 21.95 MB → 2.86 MB.
+- **Documentation cleanup** — 8 broken cross-references fixed.
+- **Paint containment optimization** — `contain: paint` on node body + RAF kill at minimal zoom tier.
+- **Node chrome styling** — added `.cognograph-node__expand-btn` reset styles for BEM consistency.
+- **Web canvas bootstrap helper** + store exposure gate for isolated testing.
+- **PermissionQueue mounted in App tree** (was orphaned).
+- **NotificationToast wired to agent event receiver** — toast on tool-call failures.
 
 ---
 
