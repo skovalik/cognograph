@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * useNodeContentVisibility -- Tests for Phase 2 LOD extensions
+ * useNodeContentVisibility -- Tests for LOD extensions
  *
  * Tests the new fields added to NodeContentVisibility:
  * - showEditor: whether rich editors (TipTap/CodeMirror) should mount

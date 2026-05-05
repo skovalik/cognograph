@@ -105,7 +105,11 @@ describe('ElectronTransport', () => {
       const messages: AgentMessage[] = [
         {
           channel: 'agent:complete',
-          payload: { conversationId: 'c1', usage: { input_tokens: 10, output_tokens: 5 } },
+          payload: {
+            conversationId: 'c1',
+            usage: { input_tokens: 10, output_tokens: 5 },
+            stopReason: 'end_turn',
+          },
         },
         {
           channel: 'notification',

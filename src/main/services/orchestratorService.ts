@@ -38,7 +38,6 @@ import {
   SynthesizeResultsSchema,
 } from '../tools/canonicalSchemas'
 import type { Tool, ToolResult } from '../tools/types'
-import { execLogWriter } from './notionExecLog'
 
 // Unique run ID generator
 let runIdCounter = 0
@@ -242,7 +241,7 @@ export function evaluateCondition(
     case 'custom-expression':
       throw new Error(
         'custom-expression conditions are not yet implemented. ' +
-          'This condition type requires a safe expression parser (Phase 2+).',
+          'This condition type requires a safe expression parser (deferred).',
       )
 
     default:

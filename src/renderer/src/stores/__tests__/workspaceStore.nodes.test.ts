@@ -491,7 +491,7 @@ describe('workspaceStore - Node Operations', () => {
   })
 
   // ---------------------------------------------------------------------------
-  // STORE-INDEX — Phase 1: Node & Edge Index Tests
+  // STORE-INDEX: Node & Edge Index Tests
   // ---------------------------------------------------------------------------
 
   describe('nodeIndex (STORE-INDEX)', () => {

@@ -70,6 +70,7 @@ describe('Transport types', () => {
 
   it('PayloadFor extracts correct payload type for agent:tool-start', () => {
     const payload: PayloadFor<'agent:tool-start'> = {
+      conversationId: 'c1',
       toolName: 'read_file',
       toolId: 't1',
     }
@@ -80,7 +81,9 @@ describe('Transport types', () => {
   it('PayloadFor extracts correct payload type for agent:tool-result', () => {
     const result: ToolResult = { success: true, output: 'data' }
     const payload: PayloadFor<'agent:tool-result'> = {
+      conversationId: 'c1',
       toolId: 't1',
+      toolName: 'read_file',
       result,
     }
     expect(payload.result.success).toBe(true)
@@ -88,6 +91,7 @@ describe('Transport types', () => {
 
   it('PayloadFor extracts correct payload type for agent:node-created', () => {
     const payload: PayloadFor<'agent:node-created'> = {
+      conversationId: 'c1',
       nodeId: 'n1',
       type: 'note',
       position: { x: 100, y: 200 },
@@ -101,6 +105,7 @@ describe('Transport types', () => {
     const payload: PayloadFor<'agent:complete'> = {
       conversationId: 'c1',
       usage,
+      stopReason: 'end_turn',
     }
     expect(payload.usage.input_tokens).toBe(100)
   })
@@ -145,19 +150,33 @@ describe('Transport types', () => {
       },
       {
         channel: 'agent:tool-start',
-        payload: { toolName: 'bash', toolId: 't1' },
+        payload: { conversationId: 'c1', toolName: 'bash', toolId: 't1' },
       },
       {
         channel: 'agent:tool-result',
-        payload: { toolId: 't1', result: { success: true } },
+        payload: {
+          conversationId: 'c1',
+          toolId: 't1',
+          toolName: 'bash',
+          result: { success: true },
+        },
       },
       {
         channel: 'agent:node-created',
-        payload: { nodeId: 'n1', type: 'artifact', position: { x: 0, y: 0 } },
+        payload: {
+          conversationId: 'c1',
+          nodeId: 'n1',
+          type: 'artifact',
+          position: { x: 0, y: 0 },
+        },
       },
       {
         channel: 'agent:complete',
-        payload: { conversationId: 'c1', usage: { input_tokens: 10, output_tokens: 5 } },
+        payload: {
+          conversationId: 'c1',
+          usage: { input_tokens: 10, output_tokens: 5 },
+          stopReason: 'end_turn',
+        },
       },
       {
         channel: 'permission:request',

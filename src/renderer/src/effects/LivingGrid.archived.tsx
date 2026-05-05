@@ -22,8 +22,8 @@
 
 import { useViewport } from '@xyflow/react'
 import { memo, useCallback, useEffect, useRef } from 'react'
+import { usePerfStore } from '../stores/perfStore'
 import { useEffectiveReducedMotion } from '../stores/programStore'
-import { useWorkspaceStore } from '../stores/workspaceStore'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -172,7 +172,7 @@ export const LivingGrid = memo(function LivingGrid() {
   const draw = useCallback(
     (timestamp: number) => {
       // Zoom performance tier — read from store (no React subscription needed)
-      const tier = useWorkspaceStore.getState().zoomPerfTier ?? 'full'
+      const tier = usePerfStore.getState().zoomTier ?? 'full'
 
       // Tier-aware frame throttle: 15fps at reduced, 30fps at full
       const effectiveInterval = tier === 'reduced' ? 66 : FRAME_INTERVAL

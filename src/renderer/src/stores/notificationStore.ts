@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * Notification Store — Phase 4A: UX-ERRORS
+ * Notification Store — UX-ERRORS
  *
  * Priority-aware notification queue with duplicate folding.
  *

@@ -55,6 +55,8 @@ export interface TerminalSession {
   idleTimeout: ReturnType<typeof setTimeout> | null
   /** CWD where .mcp.json + CLAUDE.md were written (for cleanup on exit) */
   claudeConfigCwd: string | null
+  /** User pinned this session — never auto-idle while pinned. Set via terminal:pin IPC. */
+  userPinned?: boolean
 }
 
 export interface SpawnConfig {
@@ -160,6 +162,24 @@ function resolveShell(shell: TerminalShell | undefined, isWindows: boolean): She
 // ---------------------------------------------------------------------------
 
 const sessions: Map<string, TerminalSession> = new Map()
+
+/**
+ * Nodes currently mid-spawn — prevents StrictMode race during awaits.
+ * Added before the first await in spawnTerminal, cleared in finally.
+ * The second StrictMode invocation sees the entry and spin-waits instead
+ * of racing past the guard.
+ */
+const spawningNodeIds: Set<string> = new Set()
+
+/**
+ * Per-node count of pty.spawn() invocations. Incremented immediately before
+ * each `pty.spawn(...)` call, so the counter reflects ACTUAL spawn attempts
+ * (not session-map cardinality, which is bounded by nodeId overwriting).
+ * Exposed via `__terminalManagerTestApi.getPtySpawnCount` under NODE_ENV=test
+ * so E2E can verify the guard prevented a double-spawn.
+ */
+const spawnCountByNode: Map<string, number> = new Map()
+
 let dataForwarder: TerminalDataForwarder | null = null
 let exitForwarder: TerminalExitForwarder | null = null
 let statusForwarder: TerminalStatusForwarder | null = null
@@ -200,201 +220,223 @@ export async function spawnTerminal(config: SpawnConfig): Promise<TerminalSessio
   const existing = sessions.get(config.nodeId)
   if (existing && existing.status !== 'exited') return existing
 
-  const {
-    nodeId,
-    sessionId,
-    cwd = process.cwd(),
-    cols = 80,
-    rows = 24,
-    env = {},
-    shell: requestedShell,
-    nodeTitle,
-    workspaceId: passedWorkspaceId,
-  } = config
-
-  const isWindows = process.platform === 'win32'
-  const { executable, args, injectContext } = resolveShell(requestedShell, isWindows)
-
-  // Require explicit workspace ID from renderer — never fall back to settings.json
-  // which can be stale if the user switched workspaces. Without a valid workspace ID,
-  // the MCP server would load the wrong workspace, creating nodes in the wrong canvas.
-  const workspaceId = passedWorkspaceId || ''
-  if (!workspaceId) {
-    console.warn(
-      '[Terminal] No workspaceId passed from renderer — MCP tools will not have workspace context',
-    )
+  // Spin-wait guard: covers the window between guard check and sessions.set
+  // where another StrictMode-triggered spawn() could slip past the guard
+  // while the first call is awaiting startBridge / contextAndConfigPromise.
+  // 40 × 50ms = 2s upper bound before we give up and spawn defensively.
+  if (spawningNodeIds.has(config.nodeId)) {
+    for (let i = 0; i < 40; i++) {
+      await new Promise((r) => setTimeout(r, 50))
+      const ready = sessions.get(config.nodeId)
+      if (ready && ready.status !== 'exited') return ready
+    }
+    // Fallthrough — timeout; proceed defensively so the caller still gets a PTY.
   }
+  spawningNodeIds.add(config.nodeId)
 
-  // --- MCP↔Renderer bridge (lazy start) ---
-  // Start the bridge HTTP server on first terminal spawn so MCP CLI can route
-  // mutations through the renderer's Zustand store instead of the filesystem.
-  // Must happen before writeClaudeConfig so bridge port/token are available.
-  if (workspaceId && !isBridgeRunning()) {
-    try {
-      await startBridge(workspaceId)
-    } catch (err) {
+  try {
+    const {
+      nodeId,
+      sessionId,
+      cwd = process.cwd(),
+      cols = 80,
+      rows = 24,
+      env = {},
+      shell: requestedShell,
+      nodeTitle,
+      workspaceId: passedWorkspaceId,
+    } = config
+
+    const isWindows = process.platform === 'win32'
+    const { executable, args } = resolveShell(requestedShell, isWindows)
+
+    // Require explicit workspace ID from renderer — never fall back to settings.json
+    // which can be stale if the user switched workspaces. Without a valid workspace ID,
+    // the MCP server would load the wrong workspace, creating nodes in the wrong canvas.
+    const workspaceId = passedWorkspaceId || ''
+    if (!workspaceId) {
       console.warn(
-        '[TerminalManager] Bridge start failed (non-fatal, MCP falls back to file):',
-        err,
+        '[Terminal] No workspaceId passed from renderer — MCP tools will not have workspace context',
       )
     }
-  }
 
-  // --- Context injection + Claude Code MCP config (fire-and-forget) ---
-  // Only inject Cognograph context for Claude Code shells.
-  // Other shells get a plain spawn with no context file or env vars.
-  // Build context and write .mcp.json + CLAUDE.md so Claude Code auto-connects
-  // to Cognograph's MCP server on startup. The context file is a fallback;
-  // the primary context path is via the MCP `get_initial_context` tool.
-  // Always write MCP config so `claude` typed manually in any shell picks up Cognograph tools.
-  // Full context/CLAUDE.md injection is only for dedicated Claude Code shells,
-  // but .mcp.json is written for ALL shells so MCP tools are always available.
-  const bridgeConfig = getBridgeConfig()
-  let contextAndConfigPromise: Promise<string | null> = Promise.resolve(null)
-  contextAndConfigPromise = (async () => {
-    // Build workspace override from the correct workspace file.
-    // Don't use loadCurrentWorkspaceSnapshot() — it reads settings.json → lastWorkspaceId
-    // which may point to a different/previous workspace.
-    let workspaceOverride: WorkspaceSnapshot | null = null
-    if (workspaceId) {
+    // --- MCP↔Renderer bridge (lazy start) ---
+    // Start the bridge HTTP server on first terminal spawn so MCP CLI can route
+    // mutations through the renderer's Zustand store instead of the filesystem.
+    // Must happen before writeClaudeConfig so bridge port/token are available.
+    if (workspaceId && !isBridgeRunning()) {
       try {
-        const workspacePath = join(getAppPath('userData'), 'workspaces', `${workspaceId}.json`)
-        const raw = await fsp.readFile(workspacePath, 'utf-8')
-        const data = JSON.parse(raw)
-        workspaceOverride = { nodes: data.nodes ?? [], edges: data.edges ?? [] }
-      } catch {
-        // Workspace file not yet saved to disk — pass empty workspace.
-        // CRITICAL: pass empty object, NOT undefined/null. If we pass null,
-        // buildContextForNode falls through to loadCurrentWorkspaceSnapshot()
-        // which reads settings.json → stale lastWorkspaceId → WRONG workspace.
-        // Empty object is truthy, so the ?? fallback at contextWriter.ts:675
-        // will NOT trigger. (Verified by RL pass 13-14)
-        workspaceOverride = { nodes: [], edges: [] }
-      }
-    } else {
-      // No workspaceId at all — use empty workspace rather than stale settings.json
-      workspaceOverride = { nodes: [], edges: [] }
-    }
-    return buildContextForNode(nodeId, workspaceOverride)
-  })()
-    .then(async (ctx) => {
-      await writeContextFile(ctx)
-      const configResult = await writeClaudeConfig({
-        nodeId,
-        cwd,
-        nodeTitle: nodeTitle || `Terminal ${nodeId.slice(0, 8)}`,
-        contextMarkdown: ctx.markdown,
-        workspaceId,
-        bridgePort: bridgeConfig?.port,
-        bridgeToken: bridgeConfig?.token,
-      })
-      if (!configResult.success) {
+        await startBridge(workspaceId)
+      } catch (err) {
         console.warn(
-          '[TerminalManager] Claude config write failed (non-fatal):',
-          configResult.error,
+          '[TerminalManager] Bridge start failed (non-fatal, MCP falls back to file):',
+          err,
         )
       }
-      return configResult.success ? cwd : null
-    })
-    .catch((err) => {
-      console.warn('[TerminalManager] Context/config write failed (non-fatal):', err)
-      return null
-    })
-
-  // Build safe env from allowlist, then merge user-provided + Cognograph-specific vars.
-  // This prevents leaking secrets (API keys, DB URLs) from parent process.env.
-  const cognographVars: Record<string, string> = {
-    COLORTERM: 'truecolor',
-    CLAUDE_SESSION_ID: sessionId,
-    COGNOGRAPH_NODE_ID: nodeId,
-    COGNOGRAPH_CONTEXT_FILE: getContextFilePath(nodeId),
-    COGNOGRAPH_WORKSPACE_ID: workspaceId,
-  }
-
-  const mergedEnv = mergeSafeEnv(getSafeEnv(), { ...env, ...cognographVars })
-
-  // Wait for .mcp.json to be written BEFORE spawning PTY.
-  // Claude Code reads .mcp.json on startup — if we spawn first, it misses the config.
-  await contextAndConfigPromise
-
-  const pty = await loadPty()
-  const ptyProcess = pty.spawn(executable, args, {
-    name: 'xterm-256color',
-    cols,
-    rows,
-    cwd,
-    env: mergedEnv,
-    useConpty: false, // Win10 19045 ConPTY has duplicate output bugs; winpty is reliable
-  })
-
-  const session: TerminalSession = {
-    pty: ptyProcess,
-    sessionId,
-    nodeId,
-    cols,
-    rows,
-    cwd,
-    pid: ptyProcess.pid,
-    scrollbackBuffer: [],
-    status: 'running',
-    idleTimeout: null,
-    claudeConfigCwd: null,
-  }
-
-  // Track the config directory for cleanup (resolves after PTY is already running)
-  contextAndConfigPromise
-    .then((configCwd) => {
-      session.claudeConfigCwd = configCwd
-    })
-    .catch(() => {
-      // contextAndConfigPromise already catches internally and returns null -- this is belt-and-suspenders
-    })
-
-  // --- Idle timeout ---
-  resetIdleTimer(session)
-
-  // --- onData: scrollback + idle reset + forward to renderer ---
-  ptyProcess.onData((data: string) => {
-    appendToScrollback(session, data)
-
-    // Any data means the session is active
-    if (session.status === 'idle') {
-      session.status = 'running'
-      statusForwarder?.(nodeId, 'running')
     }
 
+    // --- Context injection + Claude Code MCP config (fire-and-forget) ---
+    // Only inject Cognograph context for Claude Code shells.
+    // Other shells get a plain spawn with no context file or env vars.
+    // Build context and write .mcp.json + CLAUDE.md so Claude Code auto-connects
+    // to Cognograph's MCP server on startup. The context file is a fallback;
+    // the primary context path is via the MCP `get_initial_context` tool.
+    // Always write MCP config so `claude` typed manually in any shell picks up Cognograph tools.
+    // Full context/CLAUDE.md injection is only for dedicated Claude Code shells,
+    // but .mcp.json is written for ALL shells so MCP tools are always available.
+    const bridgeConfig = getBridgeConfig()
+    let contextAndConfigPromise: Promise<string | null> = Promise.resolve(null)
+    contextAndConfigPromise = (async () => {
+      // Build workspace override from the correct workspace file.
+      // Don't use loadCurrentWorkspaceSnapshot() — it reads settings.json → lastWorkspaceId
+      // which may point to a different/previous workspace.
+      let workspaceOverride: WorkspaceSnapshot | null = null
+      if (workspaceId) {
+        try {
+          const workspacePath = join(getAppPath('userData'), 'workspaces', `${workspaceId}.json`)
+          const raw = await fsp.readFile(workspacePath, 'utf-8')
+          const data = JSON.parse(raw)
+          workspaceOverride = { nodes: data.nodes ?? [], edges: data.edges ?? [] }
+        } catch {
+          // Workspace file not yet saved to disk — pass empty workspace.
+          // CRITICAL: pass empty object, NOT undefined/null. If we pass null,
+          // buildContextForNode falls through to loadCurrentWorkspaceSnapshot()
+          // which reads settings.json → stale lastWorkspaceId → WRONG workspace.
+          // Empty object is truthy, so the ?? fallback at contextWriter.ts:675
+          // will NOT trigger. (Verified by RL pass 13-14)
+          workspaceOverride = { nodes: [], edges: [] }
+        }
+      } else {
+        // No workspaceId at all — use empty workspace rather than stale settings.json
+        workspaceOverride = { nodes: [], edges: [] }
+      }
+      return buildContextForNode(nodeId, workspaceOverride)
+    })()
+      .then(async (ctx) => {
+        await writeContextFile(ctx)
+        const configResult = await writeClaudeConfig({
+          nodeId,
+          cwd,
+          nodeTitle: nodeTitle || `Terminal ${nodeId.slice(0, 8)}`,
+          contextMarkdown: ctx.markdown,
+          workspaceId,
+          bridgePort: bridgeConfig?.port,
+          bridgeToken: bridgeConfig?.token,
+        })
+        if (!configResult.success) {
+          console.warn(
+            '[TerminalManager] Claude config write failed (non-fatal):',
+            configResult.error,
+          )
+        }
+        return configResult.success ? cwd : null
+      })
+      .catch((err) => {
+        console.warn('[TerminalManager] Context/config write failed (non-fatal):', err)
+        return null
+      })
+
+    // Build safe env from allowlist, then merge user-provided + Cognograph-specific vars.
+    // This prevents leaking secrets (API keys, DB URLs) from parent process.env.
+    const cognographVars: Record<string, string> = {
+      COLORTERM: 'truecolor',
+      CLAUDE_SESSION_ID: sessionId,
+      COGNOGRAPH_NODE_ID: nodeId,
+      COGNOGRAPH_CONTEXT_FILE: getContextFilePath(nodeId),
+      COGNOGRAPH_WORKSPACE_ID: workspaceId,
+    }
+
+    const mergedEnv = mergeSafeEnv(getSafeEnv(), { ...env, ...cognographVars })
+
+    // Wait for .mcp.json to be written BEFORE spawning PTY.
+    // Claude Code reads .mcp.json on startup — if we spawn first, it misses the config.
+    await contextAndConfigPromise
+
+    const pty = await loadPty()
+    // Track spawn count BEFORE the actual pty.spawn call. This is the authoritative
+    // signal for the E2E: it reflects how many times we REALLY invoked node-pty,
+    // not how many entries ended up in the sessions Map (which is bounded by nodeId).
+    spawnCountByNode.set(nodeId, (spawnCountByNode.get(nodeId) ?? 0) + 1)
+    const ptyProcess = pty.spawn(executable, args, {
+      name: 'xterm-256color',
+      cols,
+      rows,
+      cwd,
+      env: mergedEnv,
+      useConpty: false, // Win10 19045 ConPTY has duplicate output bugs; winpty is reliable
+    })
+
+    const session: TerminalSession = {
+      pty: ptyProcess,
+      sessionId,
+      nodeId,
+      cols,
+      rows,
+      cwd,
+      pid: ptyProcess.pid,
+      scrollbackBuffer: [],
+      status: 'running',
+      idleTimeout: null,
+      claudeConfigCwd: null,
+    }
+
+    // Track the config directory for cleanup (resolves after PTY is already running)
+    contextAndConfigPromise
+      .then((configCwd) => {
+        session.claudeConfigCwd = configCwd
+      })
+      .catch(() => {
+        // contextAndConfigPromise already catches internally and returns null -- this is belt-and-suspenders
+      })
+
+    // --- Idle timeout ---
     resetIdleTimer(session)
 
-    // Forward to renderer (if IPC forwarder is registered)
-    dataForwarder?.(nodeId, data)
-  })
+    // --- onData: scrollback + idle reset + forward to renderer ---
+    ptyProcess.onData((data: string) => {
+      appendToScrollback(session, data)
 
-  // --- onExit: mark exited, clean up timer + config files + forward to renderer ---
-  ptyProcess.onExit(({ exitCode }) => {
-    session.status = 'exited'
-    statusForwarder?.(nodeId, 'exited')
-    clearIdleTimer(session)
+      // Any data means the session is active
+      if (session.status === 'idle') {
+        session.status = 'running'
+        statusForwarder?.(nodeId, 'running')
+      }
 
-    // Clean up generated .mcp.json + CLAUDE.md
-    // Clear claudeConfigCwd first to prevent duplicate cleanup if killTerminal is also called
-    if (session.claudeConfigCwd) {
-      const configCwd = session.claudeConfigCwd
-      session.claudeConfigCwd = null
-      cleanupClaudeConfig(configCwd).catch((err) => {
-        console.warn('[TerminalManager] Config cleanup failed (non-fatal):', err)
-      })
-    }
+      resetIdleTimer(session)
 
-    // Forward to renderer (if IPC forwarder is registered)
-    exitForwarder?.(nodeId, exitCode)
-  })
+      // Forward to renderer (if IPC forwarder is registered)
+      dataForwarder?.(nodeId, data)
+    })
 
-  sessions.set(nodeId, session)
+    // --- onExit: mark exited, clean up timer + config files + forward to renderer ---
+    ptyProcess.onExit(({ exitCode }) => {
+      session.status = 'exited'
+      statusForwarder?.(nodeId, 'exited')
+      clearIdleTimer(session)
 
-  // Fire initial status so renderer starts in sync (renderer creates nodes with 'idle' default)
-  statusForwarder?.(nodeId, 'running')
+      // Clean up generated .mcp.json + CLAUDE.md
+      // Clear claudeConfigCwd first to prevent duplicate cleanup if killTerminal is also called
+      if (session.claudeConfigCwd) {
+        const configCwd = session.claudeConfigCwd
+        session.claudeConfigCwd = null
+        cleanupClaudeConfig(configCwd).catch((err) => {
+          console.warn('[TerminalManager] Config cleanup failed (non-fatal):', err)
+        })
+      }
 
-  return session
+      // Forward to renderer (if IPC forwarder is registered)
+      exitForwarder?.(nodeId, exitCode)
+    })
+
+    sessions.set(nodeId, session)
+
+    // Fire initial status so renderer starts in sync (renderer creates nodes with 'idle' default)
+    statusForwarder?.(nodeId, 'running')
+
+    return session
+  } finally {
+    spawningNodeIds.delete(config.nodeId)
+  }
 }
 
 /**
@@ -422,6 +464,22 @@ export function resizeTerminal(nodeId: string, cols: number, rows: number): void
  * Kill the PTY for the given node and remove from the session map.
  * No-op if the nodeId is unknown. Safe to call on exited sessions.
  */
+/**
+ * Pin or unpin a session. Pinned sessions never auto-idle.
+ * Pinning a session also clears any active idle timer (Task 2.4 / F2).
+ */
+export function setPinned(nodeId: string, pinned: boolean): void {
+  const session = sessions.get(nodeId)
+  if (!session) return
+  session.userPinned = pinned
+  if (pinned) {
+    clearIdleTimer(session)
+  } else {
+    // Resume the idle timer using the standard reset path.
+    resetIdleTimer(session)
+  }
+}
+
 export function killTerminal(nodeId: string): void {
   const session = sessions.get(nodeId)
   if (!session) return
@@ -507,9 +565,12 @@ function appendToScrollback(session: TerminalSession, data: string): void {
 /**
  * Reset (or start) the idle timer for a session.
  * After IDLE_TIMEOUT_MS of no data, status -> 'idle'.
+ *
+ * Pinned sessions never start an idle timer (Task 2.4 / F2).
  */
 function resetIdleTimer(session: TerminalSession): void {
   clearIdleTimer(session)
+  if (session.userPinned) return
 
   session.idleTimeout = setTimeout(() => {
     if (session.status === 'running') {
@@ -526,5 +587,36 @@ function clearIdleTimer(session: TerminalSession): void {
   if (session.idleTimeout !== null) {
     clearTimeout(session.idleTimeout)
     session.idleTimeout = null
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Test-only accessor (NODE_ENV === 'test')
+// ---------------------------------------------------------------------------
+// Exposed on globalThis because electronApp.evaluate runs in main-process scope
+// and cannot cleanly import from the packed bundle. Gated by NODE_ENV so this
+// never leaks into prod builds.
+//
+// Consumers:
+//   - e2e/v3-foyer-wave1.spec.ts (E1.4) uses `getPtySpawnCount(nodeId)` to
+//     verify the StrictMode spin-wait guard prevented a double-spawn.
+//
+// Why `getPtySpawnCount` instead of `getSessionCount`:
+//   The `sessions` Map is keyed by nodeId, so sessions.has(id) is always 0 or 1.
+//   That makes any cardinality assertion trivially true pre- and post-fix.
+//   `spawnCountByNode` is incremented immediately before each `pty.spawn()`
+//   invocation, so it reflects how many times we REALLY spawned a PTY for
+//   that nodeId. A guard failure produces spawnCount >= 2.
+if (process.env.NODE_ENV === 'test') {
+  ;(globalThis as unknown as { __terminalManagerTestApi: unknown }).__terminalManagerTestApi = {
+    getPtySpawnCount(nodeId: string): number {
+      return spawnCountByNode.get(nodeId) ?? 0
+    },
+    getAllSessionIds(): string[] {
+      return Array.from(sessions.keys())
+    },
+    resetSpawnCounts(): void {
+      spawnCountByNode.clear()
+    },
   }
 }

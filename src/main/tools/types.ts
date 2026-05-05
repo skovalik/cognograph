@@ -43,7 +43,7 @@ export interface ToolResultContentImage {
   type: 'image'
   source: {
     type: 'base64'
-    media_type: string
+    media_type: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp'
     data: string
   }
 }

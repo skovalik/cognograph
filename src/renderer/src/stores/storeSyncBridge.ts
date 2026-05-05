@@ -7,7 +7,7 @@
  * Keeps workspaceStore ↔ nodesStore/edgesStore in sync bidirectionally.
  *
  * Problem: nodesStore and edgesStore were extracted from workspaceStore
- * (Week 2 Stream B Track 2 Phase 2.2a) but never wired for synchronization.
+ * during the store-split refactor but never wired for synchronization.
  * Components reading from nodesStore get stale/empty data. Mutations to
  * nodesStore don't propagate to workspaceStore (which saves to disk).
  *

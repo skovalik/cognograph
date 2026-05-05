@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * Filesystem Security Tests — Phase 0 (0.1a, 0.1b, 0.1c, 0.1h, 0.1l)
+ * Filesystem Security Tests (0.1a, 0.1b, 0.1c, 0.1h, 0.1l)
  *
  * Tests for:
  * 1. Symlink attack: symlink pointing outside allowed paths → blocked

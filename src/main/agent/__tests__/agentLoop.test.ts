@@ -17,6 +17,17 @@ vi.mock('../../utils/logger', () => ({
   },
 }))
 
+// agentLoop wires tracer.startSpan via the Sentry SDK, which statically
+// imports electron `app`. jsdom doesn't expose that, so we mock the SDK at
+// module load so the import chain resolves without spinning up Electron.
+vi.mock('@sentry/electron/main', () => ({
+  startInactiveSpan: vi.fn(() => ({
+    end: vi.fn(),
+    setAttribute: vi.fn(),
+  })),
+  captureException: vi.fn(),
+}))
+
 // Mock tokenEstimation so individual tests can override estimateTokens return values
 vi.mock('../tokenEstimation', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../tokenEstimation')>()
@@ -344,6 +355,145 @@ describe('runAgentWithToolLoop — cancellation', () => {
 
     expect(result.stopReason).toBe('cancelled')
     expect(result.turnCount).toBe(0)
+  })
+
+  // WS-7: 413 context overflow recovery — when the SDK throws a 413 status
+  // (context window exceeded), withRetry's onRetry callback at agentLoop.ts:270-281
+  // must invoke microcompact() on the messages array before retrying. The 413 is
+  // classified by llmErrors.ts:158-167 as { category: 'context_length', retryable:
+  // true }, so withRetry actually retries instead of throwing.
+  it('runs microcompact between attempts when stream throws 413 (WS-7 context overflow recovery)', async () => {
+    const finalMsg = makeFinalMessage()
+    const err413 = Object.assign(new Error('413 Payload Too Large'), { status: 413 })
+
+    // First call: throw 413; second call: succeed
+    const streamFn = vi
+      .fn()
+      .mockRejectedValueOnce(err413)
+      .mockResolvedValueOnce(makeMockStream(finalMsg))
+
+    // Reset the spy on microcompact for assertion
+    const microcompactMock = vi.mocked(microcompact)
+    microcompactMock.mockClear()
+
+    // Override sleep delay by patching baseDelayMs path is not exposed; the
+    // jittered delay is bounded at base*2^0 = 1000ms (random 0-1000ms),
+    // so the test completes in <1s without fake timers.
+    const config = baseConfig({
+      client: makeClient(streamFn),
+    })
+
+    const result = await runAgentWithToolLoop(config)
+
+    // Stream was called twice (initial + 1 retry), loop completed normally
+    expect(streamFn).toHaveBeenCalledTimes(2)
+    expect(result.stopReason).toBe('end_turn')
+    expect(result.turnCount).toBe(1)
+
+    // microcompact was called via the onRetry callback after the 413
+    expect(microcompactMock).toHaveBeenCalled()
+    const callArgs = microcompactMock.mock.calls[0]
+    expect(callArgs?.[1]).toBe('anthropic')
+  }, 10_000)
+
+  // WS-6: Stream idle watchdog — client.messages.stream() must receive a CHILD
+  // AbortSignal (not the outer one), and aborting the outer signal must cascade
+  // to that child via the addEventListener('abort', …, { once: true }) wired in
+  // agentLoop.ts:237-239. This satisfies the C5 "child AbortController per stream"
+  // contract: stream lifetime is bounded by both the outer cancel signal AND the
+  // 90-second idle timer, with neither bypassing the other.
+  it('passes a child AbortSignal to client.messages.stream that cascades from outer signal (WS-6 watchdog)', async () => {
+    const outerController = new AbortController()
+    let capturedSignal: AbortSignal | undefined
+    const finalMsg = makeFinalMessage()
+
+    const streamFn = vi
+      .fn()
+      .mockImplementation((_params: unknown, opts?: { signal?: AbortSignal }) => {
+        capturedSignal = opts?.signal
+        return makeMockStream(finalMsg)
+      })
+
+    const config = baseConfig({
+      client: makeClient(streamFn),
+      signal: outerController.signal,
+    })
+
+    await runAgentWithToolLoop(config)
+
+    // Stream got an AbortSignal that is NOT the outer signal (child watchdog)
+    expect(capturedSignal).toBeDefined()
+    expect(capturedSignal).not.toBe(outerController.signal)
+
+    // Aborting the outer signal cascades to the captured child signal.
+    // The child signal was registered via { once: true } before the stream call,
+    // so the cascade still fires after the stream finishes (the listener is
+    // armed for the lifetime of this turn).
+    outerController.abort(new Error('outer cancel'))
+    expect(capturedSignal!.aborted).toBe(true)
+  })
+
+  // WS-4: Abort-safe synthetic tool results (tombstone) — cancellation mid-tool-execution
+  // must still inject a tool_result for every tool_use so the message array stays
+  // valid for the API contract; the C4 tombstone then breaks the loop without
+  // making another LLM call.
+  it('injects tool_result for every tool_use on mid-execution abort (WS-4 tombstone)', async () => {
+    const controller = new AbortController()
+
+    // Tool that aborts the controller when invoked, simulating user cancel
+    // mid-tool-execution.
+    const abortingTool = buildTool({
+      name: 'aborting_tool',
+      description: 'Aborts the controller mid-execution',
+      inputSchema: z.object({}),
+      isReadOnly: true,
+      async call() {
+        controller.abort()
+        return { content: [{ type: 'text', text: 'Started but cancelled' }] }
+      },
+    })
+
+    // Turn 1: LLM returns one tool_use; turn 2 should never run.
+    const toolUseMessage = makeFinalMessage({
+      content: [
+        {
+          type: 'tool_use',
+          id: 'call_abort_1',
+          name: 'aborting_tool',
+          input: {},
+        } as unknown as Anthropic.ContentBlock,
+      ],
+      stop_reason: 'tool_use',
+    })
+
+    const streamFn = vi.fn().mockResolvedValue(makeMockStream(toolUseMessage))
+
+    const config = baseConfig({
+      client: makeClient(streamFn),
+      toolPool: assembleToolPool([abortingTool], []),
+      messages: [{ role: 'user' as const, content: 'go' }],
+      signal: controller.signal,
+    })
+
+    const result = await runAgentWithToolLoop(config)
+
+    // Tombstoned: cancelled stopReason, exactly one turn ran
+    expect(result.stopReason).toBe('cancelled')
+    expect(result.turnCount).toBe(1)
+
+    // Stream was called exactly once (tombstone prevented the second LLM call)
+    expect(streamFn).toHaveBeenCalledTimes(1)
+
+    // Last message must be a user-role message with tool_result blocks for
+    // every tool_use issued by the assistant — message array stays API-valid
+    // even after cancellation.
+    const lastMsg = result.messages[result.messages.length - 1]
+    expect(lastMsg?.role).toBe('user')
+    expect(Array.isArray(lastMsg?.content)).toBe(true)
+    const toolResultBlocks = lastMsg?.content as Anthropic.ToolResultBlockParam[]
+    expect(toolResultBlocks).toHaveLength(1)
+    expect(toolResultBlocks[0]?.type).toBe('tool_result')
+    expect(toolResultBlocks[0]?.tool_use_id).toBe('call_abort_1')
   })
 })
 

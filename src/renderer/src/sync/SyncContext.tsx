@@ -54,6 +54,23 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
   }
   const localProvider = localProviderRef.current
 
+  // Test-only accessor: expose subscriber fan-out + layout event bus so E2E
+  // tests can drive SyncContext without the main-process file watcher.
+  // Gated on __TEST_MODE__ — zero overhead in production.
+  if ((window as unknown as { __TEST_MODE__?: boolean }).__TEST_MODE__) {
+    ;(
+      window as unknown as {
+        __localSyncProviderTestApi?: { emit: (data: WorkspaceData) => void }
+      }
+    ).__localSyncProviderTestApi = {
+      emit: (data: WorkspaceData): void => {
+        localProvider._testOnlyEmitExternalChange(data)
+      },
+    }
+    ;(window as unknown as { __layoutEventsTestApi?: EventTarget }).__layoutEventsTestApi =
+      layoutEvents
+  }
+
   const workspaceId = useWorkspaceStore((state) => state.workspaceId)
   const syncMode = useWorkspaceStore((state) => state.syncMode)
   const multiplayerConfig = useWorkspaceStore((state) => state.multiplayerConfig)
@@ -158,7 +175,8 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
       const unsubExternalChange = localProvider.onExternalChange((data: WorkspaceData) => {
         const currentId = useWorkspaceStore.getState().workspaceId
         if (data.id === currentId) {
-          const prevNodeCount = useWorkspaceStore.getState().nodes.length
+          const prevNodeIds = new Set(useWorkspaceStore.getState().nodes.map((n) => n.id))
+          const prevNodeCount = prevNodeIds.size
           logger.log('[SyncProvider] External change detected, merging workspace')
           useWorkspaceStore.getState().mergeExternalWorkspace(data)
 
@@ -180,6 +198,12 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
               if (store.batchFitNodesToContent) {
                 const items: Array<{ nodeId: string; width: number; height: number }> = []
                 for (const node of store.nodes) {
+                  // Only auto-fit genuinely new nodes. `prevNodeIds` is the set of
+                  // node ids that existed BEFORE this external change. Without this
+                  // guard, any CLI-created node triggered a mass resize that
+                  // snapped unrelated existing nodes (images, logos, headers) to
+                  // widthFloor×contentFloor. See 2026-04-15-auto-fit-existing-nodes-fix.md.
+                  if (prevNodeIds.has(node.id)) continue
                   const nd = node.data as any
                   const title = nd.title || ''
                   const content = nd.content || nd.description || ''
@@ -230,23 +254,22 @@ export function SyncProviderWrapper({ children }: SyncProviderWrapperProps): JSX
               }
               // After auto-fit, dispatch layout so nodes get repositioned with proper spacing
               const convNode = store.nodes.find((n: any) => n.data?.type === 'conversation')
-              layoutEvents.dispatchEvent(
-                new CustomEvent('run-layout', {
-                  detail: {
-                    nodeIds: store.nodes
-                      .filter((n: any) => n.data?.type !== 'conversation')
-                      .map((n: any) => n.id),
-                    edgeIds: [],
-                    conversationId: convNode?.id,
-                  },
-                }),
-              )
-              // Zoom to fit all nodes
-              requestFitView(
-                store.nodes.map((n: any) => n.id),
-                0.15,
-                300,
-              )
+              const addedNodeIds = store.nodes
+                .filter((n: any) => !prevNodeIds.has(n.id) && n.data?.type !== 'conversation')
+                .map((n: any) => n.id)
+              if (addedNodeIds.length > 0) {
+                layoutEvents.dispatchEvent(
+                  new CustomEvent('run-layout', {
+                    detail: {
+                      nodeIds: addedNodeIds,
+                      edgeIds: [],
+                      conversationId: convNode?.id,
+                    },
+                  }),
+                )
+                // Zoom to fit only the newly-added nodes
+                requestFitView(addedNodeIds, 0.15, 300)
+              }
             }, 600) // 600ms > 500ms file watcher debounce — fires after rapid writes settle
           }
         }

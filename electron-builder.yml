@@ -29,7 +29,7 @@ files:
   - "!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml}"
   - "!{.env,.env.*,.npmrc,pnpm-lock.yaml}"
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
-  - "!{ARCHITECTURE.md,DECISIONS.md,TODO.md,CHANGELOG.md}"
+  - "!{ARCHITECTURE.md,CHANGELOG.md}"
   - "!{vitest.config.ts,playwright.config.ts,.dependency-cruiser.cjs}"
 
 # Pack into ASAR archive for faster loading and path length mitigation on Windows
@@ -47,7 +47,7 @@ asarUnpack:
   - "**/node_modules/node-pty/**"
 
 # Rebuild native modules (node-pty) for the target Electron version
-npmRebuild: true
+npmRebuild: false
 
 # --- Windows ----------------------------------------------------------------
 win:

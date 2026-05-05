@@ -7,11 +7,12 @@
  * Manages program-level settings that persist across all workspaces.
  * Stored in localStorage, not workspace files.
  *
- * Created as part of UI Polish Sprint Phase 4A: Accessibility Settings
+ * Created as part of the UI Polish Sprint accessibility settings work.
  */
 
 import { create } from 'zustand'
 import { persist, subscribeWithSelector } from 'zustand/middleware'
+import { usePerfStore } from './perfStore'
 
 // =============================================================================
 // Types
@@ -308,6 +309,16 @@ export const useProgramStore = create<ProgramStore>()(
           if (state) {
             applyReduceMotionToDocument(state.accessibility.reduceMotion)
             applyHighContrastFocusToDocument(state.accessibility.highContrastFocus)
+
+            // One-shot migration: seed perfStore.perfMode from legacy themeSettings.ambientEffect.performanceMode.
+            // Runs once after programStore rehydrates. perfStore reads its own persisted value first, so we
+            // only override 'auto' (the default) to avoid stomping a user's already-set new-store value.
+            const legacyPerfMode = (state as any)?.themeSettings?.ambientEffect?.performanceMode
+            if (legacyPerfMode && ['quality', 'battery'].includes(legacyPerfMode)) {
+              if (usePerfStore.getState().perfMode === 'auto') {
+                usePerfStore.getState().setPerfMode(legacyPerfMode as 'quality' | 'battery')
+              }
+            }
           }
         },
       },

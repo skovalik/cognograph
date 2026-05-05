@@ -22,8 +22,8 @@
 
 import { useViewport } from '@xyflow/react'
 import { memo, useCallback, useEffect, useRef } from 'react'
+import { usePerfStore } from '../stores/perfStore'
 import { useEffectiveReducedMotion } from '../stores/programStore'
-import { useWorkspaceStore } from '../stores/workspaceStore'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -172,7 +172,7 @@ export const LivingGrid = memo(function LivingGrid() {
   const draw = useCallback(
     (timestamp: number) => {
       // Zoom performance tier — read from store (no React subscription needed)
-      const tier = useWorkspaceStore.getState().zoomPerfTier ?? 'full'
+      const tier = usePerfStore.getState().effectiveTier
 
       // Tier-aware frame throttle: 15fps at reduced, 30fps at full
       const effectiveInterval = tier === 'reduced' ? 66 : FRAME_INTERVAL
@@ -203,9 +203,10 @@ export const LivingGrid = memo(function LivingGrid() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, w, h)
 
-      // At minimal tier: canvas is cleared, keep RAF alive but skip drawing
+      // Z-14: At minimal tier, STOP RAF entirely instead of scheduling no-op frames.
+      // The useEffect below restarts RAF when tier changes back.
       if (tier === 'minimal') {
-        rafRef.current = requestAnimationFrame(draw)
+        rafRef.current = null
         return
       }
 
@@ -241,7 +242,14 @@ export const LivingGrid = memo(function LivingGrid() {
       const hasCursor = cursor !== null
       const radiusSq = ATTRACTION_RADIUS * ATTRACTION_RADIUS
 
-      const step = tier === 'reduced' ? 2 : 1
+      // Scale step with zoom so screen-space dot density stays roughly constant.
+      // World-space cell size = GRID_SPACING. Screen-space cell size = GRID_SPACING*zoom.
+      // At zoom 1.0 we draw every dot (20px screen spacing). At zoom 0.10 a step of 1
+      // would put dots 2px apart on screen — completely overlapping, ~520k dots per
+      // frame, ~600ms in fill() per the CPU profile. Target screen spacing = 20px,
+      // so step = ceil(20 / (GRID_SPACING * zoom)) = ceil(1/zoom).
+      const zoomStep = Math.max(1, Math.ceil(1 / Math.max(zoom, 0.05)))
+      const step = tier === 'reduced' ? Math.max(2, zoomStep) : zoomStep
       for (let col = startCol; col <= endCol; col += step) {
         for (let row = startRow; row <= endRow; row += step) {
           // World position of this grid dot
@@ -307,6 +315,17 @@ export const LivingGrid = memo(function LivingGrid() {
   )
 
   // ------------------------------------------
+  // Z-14: Restart RAF when tier changes back from minimal
+  // ------------------------------------------
+  const effectiveTier = usePerfStore((s) => s.effectiveTier)
+  useEffect(() => {
+    // If tier just changed away from minimal and RAF is stopped, restart it
+    if (effectiveTier !== 'minimal' && rafRef.current === null && canvasRef.current) {
+      rafRef.current = requestAnimationFrame(draw)
+    }
+  }, [effectiveTier, draw])
+
+  // ------------------------------------------
   // Mount / unmount
   // ------------------------------------------
   useEffect(() => {
@@ -334,7 +353,7 @@ export const LivingGrid = memo(function LivingGrid() {
       parent.removeEventListener('mousemove', handleMouseMove)
       parent.removeEventListener('mouseleave', handleMouseLeave)
       ro.disconnect()
-      cancelAnimationFrame(rafRef.current)
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
     }
   }, [draw, handleMouseMove, handleMouseLeave, resizeCanvas])
 

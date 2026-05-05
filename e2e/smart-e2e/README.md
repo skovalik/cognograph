@@ -1,7 +1,6 @@
 # Smart E2E Cognitive Testing System
 
-**Status:** Phase A implementation (Tier 1 + Tier 2)  
-**Spec:** Smart E2E cognitive testing methodology
+**Status:** Phase A implementation (Tier 1 + Tier 2)
 
 ---
 
@@ -100,11 +99,11 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 ## Design Principles
 
-1. **Blind evaluation over scripted paths** — AI evaluates what it SEES, not what it KNOWS
-2. **Adversarial over cooperative** — "Where would you quit?" not "what would you do?"
-3. **Disagreement is signal** — Multiple models diverge = UX ambiguity
-4. **Forced-negative framing** — Counteract LLM positivity bias
-5. **DOM cross-check everything** — Verify AI claims against actual clickable elements
+1. **Blind evaluation over scripted paths**: AI evaluates what it SEES, not what it KNOWS
+2. **Adversarial over cooperative**: "Where would you quit?" not "what would you do?"
+3. **Disagreement is signal**: Multiple models diverge = UX ambiguity
+4. **Forced-negative framing**: Counteract LLM positivity bias
+5. **DOM cross-check everything**: Verify AI claims against actual clickable elements
 
 ---
 
@@ -144,7 +143,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 - Check Playwright config: `npx playwright show-report`
 
 ### Screenshots are empty/black
-- React Flow async rendering — increase `stableFor` in `waitForCanvasStable`
+- React Flow async rendering: increase `stableFor` in `waitForCanvasStable`
 - Check GPU mode: disable in CI with `ELECTRON_DISABLE_GPU=1`
 
 ### AI evaluations return invalid JSON
@@ -159,4 +158,4 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 ## References
 
-- RL Validation: 79.75/100 average (Marcus 82, James 87, Ravi 72, Jake 78)
+- Validated against multi-perspective code review (~80/100 average score across reviewers)

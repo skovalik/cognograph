@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * CostDashboard Component (Phase 5: Graph Intelligence)
+ * CostDashboard Component
  *
  * A right-side Sheet displaying cost tracking information:
  * - Session total cost

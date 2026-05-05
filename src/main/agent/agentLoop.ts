@@ -14,6 +14,7 @@
  */
 
 import type Anthropic from '@anthropic-ai/sdk'
+import { tracer } from '../sentryInit'
 import { parseToolCalls } from '../tools/responseParser'
 import { executeToolCallsConcurrently } from '../tools/toolExecutor'
 import type {
@@ -28,14 +29,14 @@ import { type GenericMessage, microcompact } from './microcompact'
 import { estimateTokens } from './tokenEstimation'
 import { withRetry } from './withRetry'
 
-// === Phase 1B additions — preserve across Phase 2 rewrite ===
+// === Resilience helpers (preserved across rewrite) ===
 /** Default max_tokens for API calls */
 const DEFAULT_MAX_TOKENS = 8192
 /** Escalation multiplier when response is truncated (stop_reason: max_tokens) */
 const ESCALATION_MULTIPLIER = 4
 /** Absolute ceiling for escalated max_tokens */
 const MAX_TOKENS_CEILING = 64_000
-// === end Phase 1B additions ===
+// === end resilience helpers ===
 
 /** C3: Fraction of effectiveMaxTokens at which proactive microcompaction triggers */
 const PROACTIVE_COMPACT_THRESHOLD = 0.75
@@ -75,6 +76,21 @@ export interface AgentLoopConfig {
     messages: Anthropic.MessageParam[]
     lastToolCalls: NormalizedToolCall[]
   }) => Promise<{ systemPrompt?: string } | void>
+
+  /**
+   * Optional cost-cap gate invoked before each turn's Anthropic stream call.
+   * Receives the projected USD cost (conservative upper bound based on
+   * effectiveMaxTokens at output-tier pricing); should throw `CostCapExceeded`
+   * (from `services/cost/sessionCap.ts`) if the projected cost would breach
+   * the per-tenant hard cap. The thrown error propagates out of
+   * `runAgentWithToolLoop` so the runner can surface a `cost:cap-exceeded`
+   * IPC + open an alert bead.
+   *
+   * Wire-in for the per-tenant cost cap + day-tier extension. Set
+   * via `claudeAgent.ts` (or wherever the agent runner builds the loop
+   * config), not here — this module stays free of Supabase dependencies.
+   */
+  costGate?: (projectedUsdUpperBound: number) => Promise<void>
 }
 
 /**
@@ -127,7 +143,7 @@ export interface AgentLoopResult {
  * (not partial streaming), executes them via the shared toolExecutor,
  * injects results back into messages, and repeats until end_turn or maxTurns.
  *
- * === Phase 1B additions are preserved ===
+ * === Resilience helpers are preserved ===
  * - Output token escalation (effectiveMaxTokens, ESCALATION_MULTIPLIER)
  */
 export async function runAgentWithToolLoop(config: AgentLoopConfig): Promise<AgentLoopResult> {
@@ -137,9 +153,9 @@ export async function runAgentWithToolLoop(config: AgentLoopConfig): Promise<Age
   const maxTurns = config.maxTurns ?? 25
   let messages = [...config.messages] // Copy to avoid mutating caller's array
 
-  // === Phase 1B additions — preserve across Phase 2 rewrite ===
+  // === Resilience helpers (preserved across rewrite) ===
   let effectiveMaxTokens = config.maxTokens ?? DEFAULT_MAX_TOKENS
-  // === end Phase 1B additions ===
+  // === end resilience helpers ===
 
   let currentCtx = config.executionContext
 
@@ -161,9 +177,8 @@ export async function runAgentWithToolLoop(config: AgentLoopConfig): Promise<Age
   // return FILE_UNCHANGED_STUB rather than resending identical content.
   const readCache = new Map<string, string>()
 
-  // C4: tombstoned is set after actual tool_results are injected on abort,
+  // C4: After actual tool_results are injected on abort, we break the loop,
   // preventing any further turns (onTurnEnd, next LLM call) after cancellation.
-  let tombstoned = false
 
   for (let turn = 0; turn < maxTurns; turn++) {
     if (signal?.aborted) {
@@ -196,6 +211,23 @@ export async function runAgentWithToolLoop(config: AgentLoopConfig): Promise<Age
           `truncated ${compactResult.truncatedCount} tool results`,
       )
     }
+
+    // === Cost-cap gate (per-tenant cap + day-tier extension) ===
+    // Optional gate; the runner sets `costGate` per-tenant via assertUnderCap.
+    // Conservative upper bound: assume the priciest tier (Opus output at
+    // $75/M tokens) so the gate trips early on the cheap-model paths too.
+    // The gate throws CostCapExceeded which we let propagate — the runner
+    // catches it and surfaces cost:cap-exceeded IPC.
+    if (config.costGate) {
+      const projectedUsdUpperBound = (effectiveMaxTokens * 75) / 1_000_000
+      await config.costGate(projectedUsdUpperBound)
+    }
+
+    // === OTel span for this agent turn ===
+    // Span captures `ai.model` upfront; tokens_in/tokens_out/usd are
+    // set after the stream finalizes. Span attributes are metadata only —
+    // NO prompt body, NO tool args, NO response body (privacy contract).
+    const turnSpan = tracer.startSpan('agent.turn', { attributes: { 'ai.model': model } })
 
     // === C5: Stream Idle Watchdog ===
     // Create a child AbortController so we can abort on idle timeout
@@ -266,27 +298,32 @@ export async function runAgentWithToolLoop(config: AgentLoopConfig): Promise<Age
       // Clear watchdog on any throw (withRetry exhausted, stream error, etc.)
       // so the timer never fires on a stale AbortController after this turn exits.
       clearTimeout(watchdogTimer)
+      if (err instanceof Error) turnSpan.recordException(err)
+      turnSpan.end()
       throw err
     }
 
     const finalMessage = await stream.finalMessage()
 
-    // Accumulate usage
+    // Accumulate usage + record on the OTel turn span (metadata only).
     if (finalMessage.usage) {
       totalUsage.input_tokens += finalMessage.usage.input_tokens
       totalUsage.output_tokens += finalMessage.usage.output_tokens
-      const usage = finalMessage.usage as Record<string, unknown>
+      const usage = finalMessage.usage as unknown as Record<string, unknown>
       if (typeof usage.cache_creation_input_tokens === 'number') {
         totalUsage.cache_creation_input_tokens += usage.cache_creation_input_tokens
       }
       if (typeof usage.cache_read_input_tokens === 'number') {
         totalUsage.cache_read_input_tokens += usage.cache_read_input_tokens
       }
+      turnSpan.setAttribute('ai.tokens_in', finalMessage.usage.input_tokens)
+      turnSpan.setAttribute('ai.tokens_out', finalMessage.usage.output_tokens)
     }
+    turnSpan.end()
 
     lastStopReason = finalMessage.stop_reason || 'end_turn'
 
-    // === Phase 1B additions — preserve across Phase 2 rewrite ===
+    // === Resilience helpers (preserved across rewrite) ===
     // 1.5b: If response was truncated (max_tokens), escalate and retry
     if (
       lastStopReason === 'max_tokens' &&
@@ -315,7 +352,7 @@ export async function runAgentWithToolLoop(config: AgentLoopConfig): Promise<Age
       })
       continue
     }
-    // === end Phase 1B additions (1.5b escalation) ===
+    // === end resilience helpers (1.5b escalation) ===
 
     // Parse tool calls from the final message
     const toolCalls = parseToolCalls(finalMessage, 'anthropic')
@@ -412,9 +449,8 @@ export async function runAgentWithToolLoop(config: AgentLoopConfig): Promise<Age
       content: toolResults,
     })
 
-    // C4: THEN check for abort — tombstone prevents the next turn, not result injection.
+    // C4: THEN check for abort — break prevents the next turn, not result injection.
     if (signal?.aborted) {
-      tombstoned = true
       lastStopReason = 'cancelled'
       break
     }

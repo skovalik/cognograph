@@ -23,6 +23,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { ipcMain } from 'electron'
+import { withMcpToolSpan } from '../services/mcpAgentSpans'
 import { getSafeEnv, mergeSafeEnv } from '../utils/safeEnv'
 
 // -----------------------------------------------------------------------------
@@ -58,10 +59,10 @@ interface MCPConnection {
   transport: StdioClientTransport
   tools: MCPToolDefinition[]
   connectedAt: number
-  // === Phase 1B additions — preserve across Phase 2 rewrite ===
+  // === Reconnect helpers (preserved across rewrite) ===
   /** Original config for reconnection */
   config: MCPServerConfig
-  // === end Phase 1B additions ===
+  // === end reconnect helpers ===
 }
 
 // -----------------------------------------------------------------------------
@@ -73,14 +74,14 @@ const CONNECT_TIMEOUT_MS = 15_000
 const TOOL_CALL_TIMEOUT_MS = 30_000
 const MAX_RESULT_SIZE = 500 * 1024 // 500KB
 
-// === Phase 1B additions — preserve across Phase 2 rewrite ===
+// === Reconnect helpers (preserved across rewrite) ===
 // Reconnect constants: 3 retries with exponential backoff (1s, 3s, 9s)
 const RECONNECT_MAX_RETRIES = 3
 const RECONNECT_BACKOFF_BASE_MS = 1_000
 const RECONNECT_BACKOFF_MULTIPLIER = 3
 // Circuit breaker: after 10 failures per session, stop retrying
 const CIRCUIT_BREAKER_THRESHOLD = 10
-// === end Phase 1B additions ===
+// === end reconnect helpers ===
 
 // Allowlist of known-safe MCP server commands.
 // Users can run Node/Python/npx scripts but not arbitrary shell commands.
@@ -144,7 +145,7 @@ function validateMCPCommand(command: string, args?: string[]): { valid: boolean;
 
 const connections = new Map<string, MCPConnection>()
 
-// === Phase 1B additions — preserve across Phase 2 rewrite ===
+// === Reconnect helpers (preserved across rewrite) ===
 
 /** Per-server failure count for circuit breaker (resets on successful reconnect) */
 const reconnectFailures = new Map<string, number>()
@@ -285,7 +286,7 @@ export function isCircuitBroken(serverId: string): boolean {
   return circuitBrokenServers.has(serverId)
 }
 
-// === end Phase 1B additions ===
+// === end reconnect helpers ===
 
 // -----------------------------------------------------------------------------
 // Public API
@@ -351,15 +352,15 @@ export async function connectMCPServer(config: MCPServerConfig): Promise<{
       transport,
       tools,
       connectedAt: Date.now(),
-      config, // Phase 1B: store for reconnection
+      config, // Stored for reconnection
     }
 
     connections.set(config.id, connection)
 
-    // === Phase 1B additions — preserve across Phase 2 rewrite ===
+    // === Reconnect helpers (preserved across rewrite) ===
     // Install reconnect handlers for automatic recovery on unexpected disconnect
     installReconnectHandlers(connection)
-    // === end Phase 1B additions ===
+    // === end reconnect helpers ===
 
     console.log(`[MCPClient] Connected to "${config.name}" — ${tools.length} tools discovered`)
 
@@ -455,6 +456,10 @@ export function getMCPToolsForServers(serverIds: string[]): MCPToolDefinition[] 
 
 /**
  * Call a tool on a connected MCP server.
+ *
+ * Wraps the call in an OTel span (via `withMcpToolSpan`) so the
+ * `mcp.tool_call` span surfaces in Sentry tracing. The wrapper carries
+ * `tool.name` + `mcp.server_id` only — no args, no response body.
  */
 export async function callMCPTool(
   serverId: string,
@@ -466,36 +471,39 @@ export async function callMCPTool(
     return { success: false, error: `MCP server "${serverId}" is not connected.` }
   }
 
-  try {
-    const callPromise = connection.client.callTool({ name: toolName, arguments: args })
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(
-        () => reject(new Error(`Tool call timed out after ${TOOL_CALL_TIMEOUT_MS / 1000} seconds`)),
-        TOOL_CALL_TIMEOUT_MS,
-      ),
-    )
+  return withMcpToolSpan({ 'tool.name': toolName, 'mcp.server_id': serverId }, async () => {
+    try {
+      const callPromise = connection.client.callTool({ name: toolName, arguments: args })
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () =>
+            reject(new Error(`Tool call timed out after ${TOOL_CALL_TIMEOUT_MS / 1000} seconds`)),
+          TOOL_CALL_TIMEOUT_MS,
+        ),
+      )
 
-    const result = await Promise.race([callPromise, timeoutPromise])
+      const result = await Promise.race([callPromise, timeoutPromise])
 
-    // Extract text content from MCP tool result
-    const textContent = extractTextFromResult(result)
+      // Extract text content from MCP tool result
+      const textContent = extractTextFromResult(result)
 
-    // Truncate if too large
-    if (textContent.length > MAX_RESULT_SIZE) {
-      return {
-        success: true,
-        result:
-          textContent.slice(0, MAX_RESULT_SIZE) +
-          `\n... [result truncated, ${textContent.length} bytes total]`,
+      // Truncate if too large
+      if (textContent.length > MAX_RESULT_SIZE) {
+        return {
+          success: true,
+          result:
+            textContent.slice(0, MAX_RESULT_SIZE) +
+            `\n... [result truncated, ${textContent.length} bytes total]`,
+        }
       }
-    }
 
-    return { success: true, result: textContent }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error(`[MCPClient] Tool call "${toolName}" on "${connection.name}" failed:`, message)
-    return { success: false, error: message }
-  }
+      return { success: true, result: textContent }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      console.error(`[MCPClient] Tool call "${toolName}" on "${connection.name}" failed:`, message)
+      return { success: false, error: message }
+    }
+  })
 }
 
 /**
@@ -606,7 +614,7 @@ export function registerMCPClientHandlers(): void {
     return { success: true, tools }
   })
 
-  // === Phase 1B additions — preserve across Phase 2 rewrite ===
+  // === Reconnect helpers (preserved across rewrite) ===
   ipcMain.handle('mcp:resetCircuitBreaker', async (_event, serverId: string) => {
     resetCircuitBreaker(serverId)
     return { success: true }
@@ -615,5 +623,5 @@ export function registerMCPClientHandlers(): void {
   ipcMain.handle('mcp:isCircuitBroken', async (_event, serverId: string) => {
     return { broken: isCircuitBroken(serverId) }
   })
-  // === end Phase 1B additions ===
+  // === end reconnect helpers ===
 }

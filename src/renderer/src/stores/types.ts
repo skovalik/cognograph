@@ -176,6 +176,10 @@ export interface UIState {
   activeCommandId: string | null
   promptCollapsed: boolean
   agentLogExpanded: boolean
+
+  // Chat bar prefill + contextual bar dismissal (F4 toolbar redirect)
+  commandBarPrefill: string | null
+  contextualActionBarDismissed: boolean
 }
 
 // =============================================================================

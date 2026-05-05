@@ -52,6 +52,7 @@ export function getGPUTier(): GPUTier {
     const gl2 = canvas.getContext('webgl2') as WebGL2RenderingContext | null
     if (gl2) {
       const maxTexture = gl2.getParameter(gl2.MAX_TEXTURE_SIZE) as number
+      gl2.getExtension('WEBGL_lose_context')?.loseContext()
       cachedTier = {
         webglAvailable: true,
         webgl2Available: true,
@@ -67,6 +68,7 @@ export function getGPUTier(): GPUTier {
       (canvas.getContext('experimental-webgl') as WebGLRenderingContext | null)
     if (gl1) {
       const maxTexture = gl1.getParameter(gl1.MAX_TEXTURE_SIZE) as number
+      gl1.getExtension('WEBGL_lose_context')?.loseContext()
       cachedTier = {
         webglAvailable: true,
         webgl2Available: false,

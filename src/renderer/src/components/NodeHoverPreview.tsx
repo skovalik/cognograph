@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-// NodeHoverPreview — PFD Phase 5B: Quick-Look
+// NodeHoverPreview — Quick-Look
 // Shows a tooltip-like preview of node content after 300ms hover.
 // Reduces decision cost of "should I look at this node?"
 //

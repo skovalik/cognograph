@@ -101,7 +101,7 @@ export const useEntitlementsStore = create<EntitlementsState>()(
               }
             }
           } catch {
-            // Supabase not available (Electron / open-source mode) — try workspace token
+            // Supabase not available (Electron mode) — try workspace token
           }
 
           // Fallback: Electron workspace token

@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * NotificationToast — Phase 4A: UX-ERRORS
+ * NotificationToast — UX-ERRORS
  *
  * Renders the notification queue from notificationStore.
  * Fixed top-right position, animated enter/exit via framer-motion.

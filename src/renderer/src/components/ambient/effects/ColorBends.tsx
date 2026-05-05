@@ -231,6 +231,7 @@ export default function ColorBends({
       if (qualityRef?.current && !qualityRef.current.shouldRender) return
       if (reportFrameFn) reportFrameFn()
       if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return
+      if (renderer.domElement.width === 0 || renderer.domElement.height === 0) return
       const dt = clock.getDelta()
       const elapsed = clock.elapsedTime
       material.uniforms.uTime.value = elapsed

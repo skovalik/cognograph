@@ -50,17 +50,17 @@ describe('Bridge Component Exports', () => {
       const indexMod = await import('../bridge/index')
       const exportNames = Object.keys(indexMod)
 
-      // Phase 1 components (pre-existing)
+      // Bridge status components (pre-existing)
       expect(exportNames).toContain('BridgeStatusBar')
       expect(exportNames).toContain('AgentActivityBadge')
       expect(exportNames).toContain('OrchestratorBadge')
 
-      // Phase 2 components (new - Bridge Log)
+      // Bridge Log components
       expect(exportNames).toContain('ActorBadge')
       expect(exportNames).toContain('EventCard')
       expect(exportNames).toContain('BridgeLogPanel')
 
-      // Phase 5 components (new - Graph Intelligence)
+      // Graph Intelligence components (newer)
       expect(exportNames).toContain('InsightIndicator')
       expect(exportNames).toContain('CostDashboard')
     })

@@ -4,7 +4,7 @@
 /**
  * Agent Service — manages agent lifecycle, streaming, and tool loop coordination.
  *
- * ARCHITECTURE NOTE (Phase 2C: RENDERER-PASSIVIZE):
+ * ARCHITECTURE NOTE (RENDERER-PASSIVIZE):
  * This file is being refactored toward a passive event-driven model.
  *
  * CURRENT (transitional): The renderer runs the tool loop — it receives stream
@@ -102,6 +102,9 @@ interface QueuedMessage {
 // Per-agent state map — supports concurrent agents
 const agentStates = new Map<string, AgentState>()
 
+// rAF throttle for streaming store updates — caps updateLastMessage to 60fps
+const streamingRafIds = new Map<string, number>()
+
 let streamUnsubscribe: (() => void) | null = null
 let isServiceInitialized = false
 
@@ -172,6 +175,15 @@ function cleanupState(conversationId: string): void {
 function resetAgentState(conversationId: string): void {
   const state = agentStates.get(conversationId)
   if (!state) return
+
+  // Flush any pending rAF-throttled store update before cleanup
+  const pendingRaf = streamingRafIds.get(conversationId)
+  if (pendingRaf != null) {
+    cancelAnimationFrame(pendingRaf)
+    streamingRafIds.delete(conversationId)
+    // Final flush so no text is lost
+    useWorkspaceStore.getState().updateLastMessage(conversationId, state.accumulatedText)
+  }
 
   if (state.iterationTimeout) {
     clearTimeout(state.iterationTimeout)
@@ -1008,7 +1020,19 @@ function handleStreamChunk(chunk: AgentStreamChunk): void {
         `[AgentService] [${conversationId}] text_delta - accumulated length:`,
         agentState.accumulatedText.length,
       )
-      store.updateLastMessage(conversationId, agentState.accumulatedText)
+      // rAF throttle: accumulate text immediately, flush to store at display refresh rate
+      if (!streamingRafIds.has(conversationId)) {
+        streamingRafIds.set(
+          conversationId,
+          requestAnimationFrame(() => {
+            streamingRafIds.delete(conversationId)
+            const s = getAgentState(conversationId)
+            if (s) {
+              useWorkspaceStore.getState().updateLastMessage(conversationId, s.accumulatedText)
+            }
+          }),
+        )
+      }
       break
 
     case 'tool_use_start':

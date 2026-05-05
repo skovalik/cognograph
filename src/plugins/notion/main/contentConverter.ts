@@ -552,7 +552,7 @@ function parseInlineSpans(html: string): InlineSpan[] {
       const closeMatch = html.slice(pos).match(/^<\/(\w+)>/)
       if (closeMatch) {
         // Closing tag — pop matching from stack
-        const closingTag = closeMatch[1].toLowerCase()
+        const closingTag = closeMatch[1]!.toLowerCase()
         const idx = findLastIndex(stack, (f) => f.tag === closingTag)
         if (idx !== -1) stack.splice(idx, 1)
         pos += closeMatch[0].length
@@ -561,7 +561,7 @@ function parseInlineSpans(html: string): InlineSpan[] {
 
       const openMatch = html.slice(pos).match(/^<(\w+)([^>]*?)(?:\s*\/)?>/)
       if (openMatch) {
-        const tag = openMatch[1].toLowerCase()
+        const tag = openMatch[1]!.toLowerCase()
         const attrStr = openMatch[2] || ''
 
         // Self-closing tags that don't affect text
@@ -635,7 +635,7 @@ function parseListItems(listHtml: string): string[] {
   let match: RegExpExecArray | null
 
   while ((match = liRegex.exec(listHtml)) !== null) {
-    items.push(match[1])
+    items.push(match[1] ?? '')
   }
 
   // Fallback: if no <li> found, treat entire content as one item
@@ -651,7 +651,7 @@ function parseListItems(listHtml: string): string[] {
  */
 function extractCodeLanguage(preInnerHtml: string): string {
   const match = preInnerHtml.match(/class="language-([^"]+)"/)
-  return match ? match[1] : 'plain text'
+  return match?.[1] ?? 'plain text'
 }
 
 /**
@@ -659,7 +659,9 @@ function extractCodeLanguage(preInnerHtml: string): string {
  */
 function extractCodeContent(preInnerHtml: string): string {
   const match = preInnerHtml.match(/<code[^>]*>([\s\S]*?)<\/code>/)
-  return match ? decodeHtmlEntities(match[1]) : decodeHtmlEntities(stripHtml(preInnerHtml))
+  return match?.[1] !== undefined
+    ? decodeHtmlEntities(match[1])
+    : decodeHtmlEntities(stripHtml(preInnerHtml))
 }
 
 // -----------------------------------------------------------------------------
@@ -669,7 +671,7 @@ function extractCodeContent(preInnerHtml: string): string {
 /** Polyfill for Array.findLastIndex (not available in all Node versions) */
 function findLastIndex<T>(arr: T[], predicate: (item: T) => boolean): number {
   for (let i = arr.length - 1; i >= 0; i--) {
-    if (predicate(arr[i])) return i
+    if (predicate(arr[i] as T)) return i
   }
   return -1
 }
@@ -680,7 +682,10 @@ function parseAttributes(attrStr: string): Record<string, string> {
   let match: RegExpExecArray | null
 
   while ((match = attrRegex.exec(attrStr)) !== null) {
-    attrs[match[1]] = match[2] ?? match[3] ?? match[4] ?? ''
+    const key = match[1]
+    if (key !== undefined) {
+      attrs[key] = match[2] ?? match[3] ?? match[4] ?? ''
+    }
   }
 
   return attrs

@@ -20,7 +20,7 @@
  */
 
 import crypto from 'crypto'
-import { app } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import fs from 'fs'
 import http from 'http'
 import { join } from 'path'
@@ -376,6 +376,13 @@ async function routeRequest(
     return handleGetContext(contextMatch[1]!, res)
   }
 
+  // POST /context-read — MCP/CLI notification that the caller just read
+  // context for a node. Broadcast to all renderer windows so they can
+  // animate incoming edges (F5).
+  if (pathname === '/context-read' && method === 'POST') {
+    return handleContextRead(req, res)
+  }
+
   // POST /search
   if (pathname === '/search' && method === 'POST') {
     return handleSearch(req, res)
@@ -457,6 +464,44 @@ async function handleGetContext(nodeId: string, res: http.ServerResponse): Promi
 
   const context = await buildContextForNode(nodeId, { nodes, edges }, { useCache: false })
   json(res, 200, { markdown: context.markdown, connectedNodes: context.entries })
+}
+
+async function handleContextRead(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
+  const body = await readBody(req)
+  if (body === null) {
+    res.writeHead(413, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ error: 'Payload too large' }))
+    return
+  }
+
+  let parsed: { nodeId?: unknown }
+  try {
+    parsed = JSON.parse(body)
+  } catch {
+    res.writeHead(400, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ error: 'Invalid JSON' }))
+    return
+  }
+
+  const nodeId = parsed.nodeId
+  if (typeof nodeId !== 'string' || nodeId.length === 0) {
+    res.writeHead(400, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ error: "'nodeId' must be a non-empty string" }))
+    return
+  }
+
+  // Broadcast to every live renderer window. Fire-and-forget — the IPC
+  // send is synchronous at this layer and we don't wait for ACKs.
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send('context:read-start', nodeId)
+    }
+  }
+
+  json(res, 200, { ok: true })
 }
 
 async function handleSearch(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {

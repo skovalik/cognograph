@@ -24,8 +24,8 @@ describe('htmlToNotionBlocks', () => {
     const result = htmlToNotionBlocks('<p>Hello world</p>')
 
     expect(result.blocks).toHaveLength(1)
-    expect(result.blocks[0].type).toBe('paragraph')
-    expect(result.blocks[0].paragraph).toBeDefined()
+    expect(result.blocks[0]!.type).toBe('paragraph')
+    expect(result.blocks[0]!.paragraph).toBeDefined()
     expect(result.lossyConversion).toBe(false)
   })
 
@@ -33,23 +33,23 @@ describe('htmlToNotionBlocks', () => {
     const result = htmlToNotionBlocks('<h1>Title</h1><h2>Subtitle</h2><h3>Section</h3>')
 
     expect(result.blocks).toHaveLength(3)
-    expect(result.blocks[0].type).toBe('heading_1')
-    expect(result.blocks[1].type).toBe('heading_2')
-    expect(result.blocks[2].type).toBe('heading_3')
+    expect(result.blocks[0]!.type).toBe('heading_1')
+    expect(result.blocks[1]!.type).toBe('heading_2')
+    expect(result.blocks[2]!.type).toBe('heading_3')
   })
 
   it('converts blockquote', () => {
     const result = htmlToNotionBlocks('<blockquote>A wise quote</blockquote>')
 
     expect(result.blocks).toHaveLength(1)
-    expect(result.blocks[0].type).toBe('quote')
+    expect(result.blocks[0]!.type).toBe('quote')
   })
 
   it('converts horizontal rule', () => {
     const result = htmlToNotionBlocks('<hr>')
 
     expect(result.blocks).toHaveLength(1)
-    expect(result.blocks[0].type).toBe('divider')
+    expect(result.blocks[0]!.type).toBe('divider')
   })
 
   it('converts code block with language', () => {
@@ -58,15 +58,15 @@ describe('htmlToNotionBlocks', () => {
     )
 
     expect(result.blocks).toHaveLength(1)
-    expect(result.blocks[0].type).toBe('code')
-    expect(result.blocks[0].code.language).toBe('typescript')
+    expect(result.blocks[0]!.type).toBe('code')
+    expect((result.blocks[0]!.code as { language: string }).language).toBe('typescript')
   })
 
   it('converts code block without language', () => {
     const result = htmlToNotionBlocks('<pre><code>plain code</code></pre>')
 
     expect(result.blocks).toHaveLength(1)
-    expect(result.blocks[0].code.language).toBe('plain text')
+    expect((result.blocks[0]!.code as { language: string }).language).toBe('plain text')
   })
 
   it('converts unordered list', () => {
@@ -91,8 +91,10 @@ describe('htmlToNotionBlocks', () => {
     const result = htmlToNotionBlocks('<img src="https://example.com/photo.jpg" />')
 
     expect(result.blocks).toHaveLength(1)
-    expect(result.blocks[0].type).toBe('image')
-    expect(result.blocks[0].image.external.url).toBe('https://example.com/photo.jpg')
+    expect(result.blocks[0]!.type).toBe('image')
+    expect((result.blocks[0]!.image as { external: { url: string } }).external.url).toBe(
+      'https://example.com/photo.jpg',
+    )
     expect(result.lossyConversion).toBe(false)
   })
 
@@ -100,7 +102,7 @@ describe('htmlToNotionBlocks', () => {
     const result = htmlToNotionBlocks('<img src="file:///local/image.png" />')
 
     expect(result.blocks).toHaveLength(1)
-    expect(result.blocks[0].type).toBe('paragraph')
+    expect(result.blocks[0]!.type).toBe('paragraph')
     expect(result.lossyConversion).toBe(true)
   })
 
@@ -126,7 +128,7 @@ describe('htmlToNotionBlocks', () => {
     const result = htmlToNotionBlocks('Just plain text')
 
     expect(result.blocks).toHaveLength(1)
-    expect(result.blocks[0].type).toBe('paragraph')
+    expect(result.blocks[0]!.type).toBe('paragraph')
   })
 
   it('returns empty array for empty input', () => {
@@ -150,11 +152,11 @@ describe('htmlToNotionBlocks', () => {
     )
 
     expect(result.blocks).toHaveLength(5)
-    expect(result.blocks[0].type).toBe('heading_1')
-    expect(result.blocks[1].type).toBe('paragraph')
-    expect(result.blocks[2].type).toBe('bulleted_list_item')
-    expect(result.blocks[3].type).toBe('divider')
-    expect(result.blocks[4].type).toBe('quote')
+    expect(result.blocks[0]!.type).toBe('heading_1')
+    expect(result.blocks[1]!.type).toBe('paragraph')
+    expect(result.blocks[2]!.type).toBe('bulleted_list_item')
+    expect(result.blocks[3]!.type).toBe('divider')
+    expect(result.blocks[4]!.type).toBe('quote')
   })
 })
 
@@ -165,7 +167,7 @@ describe('htmlToNotionBlocks', () => {
 describe('htmlToNotionBlocks — rich text', () => {
   it('preserves bold annotations', () => {
     const result = htmlToNotionBlocks('<p><strong>bold text</strong></p>')
-    const richText = result.blocks[0].paragraph.rich_text
+    const richText = (result.blocks[0]!.paragraph as { rich_text: any[] }).rich_text
 
     const boldSegment = richText.find((rt: any) => rt.annotations?.bold)
     expect(boldSegment).toBeDefined()
@@ -174,7 +176,7 @@ describe('htmlToNotionBlocks — rich text', () => {
 
   it('preserves italic annotations', () => {
     const result = htmlToNotionBlocks('<p><em>italic text</em></p>')
-    const richText = result.blocks[0].paragraph.rich_text
+    const richText = (result.blocks[0]!.paragraph as { rich_text: any[] }).rich_text
 
     const italicSegment = richText.find((rt: any) => rt.annotations?.italic)
     expect(italicSegment).toBeDefined()
@@ -183,7 +185,7 @@ describe('htmlToNotionBlocks — rich text', () => {
 
   it('preserves inline code', () => {
     const result = htmlToNotionBlocks('<p><code>inline code</code></p>')
-    const richText = result.blocks[0].paragraph.rich_text
+    const richText = (result.blocks[0]!.paragraph as { rich_text: any[] }).rich_text
 
     const codeSegment = richText.find((rt: any) => rt.annotations?.code)
     expect(codeSegment).toBeDefined()
@@ -192,7 +194,7 @@ describe('htmlToNotionBlocks — rich text', () => {
 
   it('preserves strikethrough', () => {
     const result = htmlToNotionBlocks('<p><s>deleted</s></p>')
-    const richText = result.blocks[0].paragraph.rich_text
+    const richText = (result.blocks[0]!.paragraph as { rich_text: any[] }).rich_text
 
     const sSegment = richText.find((rt: any) => rt.annotations?.strikethrough)
     expect(sSegment).toBeDefined()
@@ -200,7 +202,7 @@ describe('htmlToNotionBlocks — rich text', () => {
 
   it('preserves underline', () => {
     const result = htmlToNotionBlocks('<p><u>underlined</u></p>')
-    const richText = result.blocks[0].paragraph.rich_text
+    const richText = (result.blocks[0]!.paragraph as { rich_text: any[] }).rich_text
 
     const uSegment = richText.find((rt: any) => rt.annotations?.underline)
     expect(uSegment).toBeDefined()
@@ -208,7 +210,7 @@ describe('htmlToNotionBlocks — rich text', () => {
 
   it('preserves links', () => {
     const result = htmlToNotionBlocks('<p><a href="https://example.com">click here</a></p>')
-    const richText = result.blocks[0].paragraph.rich_text
+    const richText = (result.blocks[0]!.paragraph as { rich_text: any[] }).rich_text
 
     const linkSegment = richText.find((rt: any) => rt.text.link)
     expect(linkSegment).toBeDefined()
@@ -218,7 +220,7 @@ describe('htmlToNotionBlocks — rich text', () => {
 
   it('handles nested annotations (bold + italic)', () => {
     const result = htmlToNotionBlocks('<p><strong><em>bold italic</em></strong></p>')
-    const richText = result.blocks[0].paragraph.rich_text
+    const richText = (result.blocks[0]!.paragraph as { rich_text: any[] }).rich_text
 
     const nestedSegment = richText.find((rt: any) => rt.annotations?.bold && rt.annotations?.italic)
     expect(nestedSegment).toBeDefined()
@@ -226,7 +228,7 @@ describe('htmlToNotionBlocks — rich text', () => {
 
   it('handles mixed plain and formatted text', () => {
     const result = htmlToNotionBlocks('<p>plain <strong>bold</strong> more plain</p>')
-    const richText = result.blocks[0].paragraph.rich_text
+    const richText = (result.blocks[0]!.paragraph as { rich_text: any[] }).rich_text
 
     expect(richText.length).toBeGreaterThanOrEqual(2)
     // Should have at least one segment without annotations and one with bold
@@ -520,7 +522,7 @@ describe('rich text splitting', () => {
   it('handles text within the 2000-char limit', () => {
     const shortText = 'a'.repeat(100)
     const result = htmlToNotionBlocks(`<p>${shortText}</p>`)
-    const richText = result.blocks[0].paragraph.rich_text
+    const richText = (result.blocks[0]!.paragraph as { rich_text: any[] }).rich_text
 
     expect(richText).toHaveLength(1)
     expect(richText[0].text.content).toBe(shortText)
@@ -530,7 +532,7 @@ describe('rich text splitting', () => {
     const longCode = 'x'.repeat(RICH_TEXT_CHAR_LIMIT + 500)
     const result = htmlToNotionBlocks(`<pre><code>${longCode}</code></pre>`)
 
-    const richText = result.blocks[0].code.rich_text
+    const richText = (result.blocks[0]!.code as { rich_text: any[] }).rich_text
     expect(richText.length).toBeGreaterThan(1)
 
     // Verify no segment exceeds limit

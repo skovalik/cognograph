@@ -408,6 +408,10 @@ const PrismaticBurst = ({
       sm[1] += (tgt[1] - sm[1]) * alpha
       program.uniforms.uMouse.value = sm as any
       program.uniforms.uTime.value = accumTime
+      if (gl.drawingBufferWidth === 0 || gl.drawingBufferHeight === 0) {
+        raf = requestAnimationFrame(update)
+        return
+      }
       renderer.render({ scene: meshRef.current! })
       raf = requestAnimationFrame(update)
     }

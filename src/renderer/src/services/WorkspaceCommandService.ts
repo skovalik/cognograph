@@ -485,6 +485,20 @@ async function executeTier2(
       }>((resolve) => {
         registerExternalStreamHandler(requestId, {
           onChunk(chunk: AgentStreamChunk) {
+            if (import.meta.env.DEV) {
+              // Dev-only flow log so you can confirm streaming is alive.
+              // Every chunk type is logged with a concise preview — turn off
+              // by filtering out `[AgentStream]` in the console if noisy.
+              const preview =
+                chunk.type === 'text_delta'
+                  ? JSON.stringify((chunk.content ?? '').slice(0, 40))
+                  : chunk.type === 'error'
+                    ? `error=${JSON.stringify(chunk.error ?? '')}`
+                    : chunk.type === 'done'
+                      ? `stop=${chunk.stopReason}`
+                      : ''
+              console.log(`[AgentStream] chunk type=${chunk.type} ${preview}`)
+            }
             if (chunk.type === 'text_delta') {
               accumulatedText += chunk.content
               // Live-update the narration in the command log
@@ -528,6 +542,13 @@ async function executeTier2(
 
         // Build messages from workspace conversation
         const messages = buildWorkspaceMessagesForAPI()
+
+        if (import.meta.env.DEV) {
+          const model = useConnectorStore.getState().getDefaultConnector()?.model ?? 'fallback'
+          console.log(
+            `[WorkspaceCommandService] → agent:sendWithTools requestId=${requestId.slice(0, 8)} model=${model} msgCount=${messages.length} toolCount=${tools.length}`,
+          )
+        }
 
         // Send via IPC
         window.api.agent.sendWithTools({

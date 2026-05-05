@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * Tests for Phase 1B agent resilience features:
+ * Tests for agent resilience features:
  * - 1.5b: Output token escalation (max_tokens stop_reason → 4x retry)
  * - 1.5c: Pre-persist user message before API call
  */

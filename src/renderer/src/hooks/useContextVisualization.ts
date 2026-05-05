@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-// useContextVisualization — PFD Phase 4: AI Context Transparency
+// useContextVisualization — AI Context Transparency
 // Called at canvas level. Watches for chat panel focus changes and
 // triggers BFS traversal visualization via the store.
 //

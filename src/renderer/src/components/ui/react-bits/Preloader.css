@@ -1,0 +1,86 @@
+/* ReactBits Pro Preloader — adapted for Cognograph design tokens */
+
+.preloader-wrapper {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+}
+
+.preloader-fixed {
+  position: fixed;
+}
+
+.preloader-absolute {
+  position: absolute;
+}
+
+.preloader-circle {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: transparent;
+  pointer-events: auto;
+}
+
+.preloader-circle-shape {
+  border-radius: 50%;
+  will-change: transform;
+}
+
+/* Cascade fix: compound selectors override .preloader-circle { position: absolute } */
+/* Specificity (0,2,0) beats .preloader-circle (0,1,0) regardless of source order */
+.preloader-circle.preloader-fixed {
+  position: fixed;
+  inset: 0;
+}
+
+.preloader-circle.preloader-absolute {
+  position: absolute;
+  inset: 0;
+}
+
+.preloader-circle-colored {
+  background-color: var(--cg-accent, #C8963E);
+}
+
+.preloader-content {
+  width: 100%;
+  height: 100%;
+}
+
+.preloader-content-hidden {
+  visibility: hidden;
+}
+
+.preloader-loading-text {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.preloader-loading-text-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 0.75rem;
+  padding: 0 2rem;
+}
+
+.preloader-loading-text-word {
+  font-family: var(--font-mono, 'Space Mono', monospace);
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--surface-canvas, #0A0908);
+  will-change: transform, filter, opacity;
+}

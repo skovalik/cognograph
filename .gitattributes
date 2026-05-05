@@ -1,1 +1,9 @@
 
+# Use bd merge for beads JSONL files
+.beads/issues.jsonl merge=beads
+
+# Append-only audit trail — LF for cross-platform hash stability (D.E)
+
+# Phase Q.1 Step 0.6 — LF normalization for cross-platform append-only files
+docs/decisions/*.md text eol=lf
+*.jsonl text eol=lf

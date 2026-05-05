@@ -140,8 +140,8 @@ const Particles: React.FC<ParticlesProps> = ({
     camera.position.set(0, 0, cameraDistance)
 
     const resize = () => {
-      const width = container.clientWidth
-      const height = container.clientHeight
+      const width = Math.max(1, container.clientWidth)
+      const height = Math.max(1, container.clientHeight)
       renderer.setSize(width, height)
       camera.perspective({ aspect: gl.canvas.width / gl.canvas.height })
     }
@@ -210,6 +210,7 @@ const Particles: React.FC<ParticlesProps> = ({
     let currentScale = -1
     const update = (t: number) => {
       animationFrameId = requestAnimationFrame(update)
+      if (gl.drawingBufferWidth === 0 || gl.drawingBufferHeight === 0) return
       if (qualityRef?.current && !qualityRef.current.shouldRender) return
       if (reportFrame) reportFrame()
       if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return
@@ -217,14 +218,16 @@ const Particles: React.FC<ParticlesProps> = ({
         const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap
         if (scale !== currentScale) {
           currentScale = scale
-          renderer.setSize(container.clientWidth * scale, container.clientHeight * scale)
+          const qw = Math.max(1, container.clientWidth * scale)
+          const qh = Math.max(1, container.clientHeight * scale)
+          renderer.setSize(qw, qh)
           // OGL setSize also sets canvas CSS dimensions — force back to 100% so
           // low-res content stretches to fill container (CSS upscaling, not shrinking)
           const c = renderer.gl.canvas as HTMLCanvasElement
           c.style.width = '100%'
           c.style.height = '100%'
           camera.perspective({
-            aspect: (container.clientWidth * scale) / (container.clientHeight * scale),
+            aspect: qw / qh,
           })
         }
       }
@@ -262,6 +265,7 @@ const Particles: React.FC<ParticlesProps> = ({
       if (container.contains(gl.canvas)) {
         container.removeChild(gl.canvas)
       }
+      gl.getExtension('WEBGL_lose_context')?.loseContext()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [

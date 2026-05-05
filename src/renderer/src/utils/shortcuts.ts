@@ -52,7 +52,7 @@ export function matchesCombo(e: KeyboardEvent, combo: string): boolean {
   const comboKey = parsed.key
 
   // Handle special keys
-  if (comboKey === 'Delete') return e.key === 'Delete' || e.key === 'Backspace'
+  if (comboKey === 'Delete') return e.key === 'Delete'
   if (comboKey === 'Escape') return e.key === 'Escape'
   if (comboKey === 'Tab') return e.key === 'Tab'
   if (comboKey === '?') return e.key === '?'

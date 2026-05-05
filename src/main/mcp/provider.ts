@@ -63,6 +63,10 @@ export interface MCPSyncProvider {
   createEdge(source: string, target: string, data?: Record<string, unknown>): string
   deleteEdge(id: string): void
   flush(): Promise<void>
+  // Optional: notify renderer that the CLI / MCP client just read context for
+  // a node. Used by the F5 edge-animation path — see bridgeProvider.ts and
+  // handlers.ts. Fire-and-forget; failures must be silent.
+  notifyContextRead?(nodeId: string): void
 }
 
 const DEBOUNCE_MS = 500

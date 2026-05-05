@@ -154,7 +154,7 @@ function classifyAnthropicOrOpenAI(error: unknown): ClassifiedLLMError {
     }
   }
 
-  // === Phase 3A addition — 413 is context_length (retryable with compaction) ===
+  // === 413 is context_length (retryable with compaction) ===
   if (status === 413) {
     return {
       category: 'context_length',
@@ -165,7 +165,7 @@ function classifyAnthropicOrOpenAI(error: unknown): ClassifiedLLMError {
       message,
     }
   }
-  // === end Phase 3A addition ===
+  // === end context_length handling ===
 
   if (status !== undefined && status >= 500) {
     return {
@@ -257,7 +257,7 @@ function classifyGemini(error: unknown): ClassifiedLLMError {
     }
   }
 
-  // === Phase 3A addition — 413 is context_length (retryable with compaction) ===
+  // === 413 is context_length (retryable with compaction) ===
   if (status === 413) {
     return {
       category: 'context_length',
@@ -268,7 +268,7 @@ function classifyGemini(error: unknown): ClassifiedLLMError {
       message,
     }
   }
-  // === end Phase 3A addition ===
+  // === end context_length handling ===
 
   if (status !== undefined && status >= 500) {
     return {

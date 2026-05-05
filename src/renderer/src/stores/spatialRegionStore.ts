@@ -22,7 +22,7 @@ interface SpatialRegionState {
   updateRegion: (regionId: string, updates: Partial<SpatialRegion>) => void
   deleteRegion: (regionId: string) => void
 
-  // PFD Phase 3B: District management
+  // District management
   addDistrict: (
     name: string,
     bounds: SpatialRegion['bounds'],
@@ -30,7 +30,7 @@ interface SpatialRegionState {
   ) => string
   getDistricts: () => SpatialRegion[]
 
-  // PFD Phase 5C: Presentation mode
+  // Presentation mode
   getRegionsForPresentation: () => SpatialRegion[]
 
   // Membership checks
@@ -45,7 +45,7 @@ interface SpatialRegionState {
     exited: string[]
   }
 
-  // PFD Phase 5B: Auto-grow region when node extends beyond bounds
+  // Auto-grow region when node extends beyond bounds
   autoGrowRegion: (
     regionId: string,
     nodeBounds: { x: number; y: number; width: number; height: number },
@@ -135,7 +135,7 @@ export const useSpatialRegionStore = create<SpatialRegionState>()(
       return { entered, exited }
     },
 
-    // PFD Phase 5B: Auto-grow region when node extends beyond bounds
+    // Auto-grow region when node extends beyond bounds
     autoGrowRegion: (regionId, nodeBounds) => {
       const PADDING = 20
 
@@ -190,7 +190,7 @@ export const useSpatialRegionStore = create<SpatialRegionState>()(
       })
     },
 
-    // PFD Phase 3B: District management
+    // District management
     addDistrict: (name, bounds, style = 'tint') => {
       const id = uuid()
       const district: SpatialRegion = {
@@ -211,7 +211,7 @@ export const useSpatialRegionStore = create<SpatialRegionState>()(
       return get().regions.filter((r) => r.isDistrict)
     },
 
-    // PFD Phase 5C: Presentation mode — returns regions sorted for slide order
+    // Presentation mode — returns regions sorted for slide order
     // If presentationOrder is set on any region, sort by that (ascending).
     // Otherwise fall back to left-to-right x-position ordering.
     getRegionsForPresentation: () => {
@@ -239,7 +239,7 @@ export const useSpatialRegionStore = create<SpatialRegionState>()(
   })),
 )
 
-// Phase 1C: Selector for district regions (minimap overlay)
+// Selector for district regions (minimap overlay)
 export const selectDistricts = (state: SpatialRegionState): SpatialRegion[] =>
   state.regions.filter((r) => r.isDistrict)
 

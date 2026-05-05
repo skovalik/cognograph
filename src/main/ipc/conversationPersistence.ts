@@ -16,7 +16,7 @@
  * File format: `{workspacesDir}/{workspaceId}.messages.jsonl`
  * Each line: `JSON.stringify(message)` (newlines in content become \\n)
  *
- * Phase 4B — UX-JSONL
+ * UX-JSONL: append-only conversation persistence
  */
 
 import type { Message } from '@shared/types/nodes'

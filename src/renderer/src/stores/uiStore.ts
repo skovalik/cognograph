@@ -86,6 +86,10 @@ interface UIActions {
   setActiveCommandId: (id: string | null) => void
   setPromptCollapsed: (collapsed: boolean) => void
   setAgentLogExpanded: (expanded: boolean) => void
+
+  // Chat bar prefill + contextual bar dismissal (F4 toolbar redirect)
+  setCommandBarPrefill: (text: string | null) => void
+  setContextualActionBarDismissed: (dismissed: boolean) => void
 }
 
 // =============================================================================
@@ -152,6 +156,10 @@ const initialUIState: UIState = {
   activeCommandId: null,
   promptCollapsed: false,
   agentLogExpanded: false,
+
+  // Chat bar prefill + contextual bar dismissal (F4 toolbar redirect)
+  commandBarPrefill: null,
+  contextualActionBarDismissed: false,
 }
 
 // =============================================================================
@@ -450,6 +458,22 @@ export const useUIStore = create<UIStore>()(
       setAgentLogExpanded: (expanded) => {
         set((state) => {
           state.agentLogExpanded = expanded
+        })
+      },
+
+      // -------------------------------------------------------------------------
+      // Chat bar prefill + contextual bar dismissal (F4 toolbar redirect)
+      // -------------------------------------------------------------------------
+
+      setCommandBarPrefill: (text) => {
+        set((state) => {
+          state.commandBarPrefill = text
+        })
+      },
+
+      setContextualActionBarDismissed: (dismissed) => {
+        set((state) => {
+          state.contextualActionBarDismissed = dismissed
         })
       },
     })),

@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { EffectComposer, wrapEffect } from '@react-three/postprocessing'
+import { Bloom, EffectComposer, wrapEffect } from '@react-three/postprocessing'
 import { Effect } from 'postprocessing'
 /* eslint-disable react/no-unknown-property */
 import { forwardRef, useEffect, useRef } from 'react'
@@ -201,6 +201,8 @@ interface DitheredWavesProps {
   disableAnimation: boolean
   enableMouseInteraction: boolean
   mouseRadius: number
+  bloomIntensity: number
+  baseColor?: [number, number, number]
 }
 
 function DitheredWaves({
@@ -215,6 +217,8 @@ function DitheredWaves({
   disableAnimation,
   enableMouseInteraction,
   mouseRadius,
+  bloomIntensity,
+  baseColor,
 }: DitheredWavesProps) {
   const mesh = useRef<THREE.Mesh>(null)
   const mouseRef = useRef(new THREE.Vector2())
@@ -263,10 +267,19 @@ function DitheredWaves({
       prevColor.current = [...waveColor]
     }
 
-    // Sync base color with dark/light mode
-    const targetBase = isDark ? 0 : 1
-    if (u.baseColor.value.r !== targetBase) {
-      u.baseColor.value.set(targetBase, targetBase, targetBase)
+    // Smooth lerp base color toward theme background (0.15/frame ≈ 333ms to 95%)
+    {
+      const bc = u.baseColor.value
+      let tr: number, tg: number, tb: number
+      if (baseColor) {
+        ;[tr, tg, tb] = baseColor
+      } else {
+        tr = tg = tb = isDark ? 0 : 1
+      }
+      const s = 0.15
+      bc.r += (tr - bc.r) * s
+      bc.g += (tg - bc.g) * s
+      bc.b += (tb - bc.b) * s
     }
 
     if (u.effectOpacity.value !== effectOpacity) u.effectOpacity.value = effectOpacity
@@ -305,6 +318,9 @@ function DitheredWaves({
 
       <EffectComposer>
         <RetroEffect colorNum={colorNum} pixelSize={pixelSize} />
+        {bloomIntensity > 0 && (
+          <Bloom intensity={bloomIntensity} luminanceThreshold={0.3} radius={0.4} mipmapBlur />
+        )}
       </EffectComposer>
     </>
   )
@@ -322,6 +338,10 @@ interface DitherProps {
   disableAnimation?: boolean
   enableMouseInteraction?: boolean
   mouseRadius?: number
+  bloomIntensity?: number
+  bloomThreshold?: number
+  bloomRadius?: number
+  baseColor?: [number, number, number]
 }
 
 export default function Dither({
@@ -336,13 +356,17 @@ export default function Dither({
   disableAnimation = false,
   enableMouseInteraction = true,
   mouseRadius = 1,
+  bloomIntensity = 0,
+  bloomThreshold = 0.5,
+  bloomRadius = 0.4,
+  baseColor,
 }: DitherProps) {
   return (
     <Canvas
       className="w-full h-full relative"
       camera={{ position: [0, 0, 6] }}
       dpr={1}
-      gl={{ antialias: true, preserveDrawingBuffer: true }}
+      gl={{ antialias: true, preserveDrawingBuffer: true, alpha: true }}
     >
       <DitheredWaves
         waveSpeed={waveSpeed}
@@ -356,6 +380,8 @@ export default function Dither({
         disableAnimation={disableAnimation}
         enableMouseInteraction={enableMouseInteraction}
         mouseRadius={mouseRadius}
+        bloomIntensity={bloomIntensity}
+        baseColor={baseColor}
       />
     </Canvas>
   )

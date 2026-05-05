@@ -159,6 +159,7 @@ function ToolbarComponent({
         origin: 'embedded',
         workingDirectory: '',
         terminalState: 'idle',
+        userPinned: false,
         startedAt: Date.now(),
         lastActivityAt: Date.now(),
         accentColor: 'var(--accent-glow)',

@@ -2,19 +2,18 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 // Sentry error tracking — init before anything else so crashes during startup are captured.
-// Requires: npm install @sentry/electron (already in package.json)
+// Routed through ./sentry initSentry() helper to apply privacy controls (path redaction,
+// IPC breadcrumb scrubbing, production-only enable). Direct Sentry.init bypasses those.
+// Keep all main-process Sentry init in src/main/sentry.ts.
 import * as Sentry from '@sentry/electron/main'
+import { initSentry } from './sentry'
 
-if (process.env.SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-  })
-}
+initSentry()
 
 import './earlyInit'
 
 // ---------------------------------------------------------------------------
-// Startup Profiler (Phase 6A — MONITORING)
+// Startup Profiler — MONITORING
 // ---------------------------------------------------------------------------
 // Tracks timing for startup phases: app-ready → window-created →
 // workspace-loaded → plugins-loaded → ready.
@@ -90,6 +89,7 @@ import { registerBackupHandlers } from './backupManager'
 import { registerConnectorHandlers } from './connectors'
 import { registerConversationPersistenceHandlers } from './ipc/conversationPersistence'
 import { registerFolderHandlers } from './ipc/folderHandler'
+import { registerMediaFetchHandlers } from './ipc/mediaFetchHandler'
 import {
   CredentialsDeleteSchema,
   CredentialsGetMaskedSchema,
@@ -97,6 +97,7 @@ import {
   CredentialsListSchema,
   CredentialsSetSchema,
 } from './ipc/schemas'
+import { registerTelemetryHandlers } from './ipc/telemetryHandler'
 import { registerLLMHandlers } from './llm'
 import { createMCPServer, FileSyncProvider } from './mcp'
 import { disconnectAllMCPServers, registerMCPClientHandlers } from './mcp/mcpClient'
@@ -205,17 +206,17 @@ function createWindow(): void {
   const cspPolicy = isDev
     ? "default-src 'self'; " +
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+      "style-src 'self' 'unsafe-inline' https:; " +
       "img-src 'self' data: https: blob:; " +
-      "font-src 'self' data: https://fonts.gstatic.com; " +
+      "font-src 'self' data: https:; " +
       "connect-src 'self' http://localhost:* ws://localhost:* https:; " +
       "frame-src 'self' http://localhost:*; " +
       "media-src 'self' blob:"
     : "default-src 'self'; " +
       "script-src 'self'; " +
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+      "style-src 'self' 'unsafe-inline' https:; " +
       "img-src 'self' data: https:; " +
-      "font-src 'self' data: https://fonts.gstatic.com; " +
+      "font-src 'self' data: https:; " +
       "connect-src 'self' https:; " +
       "frame-src 'self'; " +
       "media-src 'self' blob:"
@@ -374,6 +375,7 @@ app.whenReady().then(async () => {
   if (!isMCPStandalone) {
     registerWorkspaceHandlers()
     registerSettingsHandlers()
+    registerMediaFetchHandlers()
     registerLLMHandlers()
     registerTemplateHandlers()
     registerAIEditorHandlers()
@@ -392,6 +394,7 @@ app.whenReady().then(async () => {
     registerNotionHandlers()
     registerTerminalHandlers()
     registerConversationPersistenceHandlers()
+    registerTelemetryHandlers()
     setupDeepLinkListeners()
 
     // Initialize Notion sync (replay queue from previous session)
@@ -662,11 +665,18 @@ app.whenReady().then(async () => {
     }
 
     // Start diagnostic server (dev mode only, not in test)
-    // Fire-and-forget — no need to await
+    // Fire-and-forget — no need to await.
+    // bootId rotates per app boot, persisted to userDataDir/diag-bootId,
+    // and removed on `before-quit` so a clean restart starts fresh.
     if (is.dev && mainWindow && !isTestMode) {
+      const userDataDir = app.getPath('userData')
       import('./diagnosticServer')
-        .then(({ startDiagnosticServer }) => {
-          startDiagnosticServer(mainWindow!)
+        .then(({ startDiagnosticServer, clearBootId, clearBearer }) => {
+          startDiagnosticServer(mainWindow!, userDataDir)
+          app.on('before-quit', () => {
+            clearBootId(userDataDir)
+            clearBearer(userDataDir)
+          })
         })
         .catch((err) => {
           console.error('[DiagnosticServer] Failed to start:', err)
@@ -680,11 +690,13 @@ app.whenReady().then(async () => {
     // ------------------------------------------------------------------
     const startupTasks: Promise<unknown>[] = []
 
-    // Auto-updater (production only)
+    // Auto-updater (production only) — wires the verifyAndApplyUpdate
+    // gate (cosign verify-blob before apply).
     if (!is.dev && mainWindow) {
       startupTasks.push(
         import('electron-updater')
-          .then(({ autoUpdater }) => {
+          .then(async ({ autoUpdater }) => {
+            const { verifyAndApplyUpdate } = await import('./services/autoUpdater')
             autoUpdater.logger = logger as any
             autoUpdater.autoDownload = false // Don't auto-download, just notify
 
@@ -694,7 +706,35 @@ app.whenReady().then(async () => {
             })
             autoUpdater.on('update-downloaded', (info) => {
               logger.log(`[AutoUpdate] Update downloaded: ${info.version}`)
-              mainWindow?.webContents.send('auto-update:downloaded', { version: info.version })
+              const downloadedFile = (info as { downloadedFile?: string }).downloadedFile
+              const senderShim = mainWindow?.webContents
+                ? {
+                    send: (ch: string, payload: unknown) =>
+                      mainWindow!.webContents.send(ch, payload),
+                  }
+                : undefined
+              if (downloadedFile) {
+                try {
+                  verifyAndApplyUpdate(
+                    downloadedFile,
+                    () => {
+                      // electron-updater's `quitAndInstall` is the canonical
+                      // apply call; do not invoke until the renderer
+                      // confirms (the existing notification-only UX).
+                      mainWindow?.webContents.send('auto-update:downloaded', {
+                        version: info.version,
+                      })
+                    },
+                    senderShim,
+                  )
+                } catch (err) {
+                  logger.log(
+                    `[AutoUpdate] Verification gate aborted apply: ${(err as Error).message}`,
+                  )
+                }
+              } else {
+                mainWindow?.webContents.send('auto-update:downloaded', { version: info.version })
+              }
             })
             autoUpdater.on('error', (err) => {
               // Don't crash on update errors — just log and continue

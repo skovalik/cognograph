@@ -11,7 +11,7 @@
  */
 
 import { sanitizeForContext } from '@shared/utils/sanitizeContext'
-import { promises as fs } from 'fs'
+import { existsSync, promises as fs } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 
@@ -30,6 +30,16 @@ export function getAppPath(name: string): string {
   // Fallback for standalone Node.js (MCP CLI)
   if (name === 'userData') return join(homedir(), '.cognograph')
   return homedir()
+}
+
+async function logBfsContext(data: Record<string, unknown>): Promise<void> {
+  try {
+    const dir = join(getAppPath('userData'), 'telemetry')
+    if (!existsSync(dir)) await fs.mkdir(dir, { recursive: true })
+    await fs.appendFile(join(dir, 'bfs-context.jsonl'), JSON.stringify(data) + '\n')
+  } catch {
+    /* silent */
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -119,11 +129,9 @@ interface AdjacencyEntry {
  */
 export class AdjacencyIndex {
   private _map: Map<string, AdjacencyEntry> | null = null
-  private _edges: WorkspaceEdge[] = []
 
   /** Build or rebuild the index from a set of edges. */
   build(edges: WorkspaceEdge[]): void {
-    this._edges = edges
     this._map = new Map()
 
     for (const edge of edges) {
@@ -148,7 +156,6 @@ export class AdjacencyIndex {
   /** Invalidate the cached index. Next access will require a rebuild. */
   invalidate(): void {
     this._map = null
-    this._edges = []
   }
 
   /** Whether the index has been built and is valid. */
@@ -720,6 +727,21 @@ export async function buildContextForNode(
     if (cached) {
       const markdown = generateMarkdown(rootTitle, cached)
       const totalTokens = cached.reduce((sum, e) => sum + e.tokenEstimate, 0)
+      const totalAvailableTokens = workspace.nodes.reduce(
+        (sum, n) => sum + estimateTokens(extractContentSummary(n) ?? ''),
+        0,
+      )
+      logBfsContext({
+        nodeId,
+        totalTokens,
+        nodeCount: cached.length,
+        depth: MAX_BFS_DEPTH,
+        maxTokensBudget: options?.maxTokens ?? null,
+        totalAvailableNodes: workspace.nodes.length,
+        totalAvailableTokens,
+        cacheHit: true,
+        timestamp: new Date().toISOString(),
+      })
       return {
         entries: cached,
         markdown,
@@ -743,6 +765,21 @@ export async function buildContextForNode(
     const markdown = generateMarkdown(rootTitle, entries)
     const totalTokens = entries.reduce((sum, e) => sum + e.tokenEstimate, 0)
 
+    logBfsContext({
+      nodeId,
+      totalTokens,
+      nodeCount: entries.length,
+      depth: MAX_BFS_DEPTH,
+      maxTokensBudget: options?.maxTokens ?? null,
+      totalAvailableNodes: workspace.nodes.length,
+      totalAvailableTokens: workspace.nodes.reduce(
+        (sum, n) => sum + estimateTokens(extractContentSummary(n) ?? ''),
+        0,
+      ),
+      cacheHit: false,
+      timestamp: new Date().toISOString(),
+    })
+
     return {
       entries,
       markdown,
@@ -762,6 +799,21 @@ export async function buildContextForNode(
   )
   const markdown = generateMarkdown(rootTitle, entries)
   const totalTokens = entries.reduce((sum, e) => sum + e.tokenEstimate, 0)
+
+  logBfsContext({
+    nodeId,
+    totalTokens,
+    nodeCount: entries.length,
+    depth: MAX_BFS_DEPTH,
+    maxTokensBudget: options?.maxTokens ?? null,
+    totalAvailableNodes: workspace.nodes.length,
+    totalAvailableTokens: workspace.nodes.reduce(
+      (sum, n) => sum + estimateTokens(extractContentSummary(n) ?? ''),
+      0,
+    ),
+    cacheHit: false,
+    timestamp: new Date().toISOString(),
+  })
 
   return {
     entries,

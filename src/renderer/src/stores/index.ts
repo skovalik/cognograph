@@ -127,7 +127,7 @@ export {
   createWorkspaceData,
   DEFAULT_NODE_DIMENSIONS,
 } from './nodeFactories'
-// Domain stores (Week 2 Stream B Track 2 Phase 2.2a)
+// Domain stores (extracted during the store-split refactor)
 export {
   useIsNodeSpawning,
   useIsSpawning,

@@ -5,7 +5,7 @@
  * Context Selection Store Tests
  *
  * Tests for the transient Ctrl+Click context selection store.
- * PFD Phase 5B: Canvas Interaction Patterns
+ * Canvas Interaction Patterns
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'

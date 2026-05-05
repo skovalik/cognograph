@@ -63,12 +63,8 @@ class ExecLogWriter {
   }
 
   private extractFirstModel(run: OrchestratorRun): string {
-    // Extract model from run data or first agent's config
+    // Extract model from run data; per-agent model is not tracked on results.
     if (run.model) return run.model
-    if (run.agentResults && run.agentResults.length > 0) {
-      const firstAgent = run.agentResults[0]
-      if (firstAgent.model) return firstAgent.model
-    }
     return 'claude-sonnet-4-6'
   }
 

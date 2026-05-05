@@ -23,7 +23,7 @@ function VersionHistoryPanelComponent({
   const { version, versionHistory } = data
 
   // No history? Don't show panel
-  if (versionHistory.length === 0) {
+  if (!versionHistory || versionHistory.length === 0) {
     return null
   }
 

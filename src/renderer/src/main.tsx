@@ -2,15 +2,21 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 // Sentry error tracking — init before React render so early errors are captured.
-// In the Electron renderer, @sentry/electron/renderer re-exports @sentry/browser
-// with Electron-aware transport. Guard on SENTRY_DSN injected via Vite define.
-import * as Sentry from '@sentry/electron/renderer'
+// Routed through ./services/sentry initSentry() helper to apply privacy controls
+// (PII redaction in messages, fetch-URL scrubbing, replay text/media masking,
+// production-only enable). Direct Sentry.init bypasses those.
+// Keep all renderer Sentry init in src/renderer/src/services/sentry.ts.
+import { initSentry } from './services/sentry'
 
-if (import.meta.env.VITE_SENTRY_DSN) {
-  Sentry.init({
-    dsn: import.meta.env.VITE_SENTRY_DSN,
-  })
-}
+initSentry()
+
+// Hydrate the API-key cache from main-process safeStorage and migrate any
+// legacy plaintext localStorage entries off disk. Fire-and-forget at
+// startup; consumers see null until hydrate resolves, which matches the
+// prior "no key configured" behavior.
+import { hydrateFromMain as hydrateApiKeys } from './services/apiKeyStore'
+
+void hydrateApiKeys()
 
 import React from 'react'
 import ReactDOM from 'react-dom/client'
@@ -42,5 +48,12 @@ if ((window as any).__TEST_MODE__) {
   })
   import('./stores/notificationStore').then(({ useNotificationStore }) => {
     ;(window as any).__notificationStore = useNotificationStore
+  })
+  // programStore exposes hasPassedFirstRunGate — E2E tests call
+  // setFirstRunGatePassed() at setup so the FirstRunSetup modal (which would
+  // otherwise intercept all pointer events behind a z-9999 backdrop) does not
+  // block node clicks. Only exposed under __TEST_MODE__.
+  import('./stores/programStore').then(({ useProgramStore }) => {
+    ;(window as any).__programStore = useProgramStore
   })
 }

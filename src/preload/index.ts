@@ -76,6 +76,39 @@ export interface SettingsAPI {
   setApiKey: (provider: string, key: string) => Promise<{ success: boolean; error?: string } | void>
 }
 
+// Media-provider fetch dispatcher (executes in main, never renderer).
+// Adapter callers build a request shape; main injects auth and performs fetch.
+export interface MediaFetchSerializedFormField {
+  name: string
+  kind: 'string' | 'blob'
+  value?: string
+  blob?: { bytes: ArrayBuffer; mimeType: string; filename?: string }
+}
+
+export interface MediaFetchRequest {
+  provider: string
+  url: string
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  headers?: Record<string, string>
+  bodyKind?: 'json' | 'form' | 'none'
+  bodyJson?: unknown
+  bodyForm?: MediaFetchSerializedFormField[]
+  responseKind: 'json' | 'binary'
+  authStyleOverride?: 'bearer' | 'xi-api-key' | 'query-key' | 'none'
+}
+
+export interface MediaFetchResult {
+  status: number
+  ok: boolean
+  json?: unknown
+  binary?: { bytes: ArrayBuffer; mimeType: string }
+  error?: string
+}
+
+export interface MediaAPI {
+  fetch: (req: MediaFetchRequest) => Promise<MediaFetchResult>
+}
+
 // Payload types for LLM streaming events
 export interface LLMChunkPayload {
   conversationId: string
@@ -802,9 +835,14 @@ export interface TerminalAPI {
     nodeTitle?: string
     workspaceId?: string
   }) => Promise<{ sessionId: string; nodeId: string; pid: number }>
-  write: (nodeId: string, data: string) => Promise<void>
-  resize: (nodeId: string, cols: number, rows: number) => Promise<void>
+  // Fire-and-forget (ipcRenderer.send) — returns synchronously. Do NOT chain
+  // .catch() on these; that will throw "Cannot read properties of undefined
+  // (reading 'catch')" on every invocation.
+  write: (nodeId: string, data: string) => void
+  resize: (nodeId: string, cols: number, rows: number) => void
   kill: (nodeId: string) => Promise<void>
+  /** Pin/unpin a terminal session. Pinned sessions never idle. */
+  pin: (nodeId: string, pinned: boolean) => Promise<void>
   getScrollback: (nodeId: string) => Promise<string[]>
   /** Subscribe to PTY data events for a specific node. Returns cleanup function. */
   onData: (nodeId: string, callback: (data: string) => void) => () => void
@@ -814,11 +852,27 @@ export interface TerminalAPI {
   onDataGlobal: (callback: (nodeId: string, data: string) => void) => () => void
   /** Subscribe to PTY status transitions for ALL nodes (running/idle/exited). */
   onStatusChangeGlobal: (callback: (nodeId: string, status: string) => void) => () => void
+  /**
+   * Subscribe to CLI "thinking" transitions for ALL nodes. Fires true when a
+   * braille-rotation spinner is detected in PTY stdout and false after a 300ms
+   * debounce without further spinner chars. Used by App.tsx to bridge to
+   * `setStreaming(nodeId, bool)` — which drives the conic ring + incoming-edge
+   * flow animation. NOT the same as `running`/`idle` from onStatusChangeGlobal.
+   */
+  onThinkingChangeGlobal: (callback: (nodeId: string, thinking: boolean) => void) => () => void
+  /**
+   * Subscribe to MCP bridge `context:read-start` broadcasts — fires when the
+   * CLI (or any MCP client) just read context for a node via the bridge.
+   * Used by App.tsx to drive the F5 incoming-edge animation. Returns cleanup
+   * function. NOT scoped to a nodeId: the callback receives every node.
+   */
+  onContextReadGlobal: (callback: (nodeId: string) => void) => () => void
 }
 
 export interface ElectronAPI {
   workspace: WorkspaceAPI
   settings: SettingsAPI
+  media: MediaAPI
   llm: LLMAPI
   templates: TemplateAPI
   dialog: DialogAPI
@@ -872,6 +926,9 @@ export interface ElectronAPI {
     sendResponse: (requestId: string, context: string) => void
   }
   conversation?: ConversationAPI
+  telemetry?: {
+    logTokenUsage: (line: string) => void
+  }
 }
 
 // Expose APIs to renderer
@@ -917,6 +974,9 @@ const api: ElectronAPI = {
     set: (key, value) => ipcRenderer.invoke('settings:set', key, value),
     getApiKey: (provider) => ipcRenderer.invoke('settings:getApiKey', provider),
     setApiKey: (provider, key) => ipcRenderer.invoke('settings:setApiKey', provider, key),
+  },
+  media: {
+    fetch: (req) => ipcRenderer.invoke('media:fetch', req),
   },
   llm: {
     send: (options) => ipcRenderer.invoke('llm:send', options),
@@ -1234,23 +1294,26 @@ const api: ElectronAPI = {
   },
   terminal: {
     spawn: (config) => ipcRenderer.invoke('terminal:spawn', config),
-    write: (nodeId, data) => ipcRenderer.invoke('terminal:write', nodeId, data),
-    resize: (nodeId, cols, rows) => ipcRenderer.invoke('terminal:resize', nodeId, cols, rows),
+    write: (nodeId, data) => ipcRenderer.send('terminal:write', nodeId, data),
+    resize: (nodeId, cols, rows) => ipcRenderer.send('terminal:resize', nodeId, cols, rows),
     kill: (nodeId) => ipcRenderer.invoke('terminal:kill', nodeId),
+    pin: (nodeId, pinned) => ipcRenderer.invoke('terminal:pin', nodeId, pinned),
     getScrollback: (nodeId) => ipcRenderer.invoke('terminal:getScrollback', nodeId),
     onData: (nodeId, callback) => {
-      const handler = (_event: Electron.IpcRendererEvent, id: string, data: string): void => {
-        if (id === nodeId) callback(data)
+      const channel = `terminal:data:${nodeId}`
+      const handler = (_event: Electron.IpcRendererEvent, data: string): void => {
+        callback(data)
       }
-      ipcRenderer.on('terminal:data', handler)
-      return () => ipcRenderer.removeListener('terminal:data', handler)
+      ipcRenderer.on(channel, handler)
+      return () => ipcRenderer.removeListener(channel, handler)
     },
     onExit: (nodeId, callback) => {
-      const handler = (_event: Electron.IpcRendererEvent, id: string, exitCode: number): void => {
-        if (id === nodeId) callback(exitCode)
+      const channel = `terminal:exit:${nodeId}`
+      const handler = (_event: Electron.IpcRendererEvent, exitCode: number): void => {
+        callback(exitCode)
       }
-      ipcRenderer.on('terminal:exit', handler)
-      return () => ipcRenderer.removeListener('terminal:exit', handler)
+      ipcRenderer.on(channel, handler)
+      return () => ipcRenderer.removeListener(channel, handler)
     },
     // Global listener for ALL terminal data — used by App.tsx to tee output to node
     // cards even when TerminalPanel is unmounted (user zoomed out from artboard)
@@ -1268,6 +1331,24 @@ const api: ElectronAPI = {
       }
       ipcRenderer.on('terminal:statusChange', handler)
       return () => ipcRenderer.removeListener('terminal:statusChange', handler)
+    },
+    // Global listener for CLI "thinking" transitions (braille spinner detected in PTY stdout)
+    // — drives the conic ring + incoming-edge flow animation via store.setStreaming.
+    onThinkingChangeGlobal: (callback: (nodeId: string, thinking: boolean) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, id: string, thinking: boolean): void => {
+        callback(id, thinking)
+      }
+      ipcRenderer.on('terminal:thinkingChange', handler)
+      return () => ipcRenderer.removeListener('terminal:thinkingChange', handler)
+    },
+    // F5: MCP bridge broadcasts 'context:read-start' when the CLI reads
+    // context for a node. Renderer uses this to pulse incoming edges.
+    onContextReadGlobal: (callback: (nodeId: string) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, id: string): void => {
+        callback(id)
+      }
+      ipcRenderer.on('context:read-start', handler)
+      return () => ipcRenderer.removeListener('context:read-start', handler)
     },
   },
   plugin: {
@@ -1339,6 +1420,9 @@ const api: ElectronAPI = {
     sendResponse: (requestId: string, context: string) => {
       ipcRenderer.send('context:response', { requestId, context })
     },
+  },
+  telemetry: {
+    logTokenUsage: (line: string) => ipcRenderer.send('telemetry:token-usage', line),
   },
 }
 

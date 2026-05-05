@@ -1,0 +1,1202 @@
+# Third-Party Notices
+
+Cognograph (the public Electron desktop app at this repository) is distributed under AGPL-3.0-only — see `LICENSE`.
+It bundles third-party packages whose licenses require notice or attribution preservation. This file collects those notices.
+
+Generated: 2026-04-30 from `node_modules/`.
+Total packages scanned: **1082**.
+
+## Summary by license
+
+- **MIT** — 897 package(s)
+- **ISC** — 65 package(s)
+- **Apache-2.0** — 65 package(s)
+- **BSD-2-Clause** — 9 package(s)
+- **BSD-3-Clause** — 16 package(s)
+- **0BSD** — 1 package(s)
+- **Unlicense** — 1 package(s)
+- **CC0-1.0** — 2 package(s)
+- **MPL-2.0** — 2 package(s)
+- **UNKNOWN** — 1 package(s)
+- **(MIT OR CC0-1.0)** — 1 package(s)
+- **(MPL-2.0 OR Apache-2.0)** — 1 package(s)
+- **(WTFPL OR MIT)** — 1 package(s)
+- **Apache-2.0 AND LGPL-3.0-or-later** — 1 package(s)
+- **BlueOak-1.0.0** — 7 package(s)
+- **CC-BY-4.0** — 1 package(s)
+- **FSL-1.1-MIT** — 2 package(s)
+- **MIT OR Apache-2.0** — 2 package(s)
+- **MIT-0** — 2 package(s)
+- **Python-2.0** — 1 package(s)
+- **SEE LICENSE IN README.md** — 1 package(s)
+- **WTFPL** — 1 package(s)
+- **WTFPL OR ISC** — 1 package(s)
+- **Zlib** — 1 package(s)
+
+## Per-license attribution
+
+### MIT
+
+- **@acemir/cssom@0.9.31** (Nikita Vasilyev <me@elv1s.ru>)
+- **@adobe/css-tools@4.4.4** (TJ Holowaychuk <tj@vision-media.ca>)
+- **@alloc/quick-lru@5.2.0** (Sindre Sorhus)
+- **@anthropic-ai/sdk@0.27.3** (Anthropic <support@anthropic.com>)
+- **@asamuzakjp/css-color@4.1.1** (asamuzaK) — https://github.com/asamuzaK/cssColor#readme
+- **@asamuzakjp/dom-selector@6.7.6** (asamuzaK) — https://github.com/asamuzaK/domSelector#readme
+- **@asamuzakjp/nwsapi@2.3.9** (Diego Perini) — http://javascript.nwbox.com/nwsapi/
+- **@babel/code-frame@7.28.6** (The Babel Team (https://babel.dev/team)) — https://babel.dev/docs/en/next/babel-code-frame
+- **@babel/compat-data@7.28.6** (The Babel Team (https://babel.dev/team))
+- **@babel/core@7.28.6** (The Babel Team (https://babel.dev/team)) — https://babel.dev/docs/en/next/babel-core
+- **@babel/generator@7.28.6** (The Babel Team (https://babel.dev/team)) — https://babel.dev/docs/en/next/babel-generator
+- **@babel/helper-compilation-targets@7.28.6** (The Babel Team (https://babel.dev/team))
+- **@babel/helper-globals@7.28.0** (The Babel Team (https://babel.dev/team))
+- **@babel/helper-module-imports@7.28.6** (The Babel Team (https://babel.dev/team)) — https://babel.dev/docs/en/next/babel-helper-module-imports
+- **@babel/helper-module-transforms@7.28.6** (The Babel Team (https://babel.dev/team)) — https://babel.dev/docs/en/next/babel-helper-module-transforms
+- **@babel/helper-plugin-utils@7.28.6** (The Babel Team (https://babel.dev/team)) — https://babel.dev/docs/en/next/babel-helper-plugin-utils
+- **@babel/helper-string-parser@7.27.1** (The Babel Team (https://babel.dev/team)) — https://babel.dev/docs/en/next/babel-helper-string-parser
+- **@babel/helper-validator-identifier@7.28.5** (The Babel Team (https://babel.dev/team))
+- **@babel/helper-validator-option@7.27.1** (The Babel Team (https://babel.dev/team))
+- **@babel/helpers@7.28.6** (The Babel Team (https://babel.dev/team)) — https://babel.dev/docs/en/next/babel-helpers
+- **@babel/parser@7.28.6** (The Babel Team (https://babel.dev/team)) — https://babel.dev/docs/en/next/babel-parser
+- **@babel/plugin-transform-arrow-functions@7.27.1** (The Babel Team (https://babel.dev/team)) — https://babel.dev/docs/en/next/babel-plugin-transform-arrow-functions
+- **@babel/plugin-transform-react-jsx-self@7.27.1** (The Babel Team (https://babel.dev/team)) — https://babel.dev/docs/en/next/babel-plugin-transform-react-jsx-self
+- **@babel/plugin-transform-react-jsx-source@7.27.1** (The Babel Team (https://babel.dev/team)) — https://babel.dev/docs/en/next/babel-plugin-transform-react-jsx-source
+- **@babel/runtime@7.28.6** (The Babel Team (https://babel.dev/team)) — https://babel.dev/docs/en/next/babel-runtime
+- **@babel/template@7.28.6** (The Babel Team (https://babel.dev/team)) — https://babel.dev/docs/en/next/babel-template
+- **@babel/traverse@7.28.6** (The Babel Team (https://babel.dev/team)) — https://babel.dev/docs/en/next/babel-traverse
+- **@babel/types@7.28.6** (The Babel Team (https://babel.dev/team)) — https://babel.dev/docs/en/next/babel-types
+- **@bcoe/v8-coverage@1.0.2** (Charles Samborski <demurgos@demurgos.net> (https://demurgos.net))
+- **@csstools/css-calc@2.1.4** — https://github.com/csstools/postcss-plugins/tree/main/packages/css-calc#readme
+- **@csstools/css-color-parser@3.1.0** — https://github.com/csstools/postcss-plugins/tree/main/packages/css-color-parser#readme
+- **@csstools/css-parser-algorithms@3.0.5** — https://github.com/csstools/postcss-plugins/tree/main/packages/css-parser-algorithms#readme
+- **@csstools/css-tokenizer@3.0.4** — https://github.com/csstools/postcss-plugins/tree/main/packages/css-tokenizer#readme
+- **@develar/schema-utils@2.6.5** (webpack Contrib (https://github.com/webpack-contrib)) — https://github.com/webpack/schema-utils
+- **@dnd-kit/accessibility@3.1.1** (Claudéric Demers)
+- **@dnd-kit/core@6.3.1** (Claudéric Demers)
+- **@dnd-kit/sortable@10.0.0** (Claudéric Demers)
+- **@dnd-kit/utilities@3.2.2** (Claudéric Demers)
+- **@electron-toolkit/preload@3.0.2** (Alex Wei<https://github.com/alex8088>) — https://github.com/alex8088/electron-toolkit/tree/master/packages/preload#readme
+- **@electron-toolkit/tsconfig@1.0.1** (Alex Wei<https://github.com/alex8088>) — https://github.com/alex8088/electron-toolkit/tree/master/packages/tsconfig#readme
+- **@electron-toolkit/utils@4.0.0** (Alex Wei<https://github.com/alex8088>) — https://github.com/alex8088/electron-toolkit/tree/master/packages/utils#readme
+- **@electron/asar@3.4.1** — https://github.com/electron/asar
+- **@electron/fuses@1.8.0** (Electron Community) — https://github.com/electron/fuses#readme
+- **@electron/get@2.0.3** (Samuel Attard)
+- **@electron/notarize@2.5.0** (Samuel Attard) — https://github.com/electron/notarize#readme
+- **@electron/rebuild@4.0.3** — https://github.com/electron/rebuild
+- **@electron/universal@2.0.3** (Samuel Attard)
+- **@esbuild/win32-x64@0.24.2**
+- **@exodus/bytes@1.9.0** (Exodus Movement, Inc.) — https://github.com/ExodusOSS/bytes#readme
+- **@floating-ui/core@1.7.4** (atomiks) — https://floating-ui.com
+- **@floating-ui/dom@1.7.5** (atomiks) — https://floating-ui.com
+- **@floating-ui/react-dom@2.1.7** (atomiks) — https://floating-ui.com/docs/react-dom
+- **@floating-ui/utils@0.2.10** (atomiks) — https://floating-ui.com
+- **@hono/node-server@1.19.11** (Yusuke Wada <yusuke@kamawada.com> (https://github.com/yusukebe)) — https://github.com/honojs/node-server
+- **@jridgewell/gen-mapping@0.3.13** (Justin Ridgewell <justin@ridgewell.name>) — https://github.com/jridgewell/sourcemaps/tree/main/packages/gen-mapping
+- **@jridgewell/remapping@2.3.5** (Justin Ridgewell <justin@ridgewell.name>) — https://github.com/jridgewell/sourcemaps/tree/main/packages/remapping
+- **@jridgewell/resolve-uri@3.1.2** (Justin Ridgewell <justin@ridgewell.name>)
+- **@jridgewell/sourcemap-codec@1.5.5** (Justin Ridgewell <justin@ridgewell.name>) — https://github.com/jridgewell/sourcemaps/tree/main/packages/sourcemap-codec
+- **@jridgewell/trace-mapping@0.3.31** (Justin Ridgewell <justin@ridgewell.name>) — https://github.com/jridgewell/sourcemaps/tree/main/packages/trace-mapping
+- **@malept/flatpak-bundler@0.4.0** (Matt Watson <mattdangerw@gmail.com>) — https://github.com/malept/flatpak-bundler#readme
+- **@modelcontextprotocol/sdk@1.26.0** (Anthropic, PBC (https://anthropic.com)) — https://modelcontextprotocol.io
+- **@monogrid/gainmap-js@3.4.0** (MONOGRID <gainmap@monogrid.com>) — https://github.com/MONOGRID/gainmap-js#readme
+- **@nodelib/fs.scandir@2.1.5**
+- **@nodelib/fs.stat@2.0.5**
+- **@nodelib/fs.walk@1.2.8**
+- **@notionhq/client@5.9.0** — https://developers.notion.com/docs/getting-started
+- **@oxc-resolver/binding-win32-x64-msvc@11.16.4** — https://oxc.rs
+- **@pkgjs/parseargs@0.11.0** — https://github.com/pkgjs/parseargs#readme
+- **@radix-ui/number@1.1.1** — https://radix-ui.com/primitives
+- **@radix-ui/primitive@1.1.3** — https://radix-ui.com/primitives
+- **@radix-ui/react-accordion@1.2.12** — https://radix-ui.com/primitives
+- **@radix-ui/react-alert-dialog@1.1.15** — https://radix-ui.com/primitives
+- **@radix-ui/react-arrow@1.1.7** — https://radix-ui.com/primitives
+- **@radix-ui/react-aspect-ratio@1.1.8** — https://radix-ui.com/primitives
+- **@radix-ui/react-avatar@1.1.11** — https://radix-ui.com/primitives
+- **@radix-ui/react-checkbox@1.3.3** — https://radix-ui.com/primitives
+- **@radix-ui/react-collapsible@1.1.12** — https://radix-ui.com/primitives
+- **@radix-ui/react-collection@1.1.7** — https://radix-ui.com/primitives
+- **@radix-ui/react-compose-refs@1.1.2** — https://radix-ui.com/primitives
+- **@radix-ui/react-context@1.1.2** — https://radix-ui.com/primitives
+- **@radix-ui/react-context-menu@2.2.16** — https://radix-ui.com/primitives
+- **@radix-ui/react-dialog@1.1.15** — https://radix-ui.com/primitives
+- **@radix-ui/react-direction@1.1.1** — https://radix-ui.com/primitives
+- **@radix-ui/react-dismissable-layer@1.1.11** — https://radix-ui.com/primitives
+- **@radix-ui/react-dropdown-menu@2.1.16** — https://radix-ui.com/primitives
+- **@radix-ui/react-focus-guards@1.1.3** — https://radix-ui.com/primitives
+- **@radix-ui/react-focus-scope@1.1.7** — https://radix-ui.com/primitives
+- **@radix-ui/react-id@1.1.1** — https://radix-ui.com/primitives
+- **@radix-ui/react-label@2.1.8** — https://radix-ui.com/primitives
+- **@radix-ui/react-menu@2.1.16** — https://radix-ui.com/primitives
+- **@radix-ui/react-popover@1.1.15** — https://radix-ui.com/primitives
+- **@radix-ui/react-popper@1.2.8** — https://radix-ui.com/primitives
+- **@radix-ui/react-portal@1.1.9** — https://radix-ui.com/primitives
+- **@radix-ui/react-presence@1.1.5** — https://radix-ui.com/primitives
+- **@radix-ui/react-primitive@2.1.3** — https://radix-ui.com/primitives
+- **@radix-ui/react-progress@1.1.8** — https://radix-ui.com/primitives
+- **@radix-ui/react-radio-group@1.3.8** — https://radix-ui.com/primitives
+- **@radix-ui/react-roving-focus@1.1.11** — https://radix-ui.com/primitives
+- **@radix-ui/react-scroll-area@1.2.10** — https://radix-ui.com/primitives
+- **@radix-ui/react-select@2.2.6** — https://radix-ui.com/primitives
+- **@radix-ui/react-separator@1.1.8** — https://radix-ui.com/primitives
+- **@radix-ui/react-slider@1.3.6** — https://radix-ui.com/primitives
+- **@radix-ui/react-slot@1.2.4** — https://radix-ui.com/primitives
+- **@radix-ui/react-switch@1.2.6** — https://radix-ui.com/primitives
+- **@radix-ui/react-tabs@1.1.13** — https://radix-ui.com/primitives
+- **@radix-ui/react-toast@1.2.15** — https://radix-ui.com/primitives
+- **@radix-ui/react-toggle@1.1.10** — https://radix-ui.com/primitives
+- **@radix-ui/react-toggle-group@1.1.11** — https://radix-ui.com/primitives
+- **@radix-ui/react-tooltip@1.2.8** — https://radix-ui.com/primitives
+- **@radix-ui/react-use-callback-ref@1.1.1** — https://radix-ui.com/primitives
+- **@radix-ui/react-use-controllable-state@1.2.2** — https://radix-ui.com/primitives
+- **@radix-ui/react-use-effect-event@0.0.2** — https://radix-ui.com/primitives
+- **@radix-ui/react-use-escape-keydown@1.1.1** — https://radix-ui.com/primitives
+- **@radix-ui/react-use-is-hydrated@0.1.0** — https://radix-ui.com/primitives
+- **@radix-ui/react-use-layout-effect@1.1.1** — https://radix-ui.com/primitives
+- **@radix-ui/react-use-previous@1.1.1** — https://radix-ui.com/primitives
+- **@radix-ui/react-use-rect@1.1.1** — https://radix-ui.com/primitives
+- **@radix-ui/react-use-size@1.1.1** — https://radix-ui.com/primitives
+- **@radix-ui/react-visually-hidden@1.2.3** — https://radix-ui.com/primitives
+- **@radix-ui/rect@1.1.1** — https://radix-ui.com/primitives
+- **@react-spring/animated@9.7.5** (Paul Henschel) — https://github.com/pmndrs/react-spring#readme
+- **@react-spring/core@9.7.5** (Paul Henschel) — https://github.com/pmndrs/react-spring#readme
+- **@react-spring/rafz@9.7.5** (Josh Ellis) — https://github.com/pmndrs/react-spring/tree/main/packages/rafz#readme
+- **@react-spring/shared@9.7.5** (Paul Henschel) — https://github.com/pmndrs/react-spring#readme
+- **@react-spring/three@9.7.5** (Paul Henschel) — https://github.com/pmndrs/react-spring#readme
+- **@react-spring/types@9.7.5** (Paul Henschel) — https://github.com/pmndrs/react-spring#readme
+- **@react-three/drei@9.122.0** — https://github.com/pmndrs/drei
+- **@react-three/fiber@8.18.0** (Paul Henschel (https://github.com/drcmda)) — https://github.com/pmndrs/react-three-fiber#readme
+- **@react-three/postprocessing@2.19.1**
+- **@remirror/core-constants@3.0.0** — https://github.com/remirror/remirror/tree/HEAD/packages/remirror__core-constants
+- **@rolldown/pluginutils@1.0.0-beta.27**
+- **@rollup/rollup-win32-x64-gnu@4.59.0** (Lukas Taegert-Atkinson) — https://rollupjs.org/
+- **@rollup/rollup-win32-x64-msvc@4.59.0** (Lukas Taegert-Atkinson) — https://rollupjs.org/
+- **@sec-ant/readable-stream@0.4.1** (Ze-Zheng Wu) — https://github.com/Sec-ant/readable-stream
+- **@sentry-internal/browser-utils@10.36.0** (Sentry) — https://github.com/getsentry/sentry-javascript/tree/master/packages/browser-utils
+- **@sentry-internal/feedback@10.36.0** (Sentry) — https://github.com/getsentry/sentry-javascript/tree/master/packages/feedback
+- **@sentry-internal/replay@10.36.0** (Sentry) — https://docs.sentry.io/platforms/javascript/session-replay/
+- **@sentry-internal/replay-canvas@10.36.0** (Sentry) — https://docs.sentry.io/platforms/javascript/session-replay/
+- **@sentry/babel-plugin-component-annotate@5.1.1** (Sentry) — https://github.com/getsentry/sentry-javascript-bundler-plugins/tree/main/packages/babel-plugin-component-annotate
+- **@sentry/browser@10.36.0** (Sentry) — https://github.com/getsentry/sentry-javascript/tree/master/packages/browser
+- **@sentry/bundler-plugin-core@5.1.1** (Sentry) — https://github.com/getsentry/sentry-javascript-bundler-plugins/tree/main/packages/bundler-plugin-core
+- **@sentry/core@10.36.0** (Sentry) — https://github.com/getsentry/sentry-javascript/tree/master/packages/core
+- **@sentry/electron@7.7.1** (Sentry)
+- **@sentry/node@10.36.0** (Sentry) — https://github.com/getsentry/sentry-javascript/tree/master/packages/node
+- **@sentry/node-core@10.36.0** (Sentry) — https://github.com/getsentry/sentry-javascript/tree/master/packages/node-core
+- **@sentry/opentelemetry@10.36.0** (Sentry) — https://github.com/getsentry/sentry-javascript/tree/master/packages/opentelemetry
+- **@sentry/react@10.43.0** (Sentry) — https://github.com/getsentry/sentry-javascript/tree/master/packages/react
+- **@sentry/rollup-plugin@5.1.1** (Sentry) — https://github.com/getsentry/sentry-javascript-bundler-plugins/tree/main/packages/rollup-plugin
+- **@sentry/vite-plugin@5.1.1** (Sentry) — https://github.com/getsentry/sentry-javascript-bundler-plugins/tree/main/packages/vite-plugin
+- **@sindresorhus/is@4.6.0** (Sindre Sorhus)
+- **@sindresorhus/merge-streams@4.0.0** (Sindre Sorhus)
+- **@standard-schema/spec@1.1.0** (Colin McDonnell) — https://standardschema.dev
+- **@stripe/stripe-js@9.0.1** (Stripe (https://www.stripe.com)) — https://stripe.com/docs/js
+- **@supabase/auth-js@2.98.0** (Supabase) — https://github.com/supabase/supabase-js/tree/master/packages/core/auth-js
+- **@supabase/functions-js@2.98.0** (Supabase) — https://github.com/supabase/supabase-js/tree/master/packages/core/functions-js
+- **@supabase/postgrest-js@2.98.0** (Supabase) — https://github.com/supabase/supabase-js/tree/master/packages/core/postgrest-js
+- **@supabase/realtime-js@2.98.0** (Supabase) — https://github.com/supabase/supabase-js/tree/master/packages/core/realtime-js
+- **@supabase/storage-js@2.98.0** (Supabase) — https://github.com/supabase/supabase-js/tree/master/packages/core/storage-js
+- **@supabase/supabase-js@2.98.0** (Supabase) — https://github.com/supabase/supabase-js/tree/master/packages/core/supabase-js
+- **@szmarczak/http-timer@4.0.6** (Szymon Marczak) — https://github.com/szmarczak/http-timer#readme
+- **@tailwindcss/typography@0.5.19**
+- **@testing-library/dom@10.4.1** (Kent C. Dodds <me@kentcdodds.com> (https://kentcdodds.com)) — https://github.com/testing-library/dom-testing-library#readme
+- **@testing-library/jest-dom@6.9.1** (Ernesto Garcia <gnapse@gmail.com> (http://gnapse.github.io)) — https://github.com/testing-library/jest-dom#readme
+- **@testing-library/react@16.3.2** (Kent C. Dodds <me@kentcdodds.com> (https://kentcdodds.com)) — https://github.com/testing-library/react-testing-library#readme
+- **@tiptap/core@3.18.0** — https://tiptap.dev
+- **@tiptap/extension-blockquote@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-bold@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-bubble-menu@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-bullet-list@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-code@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-code-block@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-collaboration@3.17.0** — https://tiptap.dev
+- **@tiptap/extension-collaboration-cursor@3.0.0** — https://tiptap.dev
+- **@tiptap/extension-document@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-dropcursor@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-floating-menu@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-gapcursor@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-hard-break@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-heading@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-horizontal-rule@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-italic@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-link@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-list@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-list-item@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-list-keymap@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-ordered-list@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-paragraph@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-placeholder@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-strike@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-text@3.16.0** — https://tiptap.dev
+- **@tiptap/extension-text-align@3.18.0** — https://tiptap.dev
+- **@tiptap/extension-underline@3.16.0** — https://tiptap.dev
+- **@tiptap/extensions@3.16.0** — https://tiptap.dev
+- **@tiptap/pm@3.18.0** — https://tiptap.dev
+- **@tiptap/react@3.16.0** — https://tiptap.dev
+- **@tiptap/starter-kit@3.16.0** — https://tiptap.dev
+- **@tiptap/y-tiptap@3.0.2**
+- **@tweenjs/tween.js@23.1.3** (tween.js contributors (https://github.com/tweenjs/tween.js/graphs/contributors)) — https://github.com/tweenjs/tween.js
+- **@types/aria-query@5.0.4** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/aria-query
+- **@types/babel__core@7.20.5** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/babel__core
+- **@types/babel__generator@7.27.0** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/babel__generator
+- **@types/babel__template@7.4.4** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/babel__template
+- **@types/babel__traverse@7.28.0** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/babel__traverse
+- **@types/body-parser@1.19.6** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/body-parser
+- **@types/cacheable-request@6.0.3** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/cacheable-request
+- **@types/chai@5.2.3** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/chai
+- **@types/connect@3.4.38** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/connect
+- **@types/d3-color@3.1.3** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-color
+- **@types/d3-drag@3.0.7** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-drag
+- **@types/d3-interpolate@3.0.4** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-interpolate
+- **@types/d3-selection@3.0.11** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-selection
+- **@types/d3-transition@3.0.9** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-transition
+- **@types/d3-zoom@3.0.8** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-zoom
+- **@types/dagre@0.7.53** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/dagre
+- **@types/debug@4.1.12** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/debug
+- **@types/deep-eql@4.0.2** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/deep-eql
+- **@types/dompurify@3.0.5** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/dompurify
+- **@types/draco3d@1.4.10** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/draco3d
+- **@types/estree@1.0.8** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/estree
+- **@types/estree-jsx@1.0.5** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/estree-jsx
+- **@types/express@5.0.6** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/express
+- **@types/express-serve-static-core@5.1.1** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/express-serve-static-core
+- **@types/fs-extra@9.0.13** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/fs-extra
+- **@types/hast@3.0.4** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/hast
+- **@types/http-cache-semantics@4.0.4** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/http-cache-semantics
+- **@types/http-errors@2.0.5** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/http-errors
+- **@types/keyv@3.1.4** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/keyv
+- **@types/linkify-it@5.0.0** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/linkify-it
+- **@types/markdown-it@14.1.2** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/markdown-it
+- **@types/mdast@4.0.4** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/mdast
+- **@types/mdurl@2.0.0** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/mdurl
+- **@types/ms@2.1.0** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/ms
+- **@types/mysql@2.15.27** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/mysql
+- **@types/node@22.19.6** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node
+- **@types/node-fetch@2.6.13** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node-fetch
+- **@types/offscreencanvas@2019.7.3** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/offscreencanvas
+- **@types/pg@8.15.6** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/pg
+- **@types/pg-pool@2.0.7** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/pg-pool
+- **@types/phoenix@1.6.7** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/phoenix
+- **@types/prop-types@15.7.15** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/prop-types
+- **@types/qs@6.14.0** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/qs
+- **@types/range-parser@1.2.7** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/range-parser
+- **@types/react@18.3.27** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react
+- **@types/react-dom@18.3.7** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-dom
+- **@types/react-reconciler@0.26.7** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-reconciler
+- **@types/react-syntax-highlighter@15.5.13** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-syntax-highlighter
+- **@types/react-window@1.8.8** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-window
+- **@types/responselike@1.0.3** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/responselike
+- **@types/send@1.2.1** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/send
+- **@types/serve-static@2.2.0** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/serve-static
+- **@types/stats.js@0.17.4** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/stats.js
+- **@types/tedious@4.0.14** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/tedious
+- **@types/three@0.182.0** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/three
+- **@types/trusted-types@2.0.7** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/trusted-types
+- **@types/unist@3.0.3** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/unist
+- **@types/use-sync-external-store@0.0.6** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/use-sync-external-store
+- **@types/uuid@10.0.0** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/uuid
+- **@types/webxr@0.5.24** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/webxr
+- **@types/ws@8.18.1** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/ws
+- **@types/yauzl@2.10.3** — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/yauzl
+- **@use-gesture/core@10.3.1** (Paul Henschel) — https://use-gesture.netlify.app
+- **@use-gesture/react@10.3.1** (Paul Henschel) — https://use-gesture.netlify.app
+- **@vitejs/plugin-react@4.7.0** (Evan You) — https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#readme
+- **@vitest/coverage-v8@4.0.18** (Anthony Fu <anthonyfu117@hotmail.com>) — https://github.com/vitest-dev/vitest/tree/main/packages/coverage-v8#readme
+- **@vitest/expect@4.0.18** — https://github.com/vitest-dev/vitest/tree/main/packages/expect#readme
+- **@vitest/pretty-format@4.0.18** — https://github.com/vitest-dev/vitest/tree/main/packages/utils#readme
+- **@vitest/runner@4.0.18** — https://github.com/vitest-dev/vitest/tree/main/packages/runner#readme
+- **@vitest/snapshot@4.0.18** — https://github.com/vitest-dev/vitest/tree/main/packages/snapshot#readme
+- **@vitest/spy@4.0.18** — https://github.com/vitest-dev/vitest/tree/main/packages/spy#readme
+- **@vitest/utils@4.0.18** — https://github.com/vitest-dev/vitest/tree/main/packages/utils#readme
+- **@vscode/ripgrep@1.17.1** (Rob Lourens)
+- **@xmldom/xmldom@0.8.11** — https://github.com/xmldom/xmldom
+- **@xterm/addon-fit@0.11.0** (The xterm.js authors)
+- **@xterm/addon-unicode11@0.9.0** (The xterm.js authors)
+- **@xterm/addon-webgl@0.19.0** (The xterm.js authors)
+- **@xterm/xterm@6.0.0**
+- **@xyflow/react@12.10.0** — https://reactflow.dev
+- **@xyflow/system@0.0.74**
+- **7zip-bin@5.2.0**
+- **abort-controller@3.0.0** (Toru Nagashima (https://github.com/mysticatea)) — https://github.com/mysticatea/abort-controller#readme
+- **accepts@2.0.0**
+- **acorn@8.15.0** — https://github.com/acornjs/acorn
+- **acorn-import-attributes@1.9.5** (Sven Sauleau <sven@sauleau.com>)
+- **acorn-jsx@5.3.2** — https://github.com/acornjs/acorn-jsx
+- **acorn-jsx-walk@2.0.0** (Julian Lloyd <me@jlmak.es>)
+- **acorn-loose@8.5.2** — https://github.com/acornjs/acorn
+- **acorn-walk@8.3.4** — https://github.com/acornjs/acorn
+- **agent-base@7.1.4** (Nathan Rajlich <nathan@tootallnate.net> (http://n8.io/))
+- **agentkeepalive@4.6.0** (fengmk2 <fengmk2@gmail.com> (https://github.com/fengmk2))
+- **ajv@8.18.0** (Evgeny Poberezkin) — https://ajv.js.org
+- **ajv-formats@2.1.1** (Evgeny Poberezkin) — https://github.com/ajv-validator/ajv-formats#readme
+- **ansi-escapes@7.2.0** (Sindre Sorhus)
+- **ansi-regex@5.0.1** (Sindre Sorhus)
+- **ansi-styles@5.2.0** (Sindre Sorhus)
+- **any-promise@1.3.0** (Kevin Beaty) — http://github.com/kevinbeaty/any-promise
+- **app-builder-bin@5.0.0-alpha.12**
+- **app-builder-lib@26.7.0** (Vladimir Krivosheev) — https://github.com/electron-userland/electron-builder
+- **arg@5.0.2** (Josh Junon <junon@wavetilt.com>)
+- **aria-hidden@1.2.6** (Anton Korzunov <thekashey@gmail.com>) — https://github.com/theKashey/aria-hidden#readme
+- **assertion-error@2.0.1** (Jake Luer <jake@qualiancy.com> (http://qualiancy.com))
+- **ast-v8-to-istanbul@0.3.10** (Ari Perkkiö <ari.perkkio@gmail.com>) — https://github.com/AriPerkkio/ast-v8-to-istanbul
+- **async@3.2.6** (Caolan McMahon) — https://caolan.github.io/async/
+- **async-exit-hook@2.0.1** (Tapani Moilanen)
+- **asynckit@0.4.0** (Alex Indigo <iam@alexindigo.com>) — https://github.com/alexindigo/asynckit#readme
+- **atomically@1.7.0** (Fabio Spampinato)
+- **autoprefixer@10.4.23** (Andrey Sitnik <andrey@sitnik.ru>)
+- **bail@2.0.2** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **balanced-match@1.0.2** (Julian Gruber) — https://github.com/juliangruber/balanced-match
+- **base64-js@1.5.1** (T. Jameson Little <t.jameson.little@gmail.com>) — https://github.com/beatgammit/base64-js
+- **bidi-js@1.0.3** (Jason Johnston)
+- **binary-extensions@2.3.0** (Sindre Sorhus)
+- **bl@4.1.0** — https://github.com/rvagg/bl
+- **body-parser@2.2.2**
+- **boolean@3.2.0**
+- **brace-expansion@2.0.2** (Julian Gruber) — https://github.com/juliangruber/brace-expansion
+- **braces@3.0.3** (Jon Schlinkert (https://github.com/jonschlinkert)) — https://github.com/micromatch/braces
+- **browserslist@4.28.1** (Andrey Sitnik <andrey@sitnik.ru>)
+- **buffer@6.0.3** (Feross Aboukhadijeh) — https://github.com/feross/buffer
+- **buffer-crc32@0.2.13** (Brian J. Brennan <brianloveswords@gmail.com>) — https://github.com/brianloveswords/buffer-crc32
+- **buffer-from@1.1.2**
+- **builder-util@26.4.1** (Vladimir Krivosheev) — https://github.com/electron-userland/electron-builder
+- **builder-util-runtime@9.5.1** (Vladimir Krivosheev) — https://github.com/electron-userland/electron-builder
+- **bytes@3.1.2** (TJ Holowaychuk <tj@vision-media.ca> (http://tjholowaychuk.com))
+- **cac@6.7.14** (egoist <0x142857@gmail.com>)
+- **cacheable-lookup@5.0.4** (Szymon Marczak) — https://github.com/szmarczak/cacheable-lookup#readme
+- **cacheable-request@7.0.4** (Luke Childs <lukechilds123@gmail.com> (http://lukechilds.co.uk))
+- **call-bind-apply-helpers@1.0.2** (Jordan Harband <ljharb@gmail.com>) — https://github.com/ljharb/call-bind-apply-helpers#readme
+- **call-bound@1.0.4** (Jordan Harband <ljharb@gmail.com>) — https://github.com/ljharb/call-bound#readme
+- **camelcase-css@2.0.1** (Steven Vachon <contact@svachon.com> (https://www.svachon.com/))
+- **camera-controls@2.10.1** (Yomotsu)
+- **ccount@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **chai@6.2.2** (Jake Luer <jake@alogicalparadox.com>) — http://chaijs.com
+- **chalk@4.1.2**
+- **character-entities@2.0.2** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **character-entities-html4@2.1.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **character-entities-legacy@3.0.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **character-reference-invalid@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **chokidar@3.6.0** (Paul Miller (https://paulmillr.com)) — https://github.com/paulmillr/chokidar
+- **chromium-pickle-js@0.2.0**
+- **ci-info@4.4.0** (Thomas Watson Steen <w@tson.dk> (https://twitter.com/wa7son)) — https://github.com/watson/ci-info
+- **cjs-module-lexer@2.2.0** (Guy Bedford) — https://github.com/nodejs/cjs-module-lexer#readme
+- **classcat@5.0.5** (Jorge Bucaran)
+- **cli-cursor@5.0.0** (Sindre Sorhus)
+- **cli-spinners@2.9.2** (Sindre Sorhus)
+- **cli-truncate@5.1.1** (Sindre Sorhus)
+- **clone@1.0.4** (Paul Vorbach <paul@vorba.ch> (http://paul.vorba.ch/))
+- **clone-response@1.0.3** (Luke Childs <lukechilds123@gmail.com> (http://lukechilds.co.uk))
+- **clsx@2.1.1** (Luke Edwards)
+- **cmdk@1.1.1** (Paco) — https://github.com/pacocoursey/cmdk#readme
+- **color-convert@2.0.1** (Heather Arthur <fayearthur@gmail.com>)
+- **color-name@1.1.4** (DY <dfcreative@gmail.com>) — https://github.com/colorjs/color-name
+- **colorette@2.0.20** (Jorge Bucaran)
+- **combined-stream@1.0.8** (Felix Geisendörfer <felix@debuggable.com> (http://debuggable.com/)) — https://github.com/felixge/node-combined-stream
+- **comma-separated-tokens@2.0.3** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **commander@4.1.1** (TJ Holowaychuk <tj@vision-media.ca>)
+- **compare-version@0.1.2** (Kevin Mårtensson)
+- **concat-map@0.0.1** (James Halliday)
+- **conf@10.2.0** (Sindre Sorhus)
+- **content-disposition@1.0.1** (Douglas Christopher Wilson <doug@somethingdoug.com>)
+- **content-type@1.0.5** (Douglas Christopher Wilson <doug@somethingdoug.com>)
+- **convert-source-map@2.0.0** (Thorsten Lorenz) — https://github.com/thlorenz/convert-source-map
+- **cookie@0.7.2** (Roman Shtylman <shtylman@gmail.com>)
+- **cookie-signature@1.2.2** (TJ Holowaychuk <tj@learnboost.com>)
+- **cors@2.8.5** (Troy Goode <troygoode@gmail.com> (https://github.com/troygoode/))
+- **crelt@1.0.6** (Marijn Haverbeke <marijn@haverbeke.berlin>) — https://github.com/marijnh/crelt#readme
+- **cross-env@7.0.3** (Kent C. Dodds <me@kentcdodds.com> (https://kentcdodds.com)) — https://github.com/kentcdodds/cross-env#readme
+- **cross-spawn@7.0.6** (André Cruz <andre@moxy.studio>) — https://github.com/moxystudio/node-cross-spawn
+- **css-tree@3.1.0** (Roman Dvornov <rdvornov@gmail.com> (https://github.com/lahmatiy))
+- **css.escape@1.5.1** (Mathias Bynens) — https://mths.be/cssescape
+- **cssesc@3.0.0** (Mathias Bynens) — https://mths.be/cssesc
+- **cssstyle@5.3.7**
+- **csstype@3.2.3** (Fredrik Nicol <fredrik.nicol@gmail.com>)
+- **dagre@0.8.5** (Chris Pettitt <cpettitt@gmail.com>)
+- **data-urls@6.0.1** (Domenic Denicola <d@domenic.me> (https://domenic.me/))
+- **debounce-fn@4.0.0** (Sindre Sorhus)
+- **debug@4.4.3** (Josh Junon (https://github.com/qix-))
+- **decimal.js@10.6.0** (Michael Mclaughlin)
+- **decode-named-character-reference@1.2.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **decompress-response@6.0.0** (Sindre Sorhus)
+- **defaults@1.0.4** (Elijah Insua <tmpvar@gmail.com>)
+- **defer-to-connect@2.0.1** (Szymon Marczak) — https://github.com/szmarczak/defer-to-connect#readme
+- **define-data-property@1.1.4** (Jordan Harband <ljharb@gmail.com>) — https://github.com/ljharb/define-data-property#readme
+- **define-properties@1.2.1** (Jordan Harband <ljharb@gmail.com>)
+- **delayed-stream@1.0.0** (Felix Geisendörfer <felix@debuggable.com> (http://debuggable.com/)) — https://github.com/felixge/node-delayed-stream
+- **depd@2.0.0** (Douglas Christopher Wilson <doug@somethingdoug.com>)
+- **dependency-cruiser@17.3.7** (Sander Verweij (https://sverweij.github.io)) — https://github.com/sverweij/dependency-cruiser
+- **dequal@2.0.3** (Luke Edwards)
+- **detect-gpu@5.0.70** (Tim van Scherpenzeel) — https://github.com/pmndrs/detect-gpu#readme
+- **detect-node@2.1.0** (Ilya Kantor) — https://github.com/iliakan/detect-node
+- **detect-node-es@1.1.0** (Ilya Kantor) — https://github.com/thekashey/detect-node
+- **devlop@1.1.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **dir-compare@4.2.0** (Liviu Grigorescu)
+- **dlv@1.1.3** (Jason Miller <jason@developit.ca> (http://jasonformat.com))
+- **dmg-builder@26.7.0** (Vladimir Krivosheev) — https://github.com/electron-userland/electron-builder
+- **dom-accessibility-api@0.5.16**
+- **dot-prop@6.0.1** (Sindre Sorhus)
+- **dunder-proto@1.0.1** (Jordan Harband <ljharb@gmail.com>) — https://github.com/es-shims/dunder-proto#readme
+- **eastasianwidth@0.2.0** (Masaki Komagata)
+- **ee-first@1.1.1** (Jonathan Ong)
+- **electron@35.7.5** (Electron Community)
+- **electron-builder@26.7.0** (Vladimir Krivosheev) — https://github.com/electron-userland/electron-builder
+- **electron-publish@26.6.0** (Vladimir Krivosheev) — https://github.com/electron-userland/electron-builder
+- **electron-store@8.2.0** (Sindre Sorhus)
+- **electron-updater@6.8.3** (Vladimir Krivosheev) — https://github.com/electron-userland/electron-builder
+- **electron-vite@2.3.0** (Alex Wei<https://github.com/alex8088>) — https://electron-vite.org
+- **emoji-regex@10.6.0** (Mathias Bynens) — https://mths.be/emoji-regex
+- **encodeurl@2.0.0**
+- **encoding@0.1.13** (Andris Reinman)
+- **end-of-stream@1.4.5** (Mathias Buus <mathiasbuus@gmail.com>) — https://github.com/mafintosh/end-of-stream
+- **enhanced-resolve@5.18.4** (Tobias Koppers @sokra) — http://github.com/webpack/enhanced-resolve
+- **env-paths@2.2.1** (Sindre Sorhus)
+- **environment@1.1.0** (Sindre Sorhus)
+- **err-code@2.0.3** (IndigoUnited <hello@indigounited.com> (http://indigounited.com))
+- **es-define-property@1.0.1** (Jordan Harband <ljharb@gmail.com>) — https://github.com/ljharb/es-define-property#readme
+- **es-errors@1.3.0** (Jordan Harband <ljharb@gmail.com>) — https://github.com/ljharb/es-errors#readme
+- **es-module-lexer@1.7.0** (Guy Bedford) — https://github.com/guybedford/es-module-lexer#readme
+- **es-object-atoms@1.1.1** (Jordan Harband <ljharb@gmail.com>) — https://github.com/ljharb/es-object-atoms#readme
+- **es-set-tostringtag@2.1.0** (Jordan Harband <ljharb@gmail.com>) — https://github.com/es-shims/es-set-tostringtag#readme
+- **es6-error@4.1.1** (Ben Youngblood) — https://github.com/bjyoungblood/es6-error
+- **esbuild@0.24.2**
+- **escalade@3.2.0** (Luke Edwards)
+- **escape-html@1.0.3**
+- **escape-string-regexp@4.0.0** (Sindre Sorhus)
+- **estree-util-is-identifier-name@3.0.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **estree-walker@3.0.3** (Rich Harris)
+- **etag@1.8.1**
+- **event-target-shim@5.0.1** (Toru Nagashima) — https://github.com/mysticatea/event-target-shim
+- **eventemitter3@5.0.4** (Arnout Kazemier)
+- **eventsource@3.0.7** (Espen Hovlandsdal <espen@hovlandsdal.com>) — https://github.com/EventSource/eventsource#readme
+- **eventsource-parser@3.0.6** (Espen Hovlandsdal <espen@hovlandsdal.com>) — https://github.com/rexxars/eventsource-parser#readme
+- **execa@9.6.1** (Sindre Sorhus)
+- **express@5.2.1** (TJ Holowaychuk <tj@vision-media.ca>) — https://expressjs.com/
+- **express-rate-limit@8.3.1** (Nathan Friedly) — https://github.com/express-rate-limit/express-rate-limit
+- **extend@3.0.2** (Stefan Thomas <justmoon@members.fsf.org> (http://www.justmoon.net))
+- **fast-deep-equal@3.1.3** (Evgeny Poberezkin) — https://github.com/epoberezkin/fast-deep-equal#readme
+- **fast-equals@5.4.0** (tony_quetano@planttheidea.com) — https://github.com/planttheidea/fast-equals#readme
+- **fast-glob@3.3.3** (Denis Malinochkin)
+- **fast-json-stable-stringify@2.1.0** (James Halliday) — https://github.com/epoberezkin/fast-json-stable-stringify
+- **fault@1.0.4** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **fd-package-json@2.0.0** (James Garbutt (https://github.com/43081j)) — https://github.com/es-tooling/fd-package-json#readme
+- **fd-slicer@1.1.0** (Andrew Kelley <superjoe30@gmail.com>)
+- **fflate@0.8.2** (Arjun Barrett <arjunbarrett@gmail.com>) — https://101arrowz.github.io/fflate
+- **figures@6.1.0** (Sindre Sorhus)
+- **fill-range@7.1.1** (Jon Schlinkert (https://github.com/jonschlinkert)) — https://github.com/jonschlinkert/fill-range
+- **finalhandler@2.1.1** (Douglas Christopher Wilson <doug@somethingdoug.com>)
+- **find-up@3.0.0** (Sindre Sorhus)
+- **form-data@4.0.5** (Felix Geisendörfer <felix@debuggable.com> (http://debuggable.com/))
+- **form-data-encoder@1.7.2** (Nick K.)
+- **format@0.2.2** (Sami Samhuri <sami@samhuri.net>) — http://samhuri.net/proj/format
+- **formatly@0.3.0** (Josh Goldberg ✨)
+- **formdata-node@4.4.1** (Nick K. <io@octetstream.me>)
+- **forwarded@0.2.0**
+- **forwarded-parse@2.1.2** (Luigi Pinca) — https://github.com/lpinca/forwarded-parse
+- **fraction.js@5.3.4** (Robert Eisele) — https://raw.org/article/rational-numbers-in-javascript/
+- **framer-motion@12.29.0** (Matt Perry)
+- **fresh@2.0.0** (TJ Holowaychuk <tj@vision-media.ca> (http://tjholowaychuk.com))
+- **fs-extra@8.1.0** (JP Richardson <jprichardson@gmail.com>) — https://github.com/jprichardson/node-fs-extra
+- **function-bind@1.1.2** (Raynos <raynos2@gmail.com>) — https://github.com/Raynos/function-bind
+- **gensync@1.0.0-beta.2** (Logan Smyth <loganfsmyth@gmail.com>) — https://github.com/loganfsmyth/gensync
+- **get-east-asian-width@1.4.0** (Sindre Sorhus)
+- **get-intrinsic@1.3.0** (Jordan Harband <ljharb@gmail.com>) — https://github.com/ljharb/get-intrinsic#readme
+- **get-nonce@1.0.1** (Anton Korzunov <thekashey@gmail.com>) — https://github.com/theKashey/get-nonce
+- **get-proto@1.0.1** (Jordan Harband <ljharb@gmail.com>) — https://github.com/ljharb/get-proto#readme
+- **get-stream@5.2.0** (Sindre Sorhus)
+- **get-tsconfig@4.13.6** (Hiroki Osame)
+- **global-directory@4.0.1** (Sindre Sorhus)
+- **globalthis@1.0.4** (Jordan Harband <ljharb@gmail.com>)
+- **glsl-noise@0.0.0** (Ian McEwan, Ashima Arts, Stefan Gustavson)
+- **goober@2.1.18** (Cristian <botecristian@yahoo.com>)
+- **gopd@1.2.0** (Jordan Harband <ljharb@gmail.com>) — https://github.com/ljharb/gopd#readme
+- **got@11.8.6**
+- **graphlib@2.1.8** (Chris Pettitt <cpettitt@gmail.com>)
+- **has-flag@4.0.0** (Sindre Sorhus)
+- **has-property-descriptors@1.0.2** (Jordan Harband <ljharb@gmail.com>) — https://github.com/inspect-js/has-property-descriptors#readme
+- **has-symbols@1.1.0** (Jordan Harband) — https://github.com/ljharb/has-symbols#readme
+- **has-tostringtag@1.0.2** (Jordan Harband) — https://github.com/inspect-js/has-tostringtag#readme
+- **hasown@2.0.2** (Jordan Harband <ljharb@gmail.com>) — https://github.com/inspect-js/hasOwn#readme
+- **hast-util-parse-selector@2.2.5** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **hast-util-to-jsx-runtime@2.3.6** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **hast-util-whitespace@3.0.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **hastscript@6.0.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **hono@4.12.8** (Yusuke Wada <yusuke@kamawada.com> (https://github.com/yusukebe)) — https://hono.dev
+- **html-encoding-sniffer@6.0.0** (Domenic Denicola <d@domenic.me> (https://domenic.me/))
+- **html-escaper@2.0.2** (Andrea Giammarchi) — https://github.com/WebReflection/html-escaper
+- **html-url-attributes@3.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **http-errors@2.0.1** (Jonathan Ong <me@jongleberry.com> (http://jongleberry.com))
+- **http-proxy-agent@7.0.2** (Nathan Rajlich <nathan@tootallnate.net> (http://n8.io/))
+- **http2-wrapper@1.0.3** (Szymon Marczak) — https://github.com/szmarczak/http2-wrapper#readme
+- **https-proxy-agent@7.0.6** (Nathan Rajlich <nathan@tootallnate.net> (http://n8.io/))
+- **humanize-ms@1.2.1** (dead-horse)
+- **husky@9.1.7** (typicode)
+- **iceberg-js@0.8.1** (mandarini) — https://github.com/supabase/iceberg-js#readme
+- **iconv-lite@0.7.2** (Alexander Shtuchkin <ashtuchkin@gmail.com>) — https://github.com/pillarjs/iconv-lite
+- **ignore@7.0.5** (kael)
+- **immediate@3.0.6**
+- **immer@10.2.0** (Michel Weststrate <info@michel.codes>) — https://github.com/immerjs/immer#readme
+- **imurmurhash@0.1.4** (Jens Taylor) — https://github.com/jensyt/imurmurhash-js
+- **indent-string@4.0.0** (Sindre Sorhus)
+- **inline-style-parser@0.2.7**
+- **interpret@3.1.1** (Gulp Team <team@gulpjs.com> (https://gulpjs.com/))
+- **ip-address@10.1.0** (Beau Gunderson <beau@beaugunderson.com> (https://beaugunderson.com/))
+- **ipaddr.js@1.9.1** (whitequark <whitequark@whitequark.org>)
+- **is-alphabetical@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **is-alphanumerical@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **is-binary-path@2.1.0** (Sindre Sorhus)
+- **is-core-module@2.16.1** (Jordan Harband <ljharb@gmail.com>) — https://github.com/inspect-js/is-core-module
+- **is-decimal@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **is-extglob@2.1.1** (Jon Schlinkert (https://github.com/jonschlinkert)) — https://github.com/jonschlinkert/is-extglob
+- **is-fullwidth-code-point@5.1.0** (Sindre Sorhus)
+- **is-glob@4.0.3** (Jon Schlinkert (https://github.com/jonschlinkert)) — https://github.com/micromatch/is-glob
+- **is-hexadecimal@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **is-installed-globally@1.0.0** (Sindre Sorhus)
+- **is-interactive@1.0.0** (Sindre Sorhus)
+- **is-number@7.0.0** (Jon Schlinkert (https://github.com/jonschlinkert)) — https://github.com/jonschlinkert/is-number
+- **is-obj@2.0.0** (Sindre Sorhus)
+- **is-path-inside@4.0.0** (Sindre Sorhus)
+- **is-plain-obj@4.1.0** (Sindre Sorhus)
+- **is-potential-custom-element-name@1.0.1** (Mathias Bynens) — https://github.com/mathiasbynens/is-potential-custom-element-name
+- **is-promise@4.0.0** (ForbesLindesay)
+- **is-stream@4.0.1** (Sindre Sorhus)
+- **is-unicode-supported@0.1.0** (Sindre Sorhus)
+- **isbinaryfile@5.0.7**
+- **isomorphic.js@0.2.5** (Kevin Jahns <kevin.jahns@protonmail.com>) — https://github.com/dmonad/isomorphic.js#readme
+- **its-fine@1.2.5** (Cody Bennett (https://github.com/codyjasonbennett)) — https://github.com/pmndrs/its-fine
+- **jiti@1.21.7**
+- **jose@6.1.3** (Filip Skokan <panva.ip@gmail.com>) — https://github.com/panva/jose
+- **js-tokens@4.0.0** (Simon Lydell)
+- **js-yaml@4.1.1** (Vladimir Zapparov <dervus.grim@gmail.com>)
+- **jsdom@27.4.0**
+- **jsesc@3.1.0** (Mathias Bynens) — https://mths.be/jsesc
+- **json-buffer@3.0.1** (Dominic Tarr <dominic.tarr@gmail.com> (http://dominictarr.com)) — https://github.com/dominictarr/json-buffer
+- **json-schema-traverse@1.0.0** (Evgeny Poberezkin) — https://github.com/epoberezkin/json-schema-traverse#readme
+- **json5@2.2.3** (Aseem Kishore <aseem.kishore@gmail.com>) — http://json5.org/
+- **jsonfile@4.0.0** (JP Richardson <jprichardson@gmail.com>)
+- **keyv@4.5.4** (Jared Wray <me@jaredwray.com> (http://jaredwray.com)) — https://github.com/jaredwray/keyv
+- **kleur@3.0.3** (Luke Edwards)
+- **lazy-val@1.0.5** (Vladimir Krivosheev) — https://github.com/develar/lazy-val
+- **lib0@0.2.117** (Kevin Jahns <kevin.jahns@protonmail.com>) — https://github.com/dmonad/lib0#readme
+- **lie@3.3.0**
+- **lilconfig@3.1.3** (antonk52)
+- **lines-and-columns@1.2.4** (Brian Donovan <brian@donovans.cc>) — https://github.com/eventualbuddha/lines-and-columns#readme
+- **linkify-it@5.0.0**
+- **linkifyjs@4.3.2** (Nick Frasser (https://nfrasser.com)) — https://linkify.js.org
+- **lint-staged@16.2.7** (Andrey Okonetchnikov <andrey@okonet.ru>) — https://github.com/lint-staged/lint-staged#readme
+- **listr2@9.0.5** (Cenk Kilic)
+- **locate-path@3.0.0** (Sindre Sorhus)
+- **lodash@4.17.23** (John-David Dalton <john.david.dalton@gmail.com>) — https://lodash.com/
+- **lodash.escaperegexp@4.1.2** (John-David Dalton <john.david.dalton@gmail.com> (http://allyoucanleet.com/)) — https://lodash.com/
+- **lodash.isequal@4.5.0** (John-David Dalton <john.david.dalton@gmail.com> (http://allyoucanleet.com/)) — https://lodash.com/
+- **log-symbols@4.1.0** (Sindre Sorhus)
+- **log-update@6.1.0** (Sindre Sorhus)
+- **longest-streak@3.1.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **loose-envify@1.4.0** (Andres Suarez <zertosh@gmail.com>) — https://github.com/zertosh/loose-envify
+- **lowercase-keys@2.0.0** (Sindre Sorhus)
+- **lowlight@1.20.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **lz-string@1.5.0** (pieroxy <pieroxy@pieroxy.net>) — http://pieroxy.net/blog/pages/lz-string/index.html
+- **maath@0.10.8**
+- **magic-string@0.30.21** (Rich Harris)
+- **magicast@0.5.1**
+- **make-dir@4.0.0** (Sindre Sorhus)
+- **markdown-it@14.1.1**
+- **markdown-table@3.0.4** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **matcher@3.0.0** (Sindre Sorhus)
+- **math-intrinsics@1.1.0** (Jordan Harband <ljharb@gmail.com>) — https://github.com/es-shims/math-intrinsics#readme
+- **mdast-util-find-and-replace@3.0.2** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **mdast-util-from-markdown@2.0.2** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **mdast-util-gfm@3.1.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **mdast-util-gfm-autolink-literal@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **mdast-util-gfm-footnote@2.1.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **mdast-util-gfm-strikethrough@2.0.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **mdast-util-gfm-table@2.0.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **mdast-util-gfm-task-list-item@2.0.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **mdast-util-mdx-expression@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **mdast-util-mdx-jsx@3.2.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **mdast-util-mdxjs-esm@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **mdast-util-phrasing@4.1.0** (Victor Felder <victor@draft.li> (https://draft.li))
+- **mdast-util-to-hast@13.2.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **mdast-util-to-markdown@2.1.2** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **mdast-util-to-string@4.0.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **mdurl@2.0.0**
+- **media-typer@1.1.0** (Douglas Christopher Wilson <doug@somethingdoug.com>)
+- **merge-descriptors@2.0.0**
+- **merge2@1.4.1** — https://github.com/teambition/merge2
+- **meshline@3.3.1** (Jaume Sanchez <the.spite@gmail.com> (https://www.clicktorelease.com)) — https://github.com/pmndrs/meshline#readme
+- **meshoptimizer@0.22.0** (Arseny Kapoulkine) — https://github.com/zeux/meshoptimizer
+- **micromark@4.0.2** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-core-commonmark@2.0.3** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-extension-gfm@3.0.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-extension-gfm-autolink-literal@2.1.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-extension-gfm-footnote@2.1.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-extension-gfm-strikethrough@2.1.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-extension-gfm-table@2.1.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-extension-gfm-tagfilter@2.0.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-extension-gfm-task-list-item@2.1.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-factory-destination@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-factory-label@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-factory-space@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-factory-title@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-factory-whitespace@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-util-character@2.1.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-util-chunked@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-util-classify-character@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-util-combine-extensions@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-util-decode-numeric-character-reference@2.0.2** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-util-decode-string@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-util-encode@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-util-html-tag-name@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-util-normalize-identifier@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-util-resolve-all@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-util-sanitize-uri@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-util-subtokenize@2.1.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-util-symbol@2.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromark-util-types@2.0.2** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **micromatch@4.0.8** (Jon Schlinkert (https://github.com/jonschlinkert)) — https://github.com/micromatch/micromatch
+- **mime@2.6.0** (Robert Kieffer)
+- **mime-db@1.52.0**
+- **mime-types@2.1.35**
+- **mimic-fn@3.1.0** (Sindre Sorhus)
+- **mimic-function@5.0.1** (Sindre Sorhus)
+- **mimic-response@1.0.1** (Sindre Sorhus)
+- **min-indent@1.0.1** (James Kyle)
+- **minimist@1.2.8** (James Halliday) — https://github.com/minimistjs/minimist
+- **minipass-fetch@4.0.1** (GitHub Inc.)
+- **minizlib@3.1.0** (Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/))
+- **module-details-from-path@1.0.4** (Thomas Watson <w@tson.dk> (https://wa.tson.dk/)) — https://github.com/watson/module-details-from-path#readme
+- **motion-dom@12.29.0** (Matt Perry)
+- **motion-utils@12.27.2** (Matt Perry)
+- **ms@2.1.3**
+- **mz@2.7.0** (Jonathan Ong)
+- **nano-spawn@2.0.0** (Sindre Sorhus)
+- **nanoid@5.1.7** (Andrey Sitnik <andrey@sitnik.ru>)
+- **negotiator@1.0.0**
+- **node-abi@4.26.0** (Lukas Geiger) — https://github.com/electron/node-abi#readme
+- **node-api-version@0.2.1** (Tim Fish <tim@timfish.uk>)
+- **node-domexception@1.0.0** (Jimmy Wärting) — https://github.com/jimmywarting/node-domexception#readme
+- **node-fetch@2.7.0** (David Frank) — https://github.com/bitinn/node-fetch
+- **node-gyp@11.5.0** (Nathan Rajlich <nathan@tootallnate.net> (http://tootallnate.net))
+- **node-pty@1.1.0** (Microsoft Corporation) — https://github.com/microsoft/node-pty
+- **node-releases@2.0.27** (Sergey Rubanov <chi187@gmail.com>)
+- **normalize-path@3.0.0** (Jon Schlinkert (https://github.com/jonschlinkert)) — https://github.com/jonschlinkert/normalize-path
+- **normalize-url@6.1.0** (Sindre Sorhus)
+- **npm-run-path@6.0.0** (Sindre Sorhus)
+- **object-assign@4.1.1** (Sindre Sorhus)
+- **object-hash@3.0.0** (Scott Puleo <puleos@gmail.com>) — https://github.com/puleos/object-hash
+- **object-inspect@1.13.4** (James Halliday) — https://github.com/inspect-js/object-inspect
+- **object-keys@1.1.1** (Jordan Harband)
+- **obug@2.1.1** (Kevin Deng <sxzz@sxzz.moe>) — https://github.com/sxzz/obug#readme
+- **on-finished@2.4.1**
+- **onetime@5.1.2** (Sindre Sorhus)
+- **ora@5.4.1** (Sindre Sorhus)
+- **orderedmap@2.1.1** (Marijn Haverbeke <marijn@haverbeke.berlin>) — https://github.com/marijnh/orderedmap#readme
+- **oxc-resolver@11.16.4** — https://oxc.rs
+- **p-cancelable@2.1.1** (Sindre Sorhus)
+- **p-limit@2.3.0** (Sindre Sorhus)
+- **p-locate@3.0.0** (Sindre Sorhus)
+- **p-map@7.0.4** (Sindre Sorhus)
+- **p-try@2.2.0** (Sindre Sorhus)
+- **parse-entities@4.0.2** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **parse-ms@4.0.0** (Sindre Sorhus)
+- **parse5@8.0.0** (Ivan Nikulin <ifaaan@gmail.com> (https://github.com/inikulin)) — https://parse5.js.org
+- **parseurl@1.3.3**
+- **path-exists@3.0.0** (Sindre Sorhus)
+- **path-is-absolute@1.0.1** (Sindre Sorhus)
+- **path-key@3.1.1** (Sindre Sorhus)
+- **path-parse@1.0.7** (Javier Blanco <http://jbgutierrez.info>) — https://github.com/jbgutierrez/path-parse#readme
+- **path-to-regexp@8.3.0**
+- **pathe@2.0.3**
+- **pe-library@0.4.1** (jet) — https://github.com/jet2jet/pe-library-js
+- **pend@1.2.0** (Andrew Kelley <superjoe30@gmail.com>)
+- **pg-protocol@1.11.0**
+- **pg-types@2.2.0** (Brian M. Carlson) — https://github.com/brianc/node-pg-types
+- **picomatch@2.3.1** (Jon Schlinkert (https://github.com/jonschlinkert)) — https://github.com/micromatch/picomatch
+- **pidtree@0.6.0** (Simone Primarosa <simonepri@outlook.com> (https://github.com/simonepri)) — http://github.com/simonepri/pidtree#readme
+- **pify@2.3.0** (Sindre Sorhus)
+- **pirates@4.0.7** (Ari Porad) — https://github.com/danez/pirates#readme
+- **pkce-challenge@5.0.1** (crouchcd) — https://github.com/crouchcd/pkce-challenge#readme
+- **pkg-up@3.1.0** (Sindre Sorhus)
+- **plist@3.1.0** (Nathan Rajlich <nathan@tootallnate.net>)
+- **postcss@8.5.6** (Andrey Sitnik <andrey@sitnik.ru>) — https://postcss.org/
+- **postcss-import@15.1.0** (Maxime Thirouin)
+- **postcss-js@4.1.0** (Andrey Sitnik <andrey@sitnik.ru>)
+- **postcss-load-config@6.0.1** (Michael Ciniawky <michael.ciniawsky@gmail.com>)
+- **postcss-nested@6.2.0** (Andrey Sitnik <andrey@sitnik.ru>)
+- **postcss-selector-parser@6.1.2** — https://github.com/postcss/postcss-selector-parser
+- **postcss-value-parser@4.2.0** (Bogdan Chadkin <trysound@yandex.ru>) — https://github.com/TrySound/postcss-value-parser
+- **postgres-array@2.0.0** (Ben Drucker)
+- **postgres-bytea@1.0.1** (Ben Drucker)
+- **postgres-date@1.0.7** (Ben Drucker)
+- **postgres-interval@1.2.0** (Ben Drucker)
+- **pretty-format@27.5.1** (James Kyle <me@thejameskyle.com>)
+- **pretty-ms@9.3.0** (Sindre Sorhus)
+- **prismjs@1.30.0** (Lea Verou)
+- **progress@2.0.3** (TJ Holowaychuk <tj@vision-media.ca>)
+- **promise-retry@2.0.1** (IndigoUnited <hello@indigounited.com> (http://indigounited.com))
+- **prompts@2.4.2** (Terkel Gjervig)
+- **prop-types@15.8.1** — https://facebook.github.io/react/
+- **proper-lockfile@4.1.2** (André Cruz <andre@moxy.studio>) — https://github.com/moxystudio/node-proper-lockfile
+- **property-information@7.1.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **prosemirror-changeset@2.3.1**
+- **prosemirror-collab@1.3.1**
+- **prosemirror-commands@1.7.1**
+- **prosemirror-dropcursor@1.8.2**
+- **prosemirror-gapcursor@1.4.0**
+- **prosemirror-history@1.5.0**
+- **prosemirror-inputrules@1.5.1**
+- **prosemirror-keymap@1.2.3**
+- **prosemirror-markdown@1.13.3**
+- **prosemirror-menu@1.2.5**
+- **prosemirror-model@1.25.4**
+- **prosemirror-schema-basic@1.2.4**
+- **prosemirror-schema-list@1.5.1**
+- **prosemirror-state@1.4.4**
+- **prosemirror-tables@1.8.5**
+- **prosemirror-trailing-node@3.0.0** — https://github.com/remirror/remirror/tree/HEAD/packages/prosemirror-trailing-node
+- **prosemirror-transform@1.11.0**
+- **prosemirror-view@1.41.5**
+- **proxy-addr@2.0.7** (Douglas Christopher Wilson <doug@somethingdoug.com>)
+- **proxy-from-env@1.1.0** (Rob Wu <rob@robwu.nl> (https://robwu.nl/)) — https://github.com/Rob--W/proxy-from-env#readme
+- **pump@3.0.3** (Mathias Buus Madsen <mathiasbuus@gmail.com>)
+- **punycode@2.3.1** (Mathias Bynens) — https://mths.be/punycode
+- **punycode.js@2.3.1** (Mathias Bynens) — https://mths.be/punycode
+- **queue-microtask@1.2.3** (Feross Aboukhadijeh) — https://github.com/feross/queue-microtask
+- **quick-lru@5.1.1** (Sindre Sorhus)
+- **range-parser@1.2.1** (TJ Holowaychuk <tj@vision-media.ca> (http://tjholowaychuk.com))
+- **raw-body@3.0.2** (Jonathan Ong <me@jongleberry.com> (http://jongleberry.com))
+- **react@18.3.1** — https://reactjs.org/
+- **react-composer@5.0.3** (James Smith <jamesplease2@gmail.com>)
+- **react-dom@18.3.1** — https://reactjs.org/
+- **react-hot-toast@2.6.0** (Timo Lins)
+- **react-is@17.0.2** — https://reactjs.org/
+- **react-markdown@9.1.0** (Espen Hovlandsdal <espen@hovlandsdal.com>)
+- **react-reconciler@0.27.0** — https://reactjs.org/
+- **react-refresh@0.17.0** — https://react.dev/
+- **react-remove-scroll@2.7.2** (Anton Korzunov <thekashey@gmail.com>)
+- **react-remove-scroll-bar@2.3.8** (Anton Korzunov <thekashey@gmail.com>)
+- **react-style-singleton@2.2.3** (Anton Korzunov (thekashey@gmail.com)) — https://github.com/theKashey/react-style-singleton#readme
+- **react-syntax-highlighter@15.6.6** (Conor Hastings) — https://github.com/react-syntax-highlighter/react-syntax-highlighter#readme
+- **react-use-measure@2.1.7** (Paul Henschel) — https://github.com/pmndrs/react-use-measure
+- **react-window@2.2.6** (Brian Vaughn <brian.david.vaughn@gmail.com> (https://github.com/bvaughn/)) — https://react-window.vercel.app/
+- **read-binary-file-arch@1.0.6** (Samuel Maddock) — https://github.com/samuelmaddock/read-binary-file-arch#readme
+- **read-cache@1.0.0** (Bogdan Chadkin <trysound@yandex.ru>) — https://github.com/TrySound/read-cache#readme
+- **readable-stream@3.6.2**
+- **readdirp@3.6.0** (Thorsten Lorenz <thlorenz@gmx.de> (thlorenz.com)) — https://github.com/paulmillr/readdirp
+- **rechoir@0.8.0** (Gulp Team <team@gulpjs.com> (http://gulpjs.com/))
+- **redent@3.0.0** (Sindre Sorhus)
+- **refractor@3.6.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **regexp-tree@0.1.27** (Dmitry Soshnikov) — https://github.com/DmitrySoshnikov/regexp-tree
+- **remark-gfm@4.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **remark-parse@11.0.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)) — https://remark.js.org
+- **remark-rehype@11.1.2** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **remark-stringify@11.0.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)) — https://remark.js.org
+- **require-directory@2.1.1** (Troy Goode <troygoode@gmail.com> (http://github.com/troygoode/)) — https://github.com/troygoode/node-require-directory/
+- **require-from-string@2.0.2** (Vsevolod Strukchinsky)
+- **require-in-the-middle@8.0.1** (Thomas Watson Steen <w@tson.dk> (https://twitter.com/wa7son)) — https://github.com/nodejs/require-in-the-middle#readme
+- **resedit@1.7.2** (jet) — https://github.com/jet2jet/resedit-js
+- **resolve@1.22.11** (James Halliday)
+- **resolve-alpn@1.2.1** (Szymon Marczak) — https://github.com/szmarczak/resolve-alpn#readme
+- **resolve-pkg-maps@1.0.0** (Hiroki Osame)
+- **responselike@2.0.1** (lukechilds)
+- **restore-cursor@5.1.0** (Sindre Sorhus)
+- **retry@0.12.0** (Tim Koschützki <tim@debuggable.com> (http://debuggable.com/)) — https://github.com/tim-kos/node-retry
+- **reusify@1.1.0** (Matteo Collina <hello@matteocollina.com>) — https://github.com/mcollina/reusify#readme
+- **rfdc@1.4.1** (David Mark Clements <david.clements@nearform.com>) — https://github.com/davidmarkclements/rfdc#readme
+- **rollup@4.59.0** (Rich Harris) — https://rollupjs.org/
+- **rope-sequence@1.3.4** (Marijn Haverbeke <marijn@haverbeke.berlin>)
+- **router@2.2.0** (Douglas Christopher Wilson <doug@somethingdoug.com>)
+- **run-parallel@1.2.0** (Feross Aboukhadijeh) — https://github.com/feross/run-parallel
+- **safe-buffer@5.2.1** (Feross Aboukhadijeh) — https://github.com/feross/safe-buffer
+- **safe-regex@2.1.1** (James C. (Jamie) Davis) — https://github.com/davisjam/safe-regex
+- **safer-buffer@2.1.2** (Nikita Skovoroda)
+- **scheduler@0.23.2** — https://reactjs.org/
+- **semver-compare@1.0.0** (James Halliday) — https://github.com/substack/semver-compare
+- **send@1.2.1** (TJ Holowaychuk <tj@vision-media.ca>)
+- **serialize-error@7.0.1** (Sindre Sorhus)
+- **serve-static@2.2.1** (Douglas Christopher Wilson <doug@somethingdoug.com>)
+- **shebang-command@2.0.0** (Kevin Mårtensson)
+- **shebang-regex@3.0.0** (Sindre Sorhus)
+- **side-channel@1.1.0** (Jordan Harband <ljharb@gmail.com>) — https://github.com/ljharb/side-channel#readme
+- **side-channel-list@1.0.0** (Jordan Harband <ljharb@gmail.com>) — https://github.com/ljharb/side-channel-list#readme
+- **side-channel-map@1.0.1** (Jordan Harband <ljharb@gmail.com>) — https://github.com/ljharb/side-channel-map#readme
+- **side-channel-weakmap@1.0.2** (Jordan Harband <ljharb@gmail.com>) — https://github.com/ljharb/side-channel-weakmap#readme
+- **simple-update-notifier@2.0.0** (alexbrazier) — https://github.com/alexbrazier/simple-update-notifier.git
+- **sisteransi@1.0.5** (Terkel Gjervig)
+- **slice-ansi@7.1.2**
+- **smart-buffer@4.2.0** (Josh Glazebrook) — https://github.com/JoshGlazebrook/smart-buffer/
+- **socks@2.8.7** (Josh Glazebrook) — https://github.com/JoshGlazebrook/socks/
+- **socks-proxy-agent@8.0.5** (Nathan Rajlich)
+- **source-map-support@0.5.21**
+- **space-separated-tokens@2.0.2** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **stackback@0.0.2** (Roman Shtylman <shtylman@gmail.com>)
+- **stat-mode@1.0.0** (Nathan Rajlich <nathan@tootallnate.net> (http://n8.io/)) — https://github.com/TooTallNate/stat-mode
+- **stats-gl@2.4.2** (Renaud ROHLINGER (https://github.com/RenaudRohlinger)) — https://github.com/RenaudRohlinger/stats-gl
+- **stats.js@0.17.0** (mrdoob) — https://github.com/mrdoob/stats.js
+- **statuses@2.0.2**
+- **std-env@3.10.0**
+- **string_decoder@1.3.0** — https://github.com/nodejs/string_decoder
+- **string-argv@0.3.2** (Anthony McCormick) — https://github.com/mccormicka/string-argv
+- **string-width@8.1.0** (Sindre Sorhus)
+- **string-width@4.2.3** (Sindre Sorhus)
+- **stringify-entities@4.0.4** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **strip-ansi@7.1.2** (Sindre Sorhus)
+- **strip-ansi@6.0.1** (Sindre Sorhus)
+- **strip-bom@3.0.0** (Sindre Sorhus)
+- **strip-final-newline@4.0.0** (Sindre Sorhus)
+- **strip-indent@3.0.0** (Sindre Sorhus)
+- **strip-json-comments@5.0.3** (Sindre Sorhus)
+- **style-to-js@1.1.21** (Mark <mark@remarkablemark.org>)
+- **style-to-object@1.0.14** (Mark <mark@remarkablemark.org>)
+- **sucrase@3.35.1** (Alan Pierce <alangpierce@gmail.com>)
+- **supports-color@7.2.0** (Sindre Sorhus)
+- **supports-preserve-symlinks-flag@1.0.0** (Jordan Harband <ljharb@gmail.com>) — https://github.com/inspect-js/node-supports-preserve-symlinks-flag#readme
+- **suspend-react@0.1.3** (Paul Henschel) — https://github.com/pmndrs/suspend-react#readme
+- **symbol-tree@3.2.4** (Joris van der Wel <joris@jorisvanderwel.com>) — https://github.com/jsdom/js-symbol-tree#symbol-tree
+- **tailwind-merge@3.4.0** (Dany Castillo) — https://github.com/dcastil/tailwind-merge
+- **tailwindcss@3.4.19** — https://tailwindcss.com
+- **tailwindcss-animate@1.0.7** (Jamie Kyle <me@thejameskyle.com>)
+- **tapable@2.3.0** (Tobias Koppers @sokra) — https://github.com/webpack/tapable
+- **temp-file@3.4.0** (Vladimir Krivosheev) — https://github.com/develar/temp-file
+- **thenify@3.3.1** (Jonathan Ong <me@jongleberry.com> (http://jongleberry.com))
+- **thenify-all@1.6.0** (Jonathan Ong <me@jongleberry.com> (http://jongleberry.com))
+- **three@0.182.0** (mrdoob) — https://threejs.org/
+- **three-mesh-bvh@0.7.8** (Garrett Johnson <garrett.kjohnson@gmail.com>) — https://github.com/gkjohnson/three-mesh-bvh#readme
+- **three-stdlib@2.36.1** (Paul Henschel (https://github.com/drcmda)) — https://github.com/pmndrs/three-stdlib
+- **tiny-async-pool@1.3.0** (Rafael Xavier de Souza)
+- **tiny-typed-emitter@2.1.0** (Zurab Benashvili <zura.benashvili@gmail.com>)
+- **tinybench@2.9.0**
+- **tinyexec@1.0.2** (James Garbutt (https://github.com/43081j)) — https://github.com/tinylibs/tinyexec#readme
+- **tinyglobby@0.2.15** (Superchupu) — https://superchupu.dev/tinyglobby
+- **tinyrainbow@3.0.3** — https://github.com/tinylibs/tinyrainbow#readme
+- **tldts@7.0.19** (Rémi Berson) — https://github.com/remusao/tldts#readme
+- **tldts-core@7.0.19** (Rémi Berson) — https://github.com/remusao/tldts#readme
+- **tmp@0.2.5** (KARASZI István <github@spam.raszi.hu>) — http://github.com/raszi/node-tmp
+- **tmp-promise@3.0.3** (Benjamin Gruenbaum and Collaborators.)
+- **to-regex-range@5.0.1** (Jon Schlinkert (https://github.com/jonschlinkert)) — https://github.com/micromatch/to-regex-range
+- **toidentifier@1.0.1** (Douglas Christopher Wilson <doug@somethingdoug.com>)
+- **tr46@0.0.3** (Sebastian Mayr <npm@smayr.name>) — https://github.com/Sebmaster/tr46.js#readme
+- **trim-lines@3.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **troika-three-text@0.52.4** (Jason Johnston <jason.johnston@protectwise.com>)
+- **troika-three-utils@0.52.4** (Jason Johnston <jason.johnston@protectwise.com>)
+- **troika-worker-utils@0.52.0** (Jason Johnston <jason.johnston@protectwise.com>)
+- **trough@2.2.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **tsconfig-paths@4.2.0** (Jonas Kello)
+- **tsconfig-paths-webpack-plugin@4.2.0** (Jonas Kello)
+- **tsx@4.21.0** (Hiroki Osame) — https://tsx.is
+- **tunnel-rat@0.1.2** (Paul Henschel) — https://github.com/pmndrs/tunnel-rat#readme
+- **type-is@2.0.1**
+- **uc.micro@2.1.0**
+- **undici-types@6.21.0** — https://undici.nodejs.org
+- **unicorn-magic@0.3.0** (Sindre Sorhus)
+- **unified@11.0.5** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)) — https://unifiedjs.com
+- **unist-util-is@6.0.1** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **unist-util-position@5.0.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **unist-util-stringify-position@4.0.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **unist-util-visit@5.0.0** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **unist-util-visit-parents@6.0.2** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **universalify@0.1.2** (Ryan Zimmerman <opensrc@ryanzim.com>) — https://github.com/RyanZim/universalify#readme
+- **unpipe@1.0.0** (Douglas Christopher Wilson <doug@somethingdoug.com>)
+- **update-browserslist-db@1.2.3** (Andrey Sitnik <andrey@sitnik.ru>)
+- **use-callback-ref@1.3.3** (theKashey <thekashey@gmail.com>)
+- **use-sidecar@1.1.3** (theKashey <thekashey@gmail.com>) — https://github.com/theKashey/use-sidecar
+- **use-sync-external-store@1.6.0**
+- **util-deprecate@1.0.2** (Nathan Rajlich <nathan@tootallnate.net> (http://n8.io/)) — https://github.com/TooTallNate/util-deprecate
+- **utility-types@3.11.0** (Piotr Witek <piotrek.witek@gmail.com> (http://piotrwitek.github.io)) — https://github.com/piotrwitek/utility-types
+- **uuid@10.0.0**
+- **vary@1.1.2** (Douglas Christopher Wilson <doug@somethingdoug.com>)
+- **vfile@6.0.3** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **vfile-message@4.0.3** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+- **vite@5.4.21** (Evan You) — https://vite.dev
+- **vitest@4.0.18** (Anthony Fu <anthonyfu117@hotmail.com>) — https://vitest.dev
+- **w3c-keyname@2.2.8** (Marijn Haverbeke <marijn@haverbeke.berlin>) — https://github.com/marijnh/w3c-keyname#readme
+- **w3c-xmlserializer@5.0.0**
+- **watskeburt@5.0.2** (Sander Verweij) — https://github.com/sverweij/watskeburt
+- **wcwidth@1.0.1** (Tim Oxley) — https://github.com/timoxley/wcwidth#readme
+- **web-streams-polyfill@4.0.0-beta.3** (Mattias Buelens <mattias@buelens.com>) — https://github.com/MattiasBuelens/web-streams-polyfill#readme
+- **webgl-sdf-generator@1.1.1** (Jason Johnston)
+- **whatwg-mimetype@4.0.0** (Domenic Denicola <d@domenic.me> (https://domenic.me/))
+- **whatwg-url@5.0.0** (Sebastian Mayr <github@smayr.name>)
+- **why-is-node-running@2.3.0** (Mathias Buus (@mafintosh)) — https://github.com/mafintosh/why-is-node-running
+- **wrap-ansi@9.0.2** (Sindre Sorhus)
+- **wrap-ansi@7.0.0** (Sindre Sorhus)
+- **ws@8.19.0** (Einar Otto Stangvik <einaros@gmail.com> (http://2x.io)) — https://github.com/websockets/ws
+- **xml2js@0.6.2** (Marek Kubica <marek@xivilization.net> (https://xivilization.net)) — https://github.com/Leonidas-from-XIV/node-xml2js
+- **xmlbuilder@15.1.1** (Ozgur Ozcitak <oozcitak@gmail.com>) — http://github.com/oozcitak/xmlbuilder-js
+- **xmlchars@2.2.0** (Louis-Dominique Dubeau <ldd@lddubeau.com>)
+- **xtend@4.0.2** (Raynos <raynos2@gmail.com>) — https://github.com/Raynos/xtend
+- **y-indexeddb@9.0.12** (Kevin Jahns <kevin.jahns@protonmail.com>) — https://yjs.dev
+- **y-prosemirror@1.3.7** (Kevin Jahns <kevin.jahns@protonmail.com>) — https://github.com/yjs/y-prosemirror#readme
+- **y-protocols@1.0.7** (Kevin Jahns <kevin.jahns@protonmail.com>) — https://github.com/yjs/y-protocols#readme
+- **y-websocket@3.0.0** (Kevin Jahns <kevin.jahns@protonmail.com>) — https://github.com/yjs/y-websocket#readme
+- **yargs@17.7.2** — https://yargs.js.org/
+- **yauzl@2.10.0** (Josh Wolfe <thejoshwolfe@gmail.com>) — https://github.com/thejoshwolfe/yauzl
+- **yjs@13.6.29** (Kevin Jahns) — https://docs.yjs.dev
+- **yocto-queue@0.1.0** (Sindre Sorhus)
+- **yoctocolors@2.1.2** (Sindre Sorhus)
+- **zod@3.25.76** (Colin McDonnell <zod@colinhacks.com>) — https://zod.dev
+- **zustand@4.5.7** (Paul Henschel) — https://github.com/pmndrs/zustand
+- **zwitch@2.0.4** (Titus Wormer <tituswormer@gmail.com> (https://wooorm.com))
+
+### ISC
+
+- **@isaacs/cliui@8.0.2** (Ben Coe <ben@npmjs.com>)
+- **@isaacs/fs-minipass@4.0.1** (Isaac Z. Schlueter)
+- **@npmcli/agent@3.0.0** (GitHub Inc.) — https://github.com/npm/agent#readme
+- **@npmcli/fs@4.0.0** (GitHub Inc.)
+- **@ungap/structured-clone@1.3.0** (Andrea Giammarchi) — https://github.com/ungap/structured-clone#readme
+- **abbrev@3.0.1** (GitHub Inc.)
+- **anymatch@3.1.3** (Elan Shanker) — https://github.com/micromatch/anymatch
+- **at-least-node@1.0.0** (Ryan Zimmerman <opensrc@ryanzim.com>) — https://github.com/RyanZim/at-least-node#readme
+- **cacache@19.0.1** (GitHub Inc.)
+- **cliui@8.0.1** (Ben Coe <ben@npmjs.com>)
+- **d3-color@3.1.0** (Mike Bostock) — https://d3js.org/d3-color/
+- **d3-dispatch@3.0.1** (Mike Bostock) — https://d3js.org/d3-dispatch/
+- **d3-drag@3.0.0** (Mike Bostock) — https://d3js.org/d3-drag/
+- **d3-interpolate@3.0.1** (Mike Bostock) — https://d3js.org/d3-interpolate/
+- **d3-selection@3.0.0** (Mike Bostock) — https://d3js.org/d3-selection/
+- **d3-timer@3.0.1** (Mike Bostock) — https://d3js.org/d3-timer/
+- **d3-transition@3.0.1** (Mike Bostock) — https://d3js.org/d3-transition/
+- **d3-zoom@3.0.0** (Mike Bostock) — https://d3js.org/d3-zoom/
+- **electron-to-chromium@1.5.267** (Kilian Valkhof)
+- **fastq@1.20.1** (Matteo Collina <hello@matteocollina.com>) — https://github.com/mcollina/fastq#readme
+- **foreground-child@3.3.1** (Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/))
+- **fs-minipass@3.0.3** (GitHub Inc.) — https://github.com/npm/fs-minipass#readme
+- **fs.realpath@1.0.0** (Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/))
+- **get-caller-file@2.0.5** (Stefan Penner) — https://github.com/stefanpenner/get-caller-file#readme
+- **glob@7.2.3** (Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/))
+- **glob-parent@6.0.2** (Gulp Team <team@gulpjs.com> (https://gulpjs.com/))
+- **graceful-fs@4.2.11**
+- **hosted-git-info@4.1.0** (Rebecca Turner <me@re-becca.org> (http://re-becca.org)) — https://github.com/npm/hosted-git-info
+- **inflight@1.0.6** (Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)) — https://github.com/isaacs/inflight
+- **inherits@2.0.4**
+- **ini@4.1.1** (GitHub Inc.)
+- **isexe@2.0.0** (Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)) — https://github.com/isaacs/isexe#readme
+- **json-stringify-safe@5.0.1** (Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me)) — https://github.com/isaacs/json-stringify-safe
+- **knip@5.82.1** (Lars Kappert) — https://knip.dev
+- **lru-cache@5.1.1** (Isaac Z. Schlueter <i@izs.me>)
+- **lucide-react@0.460.0** (Eric Fennis) — https://lucide.dev
+- **make-fetch-happen@14.0.3** (GitHub Inc.)
+- **minimatch@9.0.9** (Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me))
+- **minipass-collect@2.0.1** (Isaac Z. Schlueter <i@izs.me> (https://izs.me))
+- **minipass-flush@1.0.5** (Isaac Z. Schlueter <i@izs.me> (https://izs.me))
+- **minipass-pipeline@1.2.4** (Isaac Z. Schlueter <i@izs.me> (https://izs.me))
+- **minipass-sized@1.0.3** (Isaac Z. Schlueter <i@izs.me> (https://izs.me))
+- **n8ao@1.10.1** — https://github.com/N8python/n8ao#readme
+- **nopt@8.1.0** (GitHub Inc.)
+- **once@1.4.0** (Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/))
+- **pg-int8@1.0.1**
+- **picocolors@1.1.1** (Alexey Raspopov)
+- **potpack@1.0.2** (Vladimir Agafonkin) — https://mapbox.github.io/potpack/
+- **proc-log@5.0.0** (GitHub Inc.)
+- **saxes@6.0.0** (Louis-Dominique Dubeau <ldd@lddubeau.com>)
+- **semver@6.3.1** (GitHub Inc.)
+- **setprototypeof@1.2.0** (Wes Todd) — https://github.com/wesleytodd/setprototypeof
+- **siginfo@2.0.0** (Emil Bay <github@tixz.dk>) — https://github.com/emilbayes/siginfo#readme
+- **signal-exit@4.1.0** (Ben Coe <ben@npmjs.com>)
+- **ssri@12.0.0** (GitHub Inc.)
+- **unique-filename@4.0.0** (GitHub Inc.) — https://github.com/iarna/unique-filename
+- **unique-slug@5.0.0** (GitHub Inc.)
+- **walk-up-path@4.0.0** (Isaac Z. Schlueter <i@izs.me> (https://izs.me))
+- **which@2.0.2** (Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me))
+- **wrappy@1.0.2** (Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)) — https://github.com/npm/wrappy
+- **y18n@5.0.8** (Ben Coe <bencoe@gmail.com>) — https://github.com/yargs/y18n
+- **yallist@3.1.1** (Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/))
+- **yaml@2.8.2** (Eemeli Aro <eemeli@gmail.com>) — https://eemeli.org/yaml/
+- **yargs-parser@21.1.1** (Ben Coe <ben@npmjs.com>)
+- **zod-to-json-schema@3.25.1** (Stefan Terdell)
+
+### Apache-2.0
+
+- **@apm-js-collab/code-transformer@0.8.2**
+- **@apm-js-collab/tracing-hooks@0.3.1**
+- **@dimforge/rapier3d-compat@0.12.0** — https://rapier.rs
+- **@google/generative-ai@0.19.0** — https://github.com/google/generative-ai-js#readme
+- **@malept/cross-spawn-promise@2.0.0** (Mark Lee)
+- **@mediapipe/tasks-vision@0.10.17** (mediapipe@google.com) — http://mediapipe.dev
+- **@opentelemetry/api@1.9.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js/tree/main/api
+- **@opentelemetry/api-logs@0.210.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/api-logs
+- **@opentelemetry/context-async-hooks@2.5.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js/tree/main/packages/opentelemetry-context-async-hooks
+- **@opentelemetry/core@2.5.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js/tree/main/packages/opentelemetry-core
+- **@opentelemetry/instrumentation@0.210.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/opentelemetry-instrumentation
+- **@opentelemetry/instrumentation-amqplib@0.57.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-amqplib#readme
+- **@opentelemetry/instrumentation-connect@0.53.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-connect#readme
+- **@opentelemetry/instrumentation-dataloader@0.27.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-dataloader#readme
+- **@opentelemetry/instrumentation-express@0.58.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-express#readme
+- **@opentelemetry/instrumentation-fs@0.29.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-fs#readme
+- **@opentelemetry/instrumentation-generic-pool@0.53.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-generic-pool#readme
+- **@opentelemetry/instrumentation-graphql@0.57.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-graphql#readme
+- **@opentelemetry/instrumentation-hapi@0.56.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-hapi#readme
+- **@opentelemetry/instrumentation-http@0.210.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/opentelemetry-instrumentation-http
+- **@opentelemetry/instrumentation-ioredis@0.58.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-ioredis#readme
+- **@opentelemetry/instrumentation-kafkajs@0.19.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-kafkajs#readme
+- **@opentelemetry/instrumentation-knex@0.54.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-knex#readme
+- **@opentelemetry/instrumentation-koa@0.58.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-koa#readme
+- **@opentelemetry/instrumentation-lru-memoizer@0.54.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-lru-memoizer#readme
+- **@opentelemetry/instrumentation-mongodb@0.63.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-mongodb#readme
+- **@opentelemetry/instrumentation-mongoose@0.56.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-mongoose#readme
+- **@opentelemetry/instrumentation-mysql@0.56.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-mysql#readme
+- **@opentelemetry/instrumentation-mysql2@0.56.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-mysql2#readme
+- **@opentelemetry/instrumentation-pg@0.62.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-pg#readme
+- **@opentelemetry/instrumentation-redis@0.58.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-redis#readme
+- **@opentelemetry/instrumentation-tedious@0.29.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-tedious#readme
+- **@opentelemetry/instrumentation-undici@0.20.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/instrumentation-undici#readme
+- **@opentelemetry/redis-common@0.38.2** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/redis-common#readme
+- **@opentelemetry/resources@2.5.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js/tree/main/packages/opentelemetry-resources
+- **@opentelemetry/sdk-trace-base@2.5.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js/tree/main/packages/opentelemetry-sdk-trace-base
+- **@opentelemetry/semantic-conventions@1.39.0** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js/tree/main/semantic-conventions
+- **@opentelemetry/sql-common@0.41.2** (OpenTelemetry Authors) — https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/packages/sql-common#readme
+- **@playwright/test@1.58.0** (Microsoft Corporation) — https://playwright.dev
+- **@prisma/instrumentation@7.2.0** — https://www.prisma.io
+- **aria-query@5.3.0** (Jesse Beach <splendidnoise@gmail.com>) — https://github.com/A11yance/aria-query#readme
+- **baseline-browser-mapping@2.9.14**
+- **class-variance-authority@0.7.1** (Joe Bell (https://joebell.co.uk)) — https://github.com/joe-bell/cva#readme
+- **detect-libc@2.1.2** (Lovell Fuller <npm@lovell.info>)
+- **dexie@4.3.0** (David Fahlander <https://github.com/dfahlander>) — https://dexie.org
+- **didyoumean@1.2.2** (Dave Porter) — https://github.com/dcporter/didyoumean.js
+- **draco3d@1.5.7** (Google Draco Team)
+- **ejs@3.1.10** (Matthew Eernisse <mde@fleegix.org> (http://fleegix.org)) — https://github.com/mde/ejs
+- **expect-type@1.3.0** — https://github.com/mmkal/expect-type#readme
+- **exponential-backoff@3.1.3** (Sami Sayegh) — https://github.com/coveooss/exponential-backoff#readme
+- **fake-indexeddb@6.2.5** (Jeremy Scheff <jdscheff@gmail.com> (https://dumbmatter.com/)) — https://github.com/dumbmatter/fakeIndexedDB
+- **filelist@1.0.4** (Matthew Eernisse <mde@fleegix.org> (http://fleegix.org)) — https://github.com/mde/filelist
+- **hls.js@1.6.15** — https://github.com/video-dev/hls.js
+- **human-signals@8.0.1** (ehmicky <ehmicky@gmail.com> (https://github.com/ehmicky)) — https://www.github.com/ehmicky/human-signals
+- **import-in-the-middle@2.0.6** (Bryan English <bryan.english@datadoghq.com>) — https://github.com/nodejs/import-in-the-middle#readme
+- **jake@10.9.4** (Matthew Eernisse <mde@fleegix.org> (http://fleegix.org))
+- **localforage@1.10.0** (Mozilla) — https://github.com/localForage/localForage
+- **openai@4.104.0** (OpenAI <support@openai.com>)
+- **playwright@1.58.0** (Microsoft Corporation) — https://playwright.dev
+- **playwright-core@1.58.0** (Microsoft Corporation) — https://playwright.dev
+- **promise-worker-transferable@1.0.4** (Roman Viskin <npm@terikon.com>) — https://github.com/terikon/promise-worker-transferable#readme
+- **sumchecker@3.0.1** (Mark Lee) — https://github.com/malept/sumchecker#readme
+- **ts-interface-checker@0.1.13** (Dmitry S, Grist Labs)
+- **typescript@5.9.3** (Microsoft Corp.) — https://www.typescriptlang.org/
+- **xml-name-validator@5.0.0** (Domenic Denicola <d@domenic.me> (https://domenic.me/))
+
+> Apache-2.0 requires attribution and/or NOTICE preservation. Full license texts for the above packages are bundled in their respective `node_modules/<pkg>/LICENSE` files; see those for the canonical attribution. Where a package ships a `NOTICE` file, its content has been preserved with the package distribution.
+
+### BSD-2-Clause
+
+- **@electron/osx-sign@1.3.3** (electron) — https://github.com/electron/osx-sign
+- **dotenv@17.3.1** — https://github.com/motdotla/dotenv#readme
+- **dotenv-expand@11.0.7** (motdotla)
+- **entities@4.5.0** (Felix Boehm <me@feedic.com>)
+- **extract-zip@2.0.1** (max ogden)
+- **http-cache-semantics@4.2.0** (Kornel Lesiński <npms2@geekhood.net> (https://kornel.ski/))
+- **json-schema-typed@7.0.3** — https://github.com/typeslick/json-schema-typed
+- **uri-js@4.4.1** (Gary Court <gary.court@gmail.com>) — https://github.com/garycourt/uri-js
+- **webidl-conversions@3.0.1** (Domenic Denicola <d@domenic.me> (https://domenic.me/))
+
+> BSD-2-Clause requires attribution and/or NOTICE preservation. Full license texts for the above packages are bundled in their respective `node_modules/<pkg>/LICENSE` files; see those for the canonical attribution. Where a package ships a `NOTICE` file, its content has been preserved with the package distribution.
+
+### BSD-3-Clause
+
+- **@webgpu/types@0.1.69** — https://github.com/gpuweb/types
+- **d3-ease@3.0.1** (Mike Bostock) — https://d3js.org/d3-ease/
+- **fast-uri@3.1.0** (Vincent Le Goff <vince.legoff@gmail.com> (https://github.com/zekth)) — https://github.com/fastify/fast-uri
+- **global-agent@3.0.0** (Gajus Kuizinas)
+- **highlight.js@10.7.3** (Ivan Sagalaev) — https://highlightjs.org/
+- **ieee754@1.2.1** (Feross Aboukhadijeh)
+- **istanbul-lib-coverage@3.2.2** (Krishnan Anantheswaran <kananthmail-github@yahoo.com>) — https://istanbul.js.org/
+- **istanbul-lib-report@3.0.1** (Krishnan Anantheswaran <kananthmail-github@yahoo.com>) — https://istanbul.js.org/
+- **istanbul-reports@3.2.0** (Krishnan Anantheswaran <kananthmail-github@yahoo.com>) — https://istanbul.js.org/
+- **qs@6.14.2** — https://github.com/ljharb/qs
+- **roarr@2.15.4** (Gajus Kuizinas)
+- **smol-toml@1.6.0** (Cynthia <cyyynthia@borkenware.com>)
+- **source-map@0.6.1** (Nick Fitzgerald <nfitzgerald@mozilla.com>) — https://github.com/mozilla/source-map
+- **source-map-js@1.2.1** (Valentin 7rulnik Semirulnik <v7rulnik@gmail.com>) — https://github.com/7rulnik/source-map-js
+- **sprintf-js@1.1.3** (Alexandru Mărășteanu <hello@alexei.ro>)
+- **tough-cookie@6.0.0** (Jeremy Stashewsky) — https://github.com/salesforce/tough-cookie
+
+> BSD-3-Clause requires attribution and/or NOTICE preservation. Full license texts for the above packages are bundled in their respective `node_modules/<pkg>/LICENSE` files; see those for the canonical attribution. Where a package ships a `NOTICE` file, its content has been preserved with the package distribution.
+
+### 0BSD
+
+- **tslib@2.8.1** (Microsoft Corp.) — https://www.typescriptlang.org/
+
+### Unlicense
+
+- **ogl@1.0.11** (Nathan Gordon) — https://github.com/oframe/ogl#readme
+
+### CC0-1.0
+
+- **highlightjs-vue@1.0.0** (Sara Lissette <lissette.ibnz@gmail.com> (https://github.com/LissetteIbnz)) — https://github.com/highlightjs/highlightjs-vue#readme
+- **mdn-data@2.12.2** (Mozilla Developer Network) — https://developer.mozilla.org
+
+### MPL-2.0
+
+- **@axe-core/playwright@4.11.1**
+- **axe-core@4.11.1** — https://www.deque.com/axe/
+
+> MPL-2.0 requires attribution and/or NOTICE preservation. Full license texts for the above packages are bundled in their respective `node_modules/<pkg>/LICENSE` files; see those for the canonical attribution. Where a package ships a `NOTICE` file, its content has been preserved with the package distribution.
+
+### UNKNOWN
+
+- **webgl-constants@1.1.1** (Tim van Scherpenzeel)
+
+### (MIT OR CC0-1.0)
+
+- **type-fest@2.19.0** (Sindre Sorhus)
+
+### (MPL-2.0 OR Apache-2.0)
+
+- **dompurify@3.3.3** (Dr.-Ing. Mario Heiderich, Cure53 <mario@cure53.de> (https://cure53.de/)) — https://github.com/cure53/DOMPurify
+
+### (WTFPL OR MIT)
+
+- **utf8-byte-length@1.0.5** (Carl Xiong <xiongc05@gmail.com>) — https://github.com/parshap/utf8-byte-length#readme
+
+### Apache-2.0 AND LGPL-3.0-or-later
+
+- **@img/sharp-win32-x64@0.34.5** (Lovell Fuller <npm@lovell.info>) — https://sharp.pixelplumbing.com
+
+### BlueOak-1.0.0
+
+- **chownr@3.0.0** (Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/))
+- **jackspeak@3.4.3** (Isaac Z. Schlueter <i@izs.me>)
+- **minipass@7.1.3** (Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/))
+- **package-json-from-dist@1.0.1** (Isaac Z. Schlueter <i@izs.me> (https://izs.me))
+- **path-scurry@1.11.1** (Isaac Z. Schlueter <i@izs.me> (https://blog.izs.me))
+- **sax@1.4.4** (Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/))
+- **tar@7.5.11** (Isaac Z. Schlueter)
+
+### CC-BY-4.0
+
+- **caniuse-lite@1.0.30001764** (Ben Briggs)
+
+### FSL-1.1-MIT
+
+- **@sentry/cli@2.58.5** (Sentry) — https://docs.sentry.io/hosted/learn/cli/
+- **@sentry/cli-win32-x64@2.58.5**
+
+### MIT OR Apache-2.0
+
+- **@biomejs/biome@2.4.10** (Emanuele Stoppa) — https://biomejs.dev
+- **@biomejs/cli-win32-x64@2.4.10** — https://biomejs.dev
+
+### MIT-0
+
+- **@csstools/color-helpers@5.1.0** — https://github.com/csstools/postcss-plugins/tree/main/packages/color-helpers#readme
+- **@csstools/css-syntax-patches-for-csstree@1.0.25** — https://github.com/csstools/postcss-plugins/tree/main/packages/css-syntax-patches-for-csstree#readme
+
+### Python-2.0
+
+- **argparse@2.0.1**
+
+### SEE LICENSE IN README.md
+
+- **@anthropic-ai/claude-agent-sdk@0.2.84** (Anthropic <support@anthropic.com>) — https://github.com/anthropics/claude-agent-sdk-typescript
+
+### WTFPL
+
+- **truncate-utf8-bytes@1.0.2** (Carl Xiong <xiongc05@gmail.com>) — https://github.com/parshap/truncate-utf8-bytes#readme
+
+### WTFPL OR ISC
+
+- **sanitize-filename@1.6.3** (Parsha Pourkhomami)
+
+### Zlib
+
+- **postprocessing@6.38.2** (Raoul van Rüschen) — https://github.com/pmndrs/postprocessing
+
+## Regenerate
+
+This file is regenerated by the maintainer after dependency changes. Contact stefan@aurochs.agency to request an updated copy.

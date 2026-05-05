@@ -27,6 +27,20 @@ declare global {
 
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN || ''
 
+// Provider hosts the renderer must never leak in breadcrumbs.
+// All media-provider fetches now route through main-process IPC; this list
+// is a belt-and-suspenders strip for any third-party / future renderer code
+// path that bypasses the dispatcher.
+const PROVIDER_HOSTS = [
+  'api.openai.com',
+  'api.anthropic.com',
+  'api.stability.ai',
+  'api.replicate.com',
+  'api.dev.runwayml.com',
+  'api.elevenlabs.io',
+  'generativelanguage.googleapis.com',
+] as const
+
 let isInitialized = false
 
 /**
@@ -97,6 +111,17 @@ export function initSentry(): void {
           const url = breadcrumb.data.url as string
           if (url.includes('token') || url.includes('auth') || url.includes('stripe')) {
             breadcrumb.data.url = '[redacted]'
+          }
+          // Belt-and-suspenders: even though the fix is to route media
+          // adapters through main-process IPC (so renderer fetch shouldn't see
+          // these hosts at all), strip them on the way out as a defense-in-depth
+          // measure for any third-party plugin or future code path that calls
+          // a provider directly from the renderer. Also strips ?key= URL keys.
+          if (PROVIDER_HOSTS.some((host) => url.includes(host))) {
+            breadcrumb.data.url = '[provider:redacted]'
+          }
+          if (url.includes('?key=') || url.includes('&key=')) {
+            breadcrumb.data.url = '[provider-key-url:redacted]'
           }
         }
         return breadcrumb

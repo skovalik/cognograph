@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-// MCP Server - Phase 14
+// MCP Server
 // Creates and configures the MCP server with stdio transport
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'

@@ -4,7 +4,7 @@
 /**
  * Agent Tools — tool definitions, filtering, and execution.
  *
- * ARCHITECTURE NOTE (Phase 2C: RENDERER-PASSIVIZE):
+ * ARCHITECTURE NOTE (RENDERER-PASSIVIZE):
  * This file is being refactored. The target architecture has three layers:
  *
  *   1. TOOL DEFINITIONS (stay here) — JSON Schema metadata for UI display,
@@ -574,7 +574,7 @@ const MEMORY_TOOLS: AgentToolDefinition[] = [
 ]
 
 // -----------------------------------------------------------------------------
-// Context-Chain Path Derivation
+// Context-Chain Path Derivation (Patent P2 Claim 5)
 // -----------------------------------------------------------------------------
 
 /**
@@ -582,8 +582,8 @@ const MEMORY_TOOLS: AgentToolDefinition[] = [
  * Traverses INBOUND + bidirectional edges (same as context injection),
  * finds artifact nodes with filePath properties, and extracts parent directories.
  *
- * Spatial topology controls agent permissions. Connect a folder artifact →
- * agent can access that folder.
+ * This is the patented innovation (P2 Claim 5): spatial topology controls
+ * agent permissions. Connect a folder artifact → agent can access that folder.
  * Disconnect it → access revoked. No configuration UI needed.
  */
 export function derivePathsFromContext(agentNodeId: string): string[] {
@@ -618,7 +618,7 @@ export function derivePathsFromContext(agentNodeId: string): string[] {
       const node = nodes.find((n) => n.id === neighborId)
       if (!node) continue
 
-      // Check for project nodes with folderPath (Phase 2 folder reference)
+      // Check for project nodes with folderPath (folder reference)
       if (node.data.type === 'project') {
         const data = node.data as ProjectNodeData
         if (data.folderPath) {
@@ -626,11 +626,11 @@ export function derivePathsFromContext(agentNodeId: string): string[] {
         }
       }
 
-      // Check for artifact nodes with filesystem paths
+      // Check for artifact nodes with filesystem paths (Patent P2 Claim 5)
       if (node.data.type === 'artifact') {
         const data = node.data as ArtifactNodeData
 
-        // Phase 2: explicit folderPath takes highest priority
+        // Explicit folderPath takes highest priority
         if (data.folderPath) {
           paths.push(data.folderPath)
         }
@@ -814,7 +814,7 @@ export function setMCPToolServerMap(map: Map<string, string>): void {
 
 // -----------------------------------------------------------------------------
 // Tool Executor
-// TRANSITIONAL: This entire section moves to main process in Phase 2C.
+// TRANSITIONAL: This entire section is migrating to the main process.
 // Canvas tools will be invoked from main via builtinTools.executeInRenderer IPC.
 // Filesystem/MCP tools already delegate to main via window.api IPC.
 // Media tools will route through main-process media pipeline.
@@ -835,7 +835,7 @@ export interface ToolExecutionResult {
 /**
  * Execute a tool in the renderer process.
  *
- * @deprecated TRANSITIONAL — Phase 2C RENDERER-PASSIVIZE.
+ * @deprecated TRANSITIONAL — RENDERER-PASSIVIZE migration.
  * This function is called from:
  *   - agentService.ts (API path tool loop) — will be replaced by main-process agentLoop
  *   - chatToolService.ts (chat tool loop) — will be replaced by main-process agentLoop
@@ -857,6 +857,12 @@ export async function executeTool(
       case 'get_context_chain': {
         const nodeId = (input.nodeId as string) || agentConversationId
         const context = store.getContextForNode(nodeId)
+        // F5: pulse incoming edges so the user sees which nodes fed context
+        // into this read. Mirrors the MCP bridge path; same ~1.5s window.
+        store.setContextFlowing(nodeId, true)
+        setTimeout(() => {
+          useWorkspaceStore.getState().setContextFlowing(nodeId, false)
+        }, 1500)
         return {
           success: true,
           result: { context: context || 'No context available.' },
@@ -933,6 +939,14 @@ export async function executeTool(
       }
 
       case 'get_initial_context': {
+        // F5: agentConversationId is the node whose context window is being
+        // warmed up. Pulse its incoming edges for the user-visible animation.
+        if (agentConversationId) {
+          store.setContextFlowing(agentConversationId, true)
+          setTimeout(() => {
+            useWorkspaceStore.getState().setContextFlowing(agentConversationId, false)
+          }, 1500)
+        }
         const includeContent = input.includeContent === true
         const nodeList = store.nodes.map((n) => {
           const data = n.data as NodeData & {

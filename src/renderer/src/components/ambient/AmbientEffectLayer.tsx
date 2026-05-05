@@ -14,9 +14,9 @@ import type React from 'react'
 import { Component, memo, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { AdaptiveQualityState } from '../../hooks/useAdaptiveQuality'
 import { useAdaptiveQuality } from '../../hooks/useAdaptiveQuality'
+import { useEffectiveTier } from '../../hooks/useEffectiveTier'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 import { selectReduceMotion, useProgramStore } from '../../stores/programStore'
-import { useWorkspaceStore } from '../../stores/workspaceStore'
 import { getGPUTier } from '../../utils/gpuDetection'
 import { EFFECT_REGISTRY } from './effectRegistry'
 import { deriveColor, generatePaletteFromAccents, hexToRgbFloat } from './utils/colorConvert'
@@ -158,8 +158,8 @@ function AmbientEffectLayerComponent({
   const shouldReduceMotion =
     appReduceMotionPref === 'always' || (appReduceMotionPref === 'system' && osReducedMotion)
 
-  // Zoom performance tier — disable effects at minimal, cap quality at reduced
-  const zoomPerfTier = useWorkspaceStore((s) => s.zoomPerfTier) ?? 'full'
+  // Effective performance tier — disable effects at minimal, cap quality at reduced
+  const effectiveTier = useEffectiveTier()
 
   // Track container dimensions with ResizeObserver
   useEffect(() => {
@@ -196,7 +196,7 @@ function AmbientEffectLayerComponent({
     !shouldReduceMotion &&
     hasValidDimensions &&
     gpuTierRef.current.tier !== 'low' &&
-    zoomPerfTier !== 'minimal'
+    effectiveTier !== 'minimal'
 
   const effectColor = getEffectColor(accentColor)
 
@@ -204,7 +204,6 @@ function AmbientEffectLayerComponent({
   const { qualityRef, reportFrame } = useAdaptiveQuality({
     initialScale: gpuTierRef.current.tier === 'medium' ? 0.5 : 1.0,
     resetKey: settings.effect,
-    performanceMode: settings.performanceMode,
   })
 
   // Bloom settings — quadratic curve for more dramatic high end
@@ -232,11 +231,15 @@ function AmbientEffectLayerComponent({
     shouldRender: true,
     dprCap: 1,
   })
+  // Cap shader resolutionScale at 0.5 when effectiveTier='reduced' (medium-throttle policy).
+  // Shader cost is zoom-invariant (the canvas is window-sized, NOT inside the React Flow
+  // viewport zoom transform — verified in @xyflow/react index.js:3584 where children render
+  // as siblings of GraphView, not inside .react-flow__viewport). So we don't cap on zoomTier.
   useEffect(() => {
     if (qualityRef.current) {
       const src = qualityRef.current
       cappedQualityRef.current =
-        zoomPerfTier === 'reduced'
+        effectiveTier === 'reduced'
           ? { ...src, resolutionScale: Math.min(src.resolutionScale, 0.5) }
           : src
     }
@@ -252,7 +255,7 @@ function AmbientEffectLayerComponent({
         <Suspense fallback={null}>
           <Component
             {...resolvedProps}
-            qualityRef={zoomPerfTier === 'reduced' ? cappedQualityRef : qualityRef}
+            qualityRef={effectiveTier === 'reduced' ? cappedQualityRef : qualityRef}
             reportFrame={reportFrame}
             style={{
               position: 'absolute',
@@ -289,7 +292,7 @@ function AmbientEffectLayerComponent({
         </div>
       )}
 
-      {showBloom && zoomPerfTier === 'full' && (
+      {showBloom && effectiveTier === 'full' && (
         <BloomLayer bloomBlurPx={bloomBlurPx} bloomOpacity={bloomOpacity} qualityRef={qualityRef} />
       )}
     </div>

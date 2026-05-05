@@ -231,4 +231,23 @@ export class LocalSyncProvider implements SyncProvider {
       this._subscribers.delete(callback)
     }
   }
+
+  /** Test-only: trigger all external-change subscribers synchronously.
+   *  Used by E1.7 to simulate file-watcher events without IPC.
+   *  DO NOT CALL from production code. */
+  _testOnlyEmitExternalChange(data: WorkspaceData): void {
+    if (!(window as unknown as { __TEST_MODE__?: boolean }).__TEST_MODE__) {
+      console.warn(
+        '[LocalSyncProvider] _testOnlyEmitExternalChange called outside test mode — ignoring',
+      )
+      return
+    }
+    for (const callback of this._subscribers) {
+      try {
+        callback(data)
+      } catch (err) {
+        console.error('[LocalSyncProvider] Subscriber error (test emit):', err)
+      }
+    }
+  }
 }

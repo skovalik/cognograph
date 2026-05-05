@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import type { AgentToolDefinition } from '@shared/types'
+import { getKey as getApiKeyFromStore } from '../apiKeyStore'
 import { analyzeMediaTool } from './tools/analyzeMedia'
 import { editImageTool } from './tools/editImage'
 import { generate3DTool } from './tools/generate3D'
@@ -27,14 +28,17 @@ export function getAvailableMediaTools(): AgentToolDefinition[] {
   // Try apiKeyStore (web/cloud mode) or localStorage fallback (Electron)
   let providers: Set<string>
   try {
-    // Cloud features disabled in open-source build
-    throw new Error('No cloud key store in open-source build')
+    // Dynamic import to avoid hard dependency on web stores in Electron
+    const { useApiKeyStore } = require('../../../../web/stores/apiKeyStore')
+    const { keys } = useApiKeyStore.getState()
+    providers = new Set(keys.map((k: { provider: string }) => k.provider))
   } catch {
-    // Electron / open-source mode — check localStorage for provider keys
+    // Electron mode — read from in-memory apiKeyStore (hydrated from
+    // main-process safeStorage at startup).
     providers = new Set<string>()
     const providerNames = ['stability', 'openai', 'google', 'replicate', 'runway', 'elevenlabs']
     for (const p of providerNames) {
-      if (localStorage.getItem(`cognograph:apikey:${p}`)) providers.add(p)
+      if (getApiKeyFromStore(p)) providers.add(p)
     }
   }
 

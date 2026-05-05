@@ -79,21 +79,90 @@ export async function setBYOKKey(page: Page, key = 'test-api-key'): Promise<void
 // They are no-ops in Electron tests where requests go through the main process.
 
 /**
+ * Set `window.__TEST_MODE__ = true` BEFORE any app code runs so the
+ * store-exposure block in `renderer/src/main.tsx:30-46` fires for web
+ * tests. Must be called before `page.goto()`.
+ *
+ * Note: in the web build, `web/canvas.tsx` already exposes the store via
+ * `import.meta.env.DEV`, so this flag is defensive for future code paths
+ * that may gate on `__TEST_MODE__` directly.
+ */
+export async function enableTestMode(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    ;(window as { __TEST_MODE__?: boolean }).__TEST_MODE__ = true
+  })
+}
+
+/**
  * Mock Supabase Auth endpoints so web tests don't need a live Supabase instance.
- * Returns a minimal anonymous session that satisfies the auth store.
+ * Uses a catch-all pattern that tolerates any `/auth/v1/*` endpoint shape the
+ * installed @supabase/supabase-js version may hit (token, user, signup, logout,
+ * recover, verify, magiclink, otp, resend, etc.). Also stubs `/rest/v1/**` for
+ * any anon PostgREST reads made during boot.
  */
 export async function mockSupabaseAuth(page: Page): Promise<void> {
-  await page.route('**/auth/v1/**', async (route) => {
+  const fakeSession = {
+    access_token: 'test-jwt-token',
+    token_type: 'bearer',
+    expires_in: 3600,
+    refresh_token: 'test-refresh',
+    user: {
+      id: 'test-anon-user',
+      aud: 'authenticated',
+      role: 'anon',
+      email: '',
+      phone: '',
+      created_at: new Date().toISOString(),
+    },
+  }
+
+  // Catch-all: any request to /auth/v1/** (any hostname — matches both
+  // prod supabase.co and custom VITE_SUPABASE_URL values from .env.development).
+  const respond = async (route: import('@playwright/test').Route): Promise<void> => {
+    const url = route.request().url()
+    // Token endpoint returns the full session wrapper
+    if (url.includes('/token')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(fakeSession),
+      })
+      return
+    }
+    // User endpoint returns the user object
+    if (url.includes('/user')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(fakeSession.user),
+      })
+      return
+    }
+    // Logout returns empty OK
+    if (url.includes('/logout')) {
+      await route.fulfill({ status: 200, body: '{}' })
+      return
+    }
+    // Default: return session (covers signup, signInAnonymously, getSession, etc.)
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        access_token: 'test-jwt-token',
-        token_type: 'bearer',
-        expires_in: 3600,
-        refresh_token: 'test-refresh',
-        user: { id: 'test-anon-user', aud: 'authenticated', role: 'anon' },
-      }),
+      body: JSON.stringify(fakeSession),
+    })
+  }
+
+  await page.route('**/auth/v1/**', respond)
+
+  // Backstop: catch any stray hostname-level supabase.co call that bypasses
+  // /auth/v1/ (rare but seen with older @supabase/supabase-js versions).
+  await page.route('**/*.supabase.co/**', respond)
+
+  // Additionally stub /rest/v1/** for anon PostgREST reads made during boot.
+  await page.route('**/rest/v1/**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: '[]',
     })
   })
 }

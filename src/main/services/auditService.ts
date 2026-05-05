@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * Audit Service (Phase 2: Bridge Log - Main Process)
+ * Audit Service (Bridge Log - Main Process)
  *
  * Handles:
  * - Undo operations for audit events (node create/delete/update, edge create/delete)

@@ -26,6 +26,13 @@
   border-radius: var(--radius-xl, 12px);
   border: 2px solid transparent;
   transition: border-color var(--duration-fast) var(--ease-default);
+  /* CRITICAL: the model dropdown opens upward via `bottom: calc(100% + 8px)`
+     and extends above the bar. When the user's theme preset is `fluid-glass`,
+     glass.css:282-297 blanket-applies `overflow: hidden` to all .glass-soft
+     surfaces (to contain fluid-glass noise pseudo-elements). That clip sliced
+     the dropdown's top off. The bar itself has no noise pseudo-elements that
+     need containment, so override with !important to let children escape. */
+  overflow: visible !important;
 }
 
 .bottom-command-bar__bar:focus-within {

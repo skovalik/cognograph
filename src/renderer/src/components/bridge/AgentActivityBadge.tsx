@@ -17,7 +17,7 @@ import type { AgentActivityStatus } from '@shared/types/bridge'
 import { useStore } from '@xyflow/react'
 import { AlertCircle, Check, Clock, Clock3, Loader2, Pause } from 'lucide-react'
 import { memo, useMemo, useState } from 'react'
-import { usePerformanceMode } from '../../hooks/usePerformanceMode'
+import { useEffectiveTier } from '../../hooks/useEffectiveTier'
 import { cn } from '../../lib/utils'
 import { useBridgeStore } from '../../stores/bridgeStore'
 import { Badge } from '../ui/Badge'
@@ -93,7 +93,7 @@ function AgentActivityBadgeComponent({
 }: AgentActivityBadgeProps): JSX.Element | null {
   const agentState = useBridgeStore((s) => s.activeAgents[nodeId])
   const dismissError = useBridgeStore((s) => s.dismissAgentError)
-  const performanceMode = usePerformanceMode()
+  const effectiveTier = useEffectiveTier()
   const [popoverOpen, setPopoverOpen] = useState(false)
 
   // Scale badge inversely with zoom at low zoom levels
@@ -111,7 +111,7 @@ function AgentActivityBadgeComponent({
 
   const { Icon, className: statusClass, label, animateIcon } = config
   const showAnimation =
-    performanceMode === 'full' || (performanceMode === 'reduced' && agentState.status === 'running')
+    effectiveTier === 'full' || (effectiveTier === 'reduced' && agentState.status === 'running')
 
   return (
     <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>

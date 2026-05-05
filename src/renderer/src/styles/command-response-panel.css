@@ -81,6 +81,35 @@
   font-size: 13px;
 }
 
+/* Conic-gradient thinking indicator (inline) — replaces lucide Loader2 spin
+   to match the node-level thinking animation. Uses @property --conic-angle
+   and @keyframes conic-rotate from conic-thinking.css (imported via index.css). */
+.cmd-response-panel__thinking-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background:
+    var(--surface-panel) padding-box,
+    conic-gradient(
+      from var(--conic-angle, 0deg),
+      #c8963e,
+      #e5b95c,
+      #d4a056,
+      #b8860b,
+      #c8963e
+    ) border-box;
+  animation: conic-rotate 3s linear infinite;
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cmd-response-panel__thinking-dot {
+    animation: none;
+    border: 2px solid var(--accent-glow);
+  }
+}
+
 /* Prose theme adaptation — Tailwind prose uses its own color vars */
 .cmd-response-panel__entry-response .prose {
   --tw-prose-body: var(--text-primary);

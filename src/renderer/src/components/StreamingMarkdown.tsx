@@ -16,9 +16,11 @@
 import { memo, useMemo } from 'react'
 import { toast } from 'react-hot-toast'
 import ReactMarkdown from 'react-markdown'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import remarkGfm from 'remark-gfm'
+import {
+  cognographTheme,
+  CognographHighlighter as SyntaxHighlighter,
+} from '../themes/cognographPrism'
 
 // ---------------------------------------------------------------------------
 // Block splitter
@@ -115,7 +117,7 @@ const MarkdownBlock = memo(function MarkdownBlock({
                 Copy
               </button>
               <SyntaxHighlighter
-                style={oneDark}
+                style={cognographTheme}
                 language={match[1]}
                 PreTag="div"
                 customStyle={{

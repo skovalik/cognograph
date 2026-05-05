@@ -7,7 +7,7 @@ export {
   AccordionItem,
   AccordionTrigger,
 } from './accordion'
-// Phase 2 — Feedback Components
+// Feedback Components
 export { Alert, AlertDescription, AlertTitle } from './alert'
 export {
   AlertDialog,
@@ -27,7 +27,7 @@ export { Avatar, AvatarFallback, AvatarImage } from './avatar'
 export { Badge } from './Badge'
 // Pre-existing custom components
 export { Button } from './Button'
-// Phase 3 — Layout Components
+// Layout Components
 export {
   Card,
   CardContent,
@@ -131,9 +131,9 @@ export {
 export { Skeleton } from './skeleton'
 export { Slider } from './slider'
 export { Switch } from './switch'
-// Phase 0 — Additional Primitives
+// Additional Primitives
 export { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs'
-// Phase 1 — Form Inputs
+// Form Inputs
 export { Textarea } from './textarea'
 export { ToggleGroup, ToggleGroupItem } from './toggle-group'
 export {

@@ -30,7 +30,7 @@ export interface FeatureFlagDefinition {
  */
 export const FLAG_DEFINITIONS = {
   /**
-   * Phase 2 transition: route tool execution through the main process
+   * Route tool execution through the main process
    * IPC bridge instead of the renderer's in-process adapter.
    */
   USE_MAIN_PROCESS_TOOLS: {
@@ -39,7 +39,7 @@ export const FLAG_DEFINITIONS = {
   },
 
   /**
-   * Phase 4: persist workspace data as append-only JSONL instead of
+   * Persist workspace data as append-only JSONL instead of
    * the legacy JSON-blob-per-save approach.
    */
   JSONL_PERSISTENCE: {

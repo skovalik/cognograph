@@ -9,7 +9,7 @@
  * Only active when no text input is focused.
  * Spacebar alone should NOT trigger (must combine with arrow).
  *
- * PFD Phase 5B: Canvas Interaction Patterns
+ * Canvas Interaction Patterns
  */
 
 import { useReactFlow } from '@xyflow/react'

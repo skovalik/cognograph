@@ -4,6 +4,8 @@
 import { ipcMain, safeStorage } from 'electron'
 import Store from 'electron-store'
 
+import { registerDevInjectKeyIpc } from './services/ai/getDecryptedOrEnv'
+
 interface SettingsSchema {
   theme: 'dark' | 'light'
   autoSave: boolean
@@ -91,6 +93,9 @@ export function registerSettingsHandlers(): void {
       return { success: false, error: errorMessage }
     }
   })
+
+  // Dev /test/injectKey IPC route. No-op in production.
+  registerDevInjectKeyIpc()
 }
 
 export function getSetting<K extends keyof SettingsSchema>(key: K): SettingsSchema[K] | undefined {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-// Execution Status Store — Phase 5A: Visible Execution State Badges
+// Execution Status Store — Visible Execution State Badges
 // Tracks per-node execution state during orchestrated AI workflows.
 // Each node participating in an orchestrator pipeline gets a status
 // entry (active, queued, complete, error) that drives visual badges.

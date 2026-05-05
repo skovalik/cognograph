@@ -8,7 +8,7 @@
  * piggybacking on agentService's stream listener via
  * registerExternalStreamHandler. No main-process changes.
  *
- * ARCHITECTURE NOTE (Phase 2C: RENDERER-PASSIVIZE — IN PROGRESS):
+ * ARCHITECTURE NOTE (RENDERER-PASSIVIZE — IN PROGRESS):
  * When AGENT_LOOP_ENABLED=true, the main-process agentLoop handles all
  * tool execution internally. The renderer's sendChatWithTools while-loop
  * receives a single done chunk with stopReason='end_turn' and exits after
@@ -82,10 +82,12 @@ layoutEvents.addEventListener('run-layout', (e: Event) => {
         // Log node dimensions before layout
         for (const nid of nodeIds) {
           const n = freshStore.nodes.find((nd) => nd.id === nid)
-          if (n)
+          if (n) {
+            const ct = n.data.contentType
             console.log(
-              `  Node ${nid.slice(0, 8)}: ${n.data.title?.slice(0, 20)} w=${n.width ?? n.measured?.width} h=${n.height ?? n.measured?.height} content=${(n.data.content || '').length}chars type=${n.data.type} contentType=${n.data.contentType}`,
+              `  Node ${nid.slice(0, 8)}: ${n.data.title?.slice(0, 20)} w=${n.width ?? n.measured?.width} h=${n.height ?? n.measured?.height} content=${(n.data.content || '').length}chars type=${n.data.type}${ct ? ` contentType=${ct}` : ''}`,
             )
+          }
         }
         runLayoutPipeline(freshStore, nodeIds, edgeIds, conversationId)
       } catch (err) {
@@ -154,6 +156,7 @@ export async function sendChatWithTools(
 
   const loopState = { requestId, cancelled: false }
   activeLoops.set(conversationId, loopState)
+  let chatToolRafId: number | null = null
 
   try {
     while (toolCallCount < TOOL_LOOP_SAFETY_LIMIT && !loopState.cancelled) {
@@ -170,7 +173,13 @@ export async function sendChatWithTools(
           onChunk(chunk: AgentStreamChunk) {
             if (chunk.type === 'text_delta') {
               accumulatedText += chunk.content
-              store.updateLastMessage(conversationId, accumulatedText)
+              // rAF throttle: accumulate immediately, flush at display refresh rate
+              if (chatToolRafId == null) {
+                chatToolRafId = requestAnimationFrame(() => {
+                  chatToolRafId = null
+                  store.updateLastMessage(conversationId, accumulatedText)
+                })
+              }
             } else if (chunk.type === 'tool_use_start') {
               currentToolUse = { id: chunk.toolUseId, name: chunk.toolName, inputJson: '' }
             } else if (chunk.type === 'tool_use_delta' && currentToolUse) {
@@ -199,6 +208,13 @@ export async function sendChatWithTools(
           clientManagesToolLoop: true,
         })
       })
+
+      // Flush any pending rAF-throttled update
+      if (chatToolRafId != null) {
+        cancelAnimationFrame(chatToolRafId)
+        chatToolRafId = null
+        store.updateLastMessage(conversationId, accumulatedText)
+      }
 
       // Unregister this iteration's handler
       unregisterExternalStreamHandler(requestId)
@@ -418,10 +434,12 @@ function runLayoutPipeline(
           : 0
     const finalW = Math.max(w, dims.width, widthFloor)
     const finalH = Math.max(h, dims.height, minH, contentFloor)
-    if (import.meta.env.DEV)
+    if (import.meta.env.DEV) {
+      const ct = node.data.contentType
       console.log(
-        `[Layout Step 1] Node ${id.slice(0, 8)} "${(node.data.title || '').slice(0, 20)}" type=${node.data.type} contentType=${node.data.contentType} content=${rawContent.length}chars w=${w}→${finalW} h=${h}→${finalH} isHtml=${isHtml} contentFloor=${contentFloor} widthFloor=${widthFloor}`,
+        `[Layout Step 1] Node ${id.slice(0, 8)} "${(node.data.title || '').slice(0, 20)}" type=${node.data.type}${ct ? ` contentType=${ct}` : ''} content=${rawContent.length}chars w=${w}→${finalW} h=${h}→${finalH} isHtml=${isHtml} contentFloor=${contentFloor} widthFloor=${widthFloor}`,
       )
+    }
     if (finalW > w || finalH > h) {
       store.updateNode(
         id,

@@ -5,7 +5,7 @@
  * nodeModeUtils.ts - Node mode visual differentiation utilities
  *
  * Provides tint opacity and border style calculations for node modes.
- * Based on Phase 0 user research (76% accuracy, 80% preference).
+ * Based on user research (76% accuracy, 80% preference).
  *
  * Modifications from simulation:
  * - Increased opacity delta: 15%/25%/40% (was 20%/26%/35%)

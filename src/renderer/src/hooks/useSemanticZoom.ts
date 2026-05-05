@@ -7,7 +7,7 @@
  * ND-friendly feature: At far zoom, users see spatial layout without
  * being distracted by content. Content progressively reveals as they zoom in.
  *
- * 5 Zoom levels (Phase 1A):
+ * 5 Zoom levels:
  * - 'ultra-far' (< 0.05): Cluster/region shapes only, supports "knowing WHERE"
  * - 'far' (0.05-0.08): Titles and badges visible, can identify specific nodes
  * - 'mid' (0.08-0.12): Titles + lede + badges, summary card mode
@@ -35,7 +35,7 @@ export interface NodeContentVisibility {
   showLede: boolean
   zoomLevel: ZoomLevel
 
-  // New fields (Phase 1A)
+  // Newer fields (semantic zoom upgrade)
   showClusterSummary: boolean
   showEmbeddedContent: boolean
   showExpandedToolbar: boolean
@@ -44,7 +44,7 @@ export interface NodeContentVisibility {
   showHeader: boolean
   effectiveLevel: ZoomLevel
 
-  // Phase 2 fields (LOD universalization)
+  // LOD universalization fields
   /** Whether the rich editor (TipTap/CodeMirror) should mount — close and ultra-close only */
   showEditor: boolean
   /** Whether placeholder shimmer bars should render (title/content stand-ins at far zoom) */
@@ -140,7 +140,7 @@ export function computeZoomLevel(zoom: number, prev: ZoomLevel): ZoomLevel {
  * Computes node content visibility flags for a given zoom level.
  * Pure function -- no React dependency. Extracted for testing.
  *
- * Visibility matrix (Phase 2 — LOD universalization):
+ * Visibility matrix (LOD universalization):
  *
  * | Flag                   | ultra-far | far   | mid   | close | ultra-close |
  * |------------------------|-----------|-------|-------|-------|-------------|
@@ -268,14 +268,20 @@ export function computeNodeContentVisibility(level: ZoomLevel): NodeContentVisib
  * Uses hysteresis to prevent flickering at threshold boundaries.
  */
 export function useSemanticZoom(): ZoomLevel {
-  const zoom = useStore((state) => state.transform[2])
   const prevLevelRef = useRef<ZoomLevel>('close')
 
-  return useMemo(() => {
-    const next = computeZoomLevel(zoom, prevLevelRef.current)
-    prevLevelRef.current = next
-    return next
-  }, [zoom])
+  // Z-2: Compute level inside selector + equalityFn. The selector returns a
+  // discrete string enum — Zustand only re-renders when the string changes
+  // (5 transitions across full zoom range). Synchronous ref mutation matches
+  // the prior useMemo pattern and is safe in Zustand's subscription callback.
+  return useStore(
+    (state) => {
+      const next = computeZoomLevel(state.transform[2], prevLevelRef.current)
+      prevLevelRef.current = next
+      return next
+    },
+    (a, b) => a === b,
+  )
 }
 
 /**

@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * useCognitiveLoadVisibility (Phase 6F) -- Cognitive load meter visibility tests
+ * useCognitiveLoadVisibility -- Cognitive load meter visibility tests
  *
  * Tests the pure computeCognitiveLoadVisibility function that determines
  * when the cognitive load meter should be shown based on zoom level

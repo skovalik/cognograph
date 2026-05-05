@@ -173,6 +173,18 @@ export class BridgeSyncProvider implements MCPSyncProvider {
     // Renderer's save flow handles disk persistence.
   }
 
+  notifyContextRead(nodeId: string): void {
+    // Fire-and-forget: tell the main-process bridge that the CLI just read
+    // context for this node. mcpBridge broadcasts a 'context:read-start'
+    // IPC event to all renderer windows, which triggers the F5 edge
+    // animation. Failures must be silent — this is a UX signal, not state.
+    this.bridgePost('/context-read', { nodeId }).catch((err) => {
+      if (process.env.COGNOGRAPH_DEBUG) {
+        console.error('[BridgeSyncProvider] notifyContextRead failed:', err)
+      }
+    })
+  }
+
   // ---------------------------------------------------------------------------
   // HTTP helpers — Node.js http.request (NOT global fetch)
   // ---------------------------------------------------------------------------

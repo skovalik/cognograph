@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-// CanvasDistrictOverlay — PFD Phase 3B: Canvas Districts
+// CanvasDistrictOverlay — Canvas Districts
 // Renders user-designated regions as grayscale background tints
-// District overlay implementation
 //
 // Design decisions:
 // - Grayscale tints ONLY — hue is reserved for NoteMode type (bracket color)

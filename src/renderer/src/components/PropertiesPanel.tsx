@@ -1930,15 +1930,19 @@ function ArtifactFields({
 
   // Get source description
   const getSourceDescription = (): string => {
-    switch (data.source.type) {
+    const source = data.source
+    if (!source || !source.type) return 'Unknown source'
+    switch (source.type) {
       case 'file-drop':
-        return `Dropped: ${data.source.filename}`
+        return `Dropped: ${source.filename}`
       case 'llm-response':
         return `From conversation`
       case 'url':
-        return `URL: ${data.source.url}`
+        return `URL: ${source.url}`
       case 'created':
-        return data.source.method === 'manual' ? 'Created manually' : 'Auto-extracted'
+        return source.method === 'manual' ? 'Created manually' : 'Auto-extracted'
+      default:
+        return 'Unknown source'
     }
   }
 

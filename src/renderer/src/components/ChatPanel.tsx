@@ -21,6 +21,7 @@ import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState
 import { createPortal } from 'react-dom'
 import { toast } from 'react-hot-toast'
 import { useRatchetHeight } from '../hooks/useRatchetHeight'
+import { getKey as getApiKeyFromStore } from '../services/apiKeyStore'
 import { useIsStreaming as useStoreIsStreaming, useWorkspaceStore } from '../stores/workspaceStore'
 import { EscapePriority, escapeManager } from '../utils/EscapeManager'
 import { ContextIndicator } from './ContextIndicator'
@@ -159,7 +160,28 @@ function ChatPanelComponent({
   const nodeData = useMemo(() => {
     if (!isValidConversation || !node) return null
     try {
-      return node.data as ConversationNodeData
+      const data = node.data as ConversationNodeData
+      // Dedup messages by id before handing them to render. Upstream
+      // paths (agentEventReceiver tool bridges, JSONL sidecar restore,
+      // workspace snapshot merge) have been caught pushing duplicates
+      // despite the dedup guards in addMessage/addToolMessage — when that
+      // happens React logs "Encountered two children with the same key"
+      // and floods the console making every other log unreadable. Keeping
+      // first occurrence preserves ordering; the duplicate write is a bug
+      // to fix upstream but this guarantees the render path is robust.
+      const seen = new Set<string>()
+      const deduped = data.messages.filter((m) => {
+        if (seen.has(m.id)) return false
+        seen.add(m.id)
+        return true
+      })
+      if (deduped.length === data.messages.length) return data
+      if (import.meta.env.DEV) {
+        console.warn(
+          `[ChatPanel] dropped ${data.messages.length - deduped.length} duplicate message(s) for node ${node.id}`,
+        )
+      }
+      return { ...data, messages: deduped } as ConversationNodeData
     } catch (e) {
       console.error('Error casting node data:', e)
       return null
@@ -188,11 +210,10 @@ function ChatPanelComponent({
     return () => escapeManager.unregister(id)
   }, [isStreaming, nodeId])
 
-  // Check if user has a BYOK key for the current provider
-  const byokKey =
-    typeof window !== 'undefined'
-      ? localStorage.getItem(`cognograph:apikey:${nodeData?.provider || 'anthropic'}`)
-      : null
+  // Check if user has a BYOK key for the current provider.
+  // Read from in-memory apiKeyStore (hydrated from main-process
+  // safeStorage at startup) — never from localStorage.
+  const byokKey = getApiKeyFromStore(nodeData?.provider || 'anthropic')
 
   const connectedNodes = useMemo(() => {
     if (!isValidConversation) return []
@@ -349,6 +370,7 @@ function ChatPanelComponent({
 
   // Set up stream listeners - now filtered by conversationId (nodeId)
   // Using ref for currentResponse to avoid closure issues when effect re-runs
+  const chatPanelRafRef = useRef<number | null>(null)
   useEffect(() => {
     let unsubChunk: (() => void) | undefined
     let unsubComplete: (() => void) | undefined
@@ -369,12 +391,24 @@ function ChatPanelComponent({
             setStreaming(nodeId, true)
           }
           currentResponseRef.current += data.chunk
-          updateLastMessage(nodeId, currentResponseRef.current)
+          // rAF throttle: accumulate immediately, flush at display refresh rate
+          if (chatPanelRafRef.current == null) {
+            chatPanelRafRef.current = requestAnimationFrame(() => {
+              chatPanelRafRef.current = null
+              updateLastMessage(nodeId, currentResponseRef.current)
+            })
+          }
         }
       })
 
       unsubComplete = window.api.llm.onComplete((data) => {
         if (data.conversationId === nodeId) {
+          // Flush any pending rAF-throttled update
+          if (chatPanelRafRef.current != null) {
+            cancelAnimationFrame(chatPanelRafRef.current)
+            chatPanelRafRef.current = null
+            updateLastMessage(nodeId, currentResponseRef.current)
+          }
           setStreaming(nodeId, false) // Clear global streaming state
           setIsStreamingLocal(false)
 
@@ -435,6 +469,11 @@ function ChatPanelComponent({
 
       unsubError = window.api.llm.onError((data) => {
         if (data.conversationId === nodeId) {
+          // Flush any pending rAF-throttled update
+          if (chatPanelRafRef.current != null) {
+            cancelAnimationFrame(chatPanelRafRef.current)
+            chatPanelRafRef.current = null
+          }
           setStreaming(nodeId, false) // Clear global streaming state
           setIsStreamingLocal(false)
           toast.error(data.error)
@@ -449,6 +488,10 @@ function ChatPanelComponent({
       unsubChunk?.()
       unsubComplete?.()
       unsubError?.()
+      if (chatPanelRafRef.current != null) {
+        cancelAnimationFrame(chatPanelRafRef.current)
+        chatPanelRafRef.current = null
+      }
     }
   }, [nodeId, updateLastMessage, extractionSettings, triggerPerMessageExtraction, setStreaming])
 

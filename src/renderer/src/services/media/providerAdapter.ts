@@ -5,10 +5,13 @@ export abstract class ProviderAdapter {
   abstract readonly name: string
   abstract readonly capabilities: readonly ProviderCapability[]
 
-  constructor(
-    protected apiKey: string,
-    protected creditBalance: number | null,
-  ) {}
+  /**
+   * Adapters no longer hold the API key — the main-process
+   * media-fetch dispatcher resolves it from safeStorage by provider
+   * name. `creditBalance` stays for callers that want pre-flight quota
+   * checks; it has no effect on auth.
+   */
+  constructor(protected creditBalance: number | null = null) {}
 
   abstract generateImage(params: ImageGenParams): Promise<MediaResult>
   editImage?(params: ImageEditParams): Promise<MediaResult>

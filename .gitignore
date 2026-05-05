@@ -6,18 +6,24 @@ node_modules/
 *.lnk
 workplace saves/
 shader*.png
-# Draft figures
-*.draft.png
+patent-*.png
+p1-fig*.png
 
-# Internal backups
-src/web/landing-backup-pre-orchestration/
-
-# Build output
-dist/
+# Build output: dist/* contents are gitignored, but signed-build
+# manifests under dist/wave-5/ and dist/attestations/ carry verifiable
+# attestations and are re-included explicitly.
+dist/*
+!dist/wave-5/
+!dist/attestations/
 dist-electron/
 dist-web/
 out/
 release/
+
+# Signed build artifacts: manifests + Ed25519 signatures (verifiable
+# by anyone with dist/attestations/cosign.pub). The private signing
+# key is excluded explicitly.
+dist/attestations/cosign.key
 
 # Electron
 *.log
@@ -32,12 +38,18 @@ release/
 .DS_Store
 Thumbs.db
 
+# Phase-close per-step idempotency markers (transient run state; see plan D.H)
+
+# Phase C generator venv (per-machine, platform-specific; see plan §C1)
+
 # Environment
 .env
 .env.*
+orchestrator/.env
 
 # Secrets
 .keys/
+.supabase/keys.txt
 .resend/
 
 # TypeScript
@@ -45,6 +57,8 @@ Thumbs.db
 
 # Testing
 coverage/
+test-results/
+!test-results/.gitkeep
 
 # Misc
 *.bak

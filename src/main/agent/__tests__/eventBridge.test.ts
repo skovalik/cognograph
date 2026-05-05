@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import type { BrowserWindow } from 'electron'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { ToolResult as MainToolResult } from '../../tools/types'
 import type { AgentLoopEvent } from '../agentLoop'
 import { bridgeEventToIPC } from '../eventBridge'

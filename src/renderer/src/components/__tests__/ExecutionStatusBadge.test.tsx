@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * ExecutionStatusBadge Component Tests — Phase 5A
+ * ExecutionStatusBadge Component Tests
  *
  * Tests for the shape-coded execution status badge:
  * - Correct shape rendering per status

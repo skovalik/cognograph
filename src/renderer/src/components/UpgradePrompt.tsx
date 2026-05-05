@@ -86,8 +86,13 @@ export const UpgradePrompt = memo(function UpgradePrompt({
   const handleUpgrade = useCallback(async () => {
     setIsLoading(true)
     try {
-      // Cloud features disabled in open-source build
-      window.open('https://cognograph.app/#pricing', '_blank')
+      const { isAuthEnabled } = await import('../../../web/lib/supabase')
+      if (isAuthEnabled()) {
+        const { createCheckoutSession } = await import('../../../web/lib/billingService')
+        await createCheckoutSession('pro_monthly')
+      } else {
+        window.open('https://cognograph.app/#pricing', '_blank')
+      }
     } finally {
       setIsLoading(false)
     }

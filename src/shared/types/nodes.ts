@@ -61,6 +61,9 @@ export interface ConversationNodeData extends ContextMetadata {
     lastActivityAt: number
     accentColor: string // From SESSION_ACCENT_COLORS palette
     source: 'local' | 'cloud' // local agent vs Fly Machine
+    /** Renderer-only: user explicitly pinned this terminal to keep PTY alive
+     *  past idle timeout. Has no effect when terminalState === 'exited'. */
+    userPinned?: boolean
   }
 
   // Agent-specific fields (only meaningful when mode === 'agent')
@@ -534,7 +537,7 @@ export interface AgentRunSummary {
   toolCallCount: number
   tokensUsed: number // Backwards compat: inputTokens + outputTokens
   costUSD: number
-  // New token tracking fields (Phase 2 P0)
+  // New token tracking fields
   inputTokens: number
   outputTokens: number
   cacheCreationTokens?: number
@@ -695,7 +698,7 @@ export interface OrchestratorCondition {
   value?: string
   /** For token-count-below: the threshold */
   threshold?: number
-  /** For custom-expression: a safe JS expression (NOT implemented in Phase 1) */
+  /** For custom-expression: a safe JS expression (NOT yet implemented) */
   expression?: string
   /** Invert the condition result */
   invert: boolean

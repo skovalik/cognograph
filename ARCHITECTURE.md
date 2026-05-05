@@ -806,8 +806,6 @@ Cognograph uses **dependency-cruiser** to automatically enforce architectural bo
 | `store-not-in-utils` | Utils should not import stores directly |
 | `components-not-import-services` | Components should use hooks, not services directly |
 
-For full documentation, see: `docs/qa/ARCHITECTURAL_RULES.md`
-
 ---
 
 ## Security Considerations

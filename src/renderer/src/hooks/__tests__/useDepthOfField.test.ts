@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * useDepthOfField (Phase 6A) -- Hook tests
+ * useDepthOfField -- Hook tests
  *
  * Tests the pure helper functions and the hook CSS class + effective zoom level logic.
  */

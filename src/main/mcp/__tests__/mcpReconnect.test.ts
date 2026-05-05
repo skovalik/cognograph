@@ -17,6 +17,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 // Mocks — must be declared before imports that use them
 // ---------------------------------------------------------------------------
 
+// mcpClient wires tracer.startSpan via the service-tier withMcpToolSpan
+// wrapper. Mock the Sentry main entry so the static import chain resolves
+// without spinning up Electron.
+vi.mock('@sentry/electron/main', () => ({
+  startInactiveSpan: vi.fn(() => ({
+    end: vi.fn(),
+    setAttribute: vi.fn(),
+  })),
+  captureException: vi.fn(),
+}))
+
 // Track created instances for assertions
 interface MockTransport {
   onerror: ((err: Error) => void) | null

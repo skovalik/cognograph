@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-// CanvasTableOfContents — PFD Phase 7A: Non-Spatial Retrieval
+// CanvasTableOfContents — Non-Spatial Retrieval
 // Flat searchable list of all nodes. Parallel access method for when
 // spatial memory fails ("I know I wrote it but can't find it on canvas").
 // Triggered by Ctrl+Shift+T or command palette.

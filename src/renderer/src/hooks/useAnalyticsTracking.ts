@@ -7,7 +7,7 @@
  * Automatically tracks onboarding metrics based on workspace activity.
  * Subscribes to workspace store changes and records first-time events.
  *
- * Created as part of Track 5 Phase 5.0: Analytics Baseline
+ * Created as part of the Analytics Baseline work.
  */
 
 import { useEffect, useRef } from 'react'

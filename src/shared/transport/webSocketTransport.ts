@@ -8,7 +8,7 @@
 // Handles reconnection with exponential backoff, message serialization, and
 // buffering during disconnects.
 //
-// Created as part of Phase 5A: WEB-BACKEND hardening
+// Created as part of WEB-BACKEND hardening
 // =============================================================================
 
 import type { AgentMessage, Transport } from './types'

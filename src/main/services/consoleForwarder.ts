@@ -19,7 +19,7 @@ const logBuffer: ConsoleLogEntry[] = []
 
 function extractSource(msg: string): string {
   const match = msg.match(/^\[([^\]]+)\]/)
-  return match ? match[1] : 'main'
+  return match?.[1] ?? 'main'
 }
 
 function serializeArg(a: unknown): string {
@@ -58,6 +58,7 @@ function forward(level: LogLevel, args: unknown[]): void {
 }
 
 export function interceptConsole(): void {
+  if (!process.env.COGNOGRAPH_DEV_CONSOLE) return // Skip IPC forwarding in production
   const origLog = console.log
   const origWarn = console.warn
   const origError = console.error

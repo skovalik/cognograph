@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import { Pencil, Sparkles } from 'lucide-react'
-import { memo, useCallback } from 'react'
-import { useAIEditorStore } from '../stores/aiEditorStore'
+import { memo, useCallback, useEffect } from 'react'
+import { useUIStore } from '../stores/uiStore'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import '../styles/contextual-action-bar.css'
 
@@ -12,19 +12,31 @@ function ContextualActionBarComponent(): JSX.Element | null {
   const selectedNodeIds = useWorkspaceStore((s) => s.selectedNodeIds)
   const selectedEdgeIds = useWorkspaceStore((s) => s.selectedEdgeIds)
   const nodes = useWorkspaceStore((s) => s.nodes)
-  const openModal = useAIEditorStore((s) => s.openModal)
+  const setCommandBarPrefill = useUIStore((s) => s.setCommandBarPrefill)
+  const dismissed = useUIStore((s) => s.contextualActionBarDismissed)
+  const setDismissed = useUIStore((s) => s.setContextualActionBarDismissed)
+
+  // Reset dismissal when the selected node changes — user selecting a
+  // different single node should re-show the bar.
+  const firstSelectedId = selectedNodeIds[0] ?? null
+  useEffect(() => {
+    setDismissed(false)
+  }, [firstSelectedId, setDismissed])
 
   const handleGenerate = useCallback(() => {
     if (selectedNodeIds.length !== 1) return
-    openModal({ scope: 'single', mode: 'generate', targetNodeId: selectedNodeIds[0] })
-  }, [openModal, selectedNodeIds])
+    setCommandBarPrefill('Generate content for the selected node: ')
+    setDismissed(true)
+  }, [selectedNodeIds, setCommandBarPrefill, setDismissed])
 
   const handleModify = useCallback(() => {
     if (selectedNodeIds.length !== 1) return
-    openModal({ scope: 'single', mode: 'edit', targetNodeId: selectedNodeIds[0] })
-  }, [openModal, selectedNodeIds])
+    setCommandBarPrefill('Modify the selected node: ')
+    setDismissed(true)
+  }, [selectedNodeIds, setCommandBarPrefill, setDismissed])
 
   // Conditional returns AFTER all hooks
+  if (dismissed) return null
   if (selectedNodeIds.length !== 1 || selectedEdgeIds.length > 0) return null
   const nodeId = selectedNodeIds[0]
   const node = nodes.find((n) => n.id === nodeId)
@@ -35,10 +47,10 @@ function ContextualActionBarComponent(): JSX.Element | null {
   return (
     <div className="contextual-bar glass-soft">
       <button className="contextual-bar__btn contextual-bar__btn--primary" onClick={handleGenerate}>
-        <Sparkles /> Generate
+        <Sparkles className="w-3.5 h-3.5" /> Generate
       </button>
       <button className="contextual-bar__btn" onClick={handleModify}>
-        <Pencil /> Modify
+        <Pencil className="w-3.5 h-3.5" /> Modify
       </button>
     </div>
   )

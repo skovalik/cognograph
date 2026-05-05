@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * Permission Card Variant Tests — Phase 4B UX-PERMISSIONS
+ * Permission Card Variant Tests — UX-PERMISSIONS
  *
  * Tests for the specialized permission card variants:
  * - ShellPermissionCard: importable, memoized, exports

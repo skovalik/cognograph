@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-// MCP Tool Definitions - Phase 14
+// MCP Tool Definitions
 // Defines the schema for each tool exposed by the MCP server
 
 export const TOOL_DEFINITIONS = [

@@ -20,6 +20,11 @@ import type {
 import type { Node } from '@xyflow/react'
 import { memo } from 'react'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
+import {
+  CognographHighlighter,
+  cognographTheme,
+  getLanguageForContentType,
+} from '../../themes/cognographPrism'
 import { EditableText } from '../EditableText'
 import { RichTextEditor } from '../RichTextEditor'
 
@@ -125,6 +130,7 @@ function PinnedNodeContentComponent({ node }: PinnedNodeContentProps): JSX.Eleme
     case 'artifact': {
       const artifactData = node.data as ArtifactNodeData
       const content = artifactData.content || ''
+      const truncated = content.length > 2000 ? `${content.slice(0, 2000)}\n...` : content
       return (
         <div className="flex flex-col gap-1 h-full overflow-auto">
           {artifactData.contentType === 'image' && content ? (
@@ -133,10 +139,27 @@ function PinnedNodeContentComponent({ node }: PinnedNodeContentProps): JSX.Eleme
               alt={artifactData.title}
               className="max-w-full rounded object-contain"
             />
+          ) : content ? (
+            <CognographHighlighter
+              language={getLanguageForContentType(artifactData.contentType, artifactData.language)}
+              style={cognographTheme}
+              PreTag="div"
+              customStyle={{
+                margin: 0,
+                flex: 1,
+                minHeight: 0,
+                fontSize: '0.75rem',
+                padding: '0.5rem',
+              }}
+              wrapLongLines={
+                artifactData.contentType === 'markdown' || artifactData.contentType === 'text'
+              }
+            >
+              {truncated}
+            </CognographHighlighter>
           ) : (
             <pre className="text-xs text-[var(--text-secondary)] whitespace-pre-wrap font-mono bg-[var(--surface-panel)]/50 p-2 rounded overflow-auto flex-1">
-              {content.slice(0, 2000)}
-              {content.length > 2000 && '\n...'}
+              {truncated}
             </pre>
           )}
         </div>

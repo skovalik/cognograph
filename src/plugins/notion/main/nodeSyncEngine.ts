@@ -8,22 +8,17 @@
 // duplication detection, schema initialization.
 // All Notion API calls go through UpsertService → NotionService.
 
-import { createHash } from 'crypto'
 import { promises as fs } from 'fs'
 import { join } from 'path'
 import { notionService } from '../../../main/services/notionService'
 import type { PluginContext } from '../../types'
 import { hashContent, htmlToNotionBlocks } from './contentConverter'
 import { NodeSyncQueue } from './nodeSyncQueue'
-import type { MappedCognographFields } from './propertyMapper'
 import {
   artifactToNotionPageProperties,
-  getFieldAuthority,
-  getPageIcon,
   getTargetDbId,
   nodeToNotionProperties,
   noteToNotionPageProperties,
-  notionToNodeFields,
 } from './propertyMapper'
 import { pullService } from './pullService'
 import { SyncLogger } from './syncLogger'
@@ -151,7 +146,6 @@ export class NodeSyncEngine {
     }
 
     this.syncInProgress = true
-    const startTime = Date.now()
 
     try {
       this.currentWorkspaceId = data.canvasId
@@ -193,7 +187,6 @@ export class NodeSyncEngine {
     } catch (err) {
       this.ctx.log.error('Sync error:', String(err))
     } finally {
-      const duration = Date.now() - startTime
       this.syncInProgress = false
 
       // Check for pending save (collapse multiple saves into one)
@@ -337,7 +330,7 @@ export class NodeSyncEngine {
    */
   private async pushSingleNode(
     node: { id: string; type: string; data: any },
-    workspaceId: string,
+    _workspaceId: string,
     config: SyncConfig,
   ): Promise<{
     success: boolean
@@ -693,13 +686,18 @@ export class NodeSyncEngine {
         const existingProp = properties['Cognograph Node ID']
 
         if (!existingProp) {
-          // Add the property
+          // Add the property — SDK 2025-09-03 moved schema edits to data sources;
+          // we use the legacy databases endpoint via client.request() which still
+          // accepts a `properties` patch on the database itself.
           const addResult = await notionService.request(
             async (client) =>
-              client.databases.update({
-                database_id: db.id!,
-                properties: {
-                  'Cognograph Node ID': { rich_text: {} },
+              client.request<Record<string, unknown>>({
+                method: 'patch',
+                path: `databases/${db.id!}`,
+                body: {
+                  properties: {
+                    'Cognograph Node ID': { rich_text: {} },
+                  },
                 },
               }),
             'schemaInit',
@@ -736,7 +734,9 @@ export class NodeSyncEngine {
   // Reconciliation (Section 7e)
   // ---------------------------------------------------------------------------
 
-  private async reconcileOnStartup(nodes: Array<{ id: string; data: any }>): Promise<void> {
+  private async reconcileOnStartup(
+    nodes: Array<{ id: string; type?: string; data: any }>,
+  ): Promise<void> {
     for (const node of nodes) {
       const snapshot = this.snapshots.get(node.id)
       if (!snapshot) continue
@@ -746,7 +746,8 @@ export class NodeSyncEngine {
 
       if (currentStatus === 'dirty' || currentStatus === 'error') {
         // Check if data actually matches snapshot
-        if (!this.hasLocalChanges(node, snapshot)) {
+        const nodeWithType = { ...node, type: node.type ?? (data.type as string) ?? '' }
+        if (!this.hasLocalChanges(nodeWithType, snapshot)) {
           // Data matches — crash happened after sync but before workspace save
           data.properties = data.properties || {}
           data.properties.notion_syncStatus = 'synced'

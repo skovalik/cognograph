@@ -4,7 +4,6 @@
 /**
  * SDK Tool Definitions — wraps Cognograph canvas tools for the Agent SDK path.
  *
- * === Phase 2B update ===
  * Tool execution now delegates to the shared toolExecutor via a ToolPool,
  * ensuring consistent Zod validation and permission checks across both
  * API and SDK paths. The executeInRenderer IPC bridge is preserved as a
@@ -84,7 +83,7 @@ export function getCurrentConversationId(): string | undefined {
 }
 
 // ---------------------------------------------------------------------------
-// Phase 2B: Shared execution context and pool reference
+// Shared execution context and pool reference
 // ---------------------------------------------------------------------------
 let activeToolPool: ToolPool | undefined
 let activeExecutionContext: ExecutionContext | undefined
@@ -104,7 +103,7 @@ export function setSdkToolPool(pool: ToolPool, ctx: ExecutionContext): void {
  */
 async function executeTool(toolName: string, args: Record<string, unknown>): Promise<string> {
   if (activeToolPool && activeExecutionContext) {
-    // Phase 2B path: delegate to shared toolExecutor
+    // Shared toolExecutor path: delegate to shared toolExecutor
     const call: NormalizedToolCall = {
       id: randomUUID(),
       name: toolName,

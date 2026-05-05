@@ -11,7 +11,7 @@ import {
 } from '@xyflow/react'
 import { Link2, Maximize2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CONIC_PALETTES } from '../../constants/conicPalettes'
+import { useConicPalette } from '../../constants/conicPalettes'
 import { getPropertiesForNodeType } from '../../constants/properties'
 import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
 import { useNodeResize } from '../../hooks/useNodeResize'
@@ -200,13 +200,17 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
 
   const isUltraFar = zoomLevel === 'ultra-far'
 
-  // Strip HTML for character count (content-aware height)
-  const plainDescription = nodeData.description
-    ? nodeData.description
-        .replace(/<[^>]*>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-    : ''
+  // Z-18: Memoize regex strip — only recompute when description changes
+  const plainDescription = useMemo(
+    () =>
+      nodeData.description
+        ? nodeData.description
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+        : '',
+    [nodeData.description],
+  )
 
   // Content-aware minimum height: auto-expand based on content length, capped at MAX_HEIGHT
   const contentMinHeight = useMemo(() => {
@@ -221,9 +225,10 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
 
   const effectiveHeight = Math.max(contentMinHeight, nodeHeight)
 
+  const palette = useConicPalette()
+
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.task ?? '#10b981'
-    const palette = CONIC_PALETTES.task || CONIC_PALETTES.default
 
     return {
       '--ring-color': safeNodeColor,
@@ -235,7 +240,7 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
       width: nodeWidth,
       height: effectiveHeight,
     }
-  }, [nodeColor, themeSettings.nodeColors.task, nodeWidth, effectiveHeight])
+  }, [nodeColor, themeSettings.nodeColors.task, nodeWidth, effectiveHeight, palette])
 
   // Handle resize - also update node internals to trigger edge recalculation
   const handleResizeStart = useCallback(() => {
@@ -403,7 +408,6 @@ function TaskNodeComponent({ id, data, selected, width, height }: NodeProps): JS
     'cognograph-node',
     'cognograph-node--task',
     selected && 'selected',
-    // is-active reserved for functional state only (not selection)
     isProcessing && 'is-thinking',
     isDisabled && 'cognograph-node--disabled',
     isSpawning && 'spawning',

@@ -156,8 +156,8 @@ export default function Aurora(props: AuroraProps) {
 
     function resize() {
       if (!ctn) return
-      const width = ctn.offsetWidth
-      const height = ctn.offsetHeight
+      const width = Math.max(1, ctn.offsetWidth)
+      const height = Math.max(1, ctn.offsetHeight)
       renderer.setSize(width, height)
       if (program) {
         program.uniforms.uResolution.value = [width, height]
@@ -196,6 +196,7 @@ export default function Aurora(props: AuroraProps) {
     let currentScale = -1
     const update = (t: number) => {
       animateId = requestAnimationFrame(update)
+      if (gl.drawingBufferWidth === 0 || gl.drawingBufferHeight === 0) return
       if (propsRef.current.qualityRef?.current && !propsRef.current.qualityRef.current.shouldRender)
         return
       if (propsRef.current.reportFrame) propsRef.current.reportFrame()
@@ -206,8 +207,8 @@ export default function Aurora(props: AuroraProps) {
           propsRef.current.qualityRef.current.dprCap
         if (scale !== currentScale && ctn) {
           currentScale = scale
-          const width = ctn.offsetWidth * scale
-          const height = ctn.offsetHeight * scale
+          const width = Math.max(1, ctn.offsetWidth * scale)
+          const height = Math.max(1, ctn.offsetHeight * scale)
           renderer.setSize(width, height)
           // OGL setSize also sets canvas CSS dimensions — force back to 100% so
           // low-res content stretches to fill container (CSS upscaling, not shrinking)
@@ -231,9 +232,9 @@ export default function Aurora(props: AuroraProps) {
         renderer.render({ scene: mesh })
       }
     }
-    animateId = requestAnimationFrame(update)
-
     resize()
+
+    animateId = requestAnimationFrame(update)
 
     return () => {
       cancelAnimationFrame(animateId)

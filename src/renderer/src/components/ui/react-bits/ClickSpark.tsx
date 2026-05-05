@@ -123,7 +123,10 @@ export function ClickSpark({
     }
   }, [prefersReducedMotion])
 
-  // Animation loop
+  // Z-11: Animation loop — define draw but DON'T auto-start.
+  // RAF only runs during active spark animations (~400ms), not continuously.
+  const drawRef = useRef<((timestamp: number) => void) | null>(null)
+
   useEffect(() => {
     if (prefersReducedMotion) return
 
@@ -160,13 +163,21 @@ export function ClickSpark({
         return true
       })
 
+      // Stop RAF when all sparks have expired
+      if (sparksRef.current.length === 0) {
+        animationRef.current = 0
+        return
+      }
+
       animationRef.current = requestAnimationFrame(draw)
     }
 
-    animationRef.current = requestAnimationFrame(draw)
+    drawRef.current = draw
 
     return () => {
-      cancelAnimationFrame(animationRef.current)
+      if (animationRef.current) cancelAnimationFrame(animationRef.current)
+      animationRef.current = 0
+      drawRef.current = null
     }
   }, [prefersReducedMotion, sparkSize, sparkRadius, duration, easing])
 
@@ -189,6 +200,11 @@ export function ClickSpark({
       }))
 
       sparksRef.current.push(...newSparks)
+
+      // Start RAF if not already running
+      if (!animationRef.current && drawRef.current) {
+        animationRef.current = requestAnimationFrame(drawRef.current)
+      }
     },
     [prefersReducedMotion, sparkCount],
   )

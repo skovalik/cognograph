@@ -5,7 +5,7 @@
  * Nodes Store
  *
  * Manages node CRUD operations, node data updates, and node-specific functionality.
- * Extracted from workspaceStore as part of Week 2 Stream B Track 2 Phase 2.2a.
+ * Extracted from workspaceStore during the store-split refactor.
  */
 
 import type {

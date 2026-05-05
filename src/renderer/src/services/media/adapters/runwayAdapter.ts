@@ -1,12 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import { mediaFetchBinary, mediaFetchJson } from '../mediaFetchClient'
 import {
   type ImageGenParams,
   type MediaResult,
   ProviderAdapter,
   type VideoGenParams,
 } from '../providerAdapter'
+
+interface RunwayTask {
+  id: string
+  status?: string
+  output?: string[]
+  failure?: string
+}
+
+const RUNWAY_HEADERS = { 'X-Runway-Version': '2024-11-06' }
 
 export class RunwayAdapter extends ProviderAdapter {
   readonly name = 'runway'
@@ -25,26 +35,23 @@ export class RunwayAdapter extends ProviderAdapter {
       }
       if (params.imageUrl) body.promptImage = params.imageUrl
 
-      const res = await fetch('https://api.dev.runwayml.com/v1/image_to_video', {
+      const task = (await mediaFetchJson({
+        provider: 'runway',
+        url: 'https://api.dev.runwayml.com/v1/image_to_video',
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-          'X-Runway-Version': '2024-11-06',
-        },
-        body: JSON.stringify(body),
-      })
+        headers: RUNWAY_HEADERS,
+        bodyKind: 'json',
+        bodyJson: body,
+      })) as RunwayTask
 
-      if (!res.ok) {
-        const err = new Error(`Runway API error: ${res.status}`) as any
-        err.status = res.status
-        throw err
-      }
-
-      const task = await res.json()
       const output = await this.pollTask(task.id)
-      const videoRes = await fetch(output)
-      const blob = await videoRes.blob()
+      const { blob } = await mediaFetchBinary({
+        provider: 'runway',
+        url: output,
+        method: 'GET',
+        bodyKind: 'none',
+        authStyleOverride: 'none',
+      })
 
       return { buffer: blob, mimeType: 'video/mp4', metadata: { model: 'gen3a_turbo' } }
     })
@@ -53,14 +60,18 @@ export class RunwayAdapter extends ProviderAdapter {
   private async pollTask(id: string, maxWait = 300000): Promise<string> {
     const start = Date.now()
     while (Date.now() - start < maxWait) {
-      const res = await fetch(`https://api.dev.runwayml.com/v1/tasks/${id}`, {
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          'X-Runway-Version': '2024-11-06',
-        },
-      })
-      const data = await res.json()
-      if (data.status === 'SUCCEEDED') return data.output?.[0]
+      const data = (await mediaFetchJson({
+        provider: 'runway',
+        url: `https://api.dev.runwayml.com/v1/tasks/${id}`,
+        method: 'GET',
+        headers: RUNWAY_HEADERS,
+        bodyKind: 'none',
+      })) as RunwayTask
+      if (data.status === 'SUCCEEDED') {
+        const out = data.output?.[0]
+        if (!out) throw new Error('Runway task succeeded but returned no output URL')
+        return out
+      }
       if (data.status === 'FAILED') throw new Error(`Runway task failed: ${data.failure}`)
       await new Promise((r) => setTimeout(r, 5000))
     }

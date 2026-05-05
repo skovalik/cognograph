@@ -86,14 +86,22 @@ function TerminalPanelInner({
   const fitAddonRef = useRef<FitAddon | null>(null)
   const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mountedRef = useRef(true)
+  /** Monotonic counter incremented each effect execution. Stale inits from prior
+   *  StrictMode mount cycles compare against this to bail instead of continuing. */
+  const effectGenRef = useRef(0)
   const isReplayingRef = useRef(true) // true during scrollback replay — buffers incoming data
   const pendingDataRef = useRef<string[]>([]) // data buffered during scrollback replay, flushed after
   const [processExited, setProcessExited] = useState(false)
   /** Incremented to force the main effect to re-run on respawn. */
   const [spawnGeneration, setSpawnGeneration] = useState(0)
 
-  // Subscribe to theme mode for dynamic theme switching
+  // Subscribe to theme mode AND preset guiColors so the xterm palette tracks
+  // the active preset (sunset warm browns, forest greens, etc.), not just
+  // light/dark. Selecting guiColors as a single reference avoids re-renders
+  // on unrelated preset changes; xterm.js reference-compares the theme object
+  // anyway, so shallow object identity here is what triggers repaint.
   const themeMode = useWorkspaceStore((state) => state.themeSettings.mode)
+  const guiColors = useWorkspaceStore((state) => state.themeSettings.guiColors)
   const workspaceId = useWorkspaceStore((state) => state.workspaceId)
 
   // -------------------------------------------------------------------------
@@ -127,9 +135,7 @@ function TerminalPanelInner({
       try {
         fitAddon.fit()
         const { cols, rows } = terminal
-        window.api.terminal.resize(nodeId, cols, rows).catch((err: unknown) => {
-          console.warn('[TerminalPanel] Resize IPC failed:', err)
-        })
+        window.api.terminal.resize(nodeId, cols, rows)
       } catch {
         // fit() can throw if container has zero dimensions
       }
@@ -141,11 +147,13 @@ function TerminalPanelInner({
   // -------------------------------------------------------------------------
   useEffect(() => {
     mountedRef.current = true
+    const gen = ++effectGenRef.current // capture this execution's generation
+    const isStale = (): boolean => !mountedRef.current || effectGenRef.current !== gen
     const container = containerRef.current
     if (!container) return
 
-    // --- Build theme for current mode with optional accent color override ---
-    const theme = getTerminalTheme(themeMode, accentColor)
+    // --- Build theme for current mode + preset guiColors + accent override ---
+    const theme = getTerminalTheme(themeMode, accentColor, guiColors)
 
     // --- Check for reduced motion preference (accessibility) ---
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -222,9 +230,7 @@ function TerminalPanelInner({
               // Bracket paste mode: wrap in \x1b[200~ ... \x1b[201~ so shells
               // that support it don't execute pasted newlines as commands.
               const bracketedText = `\x1b[200~${text}\x1b[201~`
-              window.api.terminal.write(nodeId, bracketedText).catch((err: unknown) => {
-                console.warn('[TerminalPanel] Paste write failed:', err)
-              })
+              window.api.terminal.write(nodeId, bracketedText)
             }
           })
           .catch(() => {
@@ -241,7 +247,7 @@ function TerminalPanelInner({
 
     // --- Wire IPC listeners BEFORE spawn so no PTY data is missed ---
     const removeDataListener = window.api.terminal.onData(nodeId, (data: string) => {
-      if (!mountedRef.current) return
+      if (isStale()) return
       if (isReplayingRef.current) {
         pendingDataRef.current.push(data)
         return
@@ -253,11 +259,11 @@ function TerminalPanelInner({
     cleanups.push(removeDataListener)
 
     const removeExitListener = window.api.terminal.onExit(nodeId, (exitCode: number) => {
-      if (mountedRef.current && terminalRef.current) {
+      if (!isStale() && terminalRef.current) {
         terminalRef.current.writeln('')
         terminalRef.current.writeln(`\x1b[33m[Process exited with code ${exitCode}]\x1b[0m`)
       }
-      if (mountedRef.current) {
+      if (!isStale()) {
         setProcessExited(true)
       }
     })
@@ -265,7 +271,7 @@ function TerminalPanelInner({
 
     // --- Async initialization ---
     const init = async (): Promise<void> => {
-      if (!mountedRef.current) return
+      if (isStale()) return
 
       // 1. Fit BEFORE spawn so the PTY gets the correct dimensions from the start.
       //    Without this, terminal.cols/rows are the xterm.js defaults (80×24) and the
@@ -279,7 +285,7 @@ function TerminalPanelInner({
         // Fall through — spawn will use xterm.js defaults (80×24), which is acceptable.
       }
 
-      if (!mountedRef.current) return
+      if (isStale()) return
 
       try {
         // 2. Spawn terminal with the fitted cols/rows (main process returns existing
@@ -295,19 +301,19 @@ function TerminalPanelInner({
           workspaceId: workspaceId || undefined,
         })
       } catch (err) {
-        if (!mountedRef.current) return
+        if (isStale()) return
         terminal.writeln(
           `\x1b[31m[Error] Failed to spawn terminal: ${err instanceof Error ? err.message : String(err)}\x1b[0m`,
         )
         return
       }
 
-      if (!mountedRef.current) return
+      if (isStale()) return
 
       // 3. Replay scrollback — live data is buffered by the onData listener above.
       try {
         const scrollback = await window.api.terminal.getScrollback(nodeId)
-        if (mountedRef.current && scrollback.length > 0) {
+        if (!isStale() && scrollback.length > 0) {
           for (const line of scrollback) {
             terminal.writeln(line)
           }
@@ -316,7 +322,7 @@ function TerminalPanelInner({
         console.warn('[TerminalPanel] Scrollback replay failed:', err)
       }
 
-      if (!mountedRef.current) return
+      if (isStale()) return
 
       // 4. End replay phase — flush any live data that arrived during scrollback.
       isReplayingRef.current = false
@@ -330,18 +336,17 @@ function TerminalPanelInner({
       // 5. Safety resize — recalculates dimensions after PTY spawn.
       try {
         fitAddon.fit()
-        await window.api.terminal.resize(nodeId, terminal.cols, terminal.rows)
+        window.api.terminal.resize(nodeId, terminal.cols, terminal.rows)
       } catch {
         // Non-critical — terminal will work at default size
       }
 
-      if (!mountedRef.current) return
+      if (isStale()) return
 
       // 6. Wire user input -> PTY (after replay so user cannot type during scrollback)
+      // write() is fire-and-forget (ipcRenderer.send) — no Promise to await/catch.
       const inputDisposable = terminal.onData((data: string) => {
-        window.api.terminal.write(nodeId, data).catch((err: unknown) => {
-          console.warn('[TerminalPanel] Write IPC failed:', err)
-        })
+        window.api.terminal.write(nodeId, data)
       })
       cleanups.push(() => inputDisposable.dispose())
     }
@@ -396,7 +401,7 @@ function TerminalPanelInner({
   }, [nodeId, sessionId, accentColor, handleResize, spawnGeneration])
 
   // -------------------------------------------------------------------------
-  // Theme sync effect — update xterm.js colors when light/dark mode changes.
+  // Theme sync effect — update xterm.js colors when mode or preset changes.
   // Separate from the main lifecycle effect to avoid dispose/recreate.
   // -------------------------------------------------------------------------
   useEffect(() => {
@@ -404,8 +409,8 @@ function TerminalPanelInner({
     if (!terminal) return
     // xterm.js uses reference comparison for theme objects — must use a new
     // object (spread) or the canvas repaint is skipped entirely.
-    terminal.options.theme = { ...getTerminalTheme(themeMode, accentColor) }
-  }, [themeMode, accentColor])
+    terminal.options.theme = { ...getTerminalTheme(themeMode, accentColor, guiColors) }
+  }, [themeMode, accentColor, guiColors])
 
   return (
     <div

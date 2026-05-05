@@ -2,23 +2,21 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import { beforeEach, describe, expect, it } from 'vitest'
+import { _resetForTest, _setForTest } from '../../../apiKeyStore'
 import { getAvailableMediaTools } from '../../agentToolRegistry'
 
 describe('Provider flow (integration)', () => {
   beforeEach(() => {
-    const providerNames = ['stability', 'openai', 'google', 'replicate', 'runway', 'elevenlabs']
-    for (const p of providerNames) {
-      localStorage.removeItem(`cognograph:apikey:${p}`)
-    }
+    _resetForTest()
   })
 
   it('all 6 tools available when all providers keyed', () => {
-    localStorage.setItem('cognograph:apikey:stability', 'sk-test')
-    localStorage.setItem('cognograph:apikey:openai', 'sk-test')
-    localStorage.setItem('cognograph:apikey:google', 'gk-test')
-    localStorage.setItem('cognograph:apikey:replicate', 'r8-test')
-    localStorage.setItem('cognograph:apikey:runway', 'rw-test')
-    localStorage.setItem('cognograph:apikey:elevenlabs', 'el-test')
+    _setForTest('stability', 'sk-test')
+    _setForTest('openai', 'sk-test')
+    _setForTest('google', 'gk-test')
+    _setForTest('replicate', 'r8-test')
+    _setForTest('runway', 'rw-test')
+    _setForTest('elevenlabs', 'el-test')
 
     const tools = getAvailableMediaTools()
     const names = tools.map((t) => t.name)
@@ -32,7 +30,7 @@ describe('Provider flow (integration)', () => {
   })
 
   it('only image tools available with stability key only', () => {
-    localStorage.setItem('cognograph:apikey:stability', 'sk-test')
+    _setForTest('stability', 'sk-test')
     const tools = getAvailableMediaTools()
     const names = tools.map((t) => t.name)
 
@@ -42,7 +40,7 @@ describe('Provider flow (integration)', () => {
   })
 
   it('openai key enables image + analysis tools', () => {
-    localStorage.setItem('cognograph:apikey:openai', 'sk-test')
+    _setForTest('openai', 'sk-test')
     const tools = getAvailableMediaTools()
     const names = tools.map((t) => t.name)
 
@@ -52,7 +50,7 @@ describe('Provider flow (integration)', () => {
   })
 
   it('google/gemini key enables image gen + analysis', () => {
-    localStorage.setItem('cognograph:apikey:google', 'gk-test')
+    _setForTest('google', 'gk-test')
     const tools = getAvailableMediaTools()
     const names = tools.map((t) => t.name)
 
@@ -61,7 +59,7 @@ describe('Provider flow (integration)', () => {
   })
 
   it('replicate key enables image + 3D tools', () => {
-    localStorage.setItem('cognograph:apikey:replicate', 'r8-test')
+    _setForTest('replicate', 'r8-test')
     const tools = getAvailableMediaTools()
     const names = tools.map((t) => t.name)
 

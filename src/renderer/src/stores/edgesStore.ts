@@ -5,7 +5,7 @@
  * Edges Store
  *
  * Manages edge CRUD operations, edge properties, and edge-related functionality.
- * Extracted from workspaceStore as part of Week 2 Stream B Track 2 Phase 2.2a.
+ * Extracted from workspaceStore during the store-split refactor.
  */
 
 import type { ContextMetadata, EdgeData, EdgeWaypoint } from '@shared/types'

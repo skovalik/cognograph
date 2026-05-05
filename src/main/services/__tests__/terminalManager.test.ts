@@ -28,7 +28,9 @@ function createMockPtyInstance() {
   }
 }
 
-const mockSpawn = vi.fn(() => createMockPtyInstance())
+const mockSpawn = vi.fn<(...args: unknown[]) => ReturnType<typeof createMockPtyInstance>>(() =>
+  createMockPtyInstance(),
+)
 
 vi.mock('node-pty', () => ({
   spawn: (...args: unknown[]) => mockSpawn(...args),
@@ -252,29 +254,33 @@ describe('terminalManager', () => {
   // -------------------------------------------------------------------------
   // 8. Scrollback buffer: data events append lines, buffer caps at 5000
   // -------------------------------------------------------------------------
-  it('scrollback buffer accumulates lines from onData events', async () => {
+  it('scrollback buffer accumulates chunks from onData events', async () => {
     await spawnTerminal({ nodeId: 'node-sb', sessionId: 'sess-sb' })
 
-    // Simulate data arriving
-    storedOnDataCb?.('line 1\nline 2\nline 3\n')
+    // Simulate data arriving as separate chunks (scrollback stores raw chunks verbatim)
+    storedOnDataCb?.('line 1\n')
+    storedOnDataCb?.('line 2\n')
+    storedOnDataCb?.('line 3\n')
 
     const buf = getScrollback('node-sb')
-    expect(buf).toContain('line 1')
-    expect(buf).toContain('line 2')
-    expect(buf).toContain('line 3')
+    expect(buf).toHaveLength(3)
+    expect(buf.join('')).toContain('line 1')
+    expect(buf.join('')).toContain('line 2')
+    expect(buf.join('')).toContain('line 3')
   })
 
-  it('scrollback buffer caps at 5000 lines', async () => {
+  it('scrollback buffer caps at 5000 chunks', async () => {
     await spawnTerminal({ nodeId: 'node-cap', sessionId: 'sess-cap' })
 
-    // Generate 5010 lines
-    const bigChunk = Array.from({ length: 5010 }, (_, i) => `line-${i}`).join('\n')
-    storedOnDataCb?.(bigChunk)
+    // Generate 5010 separate chunks (one per onData call)
+    for (let i = 0; i < 5010; i++) {
+      storedOnDataCb?.(`line-${i}\n`)
+    }
 
     const buf = getScrollback('node-cap')
     expect(buf.length).toBeLessThanOrEqual(5000)
-    // First lines should have been trimmed; last line should be present
-    expect(buf[buf.length - 1]).toBe('line-5009')
+    // First chunks should have been trimmed; last chunk should be present
+    expect(buf[buf.length - 1]).toBe('line-5009\n')
   })
 
   // -------------------------------------------------------------------------
@@ -285,7 +291,7 @@ describe('terminalManager', () => {
     storedOnDataCb?.('hello world\n')
 
     const buf = getScrollback('node-gs')
-    expect(buf).toContain('hello world')
+    expect(buf.join('')).toContain('hello world')
   })
 
   it('getScrollback returns empty array for unknown nodeId', () => {
@@ -493,7 +499,8 @@ describe('terminalManager', () => {
     try {
       await spawnTerminal({ nodeId: 'node-noctx', sessionId: 'sess-noctx', shell: 'cmd' })
 
-      const envArg = mockSpawn.mock.calls[0]?.[2]?.env as Record<string, string> | undefined
+      const envArg = (mockSpawn.mock.calls[0]?.[2] as { env?: Record<string, string> } | undefined)
+        ?.env
       expect(envArg).toBeDefined()
       // All shells get COGNOGRAPH vars so `claude` typed manually picks up context
       expect(envArg).toHaveProperty('CLAUDE_SESSION_ID', 'sess-noctx')
@@ -511,7 +518,8 @@ describe('terminalManager', () => {
     try {
       await spawnTerminal({ nodeId: 'node-ctx', sessionId: 'sess-ctx', shell: 'claude-code' })
 
-      const envArg = mockSpawn.mock.calls[0]?.[2]?.env as Record<string, string> | undefined
+      const envArg = (mockSpawn.mock.calls[0]?.[2] as { env?: Record<string, string> } | undefined)
+        ?.env
       expect(envArg).toBeDefined()
       expect(envArg).toHaveProperty('CLAUDE_SESSION_ID', 'sess-ctx')
       expect(envArg).toHaveProperty('COGNOGRAPH_NODE_ID', 'node-ctx')

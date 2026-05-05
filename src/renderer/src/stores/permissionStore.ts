@@ -7,7 +7,7 @@
  * Zustand store for managing AI Editor permissions.
  * Tracks granted paths, pending requests, and workspace sandbox.
  *
- * v2 additions (Phase 3A PERMISSIONS):
+ * v2 additions (PERMISSIONS):
  *   - Queue up to MAX_CONCURRENT_REQUESTS pending permission requests
  *   - 60-second auto-deny timeout per request
  *   - Batch approve/deny all pending requests
@@ -72,7 +72,7 @@ export interface PermissionRequest {
     description: string
     args?: Record<string, unknown>
   }
-  /** Specialized display variant for permission card rendering (Phase 4B). */
+  /** Specialized display variant for permission card rendering. */
   display?: PermissionDisplay
   /** Timer ID for auto-deny timeout */
   _timeoutId?: ReturnType<typeof setTimeout>

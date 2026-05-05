@@ -20,8 +20,10 @@ vi.mock('electron', () => ({
 // Mock contextWriter's getWorkspaceFilePath + getAppPath
 // ---------------------------------------------------------------------------
 
-const mockGetWorkspaceFilePath = vi.fn().mockResolvedValue('/mock/userData/workspaces/ws-123.json')
-const mockGetAppPath = vi.fn(() => '/mock/userData')
+const mockGetWorkspaceFilePath = vi
+  .fn<(...args: unknown[]) => Promise<string | null>>()
+  .mockResolvedValue('/mock/userData/workspaces/ws-123.json')
+const mockGetAppPath = vi.fn<(...args: unknown[]) => string>(() => '/mock/userData')
 
 vi.mock('../contextWriter', () => ({
   getWorkspaceFilePath: (...args: unknown[]) => mockGetWorkspaceFilePath(...args),

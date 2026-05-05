@@ -8,7 +8,7 @@
  * for the next ConversationNode message. This store tracks that selection
  * separately from React Flow's multi-select.
  *
- * PFD Phase 5B: Canvas Interaction Patterns
+ * Canvas Interaction Patterns
  */
 
 import { create } from 'zustand'

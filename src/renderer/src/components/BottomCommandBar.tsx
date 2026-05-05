@@ -107,7 +107,7 @@ interface CompletionItem {
 function BottomCommandBarComponent(): JSX.Element | null {
   // ALL hooks MUST be called before any conditional return (React rules of hooks)
   const isMobile = useIsMobile()
-  const commandLog = useWorkspaceStore((s) => s.commandLog)
+  // Z-16: commandLog subscription removed — was dead (void'd at line 478)
   const selectedNodeIds = useWorkspaceStore((s) => s.selectedNodeIds)
   const nodes = useWorkspaceStore((s) => s.nodes)
   const defaultLLMId = useConnectorStore((s) => s.defaultLLMId)
@@ -127,6 +127,28 @@ function BottomCommandBarComponent(): JSX.Element | null {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const modelRef = useRef<HTMLDivElement>(null)
   const completionRef = useRef<HTMLDivElement>(null)
+
+  // ── F4 toolbar redirect: consume prefill from uiStore ──
+  const commandBarPrefill = useUIStore((s) => s.commandBarPrefill)
+  const setCommandBarPrefill = useUIStore((s) => s.setCommandBarPrefill)
+
+  useEffect(() => {
+    if (commandBarPrefill != null) {
+      setInput(commandBarPrefill)
+      requestAnimationFrame(() => {
+        const ta = inputRef.current
+        if (ta) {
+          ta.focus()
+          const len = ta.value.length
+          ta.setSelectionRange(len, len)
+          ta.style.height = 'auto'
+          const maxH = Math.floor(window.innerHeight * 0.5)
+          ta.style.height = `${Math.min(ta.scrollHeight, maxH)}px`
+        }
+      })
+      setCommandBarPrefill(null)
+    }
+  }, [commandBarPrefill, setCommandBarPrefill])
 
   // ── Prefix mode ──
   const prefixMode = detectPrefixMode(input)
@@ -300,10 +322,8 @@ function BottomCommandBarComponent(): JSX.Element | null {
       }
 
       if ((window as any).__ELECTRON__ && (window as any).api?.terminal?.write) {
-        // Send command + newline to the PTY
-        ;(window as any).api.terminal.write(terminalNodeId, cmd + '\n').catch(() => {
-          sciFiToast('Failed to send command to terminal', 'error', 2000)
-        })
+        // Send command + newline to the PTY — fire-and-forget (ipcRenderer.send).
+        ;(window as any).api.terminal.write(terminalNodeId, cmd + '\n')
         sciFiToast(`Sent to terminal: ${cmd}`, 'info', 1500)
       } else {
         sciFiToast('Terminal requires the desktop app', 'info', 2000)
@@ -349,6 +369,13 @@ function BottomCommandBarComponent(): JSX.Element | null {
     setIsExecuting(true)
     const cmd = input.trim()
     setInput('')
+
+    if (import.meta.env.DEV) {
+      const model = useConnectorStore.getState().getDefaultConnector()?.model ?? '(none)'
+      console.log(
+        `[BottomCommandBar] submit model=${model} useClaudePro=? cmd=${JSON.stringify(cmd.slice(0, 120))}`,
+      )
+    }
 
     // Open the response panel so user sees output, reset prompt to expanded
     useUIStore.getState().setResponsePanelOpen(true)
@@ -451,9 +478,6 @@ function BottomCommandBarComponent(): JSX.Element | null {
       : selectedNodeIds.length === 1
         ? '1 node selected'
         : 'canvas scope'
-
-  // Suppress unused variable warning — commandLog is read to satisfy hook rules
-  void commandLog
 
   // Active prefix config
   const activePrefixConfig = prefixMode !== 'none' ? PREFIX_CONFIG[prefixMode] : null

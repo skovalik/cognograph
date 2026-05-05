@@ -4,7 +4,7 @@
 // =============================================================================
 // dispatchTypes.ts -- Type definitions for task-to-CLI dispatch workflow
 //
-// Phase 6E: Rich Node Depth System - Dispatch Workflow Integration
+// Rich Node Depth System - Dispatch Workflow Integration
 // Defines the request/result/config types used by dispatchWorkflow utilities.
 // =============================================================================
 

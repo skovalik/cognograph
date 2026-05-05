@@ -294,6 +294,7 @@ function ContextMenuComponent(): JSX.Element | null {
           origin: 'embedded',
           workingDirectory: '',
           terminalState: 'idle',
+          userPinned: false,
           startedAt: Date.now(),
           lastActivityAt: Date.now(),
           accentColor: 'var(--accent-glow)',
@@ -609,7 +610,7 @@ function ContextMenuComponent(): JSX.Element | null {
                 shortcut="Ctrl+Shift+S"
               />
             )}
-            {/* Template file import — deferred to post-audit roadmap Phase 4 */}
+            {/* Template file import — deferred to a later roadmap milestone */}
             <MenuSeparator />
             <div className="px-3 py-2 text-xs font-medium text-[var(--text-muted)] uppercase">
               Edit
@@ -1098,7 +1099,7 @@ function ContextMenuComponent(): JSX.Element | null {
                 />
               )
             })()}
-            {/* CC Bridge: Send to Claude Code (append-only, Phase 3 dispatch) */}
+            {/* CC Bridge: Send to Claude Code (append-only dispatch) */}
             <MenuItem
               icon={<Send className="w-4 h-4" />}
               label="Send to Claude Code"
@@ -1154,7 +1155,7 @@ function ContextMenuComponent(): JSX.Element | null {
                   dispatchType = 'instruction'
                 }
 
-                // Collect file paths from connected artifact nodes
+                // Collect file paths from connected artifact nodes (Patent P2 Claim 5)
                 const connectedNodes = store.getConnectedNodes(target.nodeId)
                 for (const cn of connectedNodes) {
                   if (cn.data.type === 'artifact') {

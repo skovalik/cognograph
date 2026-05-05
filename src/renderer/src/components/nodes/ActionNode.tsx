@@ -11,7 +11,7 @@ import {
 } from '@xyflow/react'
 import { Play, Power, Zap } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
-import { CONIC_PALETTES } from '../../constants/conicPalettes'
+import { useConicPalette } from '../../constants/conicPalettes'
 import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
 import { useNodeResize } from '../../hooks/useNodeResize'
 import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
@@ -136,9 +136,10 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
   // Check if node is disabled
   const isDisabled = nodeData.enabled === false
 
+  const palette = useConicPalette()
+
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.action ?? '#10b981'
-    const palette = CONIC_PALETTES['action'] || CONIC_PALETTES.default
 
     return {
       '--ring-color': safeNodeColor,
@@ -155,7 +156,7 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
         opacity: 0.5,
       }),
     }
-  }, [nodeColor, themeSettings.nodeColors.action, nodeWidth, effectiveHeight, isDisabled])
+  }, [nodeColor, themeSettings.nodeColors.action, nodeWidth, effectiveHeight, isDisabled, palette])
 
   // Handle resize
   const handleResizeStart = useCallback(() => {
@@ -216,7 +217,6 @@ function ActionNodeComponent({ id, data, selected, width, height }: NodeProps): 
     'cognograph-node',
     'cognograph-node--action',
     selected && 'selected',
-    // is-active reserved for functional state only (not selection)
     isProcessing && 'is-thinking',
     isDisabled && 'cognograph-node--disabled',
     !nodeData.enabled && 'action-node--inactive',

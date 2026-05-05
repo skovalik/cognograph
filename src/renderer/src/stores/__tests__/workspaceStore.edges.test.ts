@@ -96,18 +96,15 @@ describe('workspaceStore - Edge Operations', () => {
       expect(state.edges).toHaveLength(1)
     })
 
-    it('should allow self-referential edges (store does not prevent them)', () => {
+    it('should prevent self-referential edges', () => {
       const note = createNoteNode('Context', { id: 'note-1' })
       seedNodes([note])
 
       const { onConnect } = useWorkspaceStore.getState()
       onConnect({ source: 'note-1', target: 'note-1', sourceHandle: null, targetHandle: null })
 
-      // Note: The store currently allows self-referential edges
       const state = getWorkspaceState()
-      expect(state.edges).toHaveLength(1)
-      expect(state.edges[0]!.source).toBe('note-1')
-      expect(state.edges[0]!.target).toBe('note-1')
+      expect(state.edges).toHaveLength(0)
     })
   })
 

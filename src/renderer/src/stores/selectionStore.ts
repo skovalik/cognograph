@@ -5,7 +5,7 @@
  * Selection Store
  *
  * Manages selection state for nodes and edges, including box selection.
- * Extracted from workspaceStore as part of Week 2 Stream B Track 2 Phase 2.2a.
+ * Extracted from workspaceStore during the store-split refactor.
  */
 
 import { create } from 'zustand'

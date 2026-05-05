@@ -8,7 +8,7 @@
 // Organized by phase for clarity, but shipped as one file.
 // =============================================================================
 
-// --- Phase 1: Activity Overlay ---
+// --- Activity Overlay ---
 
 export type AgentActivityStatus =
   | 'running'
@@ -49,7 +49,7 @@ export interface BridgeOverlayState {
   totalActiveRuns: number
 }
 
-// --- Phase 2: Audit Trail ---
+// --- Audit Trail ---
 
 export type AuditAction =
   | 'node-created'
@@ -108,7 +108,7 @@ export interface AuditEventFilter {
   orchestrationId?: string
 }
 
-// --- Phase 3: Ghost Nodes / Proposals ---
+// --- Ghost Nodes / Proposals ---
 
 export type ProposedChangeType =
   | 'create-node'
@@ -152,7 +152,7 @@ export interface Proposal {
   userModifications?: Record<string, Partial<ProposedChange>>
 }
 
-// --- Phase 4: Command Bar ---
+// --- Command Bar ---
 
 export type CommandIntent =
   | 'create-workflow'
@@ -199,7 +199,7 @@ export interface CommandSuggestion {
   source: 'recent' | 'template' | 'ai-completion' | 'contextual'
 }
 
-// --- Phase 5: Graph Intelligence ---
+// --- Graph Intelligence ---
 
 export type InsightType =
   | 'orphaned-cluster'

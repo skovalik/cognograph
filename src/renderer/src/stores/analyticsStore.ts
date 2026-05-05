@@ -7,7 +7,7 @@
  * Tracks onboarding metrics and user activation events.
  * Used to measure the effectiveness of templates, tutorials, and first-time user experience.
  *
- * Created as part of Track 5 Phase 5.0: Analytics Baseline
+ * Created as part of the Analytics Baseline work.
  */
 
 import { create } from 'zustand'

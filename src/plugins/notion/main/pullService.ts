@@ -244,7 +244,7 @@ export class PullService {
     // Step 4c-4h: Diff and resolve
     return this.resolveChanges(
       node,
-      notionFields,
+      notionFields as unknown as Record<string, unknown>,
       notionEditedMs,
       notionContentHash,
       notionHtml,
@@ -329,7 +329,7 @@ export class PullService {
       const fieldsToApply: Record<string, unknown> = {}
       for (const diff of notionChangedFields) {
         const authority = getFieldAuthority(diff.field)
-        if (authority === 'notion' || authority === 'both') {
+        if (authority === 'notion') {
           fieldsToApply[diff.field] = diff.notionValue
         }
       }

@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * IPC Security Tests (Phase 0: SEC-0.1e, SEC-0.1f, SEC-0.1i, SEC-0.1j)
+ * IPC Security Tests (SEC-0.1e, SEC-0.1f, SEC-0.1i, SEC-0.1j)
  *
  * 1. Bridge rejects request with expired/wrong token
  * 2. Bridge accepts request with valid token

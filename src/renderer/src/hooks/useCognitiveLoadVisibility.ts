@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-// useCognitiveLoadVisibility — PFD Phase 6F: Cognitive Load Meter Visibility Rules
+// useCognitiveLoadVisibility — Cognitive Load Meter Visibility Rules
 //
 // Controls when the CognitiveLoadMeter is visible based on zoom level
 // and current cognitive load. At overview zoom (ultra-far), it is always

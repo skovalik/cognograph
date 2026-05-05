@@ -238,9 +238,10 @@ function CommandResponsePanelComponent(): JSX.Element {
               {/* Thinking indicator with elapsed timer for running entries */}
               {entry.status === 'running' && (
                 <div className="cmd-response-panel__entry-thinking">
-                  <Loader2
-                    className="w-3.5 h-3.5 animate-spin"
-                    style={{ color: 'var(--accent-glow)' }}
+                  <div
+                    className="cmd-response-panel__thinking-dot"
+                    role="status"
+                    aria-label={entry.narration ? 'Working' : 'Generating'}
                   />
                   <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                     {entry.narration ? 'Working' : 'Generating'}...

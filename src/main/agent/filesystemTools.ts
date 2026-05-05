@@ -102,6 +102,74 @@ interface WorkspaceSecurityContext {
 // Cached security context — refreshed on workspace load
 let cachedSecurityContext: WorkspaceSecurityContext | null = null
 
+type WorkspaceNode = { id: string; data: Record<string, unknown> }
+
+/**
+ * Main-process mirror of the renderer's `getEffectiveAllowedPaths` derivation
+ * (W5H-S15). Walks workspace nodes and produces an allowed-paths list from
+ * project / artifact / conversation node data. Pure function over nodes — no
+ * IPC, no disk reads, no renderer trust. The renderer has its own analogous
+ * helper at `src/renderer/src/services/agentTools.ts:667`; both processes
+ * derive their allowed-paths set independently per security invariant 0.1b
+ * ("allowedPaths computed in main process, never accepted from renderer").
+ *
+ * The two helpers cannot share code without violating the security boundary,
+ * so this function is intentionally a separate code path that mirrors logic
+ * (project.folderPath, artifact source/properties, conversation agentSettings)
+ * but operates over the on-disk workspace shape rather than the in-memory
+ * renderer store.
+ */
+export function deriveAllowedPathsFromWorkspaceNodes(nodes: WorkspaceNode[]): string[] {
+  const allowedPaths: string[] = []
+
+  for (const node of nodes) {
+    const data = node.data
+    if (!data) continue
+
+    // Project nodes with folderPath
+    if (data.type === 'project' && typeof data.folderPath === 'string' && data.folderPath) {
+      allowedPaths.push(data.folderPath)
+    }
+
+    // Artifact nodes with various path sources
+    if (data.type === 'artifact') {
+      if (typeof data.folderPath === 'string' && data.folderPath) {
+        allowedPaths.push(data.folderPath)
+      } else if (
+        data.source &&
+        typeof data.source === 'object' &&
+        (data.source as Record<string, unknown>).type === 'file-drop' &&
+        typeof (data.source as Record<string, unknown>).originalPath === 'string'
+      ) {
+        const pathStr = (data.source as Record<string, unknown>).originalPath as string
+        const lastSep = Math.max(pathStr.lastIndexOf('/'), pathStr.lastIndexOf('\\'))
+        if (lastSep > 0) allowedPaths.push(pathStr.substring(0, lastSep))
+      } else if (
+        data.properties &&
+        typeof data.properties === 'object' &&
+        typeof (data.properties as Record<string, unknown>).filePath === 'string'
+      ) {
+        const customPath = (data.properties as Record<string, unknown>).filePath as string
+        const lastSep = Math.max(customPath.lastIndexOf('/'), customPath.lastIndexOf('\\'))
+        if (lastSep > 0) allowedPaths.push(customPath.substring(0, lastSep))
+      }
+    }
+
+    // Conversation nodes with agent settings (get explicitly configured paths + commands)
+    if (data.type === 'conversation' && data.agentSettings) {
+      const agentSettings = data.agentSettings as {
+        allowedPaths?: string[]
+        allowedCommands?: string[]
+      }
+      if (agentSettings.allowedPaths) {
+        allowedPaths.push(...agentSettings.allowedPaths)
+      }
+    }
+  }
+
+  return allowedPaths
+}
+
 /**
  * Load the current workspace data and derive security-critical paths.
  * This is the ONLY source of truth for allowed paths — the renderer cannot override.
@@ -121,59 +189,13 @@ export async function refreshWorkspaceSecurityContext(): Promise<WorkspaceSecuri
     const workspacePath = join(userDataPath, 'workspaces', `${settings.lastWorkspaceId}.json`)
     const workspaceContent = fs.readFileSync(workspacePath, 'utf-8')
     const workspace = JSON.parse(workspaceContent) as {
-      nodes?: Array<{ id: string; data: Record<string, unknown> }>
+      nodes?: WorkspaceNode[]
     }
 
-    const allowedPaths: string[] = []
+    const allowedPaths = workspace.nodes
+      ? deriveAllowedPathsFromWorkspaceNodes(workspace.nodes)
+      : []
     const trustedSymlinkTargets: string[] = []
-
-    // Derive paths from artifact and project nodes (same logic as renderer's derivePathsFromContext)
-    if (workspace.nodes) {
-      for (const node of workspace.nodes) {
-        const data = node.data
-        if (!data) continue
-
-        // Project nodes with folderPath
-        if (data.type === 'project' && typeof data.folderPath === 'string' && data.folderPath) {
-          allowedPaths.push(data.folderPath)
-        }
-
-        // Artifact nodes with various path sources
-        if (data.type === 'artifact') {
-          if (typeof data.folderPath === 'string' && data.folderPath) {
-            allowedPaths.push(data.folderPath)
-          } else if (
-            data.source &&
-            typeof data.source === 'object' &&
-            (data.source as Record<string, unknown>).type === 'file-drop' &&
-            typeof (data.source as Record<string, unknown>).originalPath === 'string'
-          ) {
-            const pathStr = (data.source as Record<string, unknown>).originalPath as string
-            const lastSep = Math.max(pathStr.lastIndexOf('/'), pathStr.lastIndexOf('\\'))
-            if (lastSep > 0) allowedPaths.push(pathStr.substring(0, lastSep))
-          } else if (
-            data.properties &&
-            typeof data.properties === 'object' &&
-            typeof (data.properties as Record<string, unknown>).filePath === 'string'
-          ) {
-            const customPath = (data.properties as Record<string, unknown>).filePath as string
-            const lastSep = Math.max(customPath.lastIndexOf('/'), customPath.lastIndexOf('\\'))
-            if (lastSep > 0) allowedPaths.push(customPath.substring(0, lastSep))
-          }
-        }
-
-        // Conversation nodes with agent settings (get explicitly configured paths + commands)
-        if (data.type === 'conversation' && data.agentSettings) {
-          const agentSettings = data.agentSettings as {
-            allowedPaths?: string[]
-            allowedCommands?: string[]
-          }
-          if (agentSettings.allowedPaths) {
-            allowedPaths.push(...agentSettings.allowedPaths)
-          }
-        }
-      }
-    }
 
     // Read MCP server configs for trusted symlink targets
     // .mcp.json files can specify root paths for MCP servers

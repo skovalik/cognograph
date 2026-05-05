@@ -26,7 +26,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
-import { CONIC_PALETTES } from '../../constants/conicPalettes'
+import { useConicPalette } from '../../constants/conicPalettes'
 import { getPropertiesForNodeType } from '../../constants/properties'
 import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
 import { useNodeResize } from '../../hooks/useNodeResize'
@@ -202,13 +202,17 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
     return () => window.removeEventListener('rename-node', handleRename)
   }, [id])
 
-  // Strip HTML tags for word count
-  const plainContent = nodeData.content
-    ? nodeData.content
-        .replace(/<[^>]*>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-    : ''
+  // Z-18: Memoize regex strip — only recompute when content changes
+  const plainContent = useMemo(
+    () =>
+      nodeData.content
+        ? nodeData.content
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+        : '',
+    [nodeData.content],
+  )
   const wordCount = plainContent ? plainContent.split(/\s+/).filter((w) => w.length > 0).length : 0
 
   // Calculate dynamic node color
@@ -230,7 +234,7 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
     return Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, totalHeight))
   }, [plainContent.length, nodeWidth])
 
-  // PFD Phase 5A: In-place expansion dimensions (flow coordinates, viewport-relative)
+  // In-place expansion dimensions (flow coordinates, viewport-relative)
   const expandedDimensions = useMemo(() => {
     if (!isInPlaceExpanded) return null
     const viewport = getViewport()
@@ -260,10 +264,11 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   const transparent = nodeData.transparent
   const isGlassEnabled = useIsGlassEnabled('nodes', transparent)
 
+  const palette = useConicPalette()
+
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     // Fallback chain for undefined nodeColor
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.note ?? '#f59e0b' // amber-500
-    const palette = CONIC_PALETTES['note'] || CONIC_PALETTES.default
 
     return {
       '--ring-color': safeNodeColor,
@@ -282,6 +287,7 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
     effectiveHeight,
     themeSettings.nodeColors.note,
     modeConfig.badgeColor,
+    palette,
   ])
 
   // Handle resize - also update node internals to trigger edge recalculation
@@ -440,8 +446,8 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   const { showContent, showTitle, showBadges, showLede, zoomLevel } = useNodeContentVisibility()
   const showInteractiveControls = showContent
 
-  // PFD Phase 2: Density tier computation
-  // 3 tiers at far zoom, 5 at mid/close (Section 2A of PFD Implementation Plan)
+  // Density tier computation
+  // 3 tiers at far zoom, 5 at mid/close
   const densityClass = useMemo(() => {
     if (zoomLevel === 'ultra-far' || zoomLevel === 'far') {
       // Collapse to 3 discriminable tiers at far/ultra-far zoom
@@ -468,7 +474,6 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
     'cognograph-node',
     'cognograph-node--note',
     selected && 'selected',
-    // is-active reserved for functional state only (not selection)
     isSpawning && 'is-thinking',
     isDisabled && 'cognograph-node--disabled',
     isSpawning && 'spawning',
@@ -512,7 +517,7 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
         height={nodeHeight}
       />
 
-      {/* PFD Phase 6B: Landmark badge — visible at all zoom levels */}
+      {/* Landmark badge — visible at all zoom levels */}
       {nodeData.isLandmark && (
         <div className="landmark-badge" title="Landmark node">
           &#9670;
@@ -529,7 +534,7 @@ function NoteNodeComponent({ id, data, selected, width, height }: NodeProps): JS
       {/* Extraction badge for spatial extraction system */}
       <ExtractionBadge nodeId={id} nodeColor={nodeColor} />
 
-      {/* PFD Phase 4B: Context role label — visible only when context viz is active */}
+      {/* Context role label — visible only when context viz is active */}
       {modeConfig.contextRole && (
         <div className="context-role-badge" data-role={modeConfig.contextRole}>
           {modeConfig.contextRole}

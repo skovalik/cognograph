@@ -11,7 +11,7 @@
 
 import { Expand, FileText, LayoutGrid, Link2, Wand2, X } from 'lucide-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { useAIEditorStore } from '../../stores/aiEditorStore'
+import { useUIStore } from '../../stores/uiStore'
 
 interface SelectionActionBarProps {
   selectedNodeIds: string[]
@@ -68,8 +68,9 @@ function SelectionActionBarComponent({
   const [showCustomPrompt, setShowCustomPrompt] = useState(false)
   const [customPrompt, setCustomPrompt] = useState('')
 
-  const openModal = useAIEditorStore((s) => s.openModal)
-  const _setPrompt = useAIEditorStore((s) => s.setPrompt)
+  // F4 toolbar redirect: instead of opening the AI Editor modal, push the
+  // action's prompt into the BottomCommandBar via uiStore and close the bar.
+  const setCommandBarPrefill = useUIStore((s) => s.setCommandBarPrefill)
 
   // Focus management
   useEffect(() => {
@@ -110,48 +111,35 @@ function SelectionActionBarComponent({
     [onClose],
   )
 
-  // Handle quick action click
+  // Handle quick action click — redirects to chat bar instead of modal
   const handleQuickAction = useCallback(
     (action: QuickAction) => {
-      openModal({
-        mode: action.mode,
-        scope: 'selection',
-        prompt: action.prompt,
-      })
+      setCommandBarPrefill(action.prompt)
       onClose()
     },
-    [openModal, onClose],
+    [setCommandBarPrefill, onClose],
   )
 
-  // Handle custom prompt
+  // Handle custom prompt — redirects to chat bar
   const handleCustomPrompt = useCallback(() => {
     if (!customPrompt.trim()) {
       setShowCustomPrompt(true)
       return
     }
-
-    openModal({
-      mode: 'generate',
-      scope: 'selection',
-      prompt: customPrompt.trim(),
-    })
+    setCommandBarPrefill(customPrompt.trim())
     onClose()
-  }, [customPrompt, openModal, onClose])
+  }, [customPrompt, setCommandBarPrefill, onClose])
 
-  // Handle custom prompt submit
+  // Handle custom prompt submit — redirects to chat bar
   const handleCustomSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault()
       if (customPrompt.trim()) {
-        openModal({
-          mode: 'generate',
-          scope: 'selection',
-          prompt: customPrompt.trim(),
-        })
+        setCommandBarPrefill(customPrompt.trim())
         onClose()
       }
     },
-    [customPrompt, openModal, onClose],
+    [customPrompt, setCommandBarPrefill, onClose],
   )
 
   return (

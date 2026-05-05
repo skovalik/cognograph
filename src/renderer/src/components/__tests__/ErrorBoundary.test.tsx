@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * ErrorBoundary Component Tests — Phase 4A: UX-ERRORS
+ * ErrorBoundary Component Tests — UX-ERRORS
  *
  * Tests:
  * - Module exports (ErrorBoundary, InlineErrorBoundary, withErrorBoundary)

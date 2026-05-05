@@ -28,7 +28,7 @@ import {
 } from 'lucide-react'
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getPresetById } from '../../constants/agentPresets'
-import { CONIC_PALETTES } from '../../constants/conicPalettes'
+import { useConicPalette } from '../../constants/conicPalettes'
 import { getPropertiesForNodeType } from '../../constants/properties'
 import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
 import { useIsTouch } from '../../hooks/useIsMobile'
@@ -60,7 +60,7 @@ import { InlineErrorBoundary } from '../ErrorBoundary'
 import { ExtractionBadge } from '../extractions'
 import { InlineIconPicker } from '../InlineIconPicker'
 import { PropertyBadges } from '../properties/PropertyBadge'
-import { SessionStatusIndicator } from '../SessionStatusIndicator'
+import { TerminalLifecycleDropdown } from '../TerminalLifecycleDropdown'
 import { CountUp } from '../ui/react-bits'
 import { AttachmentBadge } from './AttachmentBadge'
 import { FoldBadge } from './FoldBadge'
@@ -180,9 +180,30 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
   const [showParticles, setShowParticles] = useState(false)
   const wasExtractingRef = useRef(false)
 
-  // In-node chat expansion state
-  const [isExpanded, setIsExpanded] = useState(false)
-  const [preExpandSize, setPreExpandSize] = useState<{ w: number; h: number } | null>(null)
+  // In-node chat expansion state — persisted in node data to survive unmount
+  // (onlyRenderVisibleElements culls off-screen nodes)
+  const updateNodeEphemeral = useWorkspaceStore((state) => state.updateNodeEphemeral)
+  const [isExpanded, _setIsExpanded] = useState(() => !!(nodeData as any)._uiExpanded)
+  const setIsExpanded = useCallback(
+    (v: boolean | ((prev: boolean) => boolean)) => {
+      _setIsExpanded((prev) => {
+        const next = typeof v === 'function' ? v(prev) : v
+        updateNodeEphemeral(id, { _uiExpanded: next } as any)
+        return next
+      })
+    },
+    [id, updateNodeEphemeral],
+  )
+  const [preExpandSize, _setPreExpandSize] = useState<{ w: number; h: number } | null>(
+    () => (nodeData as any)._uiPreExpandSize ?? null,
+  )
+  const setPreExpandSize = useCallback(
+    (v: { w: number; h: number } | null) => {
+      _setPreExpandSize(v)
+      updateNodeEphemeral(id, { _uiPreExpandSize: v } as any)
+    },
+    [id, updateNodeEphemeral],
+  )
 
   // Terminal interaction mode — double-click to enter, Escape to exit
   const [terminalInteractMode, setTerminalInteractMode] = useState(false)
@@ -230,9 +251,10 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
         : 'terminal-node-exited'
     : ''
 
+  const palette = useConicPalette()
+
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.conversation ?? '#3b82f6' // blue-500
-    const palette = CONIC_PALETTES['conversation'] || CONIC_PALETTES.default
 
     return {
       '--ring-color': safeNodeColor,
@@ -253,6 +275,7 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
     terminalAccentColor,
     demoMode,
     isTerminal,
+    palette,
   ])
 
   // Handle resize - also update node internals to trigger edge recalculation
@@ -323,15 +346,29 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
     return () => escapeManager.unregister(`canvas-conversation-collapse-${id}`)
   }, [isExpanded, selected, isTerminal, terminalInteractMode, handleCollapseChat, id])
 
-  // Auto-focus xterm when entering interact mode.
-  // Polls until .xterm-helper-textarea exists — LazyTerminalPanel uses React.Suspense,
-  // so the element doesn't exist on the first rAF after expand + interact mode set.
+  // Auto-focus xterm when entering interact mode + guard against focus theft.
+  // React Flow re-renders after setSelectedNodes, moving focus back to the node
+  // wrapper div. The focusin listener catches this and redirects to xterm.
   useEffect(() => {
     if (!terminalInteractMode || !isExpanded) return
+    const node = nodeRef.current
+    if (!node) return
+
     let attempts = 0
     let timer: ReturnType<typeof setTimeout> | null = null
+
+    const focusXterm = (): void => {
+      const xtermTextarea = node.querySelector(
+        '.xterm-helper-textarea',
+      ) as HTMLTextAreaElement | null
+      if (xtermTextarea && document.activeElement !== xtermTextarea) {
+        xtermTextarea.focus()
+      }
+    }
+
+    // Initial focus: poll until xterm-helper-textarea exists (Suspense lazy load)
     const tryFocus = (): void => {
-      const xtermTextarea = nodeRef.current?.querySelector(
+      const xtermTextarea = node.querySelector(
         '.xterm-helper-textarea',
       ) as HTMLTextAreaElement | null
       if (xtermTextarea) {
@@ -343,8 +380,23 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
       }
     }
     requestAnimationFrame(tryFocus)
+
+    // Focus guard: when anything inside the node steals focus from xterm
+    // (e.g. React Flow re-render restoring focus to node wrapper), redirect it back.
+    const handleFocusIn = (e: FocusEvent): void => {
+      const target = e.target as HTMLElement
+      // Only redirect if focus landed on the node wrapper itself, not on xterm
+      if (target === node || target.closest('.react-flow__node') === node.parentElement) {
+        if (!target.classList.contains('xterm-helper-textarea')) {
+          requestAnimationFrame(focusXterm)
+        }
+      }
+    }
+    node.addEventListener('focusin', handleFocusIn)
+
     return () => {
       if (timer) clearTimeout(timer)
+      node.removeEventListener('focusin', handleFocusIn)
     }
   }, [terminalInteractMode, isExpanded])
 
@@ -401,6 +453,10 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
       } else if (isTerminal) {
         // Terminal: double-click = enter interact mode (expand first if collapsed)
         e.stopPropagation()
+        // stopPropagation bypasses React Flow's node-click selection handler.
+        // Ensure node is selected so the reset guard doesn't
+        // immediately clear terminalInteractMode.
+        useWorkspaceStore.getState().setSelectedNodes([id])
         if (!isExpanded) handleExpandChat()
         setTerminalInteractMode(true)
       } else if (isExpanded) {
@@ -540,6 +596,7 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
             shell: 'claude-code',
             source: 'local',
             terminalState: 'idle',
+            userPinned: false,
             startedAt: Date.now(),
             lastActivityAt: Date.now(),
             accentColor: 'var(--accent-glow)',
@@ -604,7 +661,6 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
     isDisabled && 'cognograph-node--disabled',
     isStreaming && 'streaming',
     isStreaming && 'is-thinking',
-    // is-active reserved for functional state only (not selection)
     nonMemberClass,
     memberHighlightClass,
     isExtracting === id && 'extracting',
@@ -623,13 +679,18 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
     <div
       ref={nodeRef}
       className={nodeClassName}
-      style={
-        isTerminal && isExpanded ? { ...nodeStyle, background: '#1a1a2e', opacity: 1 } : nodeStyle
-      }
+      style={isTerminal && isExpanded ? { ...nodeStyle, opacity: 1 } : nodeStyle}
       data-transparent={isTerminal && isExpanded ? false : transparent}
       data-lod={zoomLevel}
       onDoubleClick={handleDoubleClick}
     >
+      {/* Dedicated thinking ring — a 3px rotating conic gradient positioned
+          OUTSIDE the node (inset:-3px) via mask-composite. Independent of the
+          node's own background so opaque terminal content can't mask it.
+          Only rendered for streaming terminal nodes; chat nodes keep using
+          the border-box cascade trick from .cognograph-node.is-thinking. */}
+      {isStreaming && isTerminal && <div className="cognograph-thinking-ring" aria-hidden />}
+
       {/* Type label: floats above node */}
       <div className="cognograph-node__type-label">
         {nodeData.mode === 'agent' ? 'AGENT' : isTerminal ? 'CC SESSION' : 'CONVERSATION'}
@@ -725,11 +786,37 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
               startEditing={renameTriggered}
             />
           )}
-          {/* Terminal: Status indicator (L2+ mid zoom) */}
+          {/* Terminal: Lifecycle dropdown — wraps SessionStatusIndicator with
+              pin/unpin/kill controls (Task 2.4 / F2). */}
           {isTerminal && nodeData.terminal && (
-            <SessionStatusIndicator
-              state={nodeData.terminal.terminalState}
+            <TerminalLifecycleDropdown
+              nodeId={id}
+              terminalState={nodeData.terminal.terminalState}
+              userPinned={nodeData.terminal.userPinned ?? false}
               accentColor={nodeData.terminal.accentColor}
+              onPin={() => {
+                if (nodeData.terminal) {
+                  updateNode(id, {
+                    terminal: { ...nodeData.terminal, userPinned: true },
+                  })
+                  window.api?.terminal?.pin?.(id, true).catch(() => {})
+                }
+              }}
+              onUnpin={() => {
+                if (nodeData.terminal) {
+                  updateNode(id, {
+                    terminal: { ...nodeData.terminal, userPinned: false },
+                  })
+                  window.api?.terminal?.pin?.(id, false).catch(() => {})
+                }
+              }}
+              onKill={() => {
+                if (window.api?.terminal?.kill) {
+                  window.api.terminal.kill(id).catch((err) => {
+                    console.warn('[TerminalLifecycle] Kill failed:', err)
+                  })
+                }
+              }}
             />
           )}
           {!!nodeData.properties?.url && (
@@ -740,34 +827,62 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
               />
             </span>
           )}
-          {/* Expand/Collapse toggle — always visible at L3+ */}
+          {/* Expand/Collapse toggle — always visible at L3+.
+              R13: wrapped in <div className="node-chrome--hover"> for BEM
+              consistency with the rest of the node chrome controls. */}
           {showInteractiveControls && (
-            <button
-              className="cognograph-node__expand-btn p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 node-chrome--hover"
-              onClick={(e) => {
-                e.stopPropagation()
-                if (isExpanded) {
-                  handleCollapseChat()
-                } else {
-                  handleExpandChat()
-                  if (isTerminal) setTerminalInteractMode(true)
-                }
-              }}
-              aria-label={isExpanded ? 'Collapse' : 'Expand'}
-              title={isExpanded ? 'Collapse (Esc)' : 'Expand'}
-            >
-              {isExpanded ? (
-                <Minimize2
-                  className="w-3.5 h-3.5"
-                  style={{ color: 'var(--node-text-secondary)' }}
-                />
-              ) : (
-                <Maximize2
-                  className="w-3.5 h-3.5"
-                  style={{ color: 'var(--node-text-secondary)' }}
-                />
-              )}
-            </button>
+            <div className="node-chrome--hover flex items-center">
+              <button
+                className="cognograph-node__expand-btn p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (isExpanded) {
+                    handleCollapseChat()
+                  } else {
+                    useWorkspaceStore.getState().setSelectedNodes([id])
+                    handleExpandChat()
+                    if (isTerminal) setTerminalInteractMode(true)
+                  }
+                }}
+                aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                title={isExpanded ? 'Collapse (Esc)' : 'Expand'}
+              >
+                {isExpanded ? (
+                  <Minimize2
+                    className="w-3.5 h-3.5"
+                    style={{ color: 'var(--node-text-secondary)' }}
+                  />
+                ) : (
+                  <Maximize2
+                    className="w-3.5 h-3.5"
+                    style={{ color: 'var(--node-text-secondary)' }}
+                  />
+                )}
+              </button>
+            </div>
+          )}
+          {/* R11: Exit Interact control lives in the header chrome (not as an
+              overlay on the terminal body) when a terminal conversation is
+              actively interactive. Pointer events must bypass React Flow drag
+              via .nodrag, and the click stops propagation so the underlying
+              node doesn't re-enter interact mode. */}
+          {isTerminal && terminalInteractMode && (
+            <div className="node-chrome--hover flex items-center">
+              <button
+                className="cognograph-node__exit-interact flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium rounded hover:bg-black/10 dark:hover:bg-white/10 nodrag"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setTerminalInteractMode(false)
+                }}
+                aria-label="Exit interaction mode"
+                title="Exit interaction mode (Escape)"
+                style={{ color: 'var(--node-text-secondary)' }}
+              >
+                <MousePointer className="w-3.5 h-3.5" />
+                Exit
+              </button>
+            </div>
           )}
           {/* Mode dropdown — L3+ only (interactive control) */}
           {showInteractiveControls && (
@@ -1060,34 +1175,34 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
                 )}
               </div>
 
-              {/* Drag overlay — when NOT interacting, allows drag + double-click to interact */}
+              {/* Drag overlay — when NOT interacting, allows drag + click/double-click to interact.
+                  Single click also re-enters interact mode so users can re-grab the terminal
+                  after it has been de-focused (F7). */}
               {!terminalInteractMode && (
                 <div
                   className="absolute inset-0 z-10"
                   style={{ cursor: 'grab' }}
-                  onDoubleClick={(e) => {
+                  onClick={(e) => {
                     e.stopPropagation()
+                    // stopPropagation bypasses React Flow's node-click selection handler.
+                    // Ensure node is selected so the reset guard (line ~304) doesn't
+                    // immediately clear terminalInteractMode.
+                    useWorkspaceStore.getState().setSelectedNodes([id])
                     setTerminalInteractMode(true)
                   }}
-                  title="Double-click to interact with terminal"
+                  onDoubleClick={(e) => {
+                    e.stopPropagation()
+                    useWorkspaceStore.getState().setSelectedNodes([id])
+                    setTerminalInteractMode(true)
+                  }}
+                  title="Click to interact with terminal"
                 />
               )}
 
-              {/* Exit Interact button */}
-              {terminalInteractMode && (
-                <button
-                  className="absolute top-2 right-2 z-20 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-black/70 text-white hover:bg-black/90 transition-colors backdrop-blur-sm border border-white/10 nodrag"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setTerminalInteractMode(false)
-                  }}
-                  title="Exit interaction mode (Escape)"
-                >
-                  <MousePointer className="w-3.5 h-3.5" />
-                  Exit Interact
-                </button>
-              )}
+              {/* R11: The overlay Exit Interact button was removed here and
+                  promoted to the node header so it participates in the
+                  .cognograph-node__header chrome row. See the header block
+                  gated on `isTerminal && terminalInteractMode`. */}
             </div>
           ) : (
             /* Expanded in-node chat — nodrag/nowheel prevent React Flow from
@@ -1260,6 +1375,7 @@ function ConversationNodeComponent({ id, data, selected, width, height }: NodePr
           title="Expand conversation"
           onClick={(e) => {
             e.stopPropagation()
+            useWorkspaceStore.getState().setSelectedNodes([id])
             handleExpandChat()
             if (isTerminal) setTerminalInteractMode(true)
           }}

@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-// Context Visualization Store — PFD Phase 4: AI Context Transparency
+// Context Visualization Store — AI Context Transparency
 // Manages the visual state of context scope highlighting on the canvas.
 // Activated when chat input is focused on a node.
 //
-// Phase 6A: Depth-of-Field rings — BFS graph distance from a focus node
+// Depth-of-Field rings — BFS graph distance from a focus node
 // reduces visual detail of distant nodes, creating a focal gradient.
 
 import { create } from 'zustand'
 import type { ContextTraversalEdge, ContextTraversalNode } from '../utils/contextCache'
 
-// --- DoF Types (Phase 6A) -------------------------------------------------
+// --- DoF Types -------------------------------------------------
 
 /** Minimal edge representation for BFS traversal */
 export interface DofEdge {
@@ -111,7 +111,7 @@ interface ContextVisualizationState {
   includedEdgeIds: Set<string>
   nodeCount: number
 
-  // --- DoF state (Phase 6A) ---
+  // --- DoF state ---
   dofEnabled: boolean
   dofFocusNodeId: string | null
   /** Map of nodeId -> ring number (0-3) or -1 for disconnected */
@@ -126,7 +126,7 @@ interface ContextVisualizationState {
   ) => void
   deactivate: () => void
 
-  // DoF actions (Phase 6A)
+  // DoF actions
   setDofFocus: (nodeId: string | null) => void
   setDofEnabled: (enabled: boolean) => void
   updateDofRings: (focusNodeId: string, nodes: DofNode[], edges: DofEdge[]) => void
@@ -191,7 +191,7 @@ export const useContextVisualizationStore = create<ContextVisualizationState>()(
   },
 }))
 
-// --- Selectors (Phase 6A) -------------------------------------------------
+// --- Selectors -------------------------------------------------
 
 /**
  * Returns the depth-of-field ring for a given node.

@@ -51,7 +51,6 @@ interface LogEntry {
 // -----------------------------------------------------------------------------
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
-const MAX_ROTATED_FILES = 1 // Keep notion-sync.log + notion-sync.log.1
 
 export class SyncLogger {
   private logPath: string

@@ -5,7 +5,7 @@
  * History Store
  *
  * Manages undo/redo history and drag/resize tracking for history commits.
- * Extracted from workspaceStore as part of Week 2 Stream B Track 2 Phase 2.2a.
+ * Extracted from workspaceStore during the store-split refactor.
  */
 
 import type { HistoryAction } from '@shared/types'

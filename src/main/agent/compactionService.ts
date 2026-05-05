@@ -161,15 +161,14 @@ function extractOriginalTask(messages: CompactionMessage[], provider: LLMProvide
   for (const msg of messages) {
     if (msg.role !== 'user') continue
 
-    // Skip tool result messages
+    // Skip tool result messages (anthropic uses content blocks; openai/gemini
+    // tool/function results are filtered by the role guard above already)
     if (provider === 'anthropic' && Array.isArray(msg.content)) {
       const hasToolResult = (msg.content as Array<Record<string, unknown>>).some(
         (block) => block.type === 'tool_result',
       )
       if (hasToolResult) continue
     }
-    if (provider === 'openai' && msg.role === 'tool') continue
-    if (provider === 'gemini' && msg.role === 'function') continue
 
     // Extract text content
     if (typeof msg.content === 'string') return msg.content
@@ -610,7 +609,7 @@ export async function compactConversation(
  */
 export function shouldFullCompact(
   messages: CompactionMessage[],
-  provider: LLMProvider,
+  _provider: LLMProvider,
   tokenBudget: number,
 ): boolean {
   // Estimate current tokens

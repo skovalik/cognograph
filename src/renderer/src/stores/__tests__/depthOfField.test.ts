@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * Depth-of-Field (Phase 6A) -- BFS ring computation tests
+ * Depth-of-Field -- BFS ring computation tests
  *
  * Tests the pure computeDepthOfField function and DoF store actions.
  */

@@ -10,8 +10,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
-import { BrowserWindow, ipcMain, safeStorage } from 'electron'
-import Store from 'electron-store'
+import { BrowserWindow, ipcMain } from 'electron'
 import { v4 as uuid } from 'uuid'
 import type { IPCResponse } from '../shared/ipc-types'
 import { createIPCError, createIPCSuccess, IPC_ERROR_CODES } from '../shared/ipc-types'
@@ -22,6 +21,7 @@ import type {
   MutationPlan,
   PlanWarning,
 } from '../shared/types'
+import { getDecryptedOrEnv } from './services/ai/getDecryptedOrEnv'
 import {
   cancelStreamingSession,
   cleanupSession,
@@ -31,13 +31,9 @@ import {
   updateSessionPhase,
 } from './services/streaming'
 
-interface EncryptedKeys {
-  anthropic?: string
-  gemini?: string
-  openai?: string
-}
-
-const store = new Store()
+// EncryptedKeys + the local Store instance previously lived here for
+// the now-removed private getApiKey() helper. Both responsibilities have
+// moved into src/main/services/ai/getDecryptedOrEnv.ts.
 
 // Current streaming session ID (for cancellation)
 let currentStreamingSessionId: string | null = null
@@ -216,26 +212,6 @@ async function executeQueryTool(
 
     default:
       return { error: `Unknown tool: ${toolName}` }
-  }
-}
-
-function getApiKey(provider: string): string | null {
-  try {
-    const encryptedKeys = store.get('encryptedApiKeys', {}) as EncryptedKeys
-    const encrypted = encryptedKeys[provider as keyof EncryptedKeys]
-
-    if (!encrypted) {
-      return null
-    }
-
-    if (safeStorage.isEncryptionAvailable()) {
-      const buffer = Buffer.from(encrypted, 'base64')
-      return safeStorage.decryptString(buffer)
-    }
-    return encrypted
-  } catch (error) {
-    console.error(`[AIEditor:getApiKey] Error decrypting key:`, error)
-    return null
   }
 }
 
@@ -572,7 +548,7 @@ function parsePlanResponse(content: string): {
 async function generatePlanWithAnthropic(
   context: AIEditorContext,
 ): Promise<IPCResponse<MutationPlan>> {
-  const apiKey = getApiKey('anthropic')
+  const apiKey = await getDecryptedOrEnv('anthropic').catch(() => null)
   if (!apiKey) {
     return createIPCError(
       IPC_ERROR_CODES.LLM_API_ERROR,
@@ -717,7 +693,7 @@ Position types:
 async function generatePlanWithAgentMode(
   context: AIEditorContext,
 ): Promise<IPCResponse<MutationPlan>> {
-  const apiKey = getApiKey('anthropic')
+  const apiKey = await getDecryptedOrEnv('anthropic').catch(() => null)
   if (!apiKey) {
     return createIPCError(
       IPC_ERROR_CODES.LLM_API_ERROR,
@@ -911,7 +887,7 @@ async function generatePlanWithStreaming(context: AIEditorContext): Promise<void
   // Extract requestId from context for event correlation
   const requestId = context.requestId
 
-  const apiKey = getApiKey('anthropic')
+  const apiKey = await getDecryptedOrEnv('anthropic').catch(() => null)
   if (!apiKey) {
     mainWindow.webContents.send('aiEditor:plan:error', {
       error: 'Anthropic API key not set. Please add your API key in settings.',
@@ -1078,7 +1054,7 @@ interface RefinePlanRequest {
 }
 
 async function refinePlan(request: RefinePlanRequest): Promise<IPCResponse<MutationPlan>> {
-  const apiKey = getApiKey('anthropic')
+  const apiKey = await getDecryptedOrEnv('anthropic').catch(() => null)
   if (!apiKey) {
     return createIPCError(
       IPC_ERROR_CODES.LLM_API_ERROR,

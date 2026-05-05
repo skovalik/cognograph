@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import { mediaFetchJson } from '../mediaFetchClient'
 import { type ImageGenParams, type MediaResult, ProviderAdapter } from '../providerAdapter'
 
 export class OpenAIAdapter extends ProviderAdapter {
@@ -24,22 +25,14 @@ export class OpenAIAdapter extends ProviderAdapter {
         body.size = sizeMap[params.aspectRatio] || '1024x1024'
       }
 
-      const res = await fetch('https://api.openai.com/v1/images/generations', {
+      const data = (await mediaFetchJson({
+        provider: 'openai',
+        url: 'https://api.openai.com/v1/images/generations',
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      })
+        bodyKind: 'json',
+        bodyJson: body,
+      })) as { data?: Array<{ b64_json?: string }> }
 
-      if (!res.ok) {
-        const err = new Error(`OpenAI API error: ${res.status}`) as any
-        err.status = res.status
-        throw err
-      }
-
-      const data = await res.json()
       const b64 = data.data?.[0]?.b64_json
       if (!b64) throw new Error('No image in OpenAI response')
 

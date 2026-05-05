@@ -10,8 +10,9 @@
  */
 
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { memo, useMemo } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import { useNodesStore } from '../../stores'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 
 interface FoldBadgeProps {
   nodeId: string
@@ -23,12 +24,12 @@ function FoldBadgeComponent({
   nodeColor = 'var(--gui-accent-primary)',
 }: FoldBadgeProps): JSX.Element | null {
   const getChildNodeIds = useNodesStore((s) => s.getChildNodeIds)
-  const toggleNodeCollapsed = useNodesStore((s) => s.toggleNodeCollapsed)
-  const nodes = useNodesStore((s) => s.nodes)
-
-  const node = useMemo(() => nodes.find((n) => n.id === nodeId), [nodes, nodeId])
+  const toggleNodeCollapsed = useWorkspaceStore((s) => s.toggleNodeCollapsed)
+  // Scalar selector: only re-renders when collapsed boolean actually changes
+  const isCollapsed = useNodesStore(
+    useCallback((s) => s.nodes.find((n) => n.id === nodeId)?.data?.collapsed ?? false, [nodeId]),
+  )
   const childIds = useMemo(() => getChildNodeIds(nodeId), [getChildNodeIds, nodeId])
-  const isCollapsed = node?.data?.collapsed ?? false
   const childCount = childIds.length
 
   // Don't show if no children

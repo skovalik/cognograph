@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * InsightIndicator Component (Phase 5: Graph Intelligence)
+ * InsightIndicator Component
  *
  * Renders a subtle indicator on nodes with graph intelligence insights.
  * Features:

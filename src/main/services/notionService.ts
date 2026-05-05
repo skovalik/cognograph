@@ -171,7 +171,7 @@ class NotionService {
       // Fallback: return as-is
       return encrypted
     } catch (err) {
-      console.error('[NotionService] Failed to decrypt token:', err)
+      console.error('[NotionService] Failed to decrypt stored credential', err)
       return null
     }
   }
@@ -203,7 +203,7 @@ class NotionService {
 
     if (!this.client) {
       this.client = new Client({ auth: token })
-      console.log(`[NotionService] Client initialized (token: ...${token.slice(-4)})`)
+      console.log('[NotionService] Client initialized')
     }
 
     return true

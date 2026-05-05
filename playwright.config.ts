@@ -44,13 +44,15 @@ export default defineConfig({
   projects: [
     {
       name: 'electron',
-      testMatch: /(?:app|conversation|gpu|electron|critical|foundation|v4).*\.spec\.ts/,
+      testMatch: /(?:app|conversation|gpu|electron|critical|foundation|v3-foyer-wave|v4).*\.spec\.ts/,
       // Electron tests must run sequentially (single app instance)
       fullyParallel: false,
     },
     {
       name: 'web',
-      testMatch: /(?:web|v3-foyer).*\.spec\.ts/,
+      // Negative lookahead: v3-foyer-harness.spec.ts matches, but
+      // v3-foyer-wave{1,2,3}.spec.ts run under the electron project only.
+      testMatch: /(?:web|v3-foyer(?!-wave)).*\.spec\.ts/,
       use: {
         baseURL: 'http://localhost:5174',
       },

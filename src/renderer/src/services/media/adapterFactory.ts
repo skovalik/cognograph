@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import { getKey as getApiKeyFromStore } from '../apiKeyStore'
 import { ElevenLabsAdapter } from './adapters/elevenlabsAdapter'
 import { GeminiAdapter } from './adapters/geminiAdapter'
 import { OpenAIAdapter } from './adapters/openaiAdapter'
@@ -12,7 +13,7 @@ import type { ProviderAdapter, ProviderCapability } from './providerAdapter'
 const PROVIDER_MAP: Record<
   string,
   {
-    adapter: new (key: string, credits: number | null) => ProviderAdapter
+    adapter: new (credits: number | null) => ProviderAdapter
     capabilities: readonly ProviderCapability[]
   }
 > = {
@@ -24,15 +25,22 @@ const PROVIDER_MAP: Record<
   elevenlabs: { adapter: ElevenLabsAdapter, capabilities: ['audio_gen'] },
 }
 
-function getApiKey(provider: string): string | null {
-  // Try web apiKeyStore first, then localStorage fallback
+/**
+ * The renderer no longer passes API keys to adapters — main resolves
+ * them at fetch time. We still consult `apiKeyStore` here as a configuration
+ * presence check (so 'auto' provider selection can prefer providers with a
+ * configured key, and explicit-provider calls fail fast with a helpful error
+ * before the IPC round-trip). The returned key is NOT passed to the adapter.
+ */
+function hasApiKey(provider: string): boolean {
   try {
-    // Cloud features disabled in open-source build
-    throw new Error('No cloud key store in open-source build')
+    const { useApiKeyStore } = require('../../../../web/stores/apiKeyStore')
+    const { keys } = useApiKeyStore.getState()
+    if (keys.find((k: { provider: string }) => k.provider === provider)) return true
   } catch {
-    // Electron / open-source — check localStorage
+    // Electron mode falls through.
   }
-  return localStorage.getItem(`cognograph:apikey:${provider}`)
+  return getApiKeyFromStore(provider) != null
 }
 
 export function getAdapterForProvider(
@@ -40,11 +48,10 @@ export function getAdapterForProvider(
   requiredCapabilities: ProviderCapability[],
 ): ProviderAdapter {
   if (providerName === 'auto') {
-    // Find first provider with required capabilities and an API key
+    // Find first provider with required capabilities and a configured key
     for (const [name, config] of Object.entries(PROVIDER_MAP)) {
       if (requiredCapabilities.every((c) => config.capabilities.includes(c))) {
-        const key = getApiKey(name)
-        if (key) return new config.adapter(key, null)
+        if (hasApiKey(name)) return new config.adapter(null)
       }
     }
     throw new Error(`No provider available with capabilities: ${requiredCapabilities.join(', ')}`)
@@ -53,8 +60,7 @@ export function getAdapterForProvider(
   const config = PROVIDER_MAP[providerName]
   if (!config) throw new Error(`Unknown provider: ${providerName}`)
 
-  const key = getApiKey(providerName)
-  if (!key) throw new Error(`No API key configured for ${providerName}`)
+  if (!hasApiKey(providerName)) throw new Error(`No API key configured for ${providerName}`)
 
-  return new config.adapter(key, null)
+  return new config.adapter(null)
 }

@@ -9,7 +9,7 @@
  */
 
 import type { EdgeData } from '@shared/types'
-import { useViewport } from '@xyflow/react'
+import { useStore } from '@xyflow/react'
 import { memo, useMemo } from 'react'
 import { useEdgesStore, useSelectionStore } from '../../stores'
 
@@ -31,7 +31,9 @@ function SocketBarComponent({ nodeId, position, nodeColor }: SocketBarProps): JS
   const edges = useEdgesStore((s) => s.edges)
   const selectedEdgeIds = useSelectionStore((s) => s.selectedEdgeIds)
   const setSelectedEdges = useSelectionStore((s) => s.setSelectedEdges)
-  const { zoom } = useViewport()
+  // Z-4: Quantize zoom to 0.1 steps (~15 distinct handleSize values).
+  // Eliminates ~80 re-renders/frame during pan (zoom constant → zero re-renders).
+  const zoom = useStore((s) => Math.round(s.transform[2] * 10) / 10, Object.is)
 
   // Scale handle size inversely with zoom so they stay clickable when zoomed out
   // At zoom 1.0 → 14px, at zoom 0.5 → 20px, at zoom 2.0 → 11px (clamped)

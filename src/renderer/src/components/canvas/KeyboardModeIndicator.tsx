@@ -7,8 +7,8 @@
  * Persistent pill badge in the bottom-center showing current
  * keyboard mode: Navigate (default), Edit (text focused), Terminal, Artboard.
  *
- * PFD Phase 5B: Canvas Interaction Patterns
- * Phase 3C: Added Artboard mode detection when in-place expansion is active.
+ * Canvas Interaction Patterns
+ * Artboard mode detection added when in-place expansion is active.
  */
 
 import { memo, useEffect, useState } from 'react'

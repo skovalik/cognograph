@@ -11,9 +11,23 @@
  * - Stream console output
  * - Profile performance
  *
- * Security: Token auth + rate limiting + code validation + dev-only
+ * Security: Token + per-boot bootId auth + rate limiting + code validation + dev-only.
+ *
+ * BootId rotation:
+ *   - Each app boot generates a fresh bootId (`crypto.randomBytes(16).toString('hex')`)
+ *     and persists it to `app.getPath('userData')/diag-bootId`.
+ *   - Auth header is `Authorization: Bearer <token>:<bootId>`. Stale bootIds
+ *     (from a prior boot whose state Claude Code still has cached) get a 401
+ *     with the directive "stale bootId, restart Claude Code".
+ *   - The diag-bootId file is removed on `app.before-quit` so a clean
+ *     restart starts fresh; the file existing across an unclean shutdown
+ *     does NOT affect security since the in-process bootId is regenerated
+ *     anyway, but the next boot's diag-bootId will mismatch any cached
+ *     stale value.
  */
 
+import fs from 'node:fs'
+import path from 'node:path'
 import crypto from 'crypto'
 import type { BrowserWindow } from 'electron'
 import express, { type NextFunction, type Request, type Response } from 'express'
@@ -21,6 +35,129 @@ import rateLimit from 'express-rate-limit'
 
 // Generate ephemeral token (regenerated on every app restart)
 const DIAGNOSTIC_TOKEN = process.env.DIAGNOSTIC_TOKEN || crypto.randomBytes(32).toString('hex')
+
+// ---------------------------------------------------------------------------
+// BootId persistence
+// ---------------------------------------------------------------------------
+
+const BOOT_ID_FILENAME = 'diag-bootId'
+const BEARER_FILENAME = 'diag-bearer'
+
+export function bootIdFilePath(userDataDir: string): string {
+  return path.join(userDataDir, BOOT_ID_FILENAME)
+}
+
+export function bearerFilePath(userDataDir: string): string {
+  return path.join(userDataDir, BEARER_FILENAME)
+}
+
+export function persistBearer(userDataDir: string, bearer: string): string {
+  const filePath = bearerFilePath(userDataDir)
+  fs.mkdirSync(userDataDir, { recursive: true })
+  fs.writeFileSync(filePath, bearer, { encoding: 'utf8', mode: 0o600 })
+  try {
+    fs.chmodSync(filePath, 0o600)
+  } catch {
+    // chmod is a no-op on Windows for owner-only restriction; NTFS perms
+    // already inherit user-only access from userDataDir.
+  }
+  return filePath
+}
+
+export function clearBearer(userDataDir: string): void {
+  try {
+    fs.unlinkSync(bearerFilePath(userDataDir))
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+  }
+}
+
+/**
+ * Generate a fresh bootId and persist it. Overwrites any prior value —
+ * bootId rotates per app boot. Returns the new bootId.
+ */
+export function generateAndPersistBootId(userDataDir: string): string {
+  const bootId = crypto.randomBytes(16).toString('hex')
+  fs.mkdirSync(userDataDir, { recursive: true })
+  fs.writeFileSync(bootIdFilePath(userDataDir), bootId, 'utf8')
+  return bootId
+}
+
+export function readPersistedBootId(userDataDir: string): string | null {
+  try {
+    const value = fs.readFileSync(bootIdFilePath(userDataDir), 'utf8').trim()
+    return value || null
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw err
+  }
+}
+
+/**
+ * Remove the persisted bootId file. Idempotent — missing file is fine.
+ * Wired to `app.before-quit` in index.ts so a clean restart starts fresh.
+ */
+export function clearBootId(userDataDir: string): void {
+  try {
+    fs.unlinkSync(bootIdFilePath(userDataDir))
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Auth header validation (pure — exported for unit tests)
+// ---------------------------------------------------------------------------
+
+export type AuthValidationCode =
+  | 'AUTH_OK'
+  | 'AUTH_REQUIRED'
+  | 'AUTH_BAD_FORMAT'
+  | 'AUTH_TOKEN_MISMATCH'
+  | 'AUTH_STALE_BOOT_ID'
+
+export interface AuthValidation {
+  valid: boolean
+  code: AuthValidationCode
+  reason?: string
+}
+
+/**
+ * Validate the `Authorization: Bearer <token>:<bootId>` header against the
+ * current process token + bootId. Returns a typed verdict; the express
+ * middleware maps the verdict to a 401 response with the suggestion.
+ *
+ * Pure function — does not read environment, files, or network. Test-friendly.
+ */
+export function validateAuthHeader(
+  header: string | undefined,
+  expectedToken: string,
+  expectedBootId: string,
+): AuthValidation {
+  if (!header) {
+    return { valid: false, code: 'AUTH_REQUIRED', reason: 'missing Authorization header' }
+  }
+  const match = /^Bearer\s+([^:\s]+):([^:\s]+)\s*$/i.exec(header)
+  if (!match) {
+    return {
+      valid: false,
+      code: 'AUTH_BAD_FORMAT',
+      reason: 'expected `Authorization: Bearer <token>:<bootId>`',
+    }
+  }
+  const [, presentedToken, presentedBootId] = match
+  if (presentedToken !== expectedToken) {
+    return { valid: false, code: 'AUTH_TOKEN_MISMATCH', reason: 'token mismatch' }
+  }
+  if (presentedBootId !== expectedBootId) {
+    return {
+      valid: false,
+      code: 'AUTH_STALE_BOOT_ID',
+      reason: 'stale bootId, restart Claude Code',
+    }
+  }
+  return { valid: true, code: 'AUTH_OK' }
+}
 
 // Sensitive field names to redact from responses
 const SENSITIVE_KEYS = ['apiKey', 'password', 'token', 'secret', 'credential', 'apikey']
@@ -81,9 +218,17 @@ function redactSecrets(obj: any): any {
 }
 
 /**
- * Start diagnostic server (dev mode only)
+ * Start diagnostic server (dev mode only).
+ *
+ * @param mainWindow Active BrowserWindow used for renderer probing.
+ * @param userDataDir `app.getPath('userData')` from the caller. Required so
+ *                    this module stays free of a runtime dependency on
+ *                    Electron's `app` (the type-only `BrowserWindow` import
+ *                    is fine; pulling in the full `electron` value would
+ *                    break vitest unit tests of the helpers above).
+ *                    The bootId is persisted to `<userDataDir>/diag-bootId`.
  */
-export function startDiagnosticServer(mainWindow: BrowserWindow): void {
+export function startDiagnosticServer(mainWindow: BrowserWindow, userDataDir: string): void {
   // DEV MODE CHECK - refuse to start in production
   if (!import.meta.env.DEV && process.env.NODE_ENV !== 'development') {
     throw new Error('Diagnostic server only available in development')
@@ -95,24 +240,29 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
     return
   }
 
+  // Generate bootId per-boot and persist for the cleanup hook to detect
+  // unclean shutdowns (a leftover diag-bootId file from a prior boot is
+  // overwritten here, so a stale Claude Code cache always misses).
+  const currentBootId = generateAndPersistBootId(userDataDir)
+
   const app = express()
   app.use(express.json({ limit: '1mb' }))
 
-  // SECURITY: Token authentication (required on every request)
+  // SECURITY: Token + bootId authentication on every request.
   app.use((req: Request, res: Response, next: NextFunction): void => {
-    const token = req.headers['x-diagnostic-token']
-    if (token !== DIAGNOSTIC_TOKEN) {
+    const result = validateAuthHeader(req.headers.authorization, DIAGNOSTIC_TOKEN, currentBootId)
+    if (!result.valid) {
       res.status(401).json({
         error: 'Unauthorized',
-        code: 'AUTH_REQUIRED',
-        suggestion: 'Include x-diagnostic-token header with valid token from Cognograph console',
+        code: result.code,
+        suggestion: result.reason,
       })
       return
     }
     next()
   })
 
-  // SECURITY: Rate limiting (configurable, default 120/min for dogfood testing)
+  // SECURITY: Rate limiting (configurable, default 120/min for dev/test use)
   const maxRequests = parseInt(process.env.DIAGNOSTIC_RATE_LIMIT || '120', 10)
   const limiter = rateLimit({
     windowMs: 60 * 1000,
@@ -366,7 +516,10 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
   // Tool 8: Save screenshot to file
   app.post('/screenshot', async (req: Request, res: Response) => {
     const { path: filePath } = req.body
-    if (!filePath) return res.status(400).json({ error: 'path required' })
+    if (!filePath) {
+      res.status(400).json({ error: 'path required' })
+      return
+    }
     try {
       const image = await mainWindow.webContents.capturePage()
       const fs = await import('fs')
@@ -380,9 +533,25 @@ export function startDiagnosticServer(mainWindow: BrowserWindow): void {
   // Start server on localhost only (not 0.0.0.0!)
   const PORT = process.env.DIAGNOSTIC_PORT ? parseInt(process.env.DIAGNOSTIC_PORT, 10) : 9223
   app.listen(PORT, '127.0.0.1', () => {
+    const bearer = `${DIAGNOSTIC_TOKEN}:${currentBootId}`
+    let bearerPath: string | null = null
+    try {
+      bearerPath = persistBearer(userDataDir, bearer)
+    } catch {
+      // If we can't write the file we still need to surface the bearer somehow;
+      // print a partial fingerprint instead of the full secret so terminal
+      // recordings / shared screens don't capture the live auth value.
+    }
     console.log('\n🔐 Diagnostic Server Started')
     console.log(`   URL: http://127.0.0.1:${PORT}`)
-    console.log(`   Token: ${DIAGNOSTIC_TOKEN}`)
-    console.log('   Copy token to MCP server config\n')
+    if (bearerPath) {
+      console.log(`   Auth: Bearer in ${bearerPath} (mode 0600, rotates per boot)`)
+    } else {
+      const fp = `${DIAGNOSTIC_TOKEN.slice(0, 4)}…${DIAGNOSTIC_TOKEN.slice(-4)}:${currentBootId.slice(0, 4)}…`
+      console.log(
+        `   Auth: Bearer fingerprint ${fp} (full value not printed; bearer-file write failed)`,
+      )
+    }
+    console.log('   MCP server reads the file directly; do not paste the bearer into chat\n')
   })
 }

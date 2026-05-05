@@ -431,6 +431,10 @@ const Prism: React.FC<PrismProps> = ({
         if (TS < 1e-6) continueRAF = false
       }
 
+      if (gl.drawingBufferWidth === 0 || gl.drawingBufferHeight === 0) {
+        if (continueRAF) raf = requestAnimationFrame(render)
+        return
+      }
       renderer.render({ scene: mesh })
       if (continueRAF) {
         raf = requestAnimationFrame(render)
@@ -470,6 +474,7 @@ const Prism: React.FC<PrismProps> = ({
         delete (container as PrismContainer).__prismIO
       }
       if (gl.canvas.parentElement === container) container.removeChild(gl.canvas)
+      gl.getExtension('WEBGL_lose_context')?.loseContext()
     }
   }, [
     height,

@@ -373,19 +373,24 @@ class WorkflowSync {
     }
 
     // Query first: find existing page by Canvas ID (upsert logic)
+    // Note: SDK 2025-09-03 removed databases.query; we route through the legacy
+    // REST endpoint via client.request() which still works server-side.
     const queryResult = await notionService.request(async (client) => {
-      return await client.databases.query({
-        database_id: config.workflowsDbId,
-        filter: {
-          property: 'Canvas ID',
-          rich_text: { equals: payload.canvasId },
+      return await client.request<{ results: Array<{ id: string }> }>({
+        method: 'post',
+        path: `databases/${config.workflowsDbId}/query`,
+        body: {
+          filter: {
+            property: 'Canvas ID',
+            rich_text: { equals: payload.canvasId },
+          },
         },
       })
     }, 'queryWorkflow')
 
     if (queryResult.success && queryResult.data?.results?.length > 0) {
       // Update existing page
-      const existingPageId = queryResult.data.results[0].id
+      const existingPageId = queryResult.data.results[0]!.id
       if (queryResult.data.results.length > 1) {
         console.warn(
           `[NotionSync] Found ${queryResult.data.results.length} pages for canvas ${payload.canvasId}, updating first`,

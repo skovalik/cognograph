@@ -20,8 +20,8 @@ import {
 import { AnimatePresence } from 'framer-motion'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Toaster, toast } from 'react-hot-toast'
-import { SplashScreen } from './components/SplashScreen'
 import { TokenIndicator } from './components/TokenIndicator'
+import { Preloader } from './components/ui/react-bits'
 import { SciFiToast, sciFiToast } from './components/ui/SciFiToast'
 import '@xyflow/react/dist/style.css'
 
@@ -43,6 +43,7 @@ import { OfflineIndicatorCompact } from './components/OfflineIndicator'
 import { FirstRunSetup } from './components/onboarding/FirstRunSetup'
 import { WelcomeScreen } from './components/onboarding/WelcomeScreen'
 import { PropertiesPanel } from './components/PropertiesPanel'
+import { PermissionQueue } from './components/permissions'
 import { Toolbar } from './components/Toolbar'
 // IconRail removed — V4 chrome uses TopBar
 import { TopBar } from './components/TopBar'
@@ -77,6 +78,7 @@ const FloatingPropertiesModal = lazy(() =>
 // ZoomIndicator removed — V4 chrome uses CanvasBadges ZoomBadge
 import { ClipboardIndicator } from './components/ClipboardIndicator'
 import { CollapsibleMinimap } from './components/CollapsibleMinimap'
+import { PerfTierBadge } from './components/PerfTierBadge'
 import { PinnedWindowsContainer } from './components/PinnedWindow'
 
 const AIEditorModal = lazy(() => import('./components/ai-editor/AIEditorModal'))
@@ -134,6 +136,7 @@ const KeyboardShortcutsHelp = lazy(() =>
   import('./components/KeyboardShortcutsHelp').then((m) => ({ default: m.KeyboardShortcutsHelp })),
 )
 
+import { usePerfStore } from './stores/perfStore'
 import { getHistoryActionLabel, useWorkspaceStore } from './stores/workspaceStore'
 import './stores/storeSyncBridge' // Bidirectional sync: workspaceStore ↔ nodesStore/edgesStore
 import type { EdgeData, FontTheme, GuiColors, NodeData, WorkspaceNodeData } from '@shared/types'
@@ -174,20 +177,23 @@ import { disposeAgentEventReceiver, initAgentEventReceiver } from './services/ag
 import { initSdkToolBridge } from './services/sdkToolBridge'
 import { useAIEditorStore } from './stores/aiEditorStore'
 import { initBridgeIPC, useBridgeStore } from './stores/bridgeStore'
-import { initCCBridgeListener } from './stores/ccBridgeStore'
+import { initCCBridgeListener, useCCBridgeStore } from './stores/ccBridgeStore'
 import { useConnectorStore } from './stores/connectorStore'
 import { initConsoleLogBridge } from './stores/consoleLogStore'
 import { useContextMenuStore } from './stores/contextMenuStore'
 import { useContextVisualizationStore } from './stores/contextVisualizationStore'
+import { useExtractionStore } from './stores/extractionStore'
 import { useGraphIntelligenceStore } from './stores/graphIntelligenceStore'
-import { initOrchestratorIPC } from './stores/orchestratorStore'
+import { initOrchestratorIPC, useOrchestratorStore } from './stores/orchestratorStore'
 import { selectKeyboardOverrides, useProgramStore } from './stores/programStore'
 import { useProposalStore } from './stores/proposalStore'
+import { useSessionStatsStore } from './stores/sessionStatsStore'
 import { cleanupStoreSyncBridge } from './stores/storeSyncBridge'
 import { useTemplateStore } from './stores/templateStore'
 import { useUIStore } from './stores/uiStore'
 import { SyncProviderWrapper, useSyncProvider } from './sync'
 import { useBridgeResponder } from './sync/BridgeResponder'
+import * as artifactThemeSync from './utils/artifactThemeSync'
 import { resolveGlassStyle } from './utils/glassUtils'
 import { getGPUTier } from './utils/gpuDetection'
 import { layoutEvents } from './utils/layoutEvents'
@@ -253,10 +259,39 @@ const isWeb = import.meta.env.VITE_BUILD_TARGET === 'web'
 // Returns Promise<void> — no await needed at module level (fire-and-forget)
 initRendererPlugins()
 
-// Expose stores on window for diagnostic server + dogfood testing (dev only)
+// Seed the managed Anthropic model presets (Haiku / Sonnet / Opus 4.7) into
+// the connector store on Electron first run, then backfill any missing entry
+// for returning users. Mirrors the web bootstrap in src/web/canvas.tsx so
+// desktop users see the same out-of-the-box model picker options as web users
+// without having to hand-type model IDs in Settings → Connectors → Add Provider.
+// Runs after persist middleware finishes hydrating — otherwise we'd write into
+// an empty store that rehydration would then overwrite with the persisted state.
+void (async () => {
+  const { MANAGED_MODELS } = await import('@shared/constants/managedModels')
+  await new Promise<void>((resolve) => {
+    const unsub = useConnectorStore.persist.onFinishHydration(() => {
+      unsub()
+      resolve()
+    })
+    if (useConnectorStore.persist.hasHydrated()) resolve()
+  })
+  const store = useConnectorStore.getState()
+  for (const m of MANAGED_MODELS) {
+    if (!store.connectors.some((c) => c.model === m.model)) {
+      store.addConnector({ type: 'llm', name: m.name, provider: 'anthropic', model: m.model })
+    }
+  }
+})()
+
+// Expose stores on window for diagnostic server + dev testing (dev only)
+// Diag server (src/main/diagnosticServer.ts) resolves `window.${name}Store` via /store/:name
 if (import.meta.env.DEV) {
   ;(window as any).workspaceStore = useWorkspaceStore
   ;(window as any).programStore = useProgramStore
+  ;(window as any).sessionStatsStore = useSessionStatsStore
+  ;(window as any).extractionStore = useExtractionStore
+  ;(window as any).orchestratorStore = useOrchestratorStore
+  ;(window as any).ccBridgeStore = useCCBridgeStore
 }
 
 // Lazy font loading — module-level Set tracks which fonts have been loaded
@@ -273,7 +308,7 @@ function ensureFontLoaded(fontTheme: FontTheme): void {
   document.head.appendChild(link)
 }
 
-// PFD Phase 5B: Rect overlap check for auto-grow (used in handleNodeDragStop)
+// Rect overlap check for auto-grow (used in handleNodeDragStop)
 function rectsOverlap(
   a: { x: number; y: number; width: number; height: number },
   b: { x: number; y: number; width: number; height: number },
@@ -355,6 +390,17 @@ interface ConnectionTarget {
   nodeColor: string
 }
 
+// ---------------------------------------------------------------------------
+// Module-level constants for ReactFlow props (avoids new object refs per render)
+// ---------------------------------------------------------------------------
+const RF_FIT_VIEW_OPTIONS = { padding: 0.2, maxZoom: 1.0 } as const
+const RF_DEFAULT_EDGE_OPTIONS = { type: 'custom', animated: false } as const
+const RF_PRO_OPTIONS = { hideAttribution: true } as const
+const RF_DEMO_VIEWPORT = { x: 50, y: 50, zoom: 0.28 } as const
+const RF_PAN_ON_DRAG_TOUCH = [0] as const
+const RF_PAN_ON_DRAG_MOUSE = [1, 2] as const
+const EMPTY_HANDLERS = {} as const
+
 function Canvas(): JSX.Element {
   const { getViewport, screenToFlowPosition, getInternalNode, setCenter, fitView, zoomTo } =
     useReactFlow()
@@ -429,16 +475,16 @@ function Canvas(): JSX.Element {
     return () => layoutEvents.removeEventListener('fitView', handler)
   }, [fitView])
 
-  // PFD Phase 5B: Spacebar + Arrow key panning
+  // Spacebar + Arrow key panning
   useSpacebarPan()
 
   // Task 26: Spatial keyboard navigation (Arrow keys, Tab, Shift+Arrow)
   useSpatialNavigation()
 
-  // PFD Phase 5B: Context selection store (transient Ctrl+Click context)
+  // Context selection store (transient Ctrl+Click context)
   const toggleContextSelection = useContextSelectionStore((s) => s.toggle)
 
-  // PFD Phase 5B: Spatial region auto-grow
+  // Spatial region auto-grow
   const autoGrowRegion = useSpatialRegionStore((s) => s.autoGrowRegion)
   const spatialRegions = useSpatialRegionStore((s) => s.regions)
   const [isDraggingFile, setIsDraggingFile] = useState(false)
@@ -478,6 +524,7 @@ function Canvas(): JSX.Element {
     setSnapGuidesVersion((v) => v + 1)
   }, [])
   const snapResultRef = useRef<{ x: number; y: number } | null>(null)
+  const lastSnapCalcRef = useRef(0)
   const proximityTargetsRef = useRef<ProximityTarget[]>([])
   const lastProximityCheckRef = useRef(0)
   const isDraggingNodeRef = useRef(false)
@@ -485,8 +532,34 @@ function Canvas(): JSX.Element {
   const highlightedProximityRef = useRef<Set<string>>(new Set())
   const viewportRef = useRef<{ x: number; y: number; zoom: number }>({ x: 0, y: 0, zoom: 1 })
   const canvasContainerRef = useRef<HTMLDivElement>(null)
-  const [_indicatorZoom, setIndicatorZoom] = useState(1)
-  const lastIndicatorZoomRef = useRef(1)
+  // Z-1: _indicatorZoom/setIndicatorZoom DELETED — value was never read,
+  // but setter caused full Canvas re-render every ~2 zoom frames.
+  // Zoom display lives in CollapsibleMinimap via useViewport().
+
+  // Stable onViewportChange handler (all values accessed via refs/getState)
+  const handleViewportChange = useCallback((viewport: { x: number; y: number; zoom: number }) => {
+    const prevZoom = viewportRef.current.zoom
+    viewportRef.current = viewport
+    ;(window as any).__cognograph_viewport = viewport
+    const newZoom = viewport.zoom
+    if (newZoom !== prevZoom) {
+      // prevTier: reads from perfStore (sole source after Task 12).
+      const prevTier = usePerfStore.getState().zoomTier ?? 'full'
+      const newTier = computeZoomPerfTier(newZoom, prevTier)
+      if (newTier !== prevTier) {
+        usePerfStore.getState().setZoomTier(newTier)
+        canvasContainerRef.current?.setAttribute('data-zoom-tier', newTier)
+      }
+    }
+  }, [])
+
+  // DEV-only: expose stores on window for test scripts (perf-bench-edge-lod, AC4/5/8/9)
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      ;(window as any).__usePerfStore = usePerfStore
+      ;(window as any).__useWorkspaceStore = useWorkspaceStore
+    }
+  }, [])
 
   // Multiplayer presence
   const { broadcastCursor, clearCursor } = usePresence()
@@ -495,6 +568,10 @@ function Canvas(): JSX.Element {
   const hiddenNodeTypes = useWorkspaceStore((state) => state.hiddenNodeTypes)
   const edges = useWorkspaceStore((state) => state.edges) ?? []
   const themeSettings = useWorkspaceStore((state) => state.themeSettings)
+  const canvasStyle = useMemo(
+    () => ({ background: themeSettings.canvasBackground }),
+    [themeSettings.canvasBackground],
+  )
   const _leftSidebarOpen = useWorkspaceStore((state) => state.leftSidebarOpen)
   const _leftSidebarWidth = useWorkspaceStore((state) => state.leftSidebarWidth)
 
@@ -622,7 +699,7 @@ function Canvas(): JSX.Element {
     return () => cancelAnimationFrame(raf)
   }, [showFps])
 
-  // PFD Phase 5B: Apply context-selection-ring CSS class to context-selected nodes
+  // Apply context-selection-ring CSS class to context-selected nodes
   useEffect(() => {
     const unsub = useContextSelectionStore.subscribe((state) => {
       // Remove ring from all nodes first
@@ -641,6 +718,11 @@ function Canvas(): JSX.Element {
   // Set data-theme attribute on body for CSS variable theming
   useEffect(() => {
     document.body.setAttribute('data-theme', themeSettings.mode)
+    // Broadcast to every registered HTML artifact iframe so they follow the
+    // global theme. Artifacts opt into the handshake either via the injected
+    // baseline script (ArtifactNode adds one to every srcDoc artifact) or
+    // via their own author-contract listener if they need side effects.
+    artifactThemeSync.broadcastTheme(themeSettings.mode)
   }, [themeSettings.mode])
 
   // Listen for open-settings events from child components (e.g. AIPropertyAssist)
@@ -677,7 +759,7 @@ function Canvas(): JSX.Element {
     const cleanupCCBridge = initCCBridgeListener()
     const cleanupOrch = initOrchestratorIPC() // Must init BEFORE bridge
     const cleanupSpatialBridge = initBridgeIPC() // Bridge subscribes to orchestrator events
-    initAgentEventReceiver() // Phase 2C: passive event receiver for transport events
+    initAgentEventReceiver() // Passive event receiver for transport events
 
     // Wire graph intelligence insights from main process
     let unsubInsights: (() => void) | undefined
@@ -766,13 +848,13 @@ function Canvas(): JSX.Element {
       if (flushTimer) return
       flushTimer = setTimeout(() => {
         flushTimer = null
-        const updateNode = useWorkspaceStore.getState().updateNode
+        const updateNodeEphemeral = useWorkspaceStore.getState().updateNodeEphemeral
         for (const [nid, buf] of buffers.entries()) {
           const clean = buf.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/\x1b\][^\x07]*\x07/g, '')
           const lines = clean.split('\n').filter((l: string) => l.trim().length > 0)
           const last12 = lines.slice(-12).map((l: string) => l.slice(0, 120))
           if (last12.length > 0) {
-            updateNode(nid, { terminalPreviewLines: last12 })
+            updateNodeEphemeral(nid, { terminalPreviewLines: last12 })
           }
         }
         for (const [nid, buf] of buffers.entries()) {
@@ -805,9 +887,76 @@ function Canvas(): JSX.Element {
       store.updateNode(nodeId, {
         terminal: { ...node.data.terminal, terminalState: validStatus },
       })
+
+      // Terminal "running" is NOT the same as LLM "thinking" — don't trigger
+      // conic gradient animation (.is-thinking) for terminals on status alone.
+      // Thinking is detected separately via spinner detection in PTY stdout —
+      // see `onThinkingChangeGlobal` subscriber below.
     })
 
     return () => cleanup()
+  }, [])
+
+  // CLI thinking animation: braille-spinner-detected signal from main process
+  // bridges to the same `setStreaming` action that chat streaming uses, which
+  // lights up the conic ring on the node AND dashed flow on incoming edges.
+  // Single store flip, two visual effects — no per-node or per-edge changes.
+  useEffect(() => {
+    if (!(window as any).__ELECTRON__) return
+    if (!window.api?.terminal?.onThinkingChangeGlobal) return
+    const cleanup = window.api.terminal.onThinkingChangeGlobal(
+      (nodeId: string, thinking: boolean) => {
+        useWorkspaceStore.getState().setStreaming(nodeId, thinking)
+      },
+    )
+    return () => cleanup()
+  }, [])
+
+  // Set-hygiene: if a node leaves the workspace while its streaming flag is
+  // set, clear the flag defensively. Covers edge cases where the main process
+  // hasn't emitted thinkingChange(false) yet.
+  useEffect(() => {
+    const unsub = useWorkspaceStore.subscribe((state, prev) => {
+      if (state.nodes === prev.nodes) return
+      const removed = prev.nodes.filter((n) => !state.nodes.find((m) => m.id === n.id))
+      for (const n of removed) {
+        if (state.streamingConversations.has(n.id)) {
+          state.setStreaming(n.id, false)
+        }
+      }
+    })
+    return () => unsub()
+  }, [])
+
+  // F5: MCP bridge broadcasts when the CLI / MCP client reads context for a
+  // node. Pulse incoming edges for ~1.5s per read, coalescing repeats into
+  // a single trailing clear.
+  useEffect(() => {
+    if (!(window as any).__ELECTRON__) return
+    if (!window.api?.terminal?.onContextReadGlobal) return
+
+    const CONTEXT_FLOW_DURATION_MS = 1500
+    const timers = new Map<string, ReturnType<typeof setTimeout>>()
+
+    const cleanup = window.api.terminal.onContextReadGlobal((nodeId: string) => {
+      const store = useWorkspaceStore.getState()
+      store.setContextFlowing(nodeId, true)
+
+      const existing = timers.get(nodeId)
+      if (existing) clearTimeout(existing)
+
+      const t = setTimeout(() => {
+        useWorkspaceStore.getState().setContextFlowing(nodeId, false)
+        timers.delete(nodeId)
+      }, CONTEXT_FLOW_DURATION_MS)
+      timers.set(nodeId, t)
+    })
+
+    return () => {
+      cleanup()
+      for (const t of timers.values()) clearTimeout(t)
+      timers.clear()
+    }
   }, [])
 
   // Reset bridge + proposal state when workspace changes
@@ -964,7 +1113,7 @@ function Canvas(): JSX.Element {
   const activeChatNodeId = useWorkspaceStore((state) => state.activeChatNodeId)
   // openChatNodeIds removed — chat is now rendered in-node
 
-  // PFD Phase 4: Context Visualization
+  // Context Visualization
   const contextVizActive = useContextVisualizationStore((state) => state.active)
   const contextVizTargetNodeId = useContextVisualizationStore((state) => state.targetNodeId)
   const contextVizIsTerminal = useContextVisualizationStore((state) => state.isTerminalTarget)
@@ -972,15 +1121,15 @@ function Canvas(): JSX.Element {
   const contextVizEdgeIds = useContextVisualizationStore((state) => state.includedEdgeIds)
   const { showContextScope, hideContextScope } = useContextVisualization()
 
-  // PFD Phase 5A: In-Place Expansion
+  // In-Place Expansion
   const inPlaceExpandedNodeId = useWorkspaceStore((state) => state.inPlaceExpandedNodeId)
   const collapseInPlaceExpansion = useWorkspaceStore((state) => state.collapseInPlaceExpansion)
 
-  // PFD Phase 6C: Session interaction recording
+  // Session interaction recording
   const recordInteraction = useWorkspaceStore((state) => state.recordInteraction)
   const _lastSessionNodeId = useWorkspaceStore((state) => state.lastSessionNodeId)
 
-  // PFD Phase 7B: Calm Mode
+  // Calm Mode
   const calmMode = useWorkspaceStore((state) => state.calmMode)
   const toggleCalmMode = useWorkspaceStore((state) => state.toggleCalmMode)
 
@@ -1221,13 +1370,26 @@ function Canvas(): JSX.Element {
   }, [highlightProximityTargets])
   // highlightProximityTargets has [] deps so it's stable — this effect runs once
 
+  // Structural ref: only updates when nodes are added/removed/type-changed, NOT during drag.
+  // This prevents combinedEdges from recomputing at 60fps during drag (position-only changes).
+  const nodesStructuralRef = useRef(nodes)
+  const prevNodeIdsRef = useRef('')
+  const nodeIdsKey = useMemo(() => nodes.map((n) => n.id).join(','), [nodes])
+  if (nodeIdsKey !== prevNodeIdsRef.current) {
+    prevNodeIdsRef.current = nodeIdsKey
+    nodesStructuralRef.current = nodes
+  }
+
   // Compute combined edges including workspace member links
   const combinedEdges = useMemo(() => {
     // Start with the regular edges
     const allEdges: Edge[] = [...(edges || [])]
 
+    // Use structural ref to avoid recomputing during drag (position-only changes)
+    const stableNodes = nodesStructuralRef.current
+
     // Find workspace nodes with showLinks enabled
-    const workspaceNodesWithLinks = (nodes || []).filter(
+    const workspaceNodesWithLinks = (stableNodes || []).filter(
       (n) => n.data.type === 'workspace' && (n.data as WorkspaceNodeData).showLinks,
     )
 
@@ -1241,7 +1403,7 @@ function Canvas(): JSX.Element {
 
       for (const memberId of memberIds) {
         // Check if member node exists
-        const memberNode = nodes.find((n) => n.id === memberId)
+        const memberNode = stableNodes.find((n) => n.id === memberId)
         if (!memberNode) continue
 
         // Create a workspace membership edge
@@ -1288,7 +1450,8 @@ function Canvas(): JSX.Element {
     }
 
     return allEdges
-  }, [nodes, edges, ghostEdges])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nodesStructuralRef is stable during drag
+  }, [nodeIdsKey, edges, ghostEdges])
 
   // Compute context provider node IDs: nodes that feed context into selected conversations
   const contextProviderNodeIds = useMemo(() => {
@@ -1338,7 +1501,7 @@ function Canvas(): JSX.Element {
           classes.push('context-provider-node')
         }
 
-        // PFD Phase 6C: Recency indicators
+        // Recency indicators
         const updatedAt = (node.data as { updatedAt?: number }).updatedAt
         if (updatedAt) {
           const hoursAgo = (Date.now() - updatedAt) / (1000 * 60 * 60)
@@ -1346,7 +1509,7 @@ function Canvas(): JSX.Element {
           else if (hoursAgo < 48) classes.push('recency-warm')
         }
 
-        // PFD Phase 4: Context visualization classes
+        // Context visualization classes
         if (contextVizActive) {
           if (node.id === contextVizTargetNodeId) {
             classes.push('context-viz-target')
@@ -1357,7 +1520,7 @@ function Canvas(): JSX.Element {
           }
         }
 
-        // Phase 4B UX-A11Y: ARIA label for screen readers
+        // Accessibility: ARIA label for screen readers
         const nodeTitle = (node.data as { title?: string }).title || 'Untitled'
         const nodeType = (node.data as { type?: string }).type || 'node'
         const ariaLabel = `${nodeType}: ${nodeTitle}`
@@ -1402,7 +1565,7 @@ function Canvas(): JSX.Element {
     contextVizNodeIds,
   ])
 
-  // PFD Phase 4: Apply context edge classes for visualization
+  // Apply context edge classes for visualization
   // Terminal UX: Gold glow variant when target is a terminal node
   const vizEdges = useMemo(() => {
     if (!contextVizActive) return combinedEdges
@@ -1418,7 +1581,7 @@ function Canvas(): JSX.Element {
     })
   }, [combinedEdges, contextVizActive, contextVizEdgeIds, contextVizIsTerminal])
 
-  // PFD Phase 4: Activate/deactivate context viz when chat focus changes
+  // Activate/deactivate context viz when chat focus changes
   useEffect(() => {
     if (activeChatNodeId) {
       showContextScope(activeChatNodeId)
@@ -1984,40 +2147,47 @@ function Canvas(): JSX.Element {
         height?: number
       },
     ): void => {
+      // Shared by both snap and proximity — hoist above throttle gate
       const currentNodes = nodesRef.current
       const draggedIds = selectedNodeIds.includes(node.id) ? selectedNodeIds : [node.id]
-      const staticNodeRects = currentNodes
-        .filter((n) => !draggedIds.includes(n.id))
-        .map((n) => ({
-          position: n.position,
-          width: (n.width as number) || n.measured?.width || 280,
-          height: (n.height as number) || n.measured?.height || 140,
-        }))
 
-      const primaryRect = {
-        position: node.position,
-        width: (node.width as number) || node.measured?.width || 280,
-        height: (node.height as number) || node.measured?.height || 140,
+      // === SNAP GUIDE CALC — throttled to ~60fps ===
+      const now = performance.now()
+      if (now - lastSnapCalcRef.current >= 16) {
+        lastSnapCalcRef.current = now
+        const staticNodeRects = currentNodes
+          .filter((n) => !draggedIds.includes(n.id))
+          .map((n) => ({
+            position: n.position,
+            width: (n.width as number) || n.measured?.width || 280,
+            height: (n.height as number) || n.measured?.height || 140,
+          }))
+
+        const primaryRect = {
+          position: node.position,
+          width: (node.width as number) || node.measured?.width || 280,
+          height: (node.height as number) || node.measured?.height || 140,
+        }
+
+        const result = calculateSnapGuides(
+          draggedIds.map((id) => {
+            const n = currentNodes.find((nd) => nd.id === id)
+            return n
+              ? {
+                  position: n.position,
+                  width: (n.width as number) || n.measured?.width || 280,
+                  height: (n.height as number) || n.measured?.height || 140,
+                }
+              : primaryRect
+          }),
+          staticNodeRects,
+          node.position,
+          primaryRect,
+        )
+
+        setSnapGuides(result.guides)
+        snapResultRef.current = result.snappedPosition
       }
-
-      const result = calculateSnapGuides(
-        draggedIds.map((id) => {
-          const n = currentNodes.find((nd) => nd.id === id)
-          return n
-            ? {
-                position: n.position,
-                width: (n.width as number) || n.measured?.width || 280,
-                height: (n.height as number) || n.measured?.height || 140,
-              }
-            : primaryRect
-        }),
-        staticNodeRects,
-        node.position,
-        primaryRect,
-      )
-
-      setSnapGuides(result.guides)
-      snapResultRef.current = result.snappedPosition
 
       // ── Proximity auto-connect detection (throttled 10fps) ──
       // V1 limitation: only checks primary (leader) dragged node rect, not all selected nodes
@@ -2057,6 +2227,39 @@ function Canvas(): JSX.Element {
       _event: React.MouseEvent,
       node: { id: string; type?: string; position: { x: number; y: number } },
     ): void => {
+      // Final-frame snap recalc to prevent stale position from throttle
+      {
+        const currentNodes = nodesRef.current
+        const draggedIds = selectedNodeIds.includes(node.id) ? selectedNodeIds : [node.id]
+        const staticNodeRects = currentNodes
+          .filter((n) => !draggedIds.includes(n.id))
+          .map((n) => ({
+            position: n.position,
+            width: (n.width as number) || n.measured?.width || 280,
+            height: (n.height as number) || n.measured?.height || 140,
+          }))
+        const primaryRect = {
+          position: node.position,
+          width: 280,
+          height: 140,
+        }
+        const finalResult = calculateSnapGuides(
+          draggedIds.map((id) => {
+            const n = currentNodes.find((nd) => nd.id === id)
+            return n
+              ? {
+                  position: n.position,
+                  width: (n.width as number) || n.measured?.width || 280,
+                  height: (n.height as number) || n.measured?.height || 140,
+                }
+              : primaryRect
+          }),
+          staticNodeRects,
+          node.position,
+          primaryRect,
+        )
+        snapResultRef.current = finalResult.snappedPosition
+      }
       // Apply snap if available
       if (snapResultRef.current) {
         const snapped = snapResultRef.current
@@ -2254,7 +2457,7 @@ function Canvas(): JSX.Element {
       // Always clear visual highlights
       clearProximityHighlights()
 
-      // PFD Phase 5B: Auto-grow spatial regions when nodes are dropped inside
+      // Auto-grow spatial regions when nodes are dropped inside
       draggedIds.forEach((id) => {
         const draggedNode = nodesRef.current.find((n) => n.id === id)
         if (!draggedNode) return
@@ -2482,11 +2685,11 @@ function Canvas(): JSX.Element {
     (event: React.MouseEvent, node: Node) => {
       const isCtrlOrCmd = event.ctrlKey || event.metaKey
 
-      // PFD Phase 6C: Record interaction for session re-entry
+      // Record interaction for session re-entry
       recordInteraction(node.id, 'select')
 
       if (isCtrlOrCmd) {
-        // PFD Phase 5B: Toggle context selection for this node
+        // Toggle context selection for this node
         toggleContextSelection(node.id)
 
         // Toggle this node's selection
@@ -2520,7 +2723,7 @@ function Canvas(): JSX.Element {
       // Deselect spatial regions on canvas click
       useSpatialRegionStore.getState().selectRegion(null)
 
-      // PFD Phase 5A: Collapse in-place expansion on canvas click
+      // Collapse in-place expansion on canvas click
       if (inPlaceExpandedNodeId && event.button === 0) {
         collapseInPlaceExpansion()
       }
@@ -2835,18 +3038,18 @@ function Canvas(): JSX.Element {
         e.preventDefault()
         setShowFps((prev) => !prev)
       }
-      // PFD Phase 7A: Toggle Canvas Table of Contents (Ctrl + Shift + T)
+      // Toggle Canvas Table of Contents (Ctrl + Shift + T)
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T' && !isInputFocused) {
         e.preventDefault()
         setShowCanvasTOC((prev) => !prev)
       }
-      // PFD Phase 7B: Toggle Calm Mode (Ctrl + Shift + M)
+      // Toggle Calm Mode (Ctrl + Shift + M)
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'M' && !isInputFocused) {
         e.preventDefault()
         toggleCalmMode()
         sciFiToast(calmMode ? 'Calm Mode off' : 'Calm Mode on', 'info', 1500)
       }
-      // PFD Phase 5B: Tidy-up layout (Ctrl + Shift + L)
+      // Tidy-up layout (Ctrl + Shift + L)
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L' && !isInputFocused) {
         e.preventDefault()
         const currentNodes = nodesRef.current
@@ -3651,12 +3854,12 @@ function Canvas(): JSX.Element {
           Frontend integration has debugging issues (components not rendering).
           Deferred to v0.3.0. See docs/TODO-BRIDGE.md for details. */}
 
-        {/* Bridge Status Bar (Phase 1) — re-enabled for v0.3.0 */}
+        {/* Bridge Status Bar — re-enabled for v0.3.0 */}
         <InlineErrorBoundary name="BridgeStatusBar-canvas">
           <BridgeStatusBar />
         </InlineErrorBoundary>
 
-        {/* Proposal Card (Phase 3) - shows when agent proposes changes */}
+        {/* Proposal Card - shows when agent proposes changes */}
         {/* {activeProposal && activeProposal.status === 'pending' && (
         <ProposalCard
           proposal={activeProposal}
@@ -3778,6 +3981,10 @@ function Canvas(): JSX.Element {
           <ErrorBoundary componentName="Canvas">
             <ClickSpark>
               <ReactFlow
+                onInit={(rf) => {
+                  if (import.meta.env.DEV) (window as any).__rfInstance = rf
+                }}
+                onlyRenderVisibleElements
                 role="application"
                 aria-roledescription="spatial canvas"
                 aria-label="Cognograph workspace canvas"
@@ -3802,53 +4009,29 @@ function Canvas(): JSX.Element {
                 reconnectRadius={20}
                 onPaneClick={handlePaneClick}
                 onContextMenu={demoMode ? undefined : handleContextMenu}
-                {...(isTouch && !demoMode ? longPressHandlers : {})}
+                {...(isTouch && !demoMode ? longPressHandlers : EMPTY_HANDLERS)}
                 onSelectionChange={handleSelectionChange}
                 onNodeClick={handleNodeClick}
                 nodesConnectable={!demoMode}
                 fitView={!demoMode}
-                defaultViewport={demoMode ? { x: 50, y: 50, zoom: 0.28 } : undefined}
-                fitViewOptions={{
-                  padding: 0.2,
-                  maxZoom: 1.0, // Prevent over-zooming in tests (single nodes would zoom to 400%+)
-                }}
-                defaultEdgeOptions={{
-                  type: 'custom',
-                  animated: false,
-                }}
+                defaultViewport={demoMode ? RF_DEMO_VIEWPORT : undefined}
+                fitViewOptions={RF_FIT_VIEW_OPTIONS}
+                defaultEdgeOptions={RF_DEFAULT_EDGE_OPTIONS}
                 connectionLineType={ConnectionLineType.Bezier}
                 connectionMode={ConnectionMode.Loose}
                 deleteKeyCode={null}
                 selectionOnDrag={!isTouch}
                 selectionMode={isTouch ? SelectionMode.Full : SelectionMode.Partial}
-                panOnDrag={isTouch ? [0] : [1, 2]}
-                onViewportChange={(viewport) => {
-                  const prevZoom = viewportRef.current.zoom
-                  viewportRef.current = viewport
-                  ;(window as any).__cognograph_viewport = viewport
-                  const newZoom = viewport.zoom
-                  if (Math.abs(newZoom - lastIndicatorZoomRef.current) > 0.01) {
-                    lastIndicatorZoomRef.current = newZoom
-                    setIndicatorZoom(newZoom)
-                  }
-                  // Zoom perf tier — only compute when zoom actually changed (not on pan)
-                  if (newZoom !== prevZoom) {
-                    const prevTier = useWorkspaceStore.getState().zoomPerfTier ?? 'full'
-                    const newTier = computeZoomPerfTier(newZoom, prevTier)
-                    if (newTier !== prevTier) {
-                      useWorkspaceStore.setState({ zoomPerfTier: newTier })
-                      canvasContainerRef.current?.setAttribute('data-zoom-tier', newTier)
-                    }
-                  }
-                }}
+                panOnDrag={isTouch ? RF_PAN_ON_DRAG_TOUCH : RF_PAN_ON_DRAG_MOUSE}
+                onViewportChange={handleViewportChange}
                 selectNodesOnDrag={false}
                 multiSelectionKeyCode="Shift"
                 selectionKeyCode={null}
                 zoomOnDoubleClick={false}
                 minZoom={0.1}
                 maxZoom={4}
-                proOptions={{ hideAttribution: true }}
-                style={{ background: themeSettings.canvasBackground }}
+                proOptions={RF_PRO_OPTIONS}
+                style={canvasStyle}
               >
                 {/* Canvas grid — configurable via themeSettings.gridStyle */}
                 {(themeSettings.gridStyle ?? 'dots') === 'dots' && (
@@ -3883,15 +4066,16 @@ function Canvas(): JSX.Element {
                 {/* Controls (zoom +/-) removed — DS v3 chrome cleanup */}
                 {/* EmptyCanvasHint removed — WelcomeScreen is the empty-canvas state */}
                 {!isMobile && minimapVisible && <CollapsibleMinimap />}
+                <PerfTierBadge />
                 {/* ZoomIndicator + Fit View removed — V4 uses CanvasBadges ZoomBadge */}
                 <CanvasDistrictOverlay />
                 {/* SpatialRegionOverlay removed — regions disconnected from UI */}
                 <ExecutionStatusOverlay />
                 <ContextScopeBadge />
                 <NodeHoverPreview />
-                {/* SessionReEntryPrompt disabled */}
+                {/* SessionReEntryPrompt disabled — removed per Stefan's request */}
                 {showCanvasTOC && <CanvasTableOfContents onClose={() => setShowCanvasTOC(false)} />}
-                {/* CognitiveLoadMeter hidden */}
+                {/* CognitiveLoadMeter hidden per Stefan's request */}
                 {!isMobile && showEdgeLegend && (
                   <EdgeGrammarLegend onClose={() => setShowEdgeLegend(false)} />
                 )}
@@ -4010,10 +4194,10 @@ function Canvas(): JSX.Element {
             />
           </Suspense>
 
-          {/* PFD Phase 6B: L0 cluster summary bubbles */}
+          {/* L0 cluster summary bubbles */}
           <ClusterOverlay />
 
-          {/* PFD Phase 5B: Z-key zoom overlay */}
+          {/* Z-key zoom overlay */}
           <ZoomOverlay />
 
           {/* Task 27: Directional guide lines for keyboard navigation targets */}
@@ -4195,6 +4379,9 @@ function Canvas(): JSX.Element {
           <SciFiToast />
           <TokenIndicator />
 
+          {/* Permission queue — viewport-anchored bottom-right; renders only when ask-tier tool requests are pending */}
+          <PermissionQueue />
+
           {/* Template System Modals (lazy-loaded — PERF-BUNDLE) */}
           <Suspense fallback={null}>
             <SaveTemplateModal />
@@ -4277,11 +4464,19 @@ function Canvas(): JSX.Element {
           {/* Welcome Overlay - DISABLED: replaced by default onboarding workspace (spec 2026-03-27) */}
           {/* {!isWeb && <WelcomeOverlay onOpenSettings={() => { setSettingsCategory('ai'); setShowSettingsModal(true) }} />} */}
 
-          {/* Command Bar (Phase 4) - TEMPORARILY DISABLED FOR DEBUGGING */}
+          {/* Command Bar - TEMPORARILY DISABLED FOR DEBUGGING */}
           {/* <CommandBar /> */}
 
-          {/* Splash Screen */}
-          <AnimatePresence>{!isReady && <SplashScreen />}</AnimatePresence>
+          {/* Workspace Preloader */}
+          <Preloader
+            loading={!isReady}
+            variant="circle"
+            bgColor="#C8963E"
+            loadingText="Loading workspace"
+            duration={2000}
+            zIndex={9999}
+            position="fixed"
+          />
         </div>
 
         {/* AI Editor Modal and Preview - Outside flex container for guaranteed fixed positioning */}

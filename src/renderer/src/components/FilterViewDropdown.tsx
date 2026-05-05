@@ -9,7 +9,7 @@
  */
 
 import type { NodeData } from '@shared/types'
-import { ChevronDown, Eye, EyeOff, Filter } from 'lucide-react'
+import { ChevronUp, Eye, EyeOff, Filter } from 'lucide-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { EscapePriority, escapeManager } from '../utils/EscapeManager'
@@ -81,147 +81,132 @@ function FilterViewDropdownComponent(): JSX.Element {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Trigger button */}
+      {/* Trigger button — matches AgentLogBadge (canvas-badge glass-soft). */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs transition-colors border gui-panel-bg"
-        style={{
-          color: hasHidden ? 'var(--gui-accent-secondary)' : 'var(--gui-text-secondary)',
-          backgroundColor: hasHidden
-            ? 'color-mix(in srgb, var(--gui-accent-secondary) 15%, transparent)'
-            : undefined,
-          borderColor: hasHidden
-            ? 'color-mix(in srgb, var(--gui-accent-secondary) 40%, transparent)'
-            : 'var(--gui-border-subtle)',
-        }}
-        onMouseEnter={(e) => {
-          if (!hasHidden) {
-            e.currentTarget.style.backgroundColor =
-              'color-mix(in srgb, var(--gui-text-primary) 5%, transparent)'
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!hasHidden) {
-            e.currentTarget.style.backgroundColor = ''
-          }
-        }}
+        className="canvas-badge glass-soft"
+        style={
+          hasHidden
+            ? {
+                color: 'var(--gui-accent-secondary)',
+                borderColor: 'color-mix(in srgb, var(--gui-accent-secondary) 40%, transparent)',
+              }
+            : undefined
+        }
         title={
           hasHidden
             ? `${hiddenCount} type${hiddenCount !== 1 ? 's' : ''} hidden`
             : 'Filter node types'
         }
       >
-        <Filter className="w-3.5 h-3.5" style={{ color: 'inherit' }} />
-        <span className="hidden sm:inline" style={{ color: 'inherit' }}>
-          Filter
-        </span>
-        {hasHidden && (
-          <span
-            className="px-1 py-0.5 rounded text-[10px] font-medium"
-            style={{ backgroundColor: 'var(--gui-bg-tertiary)' }}
-          >
-            {hiddenCount}
-          </span>
-        )}
-        <ChevronDown
-          className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-          style={{ color: 'inherit' }}
-        />
+        <Filter className="w-3.5 h-3.5" />
+        Filter
+        {hasHidden && <span style={{ color: 'var(--accent-glow)' }}>({hiddenCount})</span>}
+        {/* ChevronUp because the menu opens above the button — when open,
+            the rotate-180 flips it to point down toward the collapse direction. */}
+        <ChevronUp className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Dropdown menu - opens ABOVE since button is at bottom of screen */}
+      {/* Dropdown menu - opens ABOVE since button is at bottom of screen.
+          Outer wrapper owns positioning; inner div owns glass styling. The
+          html[data-glass-style="fluid-glass"] override in glass.css:295
+          forces .glass-soft to `position: relative`, which would drop our
+          absolute positioning. Keeping them on separate elements avoids
+          that collision. */}
       {isOpen && (
-        <div
-          className="absolute bottom-full left-0 mb-1 w-52 glass-soft rounded-lg overflow-hidden shadow-xl animate-fade-in gui-z-dropdowns"
-          style={{
-            border: '1px solid var(--gui-border-subtle)',
-          }}
-        >
-          {/* Header */}
+        <div className="absolute bottom-full left-0 mb-1 w-52 gui-z-dropdowns">
           <div
-            className="flex items-center justify-between px-3 py-2 border-b"
-            style={{ borderColor: 'var(--gui-border-subtle)' }}
+            className="glass-soft rounded-lg overflow-hidden shadow-xl animate-fade-in"
+            style={{
+              border: '1px solid var(--gui-border-subtle)',
+            }}
           >
-            <span className="text-xs font-medium" style={{ color: 'var(--gui-text-primary)' }}>
-              Show Node Types
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={showAllNodeTypes}
-                className="px-1.5 py-0.5 rounded text-[10px] hover:bg-white/10 transition-colors"
-                style={{ color: 'var(--gui-text-muted)' }}
-                title="Show all"
-              >
-                All
-              </button>
-              <button
-                onClick={hideAllNodeTypes}
-                className="px-1.5 py-0.5 rounded text-[10px] hover:bg-white/10 transition-colors"
-                style={{ color: 'var(--gui-text-muted)' }}
-                title="Hide all"
-              >
-                None
-              </button>
-            </div>
-          </div>
-
-          {/* Type list */}
-          <div className="p-1">
-            {NODE_TYPES.map(({ type, label, color }) => {
-              const isHidden = hiddenNodeTypes.has(type)
-              const count = nodeCounts[type] || 0
-
-              return (
-                <button
-                  key={type}
-                  onClick={() => handleToggle(type)}
-                  className="flex items-center gap-2 w-full px-2 py-1.5 rounded text-left hover:bg-white/5 transition-colors"
-                >
-                  {/* Visibility toggle */}
-                  {isHidden ? (
-                    <EyeOff className="w-3.5 h-3.5" style={{ color: 'var(--gui-text-muted)' }} />
-                  ) : (
-                    <Eye className="w-3.5 h-3.5" style={{ color: 'var(--gui-accent-primary)' }} />
-                  )}
-
-                  {/* Type indicator */}
-                  <div
-                    className={`w-2 h-2 rounded-full ${isHidden ? 'opacity-30' : ''}`}
-                    style={{ backgroundColor: color }}
-                  />
-
-                  {/* Label */}
-                  <span
-                    className={`flex-1 text-xs ${isHidden ? 'line-through opacity-50' : ''}`}
-                    style={{ color: 'var(--gui-text-primary)' }}
-                  >
-                    {label}
-                  </span>
-
-                  {/* Count */}
-                  <span
-                    className="text-[10px] px-1.5 py-0.5 rounded"
-                    style={{
-                      backgroundColor: 'var(--gui-bg-tertiary)',
-                      color: 'var(--gui-text-muted)',
-                    }}
-                  >
-                    {count}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Footer hint */}
-          {hasHidden && (
+            {/* Header */}
             <div
-              className="px-3 py-2 text-[10px] border-t"
-              style={{ borderColor: 'var(--gui-border-subtle)', color: 'var(--gui-text-muted)' }}
+              className="flex items-center justify-between px-3 py-2 border-b"
+              style={{ borderColor: 'var(--gui-border-subtle)' }}
             >
-              Hidden nodes are preserved but not visible
+              <span className="text-xs font-medium" style={{ color: 'var(--gui-text-primary)' }}>
+                Show Node Types
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={showAllNodeTypes}
+                  className="px-1.5 py-0.5 rounded text-[10px] hover:bg-white/10 transition-colors"
+                  style={{ color: 'var(--gui-text-muted)' }}
+                  title="Show all"
+                >
+                  All
+                </button>
+                <button
+                  onClick={hideAllNodeTypes}
+                  className="px-1.5 py-0.5 rounded text-[10px] hover:bg-white/10 transition-colors"
+                  style={{ color: 'var(--gui-text-muted)' }}
+                  title="Hide all"
+                >
+                  None
+                </button>
+              </div>
             </div>
-          )}
+
+            {/* Type list */}
+            <div className="p-1">
+              {NODE_TYPES.map(({ type, label, color }) => {
+                const isHidden = hiddenNodeTypes.has(type)
+                const count = nodeCounts[type] || 0
+
+                return (
+                  <button
+                    key={type}
+                    onClick={() => handleToggle(type)}
+                    className="flex items-center gap-2 w-full px-2 py-1.5 rounded text-left hover:bg-white/5 transition-colors"
+                  >
+                    {/* Visibility toggle */}
+                    {isHidden ? (
+                      <EyeOff className="w-3.5 h-3.5" style={{ color: 'var(--gui-text-muted)' }} />
+                    ) : (
+                      <Eye className="w-3.5 h-3.5" style={{ color: 'var(--gui-accent-primary)' }} />
+                    )}
+
+                    {/* Type indicator */}
+                    <div
+                      className={`w-2 h-2 rounded-full ${isHidden ? 'opacity-30' : ''}`}
+                      style={{ backgroundColor: color }}
+                    />
+
+                    {/* Label */}
+                    <span
+                      className={`flex-1 text-xs ${isHidden ? 'line-through opacity-50' : ''}`}
+                      style={{ color: 'var(--gui-text-primary)' }}
+                    >
+                      {label}
+                    </span>
+
+                    {/* Count */}
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded"
+                      style={{
+                        backgroundColor: 'var(--gui-bg-tertiary)',
+                        color: 'var(--gui-text-muted)',
+                      }}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Footer hint */}
+            {hasHidden && (
+              <div
+                className="px-3 py-2 text-[10px] border-t"
+                style={{ borderColor: 'var(--gui-border-subtle)', color: 'var(--gui-text-muted)' }}
+              >
+                Hidden nodes are preserved but not visible
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

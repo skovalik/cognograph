@@ -5,7 +5,6 @@
  * nodeModeUtils.test.ts - Unit tests for node mode visual differentiation utilities
  *
  * Tests tint opacity calculations, border styles, and border widths for all node modes.
- * Based on spec: docs/specs/node-mode-visual-system.md
  */
 
 import { describe, it, expect } from 'vitest'

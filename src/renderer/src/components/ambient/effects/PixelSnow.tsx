@@ -250,8 +250,8 @@ export default function PixelSnow({
       const material = materialRef.current
       if (!container || !renderer || !material) return
 
-      const w = container.offsetWidth
-      const h = container.offsetHeight
+      const w = Math.max(1, container.offsetWidth)
+      const h = Math.max(1, container.offsetHeight)
       renderer.setSize(w, h)
       material.uniforms.uResolution.value.set(w, h)
     }, 100)
@@ -289,7 +289,7 @@ export default function PixelSnow({
     })
 
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setSize(container.offsetWidth, container.offsetHeight)
+    renderer.setSize(Math.max(1, container.offsetWidth), Math.max(1, container.offsetHeight))
     renderer.setClearColor(0x000000, 0)
     container.appendChild(renderer.domElement)
     rendererRef.current = renderer
@@ -299,7 +299,12 @@ export default function PixelSnow({
       fragmentShader,
       uniforms: {
         uTime: { value: 0 },
-        uResolution: { value: new Vector2(container.offsetWidth, container.offsetHeight) },
+        uResolution: {
+          value: new Vector2(
+            Math.max(1, container.offsetWidth),
+            Math.max(1, container.offsetHeight),
+          ),
+        },
         uFlakeSize: { value: flakeSize },
         uMinFlakeSize: { value: minFlakeSize },
         uPixelResolution: { value: pixelResolution },
@@ -327,6 +332,8 @@ export default function PixelSnow({
     let frameCount = 0
     const animate = () => {
       animationRef.current = requestAnimationFrame(animate)
+      const domElement = renderer.domElement
+      if (domElement.width === 0 || domElement.height === 0) return
       if (qualityRef?.current && !qualityRef.current.shouldRender) return
       if (reportFrameFn) reportFrameFn()
       if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return

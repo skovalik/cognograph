@@ -3,6 +3,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { viewportPool } from '../../../../components/nodes/Artifact3DViewportPool'
+import { _resetForTest, _setForTest } from '../../../apiKeyStore'
 import { getAvailableMediaTools } from '../../agentToolRegistry'
 import { useJobManager } from '../../jobManager'
 import {
@@ -14,11 +15,8 @@ import {
 describe('Creative pipeline (integration)', () => {
   beforeEach(() => {
     useJobManager.setState({ jobs: new Map() })
-    // Reset localStorage
-    const providerNames = ['stability', 'openai', 'google', 'replicate', 'runway', 'elevenlabs']
-    for (const p of providerNames) {
-      localStorage.removeItem(`cognograph:apikey:${p}`)
-    }
+    // Reset apiKeyStore between cases.
+    _resetForTest()
   })
 
   it('no tools available when no keys configured', () => {
@@ -27,21 +25,21 @@ describe('Creative pipeline (integration)', () => {
   })
 
   it('adding Stability key makes generate_image tool available', () => {
-    localStorage.setItem('cognograph:apikey:stability', 'sk-test-123')
+    _setForTest('stability', 'sk-test-123')
     const tools = getAvailableMediaTools()
     const imageTools = tools.filter((t) => t.name === 'generate_image')
     expect(imageTools.length).toBeGreaterThanOrEqual(1)
   })
 
   it('adding ElevenLabs key makes generate_audio tool available', () => {
-    localStorage.setItem('cognograph:apikey:elevenlabs', 'el-test-123')
+    _setForTest('elevenlabs', 'el-test-123')
     const tools = getAvailableMediaTools()
     const audioTools = tools.filter((t) => t.name === 'generate_audio')
     expect(audioTools.length).toBeGreaterThanOrEqual(1)
   })
 
   it('adding Runway key makes generate_video tool available', () => {
-    localStorage.setItem('cognograph:apikey:runway', 'rw-test-123')
+    _setForTest('runway', 'rw-test-123')
     const tools = getAvailableMediaTools()
     const videoTools = tools.filter((t) => t.name === 'generate_video')
     expect(videoTools.length).toBeGreaterThanOrEqual(1)

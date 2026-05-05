@@ -14,8 +14,11 @@
  * This "neighborhood dimming" keeps spatial context visible.
  */
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
+
+// Z-7: Stable empty array reference — same identity every render when modes are inactive
+const EMPTY_EDGES: readonly never[] = []
 
 interface ShowMembersClassResult {
   /** CSS class to apply for dimming non-members or non-focused nodes */
@@ -38,7 +41,11 @@ interface ShowMembersClassResult {
 export function useShowMembersClass(nodeId: string, parentId?: string): ShowMembersClassResult {
   const showMembersProjectId = useWorkspaceStore((state) => state.showMembersProjectId)
   const focusModeNodeId = useWorkspaceStore((state) => state.focusModeNodeId)
-  const edges = useWorkspaceStore((state) => state.edges)
+  // Z-7: Only subscribe to edges when focus/show-members mode is active.
+  // When inactive (most of the time), returns stable EMPTY_EDGES → zero re-renders on edge mutations.
+  const edges = useWorkspaceStore(
+    useCallback((state) => (focusModeNodeId ? state.edges : EMPTY_EDGES), [focusModeNodeId]),
+  )
 
   return useMemo(() => {
     // Focus mode takes priority
@@ -136,7 +143,10 @@ export function useShowMembersClassForTextNode(
 ): ShowMembersClassResult {
   const showMembersProjectId = useWorkspaceStore((state) => state.showMembersProjectId)
   const focusModeNodeId = useWorkspaceStore((state) => state.focusModeNodeId)
-  const edges = useWorkspaceStore((state) => state.edges)
+  // Z-7: Same conditional subscription as useShowMembersClass
+  const edges = useWorkspaceStore(
+    useCallback((state) => (focusModeNodeId ? state.edges : EMPTY_EDGES), [focusModeNodeId]),
+  )
 
   return useMemo(() => {
     // Focus mode takes priority

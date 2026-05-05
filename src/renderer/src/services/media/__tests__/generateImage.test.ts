@@ -1,12 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { _resetForTest, _setForTest } from '../../apiKeyStore'
 import { getAdapterForProvider } from '../adapterFactory'
 import { getAvailableMediaTools } from '../agentToolRegistry'
 import { generateImageTool } from '../tools/generateImage'
 
-// Cloud features disabled in open-source build — no web store to mock
+vi.mock('../../../../../web/stores/apiKeyStore', () => {
+  throw new Error('Not in web mode')
+})
+
+afterEach(() => {
+  _resetForTest()
+})
 
 describe('generateImage tool', () => {
   it('has correct tool definition', () => {
@@ -18,16 +25,15 @@ describe('generateImage tool', () => {
   })
 
   it('registry returns no tools when no keys configured', () => {
-    localStorage.clear()
+    _resetForTest()
     const tools = getAvailableMediaTools()
     expect(tools).toHaveLength(0)
   })
 
   it('registry returns generate_image when stability key exists', () => {
-    localStorage.setItem('cognograph:apikey:stability', 'sk-test')
+    _setForTest('stability', 'sk-test')
     const tools = getAvailableMediaTools()
     expect(tools.some((t) => t.name === 'generate_image')).toBe(true)
-    localStorage.clear()
   })
 
   it('adapterFactory throws for unknown provider', () => {
@@ -35,22 +41,20 @@ describe('generateImage tool', () => {
   })
 
   it('adapterFactory throws when no key for provider', () => {
-    localStorage.clear()
+    _resetForTest()
     expect(() => getAdapterForProvider('stability', ['image_gen'])).toThrow('No API key')
   })
 
   it('adapterFactory returns adapter when key exists', () => {
-    localStorage.setItem('cognograph:apikey:stability', 'sk-test')
+    _setForTest('stability', 'sk-test')
     const adapter = getAdapterForProvider('stability', ['image_gen'])
     expect(adapter.name).toBe('stability')
-    localStorage.clear()
   })
 
   it('auto provider selects first available', () => {
-    localStorage.setItem('cognograph:apikey:openai', 'sk-test')
+    _setForTest('openai', 'sk-test')
     const adapter = getAdapterForProvider('auto', ['image_gen'])
     // Should find stability first if key exists, otherwise openai
     expect(['stability', 'openai', 'gemini', 'replicate']).toContain(adapter.name)
-    localStorage.clear()
   })
 })

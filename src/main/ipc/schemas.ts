@@ -25,7 +25,7 @@
  * - cc-bridge:cancelDispatch
  * - llm:extract
  *
- * Completed in Phase 6A TESTS-ROUTES:
+ * Completed in TESTS-ROUTES work:
  * - [x] credentials:getMasked — integrated in index.ts
  * - [x] credentials:delete — integrated in index.ts
  * - [x] credentials:list — integrated in index.ts

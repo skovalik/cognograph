@@ -106,7 +106,7 @@ export interface ContextMetadata {
   archivedAt?: number
   archivedFromPosition?: { x: number; y: number }
 
-  // PFD Phase 6B: Landmark/Anchor nodes for spatial orientation
+  // Landmark/Anchor nodes for spatial orientation
   isLandmark?: boolean
 }
 

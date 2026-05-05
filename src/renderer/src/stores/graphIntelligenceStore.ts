@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * Graph Intelligence Store (Phase 5: Graph Intelligence)
+ * Graph Intelligence Store
  *
  * Manages ambient insights and cost tracking for the Spatial Command Bridge.
  * - Insight deduplication by type + affected nodes

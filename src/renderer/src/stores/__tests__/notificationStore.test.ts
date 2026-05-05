@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * Notification Store Tests — Phase 4A: UX-ERRORS
+ * Notification Store Tests — UX-ERRORS
  *
  * Tests: queue management, duplicate folding, auto-dismiss timeouts,
  * priority ordering, max visible cap.

@@ -32,6 +32,8 @@ export {
 } from './DecryptedText'
 // Animated borders
 export { ElectricBorder, type ElectricBorderProps } from './ElectricBorder'
+// Loading transitions
+export { default as Preloader, type PreloaderProps } from './Preloader'
 // Error boundary
 export { ReactBitsErrorBoundary } from './ReactBitsErrorBoundary'
 export { StarBorder, type StarBorderProps } from './StarBorder'

@@ -17,7 +17,7 @@
  * etc.) — only captures Arrow keys, Tab, Shift+Arrow, and Enter.
  *
  * Task 26: Spatial Selection Infrastructure
- * Phase 4B UX-A11Y: Added Enter-to-activate and exported spatial helpers.
+ * Accessibility: Added Enter-to-activate and exported spatial helpers.
  */
 
 import { useReactFlow } from '@xyflow/react'

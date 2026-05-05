@@ -10,7 +10,7 @@
  * Release Z -> animate viewport to the selected area (300ms transition).
  * If Z released without selection, just close the overlay.
  *
- * PFD Phase 5B: Canvas Interaction Patterns
+ * Canvas Interaction Patterns
  */
 
 import { useReactFlow } from '@xyflow/react'

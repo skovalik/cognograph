@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * Audit Store (Phase 2: Bridge Log)
+ * Audit Store (Bridge Log)
  *
  * Manages the complete audit trail of canvas actions.
  * - In-memory ring buffer for recent events (capped at maxEvents)

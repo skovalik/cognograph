@@ -241,6 +241,7 @@ const Grainient: React.FC<GrainientProps> = ({
       if (qualityRef?.current && !qualityRef.current.shouldRender) return
       if (reportFrame) reportFrame()
       if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return
+      if (gl.drawingBufferWidth === 0 || gl.drawingBufferHeight === 0) return
       if (qualityRef?.current) {
         const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap
         if (scale !== currentScale) {
@@ -272,6 +273,7 @@ const Grainient: React.FC<GrainientProps> = ({
       } catch {
         // Ignore
       }
+      gl.getExtension('WEBGL_lose_context')?.loseContext()
     }
   }, [
     timeSpeed,

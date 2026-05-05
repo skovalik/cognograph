@@ -4,7 +4,7 @@
 // =============================================================================
 // dispatchWorkflow.test.ts -- Tests for task-to-CLI dispatch pipeline
 //
-// Phase 6E: Rich Node Depth System - Dispatch Workflow Integration
+// Rich Node Depth System - Dispatch Workflow Integration
 // =============================================================================
 
 import type { TaskNodeData } from '@shared/types'

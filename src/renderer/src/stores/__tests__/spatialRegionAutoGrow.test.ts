@@ -5,7 +5,7 @@
  * Spatial Region Auto-Grow Tests
  *
  * Tests for the autoGrowRegion function in spatialRegionStore.
- * PFD Phase 5B: Canvas Interaction Patterns
+ * Canvas Interaction Patterns
  */
 
 import { beforeEach, describe, expect, it } from 'vitest'

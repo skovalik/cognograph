@@ -5,13 +5,13 @@
  * CC Bridge Store — Claude Code Activity Bridge State
  *
  * Manages the renderer-side state for the Claude Code activity observation layer
- * AND the dispatch layer (Phases 2-4 of the CC Bridge Full spec).
+ * AND the dispatch layer.
  *
  * State groups:
- * 1. Observation: events[], isConnected, sessionIds (Phase 1 — Hybrid)
- * 2. File Touches: fileTouches map, conflict detection (Phase 2)
- * 3. Session Tracking: sessions map, heartbeat/timeout (Phase 2)
- * 4. Dispatch: dispatches[], dispatchServerPort (Phase 3)
+ * 1. Observation: events[], isConnected, sessionIds
+ * 2. File Touches: fileTouches map, conflict detection
+ * 3. Session Tracking: sessions map, heartbeat/timeout
+ * 4. Dispatch: dispatches[], dispatchServerPort
  *
  * Store name is `ccBridgeStore` (canonical name per cross-spec analysis).
  *
@@ -34,7 +34,7 @@ import { create } from 'zustand'
 // -----------------------------------------------------------------------------
 
 interface CCBridgeState {
-  // --- Observation (Phase 1) ---
+  // --- Observation ---
   /** Recent activity events (FIFO, max 1000) */
   events: CCActivityEvent[]
   /** Whether the bridge is receiving events (true if events arrived recently) */
@@ -46,15 +46,15 @@ interface CCBridgeState {
   /** Timestamp of the last event received (for idle detection) */
   lastEventTime: number | null
 
-  // --- Session Tracking (Phase 2) ---
+  // --- Session Tracking ---
   /** Active/recent Terminal metadata, keyed by sessionId */
   sessions: Map<string, CCSessionData>
 
-  // --- File Touches (Phase 2) ---
+  // --- File Touches ---
   /** Map of normalized file path -> array of FileTouch (one per session) */
   fileTouches: Map<string, FileTouch[]>
 
-  // --- Dispatch (Phase 3) ---
+  // --- Dispatch ---
   /** Dispatch messages in queue (ephemeral, not persisted) */
   dispatches: CCDispatchMessage[]
   /** Port the dispatch server is listening on (null if not running) */
@@ -362,22 +362,22 @@ let heartbeatInterval: ReturnType<typeof setInterval> | null = null
 export function initCCBridgeListener(): () => void {
   const store = useCCBridgeStore.getState
 
-  // Activity events (Phase 1)
+  // Activity events
   const cleanupActivity = window.api.ccBridge.onActivity((event: CCActivityEvent) => {
     store().addEvent(event)
   })
 
-  // Dispatch updates (Phase 3)
+  // Dispatch updates
   const cleanupDispatchUpdate = window.api.ccBridge.onDispatchUpdate((dispatch) => {
     store().updateDispatch(dispatch)
   })
 
-  // Dispatch completions (Phase 3)
+  // Dispatch completions
   const cleanupDispatchComplete = window.api.ccBridge.onDispatchCompleted((data) => {
     store().updateDispatch(data.dispatch)
   })
 
-  // Session heartbeat check (Phase 2 — ERR-F3)
+  // Session heartbeat check (ERR-F3)
   heartbeatInterval = setInterval(() => {
     store().runHeartbeatCheck()
   }, CC_SESSION_TIMEOUTS.heartbeatInterval)
@@ -403,13 +403,13 @@ export const selectCCBridgeSessionCount = (state: CCBridgeState): number => stat
 export const selectCCBridgeLastEventTime = (state: CCBridgeState): number | null =>
   state.lastEventTime
 
-// Phase 2 selectors
+// Session/file-touch selectors
 export const selectCCBridgeSessions = (state: CCBridgeState): Map<string, CCSessionData> =>
   state.sessions
 export const selectCCBridgeFileTouches = (state: CCBridgeState): Map<string, FileTouch[]> =>
   state.fileTouches
 
-// Phase 3 selectors
+// Dispatch selectors
 export const selectCCBridgeDispatches = (state: CCBridgeState): CCDispatchMessage[] =>
   state.dispatches
 export const selectCCBridgePendingDispatches = (state: CCBridgeState): CCDispatchMessage[] =>

@@ -2,13 +2,12 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * Tests for Phase 3A ORCHESTRATE:
+ * Tests for ORCHESTRATE:
  * - Edge-based messaging (AgentEdgeResult, summary capping, temp spill)
  * - Coordinator strategy (tool building, worker dispatch, synthesis)
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { z } from 'zod'
+import { describe, it, expect } from 'vitest'
 import { buildTool } from '../../tools/buildTool'
 import { assembleToolPool } from '../../tools/assembleToolPool'
 import {

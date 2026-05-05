@@ -11,6 +11,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetWorkspaceStore, seedNode } from '../../../../test/storeUtils'
 import { createConversationNode, resetTestCounters } from '../../../../test/utils'
+import {
+  _clearAllTimers,
+  _resetIdCounter,
+  useNotificationStore,
+} from '../../stores/notificationStore'
 import { useSessionStatsStore } from '../../stores/sessionStatsStore'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
 import type {
@@ -38,6 +43,9 @@ describe('agentEventReceiver', () => {
     resetTestCounters()
     pendingLayoutNodes.clear()
     pendingLayoutEdges.clear()
+    _clearAllTimers()
+    _resetIdCounter()
+    useNotificationStore.setState({ notifications: [] })
 
     // Seed a conversation node so addToolMessage can find it
     const conv = createConversationNode([], { id: CONV_ID })
@@ -166,6 +174,33 @@ describe('agentEventReceiver', () => {
       const tracked = pendingLayoutEdges.get(CONV_ID)
       expect(tracked).toContain('edge-1')
     })
+
+    it('should fire a notification toast when a tool fails (WS-8)', () => {
+      handleToolResult({
+        conversationId: CONV_ID,
+        toolId: 'tool-fail-1',
+        toolName: 'create_node',
+        result: { success: false, error: 'Disk full' },
+      })
+
+      const notifs = useNotificationStore.getState().notifications
+      expect(notifs).toHaveLength(1)
+      expect(notifs[0].priority).toBe('warning')
+      expect(notifs[0].message).toContain('create_node')
+      expect(notifs[0].message).toContain('Disk full')
+      expect(notifs[0].nodeId).toBe(CONV_ID)
+    })
+
+    it('should NOT fire a notification on successful tool result (WS-8)', () => {
+      handleToolResult({
+        conversationId: CONV_ID,
+        toolId: 'tool-ok-1',
+        toolName: 'create_node',
+        result: { success: true, output: { nodeId: 'n1' } },
+      })
+
+      expect(useNotificationStore.getState().notifications).toHaveLength(0)
+    })
   })
 
   describe('handleNodeCreated', () => {
@@ -215,6 +250,41 @@ describe('agentEventReceiver', () => {
 
       expect(pendingLayoutNodes.has(CONV_ID)).toBe(false)
       expect(pendingLayoutEdges.has(CONV_ID)).toBe(false)
+    })
+
+    it('should fire an error notification when stopReason is error (WS-8)', () => {
+      handleAgentComplete({
+        conversationId: CONV_ID,
+        stopReason: 'error',
+        usage: { input_tokens: 0, output_tokens: 0 },
+      })
+
+      const notifs = useNotificationStore.getState().notifications
+      expect(notifs).toHaveLength(1)
+      expect(notifs[0].priority).toBe('error')
+      expect(notifs[0].nodeId).toBe(CONV_ID)
+    })
+
+    it('should fire a warning notification when stopReason is timeout (WS-8)', () => {
+      handleAgentComplete({
+        conversationId: CONV_ID,
+        stopReason: 'timeout',
+        usage: { input_tokens: 0, output_tokens: 0 },
+      })
+
+      const notifs = useNotificationStore.getState().notifications
+      expect(notifs).toHaveLength(1)
+      expect(notifs[0].priority).toBe('warning')
+    })
+
+    it('should NOT fire a notification on normal end_turn completion (WS-8)', () => {
+      handleAgentComplete({
+        conversationId: CONV_ID,
+        stopReason: 'end_turn',
+        usage: { input_tokens: 0, output_tokens: 0 },
+      })
+
+      expect(useNotificationStore.getState().notifications).toHaveLength(0)
     })
   })
 

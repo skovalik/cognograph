@@ -18,11 +18,11 @@
  *   - pointer-events: none (fully non-interactive)
  */
 
-import { useEdges, useNodes, useViewport } from '@xyflow/react'
+import { useEdges, useNodes, useStore, useViewport } from '@xyflow/react'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useReducedMotion } from '../hooks/useReducedMotion'
+import { usePerfStore } from '../stores/perfStore'
 import { selectReduceMotion, useProgramStore } from '../stores/programStore'
-import { useWorkspaceStore } from '../stores/workspaceStore'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -204,6 +204,9 @@ function ParticleDriftComponent(): JSX.Element | null {
     return result
   }, [edges, nodeMap])
 
+  // Z-14: Quantize zoom to 0.25 steps for maxParticles dep — avoids recalc every frame
+  const quantizedZoom = useStore((s) => Math.round(s.transform[2] * 4) / 4, Object.is)
+
   // Compute max particle count based on canvas area
   const maxParticles = useMemo(() => {
     const container = containerRef.current
@@ -211,8 +214,8 @@ function ParticleDriftComponent(): JSX.Element | null {
     const area = container.clientWidth * container.clientHeight
     return Math.max(0, Math.floor(area / AREA_PER_PARTICLE))
   }, [
-    // Re-evaluate when container might have resized (viewport changes proxy this)
-    viewport.zoom,
+    // Re-evaluate when container might have resized (quantized zoom proxies this)
+    quantizedZoom,
   ])
 
   // Read accent color from CSS custom property (if set), fallback to constant
@@ -243,16 +246,17 @@ function ParticleDriftComponent(): JSX.Element | null {
     }
 
     // Zoom performance tier — read from store (no React subscription needed)
-    const tier = useWorkspaceStore.getState().zoomPerfTier ?? 'full'
+    const tier = usePerfStore.getState().effectiveTier
 
-    // At minimal tier: clear canvas but keep RAF alive
+    // Z-14: At minimal tier, STOP RAF entirely instead of scheduling no-op frames.
+    // The useEffect below restarts RAF when tier changes back.
     if (tier === 'minimal') {
       const ctx = canvas.getContext('2d')
       if (ctx) {
         const dpr = window.devicePixelRatio || 1
         ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr)
       }
-      rafRef.current = requestAnimationFrame(animate)
+      rafRef.current = null
       return
     }
 
@@ -374,6 +378,14 @@ function ParticleDriftComponent(): JSX.Element | null {
 
     rafRef.current = requestAnimationFrame(animate)
   }, [])
+
+  // Z-14: Restart RAF when tier changes back from minimal
+  const effectiveTier = usePerfStore((s) => s.effectiveTier)
+  useEffect(() => {
+    if (effectiveTier !== 'minimal' && rafRef.current === null && !shouldReduceMotion) {
+      rafRef.current = requestAnimationFrame(animate)
+    }
+  }, [effectiveTier, animate, shouldReduceMotion])
 
   // Start/stop animation loop
   useEffect(() => {

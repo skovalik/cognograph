@@ -27,7 +27,14 @@ export interface ModelPricing {
  * Updated March 2026.
  */
 export const MODEL_PRICING: Record<string, ModelPricing> = {
-  // Anthropic Claude models (current generation)
+  // Anthropic Claude models (current generation — 4.7 / 4.6 / 4.5)
+  // IMPORTANT: More-specific keys MUST precede less-specific ones because the
+  // fuzzy matcher uses Object.entries insertion order with `lower.includes(key)`.
+  // e.g. "claude-opus-4-7" contains "claude-opus-4" as a substring.
+  'claude-opus-4-7': { input: 5, output: 25 },
+  'claude-opus-4-6': { input: 5, output: 25 },
+  'claude-sonnet-4-6': { input: 3, output: 15 },
+  'claude-haiku-4-5': { input: 0.8, output: 4 },
   'claude-opus-4': { input: 15, output: 75 },
   'claude-sonnet-4': { input: 3, output: 15 },
   'claude-haiku-4': { input: 0.8, output: 4 },

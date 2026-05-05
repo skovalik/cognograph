@@ -11,7 +11,7 @@
 import { useStore } from '@xyflow/react'
 import { CheckCircle, Pause, XCircle, Zap } from 'lucide-react'
 import { memo, useMemo } from 'react'
-import { usePerformanceMode } from '../../hooks/usePerformanceMode'
+import { useEffectiveTier } from '../../hooks/useEffectiveTier'
 import { cn } from '../../lib/utils'
 import { useBridgeStore } from '../../stores/bridgeStore'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
@@ -45,7 +45,7 @@ const STATUS_CONFIG = {
 
 function OrchestratorBadgeComponent({ nodeId }: OrchestratorBadgeProps): JSX.Element | null {
   const orchState = useBridgeStore((s) => s.activeOrchestrators[nodeId])
-  const performanceMode = usePerformanceMode()
+  const effectiveTier = useEffectiveTier()
 
   // Scale badge inversely with zoom at low zoom levels
   const zoom = useStore((s) => s.transform[2])
@@ -61,7 +61,7 @@ function OrchestratorBadgeComponent({ nodeId }: OrchestratorBadgeProps): JSX.Ele
   if (!config) return null
 
   const { Icon, className: statusClass, label } = config
-  const showGlow = performanceMode === 'full' && orchState.status === 'orchestrating'
+  const showGlow = effectiveTier === 'full' && orchState.status === 'orchestrating'
 
   return (
     <Tooltip>

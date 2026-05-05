@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * useCalmMode (Phase 6F) -- Calm mode hook and zoom shift tests
+ * useCalmMode -- Calm mode hook and zoom shift tests
  *
  * Tests the pure computeEffectiveZoomWithCalm function that shifts
  * zoom levels toward ultra-far based on the calm offset.

@@ -466,6 +466,7 @@ export default function FloatingLines({
       if (qualityRef?.current && !qualityRef.current.shouldRender) return
       if (reportFrameFn) reportFrameFn()
       if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return
+      if (renderer.domElement.width === 0 || renderer.domElement.height === 0) return
       uniforms.iTime.value = clock.getElapsedTime()
 
       if (interactive) {

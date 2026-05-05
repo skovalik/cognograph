@@ -5,7 +5,7 @@
  * Persistence Store
  *
  * Manages workspace persistence, save status, and workspace metadata.
- * Extracted from workspaceStore as part of Week 2 Stream B Track 2 Phase 2.2a.
+ * Extracted from workspaceStore during the store-split refactor.
  */
 
 import type { WorkspaceData } from '@shared/types'

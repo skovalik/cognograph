@@ -5,7 +5,7 @@
  * Properties Store
  *
  * Manages property schema, custom properties, and property CRUD operations.
- * Extracted from workspaceStore as part of Week 2 Stream B Track 2 Phase 2.2a.
+ * Extracted from workspaceStore during the store-split refactor.
  */
 
 import type { NodeData, PropertyDefinition, PropertyOption, PropertySchema } from '@shared/types'

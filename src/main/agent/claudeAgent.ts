@@ -2,12 +2,15 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 import { execFile, spawn } from 'node:child_process'
+import { createRequire } from 'node:module'
+import * as path from 'node:path'
 import { promisify } from 'node:util'
-import { type Options, query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk'
+import { type Options, query } from '@anthropic-ai/claude-agent-sdk'
 import Anthropic from '@anthropic-ai/sdk'
-import { BrowserWindow, ipcMain, safeStorage } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 import Store from 'electron-store'
 import { callMCPTool, getMCPToolsForServers, listMCPConnections } from '../mcp/mcpClient'
+import { getDecryptedOrEnv } from '../services/ai/getDecryptedOrEnv'
 import { getSetting } from '../settings'
 import { assembleToolPool } from '../tools/assembleToolPool'
 import type { BuiltinToolDeps } from '../tools/builtinTools'
@@ -24,7 +27,7 @@ import {
   writeFile as fsWriteFile,
   getSecurityContext,
 } from './filesystemTools'
-// === Phase 1B additions — preserve across Phase 2 rewrite ===
+// === Resilience helpers (preserved across rewrite) ===
 import { classifyLLMError } from './llmErrors'
 import {
   createCognographSdkServer,
@@ -33,9 +36,9 @@ import {
   setCurrentConversationId,
   setSdkToolPool,
 } from './sdkTools'
-// === end Phase 1B additions ===
+// === end resilience helpers ===
 
-// === Phase 3A additions — context budget enforcement ===
+// === Context budget enforcement ===
 import {
   clearContextErrorState,
   contextBudget,
@@ -44,30 +47,30 @@ import {
 } from './contextBudget'
 import { estimateTokens } from './tokenEstimation'
 
-// === end Phase 3A additions ===
+// === end context budget enforcement ===
 
 export type { AgentLoopConfig, AgentLoopEvent, AgentLoopResult } from './agentLoop'
-// === Phase 2B additions — agent loop + tool executor ===
+// === Agent loop + tool executor ===
 export { runAgentWithToolLoop } from './agentLoop'
 
-// === end Phase 2B additions ===
+// === end agent loop + tool executor ===
 
 import { runAgentWithToolLoop as _runAgentLoop } from './agentLoop'
-// === Phase B1 additions — event bridge + agentLoop wiring ===
+// === Event bridge + agentLoop wiring ===
 import { bridgeEventToIPC } from './eventBridge'
 
-// === end Phase B1 additions ===
+// === end event bridge ===
 
 const execFileAsync = promisify(execFile)
 
-// === Phase 1B additions — preserve across Phase 2 rewrite ===
+// === Resilience helpers (preserved across rewrite) ===
 /** Default max_tokens for API calls */
 const DEFAULT_MAX_TOKENS = 8192
 /** Escalation multiplier when response is truncated (stop_reason: max_tokens) */
 const ESCALATION_MULTIPLIER = 4
 /** Absolute ceiling for escalated max_tokens */
 const MAX_TOKENS_CEILING = 64_000
-// === end Phase 1B additions ===
+// === end resilience helpers ===
 
 // Types for agent requests
 interface MemoryEntry {
@@ -141,13 +144,11 @@ type AgentStreamChunk =
       conversationId: string
       type: 'error'
       error: string
+      stack?: string
     }
 
-interface EncryptedKeys {
-  anthropic?: string
-  gemini?: string
-  openai?: string
-}
+// EncryptedKeys was only used by the now-removed private getApiKey() helper;
+// resolution moved into src/main/services/ai/getDecryptedOrEnv.ts.
 
 interface ActiveRequest {
   controller: AbortController
@@ -306,27 +307,6 @@ export function getActiveToolPool(builtinDeps: BuiltinToolDeps): ToolPool {
   return assembleToolPool(builtins, mcpTools)
 }
 
-// Get API key from encrypted store (replicates llm.ts pattern)
-function getApiKey(provider: string): string | null {
-  try {
-    const encryptedKeys = store.get('encryptedApiKeys', {}) as EncryptedKeys
-    const encrypted = encryptedKeys[provider as keyof EncryptedKeys]
-
-    if (!encrypted) {
-      return null
-    }
-
-    if (safeStorage.isEncryptionAvailable()) {
-      const buffer = Buffer.from(encrypted, 'base64')
-      return safeStorage.decryptString(buffer)
-    }
-    return encrypted
-  } catch (error) {
-    console.error(`[Agent:getApiKey] Error decrypting key:`, error)
-    return null
-  }
-}
-
 function getMainWindow(): BrowserWindow | null {
   const windows = BrowserWindow.getAllWindows()
   return windows[0] || null
@@ -336,6 +316,60 @@ function sendStreamChunk(chunk: AgentStreamChunk): void {
   const mainWindow = getMainWindow()
   if (mainWindow) {
     mainWindow.webContents.send('agent:stream', chunk)
+  }
+}
+
+/**
+ * Translate an Agent SDK `assistant` message's content blocks into
+ * AgentStreamChunk events for the renderer.
+ *
+ * The SDK's assistant messages contain an array of blocks where each block is
+ * EITHER `{ type: 'text', text }` OR `{ type: 'tool_use', id, name, input }`
+ * (and occasionally future block types we don't know about). Before this
+ * helper existed, the SDK path only forwarded text blocks — tool_use blocks
+ * were silently dropped, leaving the UI with no indication that the agent
+ * had called a tool. Users would see empty assistant bubbles followed by
+ * "continue" prompts because the stream ended with no visible content.
+ *
+ * The emitted `tool_use_start` chunks are already handled by the renderer's
+ * stream listener at WorkspaceCommandService.ts so no renderer change is
+ * needed. The API path (agentLoop + bridgeEventToIPC) emits its own
+ * tool-start events and is unaffected by this helper.
+ *
+ * Exported for unit testing (claudeAgentSdkForwarding.test.ts). Intentionally
+ * pure — takes `sendChunk` as a parameter rather than calling
+ * `sendStreamChunk` directly so tests can inject a spy.
+ *
+ * Unknown block types are silently skipped (dev-mode warn) so new SDK block
+ * types in future versions degrade gracefully rather than crashing the loop.
+ */
+export function forwardAssistantMessageBlocks(
+  // biome-ignore lint/suspicious/noExplicitAny: SDK assistant message shape not typed
+  msg: any,
+  sendChunk: (chunk: AgentStreamChunk) => void,
+  meta: { requestId: string; conversationId: string },
+): void {
+  if (msg?.type !== 'assistant') return
+  const blocks = msg.message?.content
+  if (!Array.isArray(blocks)) return
+  for (const block of blocks) {
+    if (block?.type === 'text' && typeof block.text === 'string') {
+      sendChunk({
+        ...meta,
+        type: 'text_delta',
+        content: block.text,
+      })
+    } else if (block?.type === 'tool_use' && block.id && block.name) {
+      sendChunk({
+        ...meta,
+        type: 'tool_use_start',
+        toolUseId: block.id,
+        toolName: block.name,
+      })
+    } else if (block?.type && process.env.NODE_ENV !== 'production') {
+      // Unknown/future block types — log so we notice without breaking the loop
+      console.warn(`[claudeAgent] Skipping unhandled assistant block type: ${block.type}`)
+    }
   }
 }
 
@@ -489,8 +523,34 @@ async function handleAgentSDKRequest(payload: AgentRequestPayload): Promise<void
   // Session resumption for multi-turn context
   const existingSessionId = store.get(`sdkSession:${conversationId}`) as string | undefined
 
-  // Resolve claude binary — Electron's PATH may not include npm global bin
-  const claudePath = findClaudeBinary()
+  // Resolve the SDK's bundled cli.js explicitly.
+  //
+  // Background: @anthropic-ai/claude-code 2.x ships as a native binary (no
+  // cli.js at the user's global install), so the prior findClaudeBinary()
+  // looking there falls through to the string "claude" and makes the SDK
+  // spawn `node claude`, which ENOENTs.
+  //
+  // The SDK ships its OWN cli.js next to sdk.mjs and has a self-resolving
+  // fallback `X=path.join(path.dirname(import.meta.url), "cli.js")` when
+  // pathToClaudeCodeExecutable is unset. That fallback ONLY works when the
+  // SDK file is loaded from its own node_modules location — electron-vite's
+  // main-process bundler can inline dependencies, at which point import.meta.url
+  // points at the bundle and the fallback resolves to a nonexistent cli.js.
+  // Symptoms: the SDK spawns but hangs (waiting on a subprocess that crashes
+  // immediately or never starts writing to stdout).
+  //
+  // Fix: resolve the SDK's MAIN entry (exported), take its directory, then
+  // join with cli.js. Can't require.resolve('.../cli.js') directly — the
+  // SDK's package.json `exports` map only publishes `.`, `./embed`, `./browser`,
+  // `./bridge`, and `./sdk-tools`. Any other subpath (including `./cli.js`
+  // and `./package.json`) throws ERR_PACKAGE_PATH_NOT_EXPORTED under Node's
+  // strict exports enforcement, which Electron 28+ inherits.
+  const sdkRequire = createRequire(import.meta.url)
+  const sdkCliPath = path.join(
+    path.dirname(sdkRequire.resolve('@anthropic-ai/claude-agent-sdk')),
+    'cli.js',
+  )
+  logger.debug(`[Agent] SDK cli.js resolved to: ${sdkCliPath}`)
 
   const options: Options = {
     systemPrompt,
@@ -498,8 +558,12 @@ async function handleAgentSDKRequest(payload: AgentRequestPayload): Promise<void
     maxTurns: 25,
     permissionMode: 'bypassPermissions',
     allowDangerouslySkipPermissions: true,
-    model: (payload.model as string) || 'claude-sonnet-4-6',
-    pathToClaudeCodeExecutable: claudePath,
+    // Default to Opus 4.7 — the Agent SDK path runs under the user's Claude Pro
+    // subscription (useClaudeProAccount=true), so there's no per-token cost
+    // penalty for using the most capable model. Explicit payload.model from
+    // the bottom command bar's model picker still wins when set.
+    model: (payload.model as string) || 'claude-opus-4-7',
+    pathToClaudeCodeExecutable: sdkCliPath,
     // Restrict to only our MCP tools — use allowedTools to whitelist
     // Do NOT set tools:[] — that disables MCP tools too
     allowedTools: [
@@ -535,19 +599,9 @@ async function handleAgentSDKRequest(payload: AgentRequestPayload): Promise<void
         store.set(`sdkSession:${conversationId}`, (msg as any).session_id)
       }
 
-      // Forward assistant text to renderer
+      // Forward assistant text + tool_use blocks to renderer
       if (msg.type === 'assistant') {
-        // biome-ignore lint/suspicious/noExplicitAny: SDK assistant message shape not typed
-        for (const block of (msg as any).message.content) {
-          if (block.type === 'text') {
-            sendStreamChunk({
-              requestId,
-              conversationId,
-              type: 'text_delta',
-              content: block.text,
-            })
-          }
-        }
+        forwardAssistantMessageBlocks(msg, sendStreamChunk, { requestId, conversationId })
       }
 
       // Forward completion
@@ -673,7 +727,7 @@ export async function runAgentForOrchestrator(opts: {
   cacheReadTokens?: number
   toolCallCount: number
 }> {
-  const apiKey = getApiKey('anthropic')
+  const apiKey = await getDecryptedOrEnv('anthropic').catch(() => null)
   if (!apiKey) {
     return {
       status: 'failed',
@@ -809,7 +863,7 @@ export function registerAgentHandlers(): void {
     }
     // === end B3 ===
 
-    // === Phase 1B additions — preserve across Phase 2 rewrite ===
+    // === Resilience helpers (preserved across rewrite) ===
     // 1.5c: Pre-persist user message before API call for crash safety.
     // If the process crashes mid-stream, the user's message survives.
     const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')
@@ -829,10 +883,10 @@ export function registerAgentHandlers(): void {
         logger.warn(`[Agent] Failed to pre-persist user message:`, persistError)
       }
     }
-    // === end Phase 1B additions (1.5c) ===
+    // === end resilience helpers (1.5c) ===
 
     // Get API key
-    const apiKey = getApiKey('anthropic')
+    const apiKey = await getDecryptedOrEnv('anthropic').catch(() => null)
     if (!apiKey) {
       sendStreamChunk({
         requestId,
@@ -862,7 +916,7 @@ export function registerAgentHandlers(): void {
 
       logger.debug(`[Agent] Starting stream with model: ${model || 'claude-sonnet-4-6'}`)
 
-      // === Phase 3A additions — context budget check ===
+      // === Context budget check ===
       const estimatedContextTokens =
         estimateTokens(systemPrompt) + estimateTokens(JSON.stringify(messages))
       contextBudget.trackConversation(conversationId, estimatedContextTokens)
@@ -898,9 +952,9 @@ export function registerAgentHandlers(): void {
             `Aggregate: ${budgetCheck.aggregateTokens} tokens.`,
         )
       }
-      // === end Phase 3A additions ===
+      // === end context budget block ===
 
-      // === Phase B1: Feature flag — agentLoop vs inline streaming ===
+      // === Feature flag — agentLoop vs inline streaming ===
       // H-FIX-1: AGENT_LOOP_ENABLED defaults to true. Set to 'false' to fall
       // back to the original inline streaming path for debugging.
       if (process.env.AGENT_LOOP_ENABLED !== 'false') {
@@ -949,6 +1003,7 @@ export function registerAgentHandlers(): void {
                 systemPrompt: buildAgentSystemPrompt(freshContext, memory, systemPromptPrefix),
               }
             }
+            return undefined
           },
         })
 
@@ -982,11 +1037,11 @@ export function registerAgentHandlers(): void {
         // OLD PATH: inline streaming (fallback while AGENT_LOOP_ENABLED=false)
         // ---------------------------------------------------------------
 
-        // === Phase 1B additions — preserve across Phase 2 rewrite ===
+        // === Resilience helpers (preserved across rewrite) ===
         // 1.5b: Output token escalation. Start with DEFAULT_MAX_TOKENS,
         // escalate 4x on max_tokens stop_reason, up to MAX_TOKENS_CEILING.
         let effectiveMaxTokens = maxTokens || DEFAULT_MAX_TOKENS
-        // === end Phase 1B additions (1.5b init) ===
+        // === end resilience helpers (1.5b init) ===
 
         // Make streaming API call with rate-limit retry
         const MAX_RETRIES = 3
@@ -1023,7 +1078,7 @@ export function registerAgentHandlers(): void {
             // Get final message to determine stop reason and extract usage
             finalMessage = await stream.finalMessage()
 
-            // === Phase 1B additions — preserve across Phase 2 rewrite ===
+            // === Resilience helpers (preserved across rewrite) ===
             // 1.5b: If response was truncated (max_tokens), escalate and retry
             if (
               finalMessage.stop_reason === 'max_tokens' &&
@@ -1048,14 +1103,14 @@ export function registerAgentHandlers(): void {
               // Don't break — continue the retry loop with escalated tokens
               continue
             }
-            // === end Phase 1B additions (1.5b escalation) ===
+            // === end resilience helpers (1.5b escalation) ===
 
             break // success — exit retry loop
           } catch (retryError: unknown) {
-            // === Phase 1B additions — preserve across Phase 2 rewrite ===
+            // === Resilience helpers (preserved across rewrite) ===
             // Use classifyLLMError for structured error handling
             const classified = classifyLLMError(retryError, 'anthropic')
-            // === end Phase 1B additions ===
+            // === end resilience helpers ===
 
             if (
               classified.category === 'rate_limit' &&
@@ -1090,7 +1145,7 @@ export function registerAgentHandlers(): void {
               continue // retry
             }
 
-            // === Phase 3A additions — context_length (413) retry with compaction ===
+            // === context_length (413) retry with compaction ===
             if (
               classified.category === 'context_length' &&
               classified.status === 413 &&
@@ -1123,7 +1178,7 @@ export function registerAgentHandlers(): void {
               }
               // After MAX_CONTEXT_RETRIES, fall through to throw
             }
-            // === end Phase 3A additions ===
+            // === end context budget block ===
 
             throw retryError // non-retryable or out of retries — let outer catch handle it
           }
@@ -1152,16 +1207,16 @@ export function registerAgentHandlers(): void {
           usage,
         })
 
-        // === Phase 1B additions — preserve across Phase 2 rewrite ===
+        // === Resilience helpers (preserved across rewrite) ===
         // 1.5c: Clear pre-persisted message on successful completion
         try {
           store.delete(`pendingUserMessage:${conversationId}`)
         } catch {
           // Non-fatal
         }
-        // === end Phase 1B additions (1.5c cleanup) ===
+        // === end resilience helpers (1.5c cleanup) ===
 
-        // === Phase 3A additions — clear error state on success ===
+        // === clear error state on success ===
         clearContextErrorState(conversationId)
         // Update budget tracker with actual usage
         if (finalMessage?.usage) {
@@ -1170,9 +1225,9 @@ export function registerAgentHandlers(): void {
             finalMessage.usage.input_tokens + finalMessage.usage.output_tokens,
           )
         }
-        // === end Phase 3A additions ===
+        // === end context budget block ===
       }
-      // === end Phase B1 feature flag ===
+      // === end feature flag ===
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
         logger.debug(`[Agent] Request ${requestId} cancelled`)
@@ -1185,7 +1240,7 @@ export function registerAgentHandlers(): void {
       } else {
         console.error(`[Agent] Error in request ${requestId}:`, error)
 
-        // === Phase 1B additions — preserve across Phase 2 rewrite ===
+        // === Resilience helpers (preserved across rewrite) ===
         // Use classifyLLMError for structured error messaging
         const classified = classifyLLMError(error, 'anthropic')
         let userMessage = classified.message
@@ -1208,7 +1263,7 @@ export function registerAgentHandlers(): void {
             // Keep the original classified message
             break
         }
-        // === end Phase 1B additions ===
+        // === end resilience helpers ===
 
         sendStreamChunk({
           requestId,

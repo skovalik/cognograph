@@ -4,7 +4,7 @@
 /**
  * ClusterOverlay — L0 (ultra-far) zoom cluster summary bubbles
  *
- * PFD Phase 6B: At ultra-far zoom, individual nodes are too small to read.
+ * At ultra-far zoom, individual nodes are too small to read.
  * Instead, we compute spatial clusters and render summary "bubbles" showing:
  *   - Dominant type icon
  *   - Node count

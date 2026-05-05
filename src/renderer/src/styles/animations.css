@@ -1033,7 +1033,7 @@
   animation: minimap-pulse 2s ease-in-out infinite;
 }
 
-/* Phase 1C: CC session pulse — streaming conversation nodes pulse in minimap */
+/* CC session pulse — streaming conversation nodes pulse in minimap */
 .minimap-node-streaming {
   animation: minimap-pulse 2s ease-in-out infinite;
 }
@@ -1043,7 +1043,7 @@
   50% { opacity: 0.4; }
 }
 
-/* Phase 1C: Respect prefers-reduced-motion for minimap animations */
+/* Respect prefers-reduced-motion for minimap animations */
 @media (prefers-reduced-motion: reduce) {
   .react-flow__minimap-node.streaming,
   .minimap-node-streaming {
@@ -1063,7 +1063,7 @@
   animation: none;
 }
 
-/* Phase 1C: District boundary rectangles in minimap overlay */
+/* District boundary rectangles in minimap overlay */
 .minimap-district {
   transition: fill-opacity 0.2s ease;
 }
@@ -1100,15 +1100,9 @@
    Smooth transitions when auto-layout or manual positioning changes
    ============================================================================= */
 
-/* Enable smooth transform transitions for layout changes */
-.react-flow__node {
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* Disable transition during drag to avoid lag */
-.react-flow__node.dragging {
-  transition: none !important;
-}
+/* Z-20: Global .react-flow__node transition REMOVED — caused 30+ simultaneous
+   300ms spring transitions during pan. Layout animations use .layout-animating
+   (line 1119). Drag-end spring uses .node-drag-end (below). */
 
 /* Spring physics animation class for drag end */
 .node-drag-end {
@@ -1283,7 +1277,7 @@
 /* ── Proximity auto-connect visual feedback ── */
 /* Class "proximity-target" is added to .react-flow__node wrapper (data-id element).
    Uses box-shadow (not outline/::after) to follow border-radius and avoid
-   ::after conflict with .is-active activity bar on conversation nodes. */
+   ::after conflict with the bookmark badge on conversation nodes. */
 
 .react-flow__node.proximity-target .cognograph-node {
   box-shadow:

@@ -8,7 +8,7 @@
 // Transport interface. Drop-in replacement for direct webContents.send()
 // calls in the main process.
 //
-// Created as part of Phase 1: TRANSPORT-ABSTRACTION
+// Created as part of TRANSPORT-ABSTRACTION work
 // =============================================================================
 
 import type { AgentMessage, AgentMessageChannel, Transport } from '@shared/transport/types'

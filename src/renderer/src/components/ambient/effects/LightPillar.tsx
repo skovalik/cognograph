@@ -52,6 +52,8 @@ const LightPillar: React.FC<LightPillarProps> = ({
   const geometryRef = useRef<THREE.PlaneGeometry | null>(null)
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2(0, 0))
   const timeRef = useRef<number>(0)
+  const rotationSpeedRef = useRef(rotationSpeed)
+  const darkTargetRef = useRef(isDark ? 1.0 : 0.0)
   const [webGLSupported, setWebGLSupported] = useState<boolean>(true)
 
   // Check WebGL support
@@ -60,6 +62,8 @@ const LightPillar: React.FC<LightPillarProps> = ({
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
     if (!gl) {
       setWebGLSupported(false)
+    } else {
+      ;(gl as WebGLRenderingContext).getExtension('WEBGL_lose_context')?.loseContext()
     }
   }, [])
 
@@ -67,8 +71,8 @@ const LightPillar: React.FC<LightPillarProps> = ({
     if (!containerRef.current || !webGLSupported) return
 
     const container = containerRef.current
-    const width = container.clientWidth
-    const height = container.clientHeight
+    const width = Math.max(1, container.clientWidth)
+    const height = Math.max(1, container.clientHeight)
 
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
       navigator.userAgent,
@@ -167,7 +171,7 @@ const LightPillar: React.FC<LightPillarProps> = ({
       uniform float uPillarRotSin;
       uniform float uWaveSin[4];
       uniform float uWaveCos[4];
-      uniform int uIsDark;
+      uniform float uDarkMix;
       varying vec2 vUv;
 
       const float PI = 3.141592653589793;
@@ -269,11 +273,13 @@ const LightPillar: React.FC<LightPillarProps> = ({
         color -= rnd / 15.0 * uNoiseIntensity;
         
         color *= uIntensity;
-        if (uIsDark == 0) {
-          float brightest = max(color.r, max(color.g, color.b));
-          color = clamp(color + vec3(1.0 - brightest), 0.0, 1.0);
-        }
-        gl_FragColor = vec4(color, 1.0);
+
+        float brightest = max(color.r, max(color.g, color.b));
+        float alpha_out = smoothstep(0.005, 0.15, brightest);
+
+        vec3 color_light = clamp(color + vec3(1.0 - brightest), 0.0, 1.0);
+        color = mix(color_light, color, uDarkMix);
+        gl_FragColor = vec4(color, alpha_out);
       }
     `
 
@@ -313,7 +319,7 @@ const LightPillar: React.FC<LightPillarProps> = ({
         uPillarRotSin: { value: pillarRotSin },
         uWaveSin: { value: waveSinValues },
         uWaveCos: { value: waveCosValues },
-        uIsDark: { value: isDark ? 1 : 0 },
+        uDarkMix: { value: isDark ? 1.0 : 0.0 },
       },
       transparent: true,
       depthWrite: false,
@@ -358,6 +364,8 @@ const LightPillar: React.FC<LightPillarProps> = ({
         return
 
       rafRef.current = requestAnimationFrame(animate)
+      const domElement = rendererRef.current.domElement
+      if (domElement.width === 0 || domElement.height === 0) return
       if (qualityRef?.current && !qualityRef.current.shouldRender) return
       if (reportFrameFn) reportFrameFn()
       if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return
@@ -365,13 +373,20 @@ const LightPillar: React.FC<LightPillarProps> = ({
       const deltaTime = currentTime - lastTime
 
       if (deltaTime >= frameTime) {
-        timeRef.current += 0.016 * rotationSpeed
+        timeRef.current += 0.016 * rotationSpeedRef.current
         materialRef.current.uniforms.uTime.value = timeRef.current
 
         // Pre-compute rotation on CPU
         const rotAngle = timeRef.current * 0.3
         materialRef.current.uniforms.uRotCos.value = Math.cos(rotAngle)
         materialRef.current.uniforms.uRotSin.value = Math.sin(rotAngle)
+
+        // Smooth dark/light transition
+        const dm = materialRef.current.uniforms.uDarkMix.value
+        const dmt = darkTargetRef.current
+        if (Math.abs(dm - dmt) > 0.001) {
+          materialRef.current.uniforms.uDarkMix.value = dm + (dmt - dm) * 0.15
+        }
 
         rendererRef.current.render(sceneRef.current, cameraRef.current)
         lastTime = currentTime - (deltaTime % frameTime)
@@ -388,8 +403,8 @@ const LightPillar: React.FC<LightPillarProps> = ({
 
       resizeTimeout = window.setTimeout(() => {
         if (!rendererRef.current || !materialRef.current || !containerRef.current) return
-        const newWidth = containerRef.current.clientWidth
-        const newHeight = containerRef.current.clientHeight
+        const newWidth = Math.max(1, containerRef.current.clientWidth)
+        const newHeight = Math.max(1, containerRef.current.clientHeight)
         rendererRef.current.setSize(newWidth, newHeight)
         materialRef.current.uniforms.uResolution.value.set(newWidth, newHeight)
       }, 150)
@@ -427,20 +442,37 @@ const LightPillar: React.FC<LightPillarProps> = ({
       geometryRef.current = null
       rafRef.current = null
     }
+  }, [interactive, webGLSupported, quality])
+
+  // Hot-update uniforms without tearing down the WebGL renderer
+  useEffect(() => {
+    rotationSpeedRef.current = rotationSpeed
+    const mat = materialRef.current
+    if (!mat) return
+    const tc = new THREE.Color(topColor)
+    const bc = new THREE.Color(bottomColor)
+    mat.uniforms.uTopColor.value.set(tc.r, tc.g, tc.b)
+    mat.uniforms.uBottomColor.value.set(bc.r, bc.g, bc.b)
+    mat.uniforms.uIntensity.value = intensity
+    darkTargetRef.current = isDark ? 1.0 : 0.0
+    mat.uniforms.uGlowAmount.value = glowAmount
+    mat.uniforms.uPillarWidth.value = pillarWidth
+    mat.uniforms.uPillarHeight.value = pillarHeight
+    mat.uniforms.uNoiseIntensity.value = noiseIntensity
+    const rad = (pillarRotation * Math.PI) / 180.0
+    mat.uniforms.uPillarRotCos.value = Math.cos(rad)
+    mat.uniforms.uPillarRotSin.value = Math.sin(rad)
   }, [
     topColor,
     bottomColor,
     intensity,
     rotationSpeed,
-    interactive,
+    isDark,
     glowAmount,
     pillarWidth,
     pillarHeight,
     noiseIntensity,
     pillarRotation,
-    webGLSupported,
-    quality,
-    isDark,
   ])
 
   if (!webGLSupported) {

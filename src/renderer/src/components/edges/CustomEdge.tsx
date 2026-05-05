@@ -22,9 +22,11 @@ import {
 import { MapPin, Plus, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import { useShallow } from 'zustand/react/shallow'
+import { useEffectiveTier } from '../../hooks/useEffectiveTier'
 import { useBridgeStore } from '../../stores/bridgeStore'
 import { useContextMenuStore } from '../../stores/contextMenuStore'
-import { useIsStreaming, useWorkspaceStore } from '../../stores/workspaceStore'
+import { useIsContextFlowing, useIsStreaming, useWorkspaceStore } from '../../stores/workspaceStore'
 import { EscapePriority, escapeManager } from '../../utils/EscapeManager'
 import { FormattedText } from '../FormattedText'
 
@@ -553,6 +555,19 @@ function getBaseStrokeWidth(weight: number, strokePreset: EdgeStrokePreset | und
  * Get visual properties from edge strength
  * Returns stroke width, dash pattern, and opacity based on strength level
  */
+// Z-19: Module-level constants — avoids allocating new objects per call
+const STRENGTH_LIGHT = { strokeWidth: 1.0, dashArray: '6,4' as string | undefined, opacity: 0.6 }
+const STRENGTH_STRONG = {
+  strokeWidth: 2.5,
+  dashArray: undefined as string | undefined,
+  opacity: 1,
+}
+const STRENGTH_NORMAL = {
+  strokeWidth: 1.5,
+  dashArray: undefined as string | undefined,
+  opacity: 0.8,
+}
+
 function getStrengthVisuals(strength: EdgeStrength | undefined): {
   strokeWidth: number
   dashArray: string | undefined
@@ -560,24 +575,12 @@ function getStrengthVisuals(strength: EdgeStrength | undefined): {
 } {
   switch (strength) {
     case 'light':
-      return {
-        strokeWidth: 1.0,
-        dashArray: '6,4',
-        opacity: 0.6,
-      }
+      return STRENGTH_LIGHT
     case 'strong':
-      return {
-        strokeWidth: 2.5,
-        dashArray: undefined,
-        opacity: 1,
-      }
+      return STRENGTH_STRONG
     case 'normal':
     default:
-      return {
-        strokeWidth: 1.5,
-        dashArray: undefined,
-        opacity: 0.8,
-      }
+      return STRENGTH_NORMAL
   }
 }
 
@@ -658,22 +661,25 @@ function CustomEdgeComponent({
   const isWorkspaceLink = (edgeData as { isWorkspaceLink?: boolean }).isWorkspaceLink === true
 
   // Store subscriptions
-  const zoom = useStore((s) => s.transform[2])
+  // Z-5: Quantize zoom to 0.05 steps — sub-pixel visual difference, ~90% fewer re-renders
+  const zoom = useStore((s) => Math.round(s.transform[2] * 20) / 20, Object.is)
   // Default to 'rounded' (orthogonal + 20px corner radius) — clean right-angle routing.
   // 'smooth' (bezier) produces wild arcs with auto control points.
   const globalEdgeStyle = useWorkspaceStore((state) => state.themeSettings.edgeStyle) || 'smooth'
   const linkGradientEnabled =
     useWorkspaceStore((state) => state.themeSettings.linkGradientEnabled) ?? true
   const themeMode = useWorkspaceStore((state) => state.themeSettings.mode)
-  const linkColors = useWorkspaceStore((state) => state.themeSettings.linkColors)
+  // Z-17: shallow compare — linkColors is an object, avoid re-render when sibling theme props change
+  const linkColors = useWorkspaceStore(useShallow((state) => state.themeSettings.linkColors))
   const updateEdge = useWorkspaceStore((state) => state.updateEdge)
   const commitEdgeWaypointDrag = useWorkspaceStore((state) => state.commitEdgeWaypointDrag)
-  const selectedEdgeIds = useWorkspaceStore((state) => state.selectedEdgeIds)
+  // Z-6: Scalar selector — only re-renders when multi-selection count changes (not on every selection)
+  // Individual edge selection uses RF's `selected` prop (already provided per-edge).
+  const isMultiEdgeSelection = useWorkspaceStore(
+    useCallback((state) => state.selectedEdgeIds.length > 1, []),
+  )
   const setSelectedEdges = useWorkspaceStore((state) => state.setSelectedEdges)
   const openContextMenu = useContextMenuStore((state) => state.open)
-
-  // P3-4: Hide waypoint handles when multiple edges are selected (too cluttered)
-  const isMultiEdgeSelection = selectedEdgeIds.length > 1
 
   // Use per-edge style if set, otherwise fall back to global
   const edgeStyle: EdgeStyle = edgeData.edgeStyle || globalEdgeStyle
@@ -773,14 +779,15 @@ function CustomEdgeComponent({
   const modifierHintShownRef = useRef(false)
   const modifierUseCountRef = useRef({ shift: 0, ctrl: 0 })
 
-  // Bridge: animated edge detection (Phase 1)
+  // Bridge: animated edge detection
   const isBridgeAnimated = useBridgeStore((state) => state.animatedEdgeIds.includes(id))
   const bridgeAnimationSpeed = useBridgeStore((state) => state.settings.animationSpeed)
   const showBridgeEdgeAnimations = useBridgeStore((state) => state.settings.showEdgeAnimations)
 
   // Streaming state
   const isTargetStreaming = useIsStreaming(target)
-  const showContextFlow = isTargetStreaming && !isInactive
+  const isTargetContextFlowing = useIsContextFlowing(target)
+  const showContextFlow = (isTargetStreaming || isTargetContextFlowing) && !isInactive
   const linkColor = (edgeData as { linkColor?: string }).linkColor
 
   // Colors - use theme linkColors based on edge state (fallback to defaults if not set)
@@ -1290,7 +1297,7 @@ function CustomEdgeComponent({
     if (activeIndex === null || isWorkspaceLink) return
 
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (e.key === 'Delete') {
         e.preventDefault()
         e.stopPropagation()
 
@@ -1451,7 +1458,7 @@ function CustomEdgeComponent({
   )
 
   // ==========================================================================
-  // EDGE LOD (Level of Detail) — PFD Phase 3A
+  // EDGE LOD (Level of Detail)
   // Far zoom: strong edges only. Mid: strong + normal. Close: all edges.
   // Selected, workspace-link, and context-highlighted edges always visible.
   // ==========================================================================
@@ -1460,16 +1467,44 @@ function CustomEdgeComponent({
   // Far zoom: simplified single-stroke render (no defs, markers, labels, waypoints)
   // Mid zoom: all edges visible, light edges included
   // Close zoom: full render
+  const effectiveTier = useEffectiveTier()
+  // Low-zoom skeleton override: at zoom < 0.30, React Flow's
+  // onlyRenderVisibleElements stops culling (whole graph fits in viewport — verified
+  // @xyflow/react index.js:2290 useVisibleEdgeIds), so 200+ edges all render full
+  // SVG defs at once. The frame budget left over for the shader collapses, which
+  // surfaces as "shader is laggy at low zoom" even though shader cost itself is
+  // zoom-invariant. Skeleton trades subtle gradients (visible <30%) for getting
+  // budget back. Labels are unreadable below ~50% anyway; markers are replaced
+  // with equivalent inline polygons; stroke weight differentiation is preserved.
   const edgeLodSkeleton = useMemo(() => {
     if (selected || isWorkspaceLink || isContextProviderHighlighted || showContextFlow) return false
-    return zoom < 0.25
-  }, [zoom, selected, isWorkspaceLink, isContextProviderHighlighted, showContextFlow])
+    if (effectiveTier === 'minimal') return true
+    return zoom < 0.35
+  }, [
+    effectiveTier,
+    zoom,
+    selected,
+    isWorkspaceLink,
+    isContextProviderHighlighted,
+    showContextFlow,
+  ])
 
   if (edgeLodSkeleton) {
     const strength = edgeData.strength || 'normal'
     const skeletonScreenPx: Record<string, number> = { light: 0.8, normal: 1.2, strong: 1.8 }
     const skeletonStroke = Math.max(1.5, (skeletonScreenPx[strength] || 1.2) / zoom)
     const skeletonOpacity: Record<string, number> = { light: 0.4, normal: 0.7, strong: 1.0 }
+    // Inline arrowheads at skeleton zoom (<25%) — full marker defs are skipped
+    // for perf, but arrows stay visible as direction markers. Size targets
+    // ~5px on screen regardless of zoom; narrow aspect ratio (30% tall) so
+    // the arrow stays visually proportional to the thin skeleton stroke.
+    const showArrow = arrowStyle !== 'none'
+    const arrowWidthUS = Math.min(30, 5 / Math.max(zoom, 0.05)) // user-space width
+    const arrowHalfHeightUS = arrowWidthUS * 0.3
+    const angleEnd = (Math.atan2(targetY - sourceY, targetX - sourceX) * 180) / Math.PI
+    const angleStart = angleEnd + 180
+    const arrowOpacity = skeletonOpacity[strength] ?? 0.7
+    const arrowPoints = `0,0 ${-arrowWidthUS},${-arrowHalfHeightUS} ${-arrowWidthUS},${arrowHalfHeightUS}`
     return (
       <g>
         <path
@@ -1479,9 +1514,25 @@ function CustomEdgeComponent({
             stroke: edgeColor,
             strokeWidth: skeletonStroke,
             strokeLinecap: 'round',
-            opacity: skeletonOpacity[strength] ?? 0.7,
+            opacity: arrowOpacity,
           }}
         />
+        {showArrow && (
+          <polygon
+            points={arrowPoints}
+            transform={`translate(${targetX},${targetY}) rotate(${angleEnd})`}
+            fill={edgeColor}
+            style={{ opacity: arrowOpacity, pointerEvents: 'none' }}
+          />
+        )}
+        {showArrow && isBidirectional && (
+          <polygon
+            points={arrowPoints}
+            transform={`translate(${sourceX},${sourceY}) rotate(${angleStart})`}
+            fill={edgeColor}
+            style={{ opacity: arrowOpacity, pointerEvents: 'none' }}
+          />
+        )}
       </g>
     )
   }
@@ -1518,7 +1569,7 @@ function CustomEdgeComponent({
             undefined) // Level 4: solid
 
   // Zoom-level edge collapsing — at far zoom, strip semantic visuals
-  const isFarZoom = zoom < 0.3
+  const isFarZoom = effectiveTier !== 'full'
   const strokeDasharray = isFarZoom ? (isWorkspaceLink ? '5,5' : undefined) : computedDashArray
 
   // Apply semantic color tint via CSS color-mix
@@ -1542,7 +1593,7 @@ function CustomEdgeComponent({
   // Animation class for animated line style
   const animationClass = lineStyle === 'animated' && !isInactive ? 'edge-animated-flow' : ''
 
-  // Bridge edge flow animation (Phase 1)
+  // Bridge edge flow animation
   const shouldShowBridgeAnimation =
     isBridgeAnimated && showBridgeEdgeAnimations && !isInactive && !isWorkspaceLink && zoom >= 0.5
   const bridgeAnimClass = shouldShowBridgeAnimation
@@ -1590,7 +1641,7 @@ function CustomEdgeComponent({
               : isHovering && !isWorkspaceLink
                 ? 'drop-shadow(0 0 1px rgba(255, 255, 255, 0.1))'
                 : undefined,
-          transition: 'stroke-width 0.15s ease, filter 0.15s ease, opacity 0.15s ease',
+          transition: 'stroke-width 0.15s ease, opacity 0.15s ease',
         }}
         markerEnd={arrowStyle !== 'none' ? `url(#arrow-${id})` : undefined}
         markerStart={

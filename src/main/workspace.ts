@@ -16,7 +16,6 @@ import {
   WorkspaceSaveSchema,
   WorkspaceWatchSchema,
 } from './ipc/schemas'
-import { workflowSync } from './services/notionSync'
 import { validateWorkspaceData } from './workspaceValidation'
 
 // File watcher state
@@ -282,7 +281,7 @@ export function registerWorkspaceHandlers(): void {
       const data = validateWorkspaceData(parsed) as unknown as WorkspaceData
       backupManager.start(id)
 
-      // Phase 4B: Migrate inline conversation messages to JSONL sidecar
+      // Migrate inline conversation messages to JSONL sidecar
       try {
         await migrateInlineMessages(id, filePath)
       } catch (migrationError) {

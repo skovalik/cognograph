@@ -13,6 +13,7 @@ import type { AmbientEffectSettings, AmbientEffectType } from '@shared/types'
 import { Link, RotateCcw } from 'lucide-react'
 import type React from 'react'
 import { memo, useCallback } from 'react'
+import { usePerfStore } from '../../stores/perfStore'
 import { EFFECT_REGISTRY, type PropSchema } from './effectRegistry'
 import { hexToRgbFloat, rgbFloatToHex } from './utils/colorConvert'
 
@@ -32,6 +33,8 @@ function EffectControlsPanelComponent({
   textMuted,
   resolvedValues,
 }: EffectControlsPanelProps): JSX.Element | null {
+  const perfMode = usePerfStore((s) => s.perfMode)
+  const setPerfMode = usePerfStore((s) => s.setPerfMode)
   const entry = EFFECT_REGISTRY[effectType]
   if (!entry) return null
 
@@ -94,13 +97,11 @@ function EffectControlsPanelComponent({
         <div className="flex items-center gap-2">
           <span className={`text-[10px] ${textMuted} w-20 truncate`}>Quality</span>
           <select
-            value={settings.performanceMode ?? 'auto'}
-            onChange={(e) =>
-              onChange({
-                ...settings,
-                performanceMode: e.target.value as 'auto' | 'quality' | 'battery',
-              })
-            }
+            value={perfMode}
+            onChange={(e) => {
+              const next = e.target.value as 'auto' | 'quality' | 'battery'
+              setPerfMode(next)
+            }}
             className={`flex-1 text-[10px] ${textMuted} bg-transparent border border-current/20 rounded px-1 py-0.5`}
           >
             <option value="auto">Auto (adaptive)</option>

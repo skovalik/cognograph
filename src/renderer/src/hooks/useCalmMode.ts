@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-// useCalmMode — PFD Phase 6F: Calm Mode Hook
+// useCalmMode — Calm Mode Hook
 //
 // Provides computed calm mode state and a pure function for adjusting
 // zoom levels based on the calm offset. Integrates with the 5-level

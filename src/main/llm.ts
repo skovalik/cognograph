@@ -3,12 +3,12 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { BrowserWindow, ipcMain, safeStorage } from 'electron'
-import Store from 'electron-store'
+import { BrowserWindow, ipcMain } from 'electron'
 import OpenAI from 'openai'
 import type { IPCResponse } from '../shared/ipc-types'
 import { createIPCError, createIPCSuccess, IPC_ERROR_CODES } from '../shared/ipc-types'
 import { LlmSendSchema } from './ipc/schemas'
+import { getDecryptedOrEnv } from './services/ai/getDecryptedOrEnv'
 
 interface LLMRequest {
   conversationId: string // Identifies which chat panel this request belongs to
@@ -20,13 +20,6 @@ interface LLMRequest {
   temperature?: number
 }
 
-interface EncryptedKeys {
-  anthropic?: string
-  gemini?: string
-  openai?: string
-}
-
-const store = new Store()
 const activeStreams = new Map<string, AbortController>()
 
 // ---------------------------------------------------------------------------
@@ -81,26 +74,6 @@ export function getClientCacheSize(): number {
   return clientCache.size
 }
 
-function getApiKey(provider: string): string | null {
-  try {
-    const encryptedKeys = store.get('encryptedApiKeys', {}) as EncryptedKeys
-    const encrypted = encryptedKeys[provider as keyof EncryptedKeys]
-
-    if (!encrypted) {
-      return null
-    }
-
-    if (safeStorage.isEncryptionAvailable()) {
-      const buffer = Buffer.from(encrypted, 'base64')
-      return safeStorage.decryptString(buffer)
-    }
-    return encrypted
-  } catch (error) {
-    console.error(`[LLM] Error decrypting ${provider} key:`, error)
-    return null
-  }
-}
-
 function getMainWindow(): BrowserWindow | null {
   const windows = BrowserWindow.getAllWindows()
   return windows[0] || null
@@ -108,7 +81,7 @@ function getMainWindow(): BrowserWindow | null {
 
 async function streamAnthropic(request: LLMRequest): Promise<void> {
   const { conversationId } = request
-  const apiKey = getApiKey('anthropic')
+  const apiKey = await getDecryptedOrEnv('anthropic').catch(() => null)
   if (!apiKey) throw new Error('Anthropic API key not set')
 
   const client = getCachedAnthropicClient(apiKey)
@@ -181,7 +154,7 @@ async function streamAnthropic(request: LLMRequest): Promise<void> {
 
 async function streamGemini(request: LLMRequest): Promise<void> {
   const { conversationId } = request
-  const apiKey = getApiKey('gemini')
+  const apiKey = await getDecryptedOrEnv('gemini').catch(() => null)
   if (!apiKey) throw new Error('Gemini API key not set')
 
   const genAI = getCachedGeminiClient(apiKey)
@@ -252,7 +225,7 @@ async function streamGemini(request: LLMRequest): Promise<void> {
 
 async function streamOpenAI(request: LLMRequest): Promise<void> {
   const { conversationId } = request
-  const apiKey = getApiKey('openai')
+  const apiKey = await getDecryptedOrEnv('openai').catch(() => null)
   if (!apiKey) throw new Error('OpenAI API key not set')
 
   const client = getCachedOpenAIClient(apiKey)
@@ -326,7 +299,7 @@ interface ExtractionRequest {
 }
 
 async function extractionCall(request: ExtractionRequest): Promise<IPCResponse<string>> {
-  const apiKey = getApiKey('anthropic')
+  const apiKey = await getDecryptedOrEnv('anthropic').catch(() => null)
   if (!apiKey) {
     return createIPCError(IPC_ERROR_CODES.LLM_API_ERROR, 'Anthropic API key not set')
   }

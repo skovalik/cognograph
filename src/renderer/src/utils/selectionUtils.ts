@@ -42,7 +42,7 @@ export interface XYPosition {
 
 /**
  * Checks if a point is inside a node's bounding box.
- * Used for origin-tracking selection (Phase 2).
+ * Used for origin-tracking selection.
  *
  * @param point - The point to check
  * @param node - The node to check against

@@ -4,7 +4,7 @@
 // =============================================================================
 // dispatchMenuItems.test.ts -- Tests for dispatch context menu items
 //
-// Phase 6E: Rich Node Depth System - Dispatch Workflow Integration
+// Rich Node Depth System - Dispatch Workflow Integration
 // =============================================================================
 
 import { describe, it, expect } from 'vitest'

@@ -61,7 +61,6 @@ import {
   getPropertiesForNodeType,
 } from '../constants/properties'
 import { DEFAULT_GUI_DARK, DEFAULT_GUI_LIGHT, getPresetColors } from '../constants/themePresets'
-import type { ZoomPerfTier } from '../hooks/useZoomPerformanceTier'
 import {
   emitEdgeCreated,
   emitEdgeDeleted,
@@ -97,7 +96,7 @@ import type { PinnedWindow, TrashedItem } from './types'
 export type { CommandLogEntry, PinnedWindow, TrashedItem }
 
 // -----------------------------------------------------------------------------
-// Index Helpers (STORE-INDEX task — Phase 1)
+// Index Helpers (STORE-INDEX task)
 // -----------------------------------------------------------------------------
 
 /**
@@ -191,7 +190,7 @@ interface WorkspaceState {
   edges: Edge<EdgeData>[]
   viewport: { x: number; y: number; zoom: number }
 
-  // Indexes (STORE-INDEX — Phase 1)
+  // Indexes (STORE-INDEX)
   nodeIndex: Map<string, number> // nodeId -> index in nodes array (O(1) lookup)
   edgesByTarget: Map<string, string[]> // targetNodeId -> [edgeIds] (O(1) incoming edges)
   propertySchema: PropertySchema
@@ -217,13 +216,13 @@ interface WorkspaceState {
   hiddenNodeTypes: Set<NodeData['type']> // Node types to hide from canvas
   showMembersProjectId: string | null // When set, dims non-members of this project on canvas
   focusModeNodeId: string | null // When set, dims all nodes except this one (Focus Mode)
-  inPlaceExpandedNodeId: string | null // PFD Phase 5A: node expanded in-place on canvas for reading
-  calmMode: boolean // PFD Phase 7B: stimulus reduction toggle for overwhelm
-  reducedMotion: boolean // Phase 1B: matches prefers-reduced-motion media query
+  inPlaceExpandedNodeId: string | null // Node expanded in-place on canvas for reading
+  calmMode: boolean // Stimulus reduction toggle for overwhelm
+  reducedMotion: boolean // Matches prefers-reduced-motion media query
   bookmarkedNodeId: string | null // Visual bookmark - "current focus" node with jump-to hotkey
   numberedBookmarks: Record<number, string | null> // 1-9 numbered bookmarks for instant spatial anchors
 
-  // PFD Phase 6C: Session interaction log for re-entry navigation
+  // Session interaction log for re-entry navigation
   sessionInteractions: Array<{
     nodeId: string
     timestamp: number
@@ -251,11 +250,9 @@ interface WorkspaceState {
     timestamp: number
   } | null
 
-  // Zoom performance tier (proactive effect throttling at low zoom)
-  zoomPerfTier: ZoomPerfTier
-
   // Visual feedback state
   streamingConversations: Set<string> // Set of nodeIds currently streaming
+  contextFlowingNodes: Set<string> // Set of nodeIds currently receiving context flow (F5 edge animation)
   recentlySpawnedNodes: Set<string> // Set of nodeIds that were just created (for spawn animation)
   spawningNodeIds: string[] // Array of nodeIds currently spawning (for extraction animations)
   nodeUpdatedAt: Map<string, number> // Tracks last content-edit time per node (for warmth indicator)
@@ -318,6 +315,7 @@ interface WorkspaceState {
   ) => void
   addAgentNode: (position: { x: number; y: number }) => string
   updateNode: (nodeId: string, data: Partial<NodeData>) => void
+  updateNodeEphemeral: (nodeId: string, data: Partial<NodeData>) => void
   updateBulkNodes: (nodeIds: string[], data: Partial<NodeData>) => void
   changeNodeType: (nodeId: string, newType: NodeData['type']) => void
   deleteNodes: (nodeIds: string[]) => void
@@ -438,7 +436,7 @@ interface WorkspaceState {
   clearNumberedBookmark: (num: number) => void
   getNumberedBookmarkNodeId: (num: number) => string | null
   toggleLandmark: (nodeId: string) => void
-  toggleCalmMode: () => void // PFD Phase 7B
+  toggleCalmMode: () => void // Calm Mode
   recordInteraction: (nodeId: string, action: 'select' | 'edit' | 'chat') => void
   reorderLayers: (nodeIds: string[], targetIndex: number) => void
   moveNodesForward: (nodeIds: string[]) => void // Bring selected nodes forward (higher z-index)
@@ -468,6 +466,7 @@ interface WorkspaceState {
 
   // Actions - Visual Feedback
   setStreaming: (nodeId: string, isStreaming: boolean) => void
+  setContextFlowing: (nodeId: string, flowing: boolean) => void
 
   // Actions - Messages
   addMessage: (nodeId: string, role: 'user' | 'assistant', content: string) => void
@@ -796,6 +795,17 @@ const migrateNodeProperties = (node: Node<NodeData>): Node<NodeData> => {
     }
   }
 
+  // Migrate artifact nodes to have versionHistory (added after initial schema)
+  if (data.type === 'artifact') {
+    const artifactData = data as ArtifactNodeData
+    if (!artifactData.versionHistory) {
+      artifactData.versionHistory = []
+    }
+    if (!artifactData.source || !artifactData.source.type) {
+      artifactData.source = { type: 'created', method: 'manual' }
+    }
+  }
+
   // Migrate conversation nodes to have mode field (defaults to 'chat')
   if (data.type === 'conversation') {
     const convData = data as ConversationNodeData
@@ -818,7 +828,7 @@ const migrateWorkspaceNodes = (nodes: Node<NodeData>[]): Node<NodeData>[] => {
 // History Action Label Helper
 // -----------------------------------------------------------------------------
 
-// PFD Phase 7D: Enhanced undo narration with node names and details.
+// Enhanced undo narration with node names and details.
 // Truncate long titles to keep toast readable.
 function truncTitle(title: string | undefined, max = 25): string {
   if (!title) return ''
@@ -913,7 +923,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       nodes: [],
       edges: [],
       viewport: { x: 0, y: 0, zoom: 1 },
-      // Indexes (STORE-INDEX — Phase 1)
+      // Indexes (STORE-INDEX)
       nodeIndex: new Map<string, number>(),
       edgesByTarget: new Map<string, string[]>(),
       propertySchema: { ...DEFAULT_PROPERTY_SCHEMA },
@@ -961,8 +971,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       openExtractionPanelNodeId: null,
       extractionDrag: null,
       lastAcceptedExtraction: null,
-      zoomPerfTier: 'full' as ZoomPerfTier,
       streamingConversations: new Set<string>(),
+      contextFlowingNodes: new Set<string>(),
       recentlySpawnedNodes: new Set<string>(),
       spawningNodeIds: [],
       nodeUpdatedAt: new Map<string, number>(),
@@ -1267,6 +1277,17 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             get().evaluateAllNodeActivations()
           }, 0)
         }
+      },
+
+      // Lightweight node update that skips undo history + audit emission.
+      // Use ONLY for ephemeral display data (terminalPreviewLines, lastActivity).
+      updateNodeEphemeral: (nodeId, data) => {
+        set((state) => {
+          const node = state.nodes.find((n) => n.id === nodeId)
+          if (node) {
+            Object.assign(node.data, data)
+          }
+        })
       },
 
       updateBulkNodes: (nodeIds, data) => {
@@ -3536,6 +3557,16 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         })
       },
 
+      setContextFlowing: (nodeId, flowing) => {
+        set((state) => {
+          if (flowing) {
+            state.contextFlowingNodes.add(nodeId)
+          } else {
+            state.contextFlowingNodes.delete(nodeId)
+          }
+        })
+      },
+
       updateExtractionSettings: (nodeId, settings) => {
         set((state) => {
           const node = state.nodes.find((n) => n.id === nodeId)
@@ -3849,6 +3880,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               content,
               timestamp: Date.now(),
             }
+            if (convData.messages.some((m) => m.id === newMessage.id)) {
+              console.warn('[addMessage] duplicate message id, skipping', newMessage.id)
+              return
+            }
             convData.messages.push(newMessage)
 
             // Persist to JSONL sidecar (fire-and-forget — queue handles ordering)
@@ -3932,41 +3967,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       updateLastMessage: (nodeId, content) => {
         set((state) => {
-          const nodeIndex = state.nodes.findIndex((n) => n.id === nodeId)
-          const node = state.nodes[nodeIndex]
-          if (nodeIndex === -1 || !node) return
-
-          if (node.data.type !== 'conversation') return
-
+          const node = state.nodes.find((n) => n.id === nodeId)
+          if (!node || node.data.type !== 'conversation') return
           const convData = node.data as ConversationNodeData
-          const lastMessageIndex = convData.messages.length - 1
-          if (lastMessageIndex < 0) return
-
-          const lastMessage = convData.messages[lastMessageIndex]
-          if (lastMessage?.role !== 'assistant') return
-
-          // Create new message object to trigger React re-render
-          const updatedMessage = { ...lastMessage, content }
-
-          // Create new messages array
-          const newMessages = [...convData.messages]
-          newMessages[lastMessageIndex] = updatedMessage
-
-          // Create new node data
-          const newNodeData = {
-            ...convData,
-            messages: newMessages,
-          }
-
-          // Create new nodes array
-          const newNodes = [...state.nodes]
-          newNodes[nodeIndex] = {
-            ...node,
-            id: node.id, // Ensure id is not undefined
-            data: newNodeData,
-          } as typeof node
-
-          state.nodes = newNodes
+          const last = convData.messages[convData.messages.length - 1]
+          if (!last || last.role !== 'assistant') return
+          last.content = content // immer draft mutation — no array spread needed
         })
       },
 
@@ -3989,6 +3995,15 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const node = state.nodes.find((n) => n.id === nodeId)
           if (node && node.data.type === 'conversation') {
             const convData = node.data as ConversationNodeData
+            if (convData.messages.some((m) => m.id === message.id)) {
+              console.warn(
+                '[addToolMessage] duplicate message id, skipping',
+                message.id,
+                'role=',
+                message.role,
+              )
+              return
+            }
             convData.messages.push(message)
 
             // Persist to JSONL sidecar — same path as addMessage
@@ -4045,6 +4060,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           state.isExtracting = null
           // Streaming/animation state
           state.streamingConversations = new Set()
+          state.contextFlowingNodes = new Set()
           state.recentlySpawnedNodes = new Set()
           state.spawningNodeIds = []
           state.nodeUpdatedAt = new Map()
@@ -4210,7 +4226,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             )
             state.expandedNodeIds = new Set(validExpanded)
 
-            // PFD Phase 6C: Restore session interactions (filter to valid nodes)
+            // Restore session interactions (filter to valid nodes)
             state.sessionInteractions = (session.interactions || []).filter(
               (i: { nodeId: string }) => validNodeIds.has(i.nodeId),
             )
@@ -4259,6 +4275,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           state.isExtracting = null
           // Streaming/animation state
           state.streamingConversations = new Set()
+          state.contextFlowingNodes = new Set()
           state.recentlySpawnedNodes = new Set()
           state.spawningNodeIds = []
           state.nodeUpdatedAt = new Map()
@@ -4425,7 +4442,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             leftSidebarTab: state.leftSidebarTab !== 'layers' ? state.leftSidebarTab : undefined,
             expandedNodeIds:
               state.expandedNodeIds.size > 0 ? Array.from(state.expandedNodeIds) : undefined,
-            // PFD Phase 6C: Session interaction log (capped, 7-day rolling)
+            // Session interaction log (capped, 7-day rolling)
             interactions:
               state.sessionInteractions.length > 0
                 ? state.sessionInteractions.filter(
@@ -5168,7 +5185,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const effectiveBudget = Math.floor(tokenBudget * TOKEN_SAFETY_MARGIN)
 
           finalSortedNodes.forEach((node) => {
-            // Token budget enforcement:
+            // Token budget enforcement (Patent 1, Claims 1e/3/14c):
             // Stop adding nodes once accumulated tokens reach the budget
             if (accumulatedTokens >= effectiveBudget) return
             const nodeData = node.data as {
@@ -5409,7 +5426,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         }) // end getCachedContext
       },
 
-      // PFD Phase 4: Context Transparency — Structured BFS traversal
+      // Context Transparency — Structured BFS traversal
       // Returns both the formatted text AND structured node/edge data
       // for visualization. Uses same BFS algorithm as getContextForNode
       // but also tracks traversed edges. Zero changes to getContextForNode.
@@ -6833,7 +6850,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 )
 
 // -----------------------------------------------------------------------------
-// Index Auto-Rebuild Subscriptions (STORE-INDEX — Phase 1)
+// Index Auto-Rebuild Subscriptions (STORE-INDEX)
 // -----------------------------------------------------------------------------
 // Subscribe to nodes/edges array changes and rebuild indexes automatically.
 // This fires synchronously after each setState, ensuring indexes are always
@@ -6842,22 +6859,21 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 // TODO: Future optimization can replace rebuild-from-scratch with incremental
 // updates at each of the 42+ mutation sites for sub-O(n) index maintenance.
 
-let _prevNodesRef: unknown = null
+// nodeIndex subscription — catches external setState calls (e.g., test fixtures,
+// undo/redo) that bypass inline rebuildNodeIndex. Only rebuilds when node count
+// changes (structural add/remove), not on every reference change.
+let _prevNodesLength = 0
 useWorkspaceStore.subscribe(
   (state) => state.nodes,
   (nodes) => {
-    // Only rebuild if nodes array reference actually changed
-    if (nodes !== _prevNodesRef) {
-      _prevNodesRef = nodes
+    if (nodes.length !== _prevNodesLength) {
+      _prevNodesLength = nodes.length
       const state = useWorkspaceStore.getState()
       const newIndex = new Map<string, number>()
       for (let i = 0; i < nodes.length; i++) {
         newIndex.set(nodes[i]?.id, i)
       }
-      // Avoid infinite loop: only set if actually different
-      if (newIndex.size !== state.nodeIndex.size || !mapsEqual(newIndex, state.nodeIndex)) {
-        useWorkspaceStore.setState({ nodeIndex: newIndex })
-      }
+      useWorkspaceStore.setState({ nodeIndex: newIndex })
     }
   },
 )
@@ -6884,15 +6900,6 @@ useWorkspaceStore.subscribe(
     }
   },
 )
-
-/** Shallow Map equality check for nodeIndex */
-function mapsEqual(a: Map<string, number>, b: Map<string, number>): boolean {
-  if (a.size !== b.size) return false
-  for (const [key, val] of a) {
-    if (b.get(key) !== val) return false
-  }
-  return true
-}
 
 /** Shallow Map equality check for edgesByTarget */
 function edgesMapsEqual(a: Map<string, string[]>, b: Map<string, string[]>): boolean {
@@ -6936,6 +6943,9 @@ export const useLastCanvasClick = (): { x: number; y: number; time: number } | n
 // Visual Feedback Selector Hooks
 export const useIsStreaming = (nodeId: string): boolean =>
   useWorkspaceStore((state) => state.streamingConversations.has(nodeId))
+
+export const useIsContextFlowing = (nodeId: string): boolean =>
+  useWorkspaceStore((state) => state.contextFlowingNodes.has(nodeId))
 
 export const useIsSpawning = (nodeId: string): boolean =>
   useWorkspaceStore((state) => state.recentlySpawnedNodes.has(nodeId))

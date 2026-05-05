@@ -244,7 +244,7 @@
   /* =========================================================================
      NODE MODE TINTS
      Visual differentiation for node modes via background opacity
-     Based on Phase 0 user study: 76% accuracy, 80% preference
+     Based on user study: 76% accuracy, 80% preference
      ========================================================================= */
   --node-mode-tint-light: 15%;      /* Light modes: General, Background */
   --node-mode-tint-medium: 25%;     /* Medium modes: Reference, Example, Page, etc. */
@@ -647,6 +647,14 @@
 ::view-transition-old(root),
 ::view-transition-new(root) {
   mix-blend-mode: normal;
+  /* Pass clicks through to the real DOM during the transition. Without this,
+     view-transition pseudo-elements overlay the page and intercept pointer
+     events. Radix Sheet / Dialog / Popover see the click target as the
+     pseudo-element (not inside their content tree) and fire their
+     close-on-outside-click handler — so the Theme panel closes mid-animation
+     when the user clicks another preset before the first animation finishes.
+     Letting events pass through preserves modal state across rapid actions. */
+  pointer-events: none;
 }
 
 /* Suppress default crossfade when JS drives the clip-path animation */

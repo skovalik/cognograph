@@ -22,6 +22,10 @@
    non-final background layer is invalid CSS and Chrome 134+ silently
    drops the entire declaration, leaving the node transparent. */
 .cognograph-node.is-thinking {
+  border-color: transparent !important;
+  /* !important required: .conversation-node--terminal at nodes.css:2858 uses
+     `background: var(--terminal-bg) !important` which wins over non-important
+     declarations regardless of specificity. Thinking state must dominate. */
   background:
     linear-gradient(var(--surface-node), var(--surface-node)) padding-box,
     conic-gradient(
@@ -31,8 +35,13 @@
       var(--conic-color-3),
       var(--conic-color-4),
       var(--conic-color-1)
-    ) border-box;
-  animation: conic-rotate 3s linear infinite;
+    ) border-box !important;
+  animation: conic-rotate 3s linear infinite !important;
+  /* Subtle outer glow in the active preset's accent color — the dedicated ring
+     element carries the actual visible rotating gradient; this halo just adds
+     atmospheric spread so the node reads as "active" from a distance. Tied to
+     --conic-color-2 so it tracks the theme rather than clashing with it. */
+  box-shadow: 0 0 24px 4px color-mix(in srgb, var(--conic-color-2, #a855f7) 25%, transparent) !important;
 }
 
 /* Per-node-type palettes (set inline via --conic-color-* on each node) */
@@ -44,6 +53,66 @@
 /* Project:       #7C7CAB, #8b5cf6, #a78bfa, #c084fc */
 /* Action:        #C4845A, #f97316, #fb923c, #fbbf24 */
 /* Orchestrator:  #a855f7, #c084fc, #e879f9, #f472b6 */
+
+/* =============================================================================
+   DEDICATED RING ELEMENT — .cognograph-thinking-ring
+   Sits at inset:-4px as a positioned child of .cognograph-node (rendered by
+   ConversationNode when isStreaming && isTerminal). Uses mask-composite:exclude
+   to paint a 4px conic-gradient ring ONLY in the padding strip — the interior
+   content-box is masked out, so the gradient cannot bleed through transparent
+   children like .cognograph-node__header. Theme palette drives the stops via
+   --conic-color-1..4 inline vars; 8-stop alternation (base/highlight/base/
+   shadow) ensures visible rotation even for monotone palettes (sunset's
+   4 close golds). z-index:2 keeps the ring above sibling children; the mask
+   ensures it only paints in its own outer-strip region.
+   ============================================================================= */
+.cognograph-thinking-ring {
+  position: absolute;
+  inset: -4px;
+  padding: 4px;
+  border-radius: calc(var(--radius-md) + 4px);
+  /* Theme-driven with programmatic lightness variation — 8 stops alternating
+     base → highlight (mix 55% with white) → base → shadow (mix 40% with black)
+     so monotone palettes (sunset's four close golds) still show visible
+     rotation. Rainbow literals are fallback-only. */
+  background: conic-gradient(
+    from var(--conic-angle),
+    var(--conic-color-1, #3b82f6) 0deg,
+    color-mix(in srgb, var(--conic-color-2, #a855f7) 55%, #ffffff) 45deg,
+    var(--conic-color-3, #ec4899) 90deg,
+    color-mix(in srgb, var(--conic-color-4, #f59e0b) 40%, #000000) 135deg,
+    var(--conic-color-1, #3b82f6) 180deg,
+    color-mix(in srgb, var(--conic-color-2, #a855f7) 55%, #ffffff) 225deg,
+    var(--conic-color-3, #ec4899) 270deg,
+    color-mix(in srgb, var(--conic-color-4, #f59e0b) 40%, #000000) 315deg,
+    var(--conic-color-1, #3b82f6) 360deg
+  );
+  /* Mask-composite ring technique: two mask layers, the first clipped to
+     content-box (the inside area), the second defaulting to border-box (full
+     element). Composited with `exclude` (XOR), the result is "pixels in
+     border-box but not in content-box" — i.e. ONLY the 4px padding strip.
+     This is why the gradient cannot bleed through any transparent children
+     inside the node: only the outer strip is ever painted.
+     -webkit-* prefix with `xor` keyword keeps older Chromium/Safari happy. */
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: conic-rotate 3s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cognograph-thinking-ring {
+    animation: none;
+  }
+}
+
 
 /* Reduced motion: static gradient, no rotation */
 @media (prefers-reduced-motion: reduce) {

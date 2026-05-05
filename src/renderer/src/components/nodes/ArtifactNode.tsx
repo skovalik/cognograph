@@ -38,9 +38,9 @@ import {
   Video,
   Volume2,
 } from 'lucide-react'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { CONIC_PALETTES } from '../../constants/conicPalettes'
+import { useConicPalette } from '../../constants/conicPalettes'
 import { getPropertiesForNodeType } from '../../constants/properties'
 import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
 import { useNodeResize } from '../../hooks/useNodeResize'
@@ -54,6 +54,17 @@ import {
   useNodeWarmth,
   useWorkspaceStore,
 } from '../../stores/workspaceStore'
+import {
+  CognographHighlighter,
+  cognographTheme,
+  getLanguageForContentType,
+} from '../../themes/cognographPrism'
+import {
+  CAPABILITY_MESSAGE_TYPE,
+  markCapable,
+  registerArtifactIframe,
+  unregisterArtifactIframe,
+} from '../../utils/artifactThemeSync'
 import { EscapePriority, escapeManager } from '../../utils/EscapeManager'
 import {
   buildPreviewUrl,
@@ -218,6 +229,15 @@ function getActiveContent(nodeData: ArtifactNodeData): {
   }
 }
 
+/** DJB2 string hash — fast, non-cryptographic, sufficient for React key uniqueness */
+function djb2Hash(str: string): number {
+  let hash = 5381
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash + str.charCodeAt(i)) | 0
+  }
+  return hash >>> 0
+}
+
 function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps): JSX.Element {
   const nodeData = data as ArtifactNodeData
   const propsWidth = width as number | undefined
@@ -256,6 +276,10 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   const [refreshKey, setRefreshKey] = useState(0)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // ---- Inline content editing state (text/code/markdown artifacts) ----
+  const [isEditingContent, setIsEditingContent] = useState(false)
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null)
 
   // ---- Inline HTML rendering state ----
   const [htmlInteractionMode, setHtmlInteractionMode] = useState(false)
@@ -306,6 +330,39 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
     imageAutoSizedRef.current = false
   }, [nodeData.content])
 
+  // Theme sync — register the iframe with artifactThemeSync so the global
+  // theme mode is broadcast to it. Handle incoming capability-declaration
+  // handshake messages so Tier 1 supersedes Tier 2/3 fallbacks. Cleanup
+  // on unmount or when the artifact content changes (iframe re-renders).
+  useEffect(() => {
+    if (nodeData.contentType !== 'html' || !nodeData.content) return
+    const iframe = htmlIframeRef.current
+    if (!iframe) return
+
+    const onLoad = (): void => registerArtifactIframe(iframe, id)
+    iframe.addEventListener('load', onLoad)
+
+    const handleThemeMessage = (event: MessageEvent): void => {
+      if (event.source !== iframe.contentWindow) return
+      if (event.data?.type !== CAPABILITY_MESSAGE_TYPE) return
+      if (event.data?.nodeId && event.data.nodeId !== id) return
+      markCapable(id)
+    }
+    window.addEventListener('message', handleThemeMessage)
+
+    // If the iframe already loaded before this effect ran (rare but possible
+    // after a fast srcdoc swap), register immediately.
+    if (iframe.contentDocument?.readyState === 'complete') {
+      registerArtifactIframe(iframe, id)
+    }
+
+    return () => {
+      iframe.removeEventListener('load', onLoad)
+      window.removeEventListener('message', handleThemeMessage)
+      unregisterArtifactIframe(id)
+    }
+  }, [id, nodeData.contentType, nodeData.content])
+
   // Auto-size node via postMessage from sandboxed iframe (S4).
   // The iframe injects a ResizeObserver that posts 'artifact-resize' messages.
   // This replaces contentDocument access which requires allow-same-origin.
@@ -341,7 +398,7 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
       const MAX_ARTIFACT_HEIGHT = 5000
       const finalH = Math.min(Math.max(200, neededH), MAX_ARTIFACT_HEIGHT)
       const finalW = Math.abs(neededW - currentW) > 30 ? Math.max(300, neededW) : currentW
-      if (Math.abs(neededH - currentH) > 30 || Math.abs(neededW - currentW) > 30) {
+      if (Math.abs(finalH - currentH) > 30 || Math.abs(neededW - currentW) > 30) {
         updateNodeDimensions(id, finalW, finalH)
         htmlIframeAutoSizedRef.current = true
       }
@@ -395,9 +452,10 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
   // Get content type for tint differentiation
   const activeFileContentType = nodeData.files?.[0]?.contentType || nodeData.contentType
 
+  const palette = useConicPalette()
+
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.artifact ?? '#8b5cf7'
-    const palette = CONIC_PALETTES['artifact'] || CONIC_PALETTES.default
 
     return {
       '--ring-color': safeNodeColor,
@@ -409,7 +467,14 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
       width: nodeWidth,
       ...(hasExplicitHeight ? { height: nodeHeight } : { minHeight: nodeHeight }),
     }
-  }, [nodeColor, themeSettings.nodeColors.artifact, nodeWidth, nodeHeight, hasExplicitHeight])
+  }, [
+    nodeColor,
+    themeSettings.nodeColors.artifact,
+    nodeWidth,
+    nodeHeight,
+    hasExplicitHeight,
+    palette,
+  ])
 
   // Handle resize - also update node internals to trigger edge recalculation
   const handleResizeStart = useCallback(() => {
@@ -619,10 +684,26 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
 
   // Get active content (from multi-file or single file)
   const activeContent = getActiveContent(nodeData)
+  const deferredHighlightContent = useDeferredValue(activeContent.content || '')
   const isMultiFile = nodeData.files && nodeData.files.length > 0
   const files = nodeData.files || []
   const firstFile = files[0]
   const activeFileId = nodeData.activeFileId || (firstFile ? firstFile.id : undefined)
+
+  // ---- Content editing: save handler for text/code/markdown ----
+  const handleContentSave = useCallback(
+    (newContent: string) => {
+      if (isMultiFile && activeFileId) {
+        const updatedFiles = files.map((f) =>
+          f.id === activeFileId ? { ...f, content: newContent } : f,
+        )
+        updateNode(id, { files: updatedFiles })
+      } else {
+        updateNode(id, { content: newContent })
+      }
+    },
+    [id, isMultiFile, activeFileId, files, updateNode],
+  )
 
   // SVG stored as data URI should render as <img>, not through iframe srcdoc
   const isSvgDataUri =
@@ -694,6 +775,19 @@ function ArtifactNodeComponent({ id, data, selected, width, height }: NodeProps)
       safe = cspMeta + safe
     }
 
+    // 5b. Inject default body styles — white background + dark text baseline.
+    //     Placed BEFORE artifact's own <style> blocks (step 4 injected them into <head>)
+    //     so the artifact's CSS has higher source order specificity and overrides these.
+    //     Uses lowest-specificity selectors (element only, no classes/IDs).
+    const defaultBodyCss =
+      '<style data-cg-defaults>body{background-color:#ffffff;color:#000000;margin:0;font-family:system-ui,-apple-system,sans-serif;}</style>'
+    if (safe.includes('<head>')) {
+      // Insert at START of <head> — before artifact's own styles (which were injected after <head>)
+      safe = safe.replace('<head>', '<head>' + defaultBodyCss)
+    } else {
+      safe = defaultBodyCss + safe
+    }
+
     // 6. Inject resize reporter AFTER DOMPurify + CSP (trusted code, never sanitized).
     //    Uses postMessage to report content dimensions since allow-same-origin is removed
     //    and contentDocument is no longer accessible from the parent.
@@ -711,6 +805,76 @@ new ResizeObserver(function() {
       safe = safe.replace('</body>', resizeScript + '</body>')
     } else {
       safe = safe + resizeScript
+    }
+
+    // 7. Inject theme-sync baseline — every HTML artifact receives
+    //    cognograph:theme messages from the parent and applies the mode in
+    //    four escalating ways so artifact-internal side effects (shader
+    //    uniforms, per-setTheme state) fire even when the artifact author
+    //    didn't opt into the protocol explicitly:
+    //      a. Call window.setTheme(v) if exposed (design-system-v3.8 pattern)
+    //      b. Click any matching #theme-toggle / #daynight-btn / etc. if the
+    //         button's current state differs from the target
+    //      c. Write data-theme on documentElement and body (CSS fallback)
+    //      d. Re-broadcast as a custom 'cognograph:theme' CustomEvent so any
+    //         listeners the artifact registers get notified in their own
+    //         handler system
+    //    Declares capability on load so the parent can skip parent-side
+    //    Tier 2/3 fallbacks (which can't reach this sandboxed iframe anyway).
+    const themeScript = `<script>
+(function(){
+  try {
+    var TOGGLE_SEL = 'button[aria-label*="theme" i],button[aria-label*="dark" i],button[aria-label*="light" i],button[aria-label*="mode" i],button[id*="theme" i],button[id*="daynight" i],button[id*="dark-mode" i],[data-theme-toggle],button[class*="theme-toggle" i],button[class*="daynight" i]';
+    function readCurrent() {
+      var d = document.documentElement.getAttribute('data-theme');
+      if (d === 'dark' || d === 'light') return d;
+      var b = document.body && document.body.getAttribute('data-theme');
+      if (b === 'dark' || b === 'light') return b;
+      if (document.documentElement.classList.contains('dark')) return 'dark';
+      return null;
+    }
+    function apply(v) {
+      if (v !== 'dark' && v !== 'light') return;
+      var applied = false;
+      // Tier A: artifact-exposed setTheme (fires its side effects)
+      if (typeof window.setTheme === 'function') {
+        try { window.setTheme(v); applied = true; } catch(_) {}
+      }
+      // Tier B: click a matching toggle button only if state differs
+      if (!applied) {
+        var btn = document.querySelector(TOGGLE_SEL);
+        if (btn) {
+          var cur = readCurrent();
+          if (cur && cur !== v) {
+            try { btn.click(); applied = true; } catch(_) {}
+          } else if (cur === v) {
+            applied = true; // already correct, no action needed
+          }
+        }
+      }
+      // Tier C: always write attribute as CSS baseline
+      document.documentElement.setAttribute('data-theme', v);
+      if (document.body) document.body.setAttribute('data-theme', v);
+      // Tier D: dispatch custom event for artifact-side listeners
+      try {
+        document.dispatchEvent(new CustomEvent('cognograph:theme', { detail: { value: v } }));
+      } catch(_) {}
+    }
+    window.addEventListener('message', function(e){
+      if (e && e.data && e.data.type === 'cognograph:theme') apply(e.data.value);
+    });
+    window.parent.postMessage({
+      type: 'cognograph:theme-capable',
+      modes: ['light','dark'],
+      nodeId: '${id.replace(/'/g, "\\'")}'
+    }, '*');
+  } catch(_) {}
+})();
+</script>`
+    if (safe.includes('</body>')) {
+      safe = safe.replace('</body>', themeScript + '</body>')
+    } else {
+      safe = safe + themeScript
     }
 
     return safe
@@ -808,8 +972,11 @@ new ResizeObserver(function() {
     [nodeData.title, activeContent, isMultiFile, files],
   )
 
-  // Count lines for display
-  const lineCount = activeContent.content ? activeContent.content.split('\n').length : 0
+  // Z-18: Memoize line count — only recompute when content changes
+  const lineCount = useMemo(
+    () => (activeContent.content ? activeContent.content.split('\n').length : 0),
+    [activeContent.content],
+  )
   const totalFiles = files.length || 1
 
   // Check if node is disabled
@@ -889,25 +1056,41 @@ new ResizeObserver(function() {
     )
   }, [activeContent.content, activeContent.contentType])
 
-  const nodeClassName = [
-    'cognograph-node',
-    'cognograph-node--artifact',
-    selected && 'selected',
-    isDisabled && 'cognograph-node--disabled',
-    isSpawning && 'spawning',
-    isSpawning && 'is-thinking',
-    // is-active reserved for functional state only (not selection)
-    nonMemberClass,
-    memberHighlightClass,
-    warmthLevel && `warmth-${warmthLevel}`,
-    isPinned && 'node--pinned',
-    isBookmarked && 'cognograph-node--bookmarked',
-    isCut && 'cognograph-node--cut',
-    nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
-    `artifact-node--lod-${zoomLevel}`,
-  ]
-    .filter(Boolean)
-    .join(' ')
+  // Z-18: Memoize className construction
+  const nodeClassName = useMemo(
+    () =>
+      [
+        'cognograph-node',
+        'cognograph-node--artifact',
+        selected && 'selected',
+        isDisabled && 'cognograph-node--disabled',
+        isSpawning && 'spawning',
+        isSpawning && 'is-thinking',
+        nonMemberClass,
+        memberHighlightClass,
+        warmthLevel && `warmth-${warmthLevel}`,
+        isPinned && 'node--pinned',
+        isBookmarked && 'cognograph-node--bookmarked',
+        isCut && 'cognograph-node--cut',
+        nodeData.nodeShape && `node-shape-${nodeData.nodeShape}`,
+        `artifact-node--lod-${zoomLevel}`,
+      ]
+        .filter(Boolean)
+        .join(' '),
+    [
+      selected,
+      isDisabled,
+      isSpawning,
+      nonMemberClass,
+      memberHighlightClass,
+      warmthLevel,
+      isPinned,
+      isBookmarked,
+      isCut,
+      nodeData.nodeShape,
+      zoomLevel,
+    ],
+  )
 
   const nodeContent = (
     <div
@@ -1385,7 +1568,7 @@ new ResizeObserver(function() {
                         >
                           <iframe
                             ref={htmlIframeRef}
-                            key={sanitizedHtmlContent.length}
+                            key={djb2Hash(sanitizedHtmlContent)}
                             srcDoc={sanitizedHtmlContent}
                             // SECURITY (S4): allow-same-origin REMOVED — prevents srcdoc from
                             // accessing parent DOM, localStorage, auth tokens (session takeover).
@@ -1397,7 +1580,7 @@ new ResizeObserver(function() {
                               minHeight: '320px',
                               border: 'none',
                               borderRadius: '4px',
-                              backgroundColor: 'transparent',
+                              backgroundColor: '#ffffff',
                               pointerEvents: htmlInteractionMode ? 'auto' : 'none',
                             }}
                             title={nodeData.title}
@@ -1426,22 +1609,96 @@ new ResizeObserver(function() {
                       )}
                     </div>
                   ) : (
-                    <pre
-                      className="text-xs font-mono overflow-auto p-2 rounded flex-1"
-                      style={{
-                        backgroundColor: 'var(--node-bg-secondary)',
-                        color: 'var(--node-text-secondary)',
-                        whiteSpace: 'pre',
-                        wordBreak: 'normal',
-                        overscrollBehavior: 'contain',
-                      }}
-                    >
-                      {activeContent.content || (
-                        <span className="italic" style={{ color: 'var(--node-text-muted)' }}>
-                          Empty artifact
-                        </span>
+                    <>
+                      {isEditingContent ? (
+                        <textarea
+                          ref={editTextareaRef}
+                          className="nodrag nopan nowheel"
+                          defaultValue={activeContent.content || ''}
+                          onBlur={(e) => {
+                            handleContentSave(e.target.value)
+                            setIsEditingContent(false)
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                              e.stopPropagation()
+                              handleContentSave(e.currentTarget.value)
+                              setIsEditingContent(false)
+                            }
+                          }}
+                          autoFocus
+                          spellCheck={false}
+                          style={{
+                            margin: 0,
+                            flex: 1,
+                            minHeight: 0,
+                            fontSize: '0.75rem',
+                            fontFamily: 'var(--font-mono, monospace)',
+                            lineHeight: 1.5,
+                            padding: '0.5rem',
+                            backgroundColor: 'var(--node-bg-secondary)',
+                            color: 'var(--node-text-primary)',
+                            border: '1px solid var(--node-accent, var(--gold-dim))',
+                            borderRadius: '4px',
+                            resize: 'none',
+                            outline: 'none',
+                            overflowY: 'auto',
+                            overscrollBehavior: 'contain',
+                            width: '100%',
+                            tabSize: 2,
+                          }}
+                        />
+                      ) : activeContent.content ? (
+                        <div
+                          onDoubleClick={(e) => {
+                            e.stopPropagation()
+                            setIsEditingContent(true)
+                          }}
+                          title="Double-click to edit"
+                          style={{ flex: 1, minHeight: 0, cursor: 'text' }}
+                        >
+                          <CognographHighlighter
+                            language={getLanguageForContentType(
+                              activeContent.contentType,
+                              activeContent.language,
+                            )}
+                            style={cognographTheme}
+                            PreTag="div"
+                            customStyle={{
+                              margin: 0,
+                              flex: 1,
+                              minHeight: 0,
+                              fontSize: '0.75rem',
+                              overscrollBehavior: 'contain',
+                            }}
+                            wrapLongLines={
+                              activeContent.contentType === 'markdown' ||
+                              activeContent.contentType === 'text'
+                            }
+                          >
+                            {deferredHighlightContent}
+                          </CognographHighlighter>
+                        </div>
+                      ) : (
+                        <pre
+                          className="text-xs font-mono overflow-auto p-2 rounded flex-1"
+                          style={{
+                            backgroundColor: 'var(--node-bg-secondary)',
+                            color: 'var(--node-text-secondary)',
+                            cursor: 'text',
+                          }}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation()
+                            setIsEditingContent(true)
+                          }}
+                          title="Double-click to edit"
+                        >
+                          <span className="italic" style={{ color: 'var(--node-text-muted)' }}>
+                            Empty artifact
+                          </span>
+                        </pre>
                       )}
-                    </pre>
+                    </>
                   )}
 
                   {/* Inline property controls */}

@@ -13,7 +13,7 @@ import {
 import { ChevronDown, ChevronRight, FolderKanban, FolderOpen, Link2, Plus } from 'lucide-react'
 import * as path from 'path'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
-import { CONIC_PALETTES } from '../../constants/conicPalettes'
+import { useConicPalette } from '../../constants/conicPalettes'
 import { getPropertiesForNodeType } from '../../constants/properties'
 import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
 import { useNodeResize } from '../../hooks/useNodeResize'
@@ -95,9 +95,10 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
   const transparent = nodeData.transparent
   const isGlassEnabled = useIsGlassEnabled('nodes', transparent)
 
+  const palette = useConicPalette()
+
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.project ?? '#0ea5e9'
-    const palette = CONIC_PALETTES['project'] || CONIC_PALETTES.default
 
     return {
       '--ring-color': safeNodeColor,
@@ -109,7 +110,7 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
       width: '100%',
       height: '100%',
     }
-  }, [nodeColor, themeSettings.nodeColors.project])
+  }, [nodeColor, themeSettings.nodeColors.project, palette])
 
   // Get current node dimensions - prefer props (from React Flow), fall back to data/defaults
   const nodeWidth = width ?? nodeData.width ?? 280
@@ -248,7 +249,6 @@ function ProjectNodeComponent({ id, data, selected, width, height }: NodeProps):
     'cognograph-node',
     'cognograph-node--project',
     selected && 'selected',
-    // is-active reserved for functional state only (not selection)
     isProcessing && 'is-thinking',
     isDragOver && 'drag-over',
     isDisabled && 'cognograph-node--disabled',

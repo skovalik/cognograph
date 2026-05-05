@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * Conversation Persistence Tests — Phase 4B UX-JSONL
+ * Conversation Persistence Tests — UX-JSONL
  *
  * Covers:
  * - Send → save → reload → visible

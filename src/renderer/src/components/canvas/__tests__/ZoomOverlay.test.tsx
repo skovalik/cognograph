@@ -4,7 +4,7 @@
 /**
  * ZoomOverlay Tests
  *
- * PFD Phase 5B: Canvas Interaction Patterns
+ * Canvas Interaction Patterns
  */
 
 import { render, screen } from '@testing-library/react'

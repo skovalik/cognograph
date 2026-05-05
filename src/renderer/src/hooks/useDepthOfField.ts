@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * useDepthOfField — Hook for depth-of-field visual ring computation (Phase 6A)
+ * useDepthOfField — Hook for depth-of-field visual ring computation
  *
  * Returns the CSS class and effective zoom level for a node based on its
  * graph distance from the DoF focus node. DoF can only REDUCE detail

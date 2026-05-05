@@ -5,7 +5,7 @@
  * Canvas Viewport Store
  *
  * Manages viewport state, focus mode, bookmarks, and saved views.
- * Extracted from workspaceStore as part of Week 2 Stream B Track 2 Phase 2.2a.
+ * Extracted from workspaceStore during the store-split refactor.
  */
 
 import { v4 as uuid } from 'uuid'

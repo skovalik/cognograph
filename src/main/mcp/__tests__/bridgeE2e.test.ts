@@ -97,13 +97,15 @@ beforeAll(async () => {
         return dataStore.edges
       case 'create-node': {
         const newId = (params?.id as string) || `created-${Date.now()}`
+        const incomingData = (params?.data as Record<string, unknown> | undefined) ?? {}
         const newNode = {
           id: newId,
           type: (params?.type as string) || 'note',
           position: (params?.position as { x: number; y: number }) || { x: 0, y: 0 },
           data: {
-            ...((params?.data as Record<string, unknown>) ?? {}),
-            type: params?.type || 'note',
+            ...incomingData,
+            type: (params?.type as string) || 'note',
+            title: (incomingData['title'] as string) ?? '',
           },
         }
         dataStore.nodes.push(newNode)
@@ -222,7 +224,7 @@ describe('BridgeSyncProvider → Bridge Server E2E', () => {
     await provider.load()
 
     // Create via provider (goes through HTTP to bridge to queryFn)
-    const nodeId = provider.createNode('task', { title: 'Round Trip Task' })
+    provider.createNode('task', { title: 'Round Trip Task' })
 
     // Wait for async POST
     await new Promise((r) => setTimeout(r, 300))

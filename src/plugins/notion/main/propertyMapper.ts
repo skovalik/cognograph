@@ -127,10 +127,6 @@ function dateProperty(unixMs: number): unknown {
   return { date: { start: new Date(unixMs).toISOString().split('T')[0] } }
 }
 
-function numberProperty(value: number): unknown {
-  return { number: value }
-}
-
 // Extract plain text from Notion rich_text array
 function extractRichText(richTextArray: Array<{ plain_text?: string }>): string {
   if (!Array.isArray(richTextArray)) return ''
@@ -342,7 +338,7 @@ export function projectFromNotion(notionProperties: Record<string, any>): Mapped
 // -----------------------------------------------------------------------------
 
 export function noteToNotionPageProperties(
-  nodeId: string,
+  _nodeId: string,
   data: CognographNodeData,
 ): NotionPropertyObject {
   const properties: NotionPropertyObject = {}
@@ -368,7 +364,7 @@ export function noteToNotionPageProperties(
 // -----------------------------------------------------------------------------
 
 export function artifactToNotionPageProperties(
-  nodeId: string,
+  _nodeId: string,
   data: CognographNodeData,
 ): NotionPropertyObject {
   const properties: NotionPropertyObject = {}

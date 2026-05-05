@@ -82,7 +82,7 @@ export function getCachedContext(
 }
 
 // ---------------------------------------------------------------------------
-// Traversal Cache (Phase 4: Context Transparency)
+// Traversal Cache (Context Transparency)
 // Separate from text cache — stores structured BFS results for visualization.
 // ---------------------------------------------------------------------------
 

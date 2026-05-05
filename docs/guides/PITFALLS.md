@@ -4,33 +4,15 @@
 
 ---
 
-## 🔒 License & Legal Integrity Protocol
+## 🔒 License & Legal Integrity
 
-**The Problem:**
-LICENSE was overwritten from AGPL-3.0 + Defensive Patent Pledge to MIT and nobody caught it for weeks. It shipped live on GitHub with the wrong license.
+The license is AGPL-3.0 + Defensive Patent Pledge, not MIT. Don't modify legal files (`LICENSE`, `PATENTS`, `package.json` `license` field, README License section) without maintainer review.
 
-**The Rule — NEVER modify legal files without explicit Stefan approval:**
-- `LICENSE` — The original is an 8-line AGPL-3.0 header with copyright + Defensive Patent Pledge
-- `PATENTS` — Lists provisional patent applications (if present)
-- `package.json` `"license"` field — Must be `"AGPL-3.0-only"`
-- README License section — Must say "Free for personal use. Commercial license available."
-
-**Before ANY change to legal files:**
-1. Show Stefan the exact diff BEFORE committing
-2. Verify against the canonical source: public repo commit `3a9740d` (the first push)
-3. If a license reference exists in docs but contradicts the LICENSE file, the LICENSE file is canonical — not the doc
-
-**Business Model (for context):**
-- AGPL-3.0 Open Core = personal use free, commercial use requires commercial license
-- This is NOT MIT (permissive) — AGPL is copyleft
-- Defensive Patent Pledge protects users from patent assertion
-
-**Cross-repo sync checklist (when touching license):**
-- [ ] LICENSE files match across repos
-- [ ] PATENTS files match across repos
-- [ ] Both `package.json` say `"AGPL-3.0-only"`
+**Consistency checklist when touching license:**
+- [ ] `LICENSE` and `PATENTS` reflect AGPL-3.0 + Defensive Patent Pledge
+- [ ] `package.json` says `"AGPL-3.0-only"`
 - [ ] `package-lock.json` root entry says `"AGPL-3.0-only"` (stale after `npm install`)
-- [ ] Both README License sections match
+- [ ] README License section matches
 
 ---
 
@@ -444,23 +426,6 @@ When something doesn't work, check these in order:
 7. **React Flow nodeTypes** - Confirm type names match exactly
 
 ---
-
----
-
-## 📋 Process Pitfall: Plan Document Drift
-
-**The Problem:**
-Plan/roadmap documents (like `docs/NEXT_PHASE_PLAN.md`) describe features as "needs to be done." Multiple sessions implement the work, but nobody updates the plan. The next session reads a stale plan that says "build X" when X already exists. This wastes time investigating, risks re-implementation, and confuses the project timeline.
-
-**Real example:** NEXT_PHASE_PLAN.md had 27 items all described as TODO. When audited, 24 of 27 were already fully implemented. The plan read like a fresh roadmap when it was actually a nearly-complete project.
-
-**The Solution:**
-1. **Before implementing from a plan:** Verify the item isn't already done. `grep` for the file/symbol/component the plan says to create.
-2. **After implementing:** Update the plan doc immediately — add `✅ DONE` inline, update status tables.
-3. **On session end:** Review which plan items you touched and update their status.
-4. **Standard markers:** `✅ DONE`, `🟡 PARTIAL`, `❌ REMAINING`, `⏳ DEFERRED`
-
-See also: project-level instructions for plan drift prevention.
 
 ---
 

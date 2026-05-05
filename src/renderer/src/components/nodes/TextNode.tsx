@@ -143,7 +143,6 @@ function TextNodeComponent({ id, data, selected, width, height }: NodeProps): JS
   const nodeClassName = [
     'text-node',
     selected && 'selected',
-    // is-active reserved for functional state only (not selection)
     isDisabled && 'cognograph-node--disabled',
     isSpawning && 'spawning',
     nonMemberClass,

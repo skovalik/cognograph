@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * Graph Intelligence Service (Phase 5: Graph Intelligence)
+ * Graph Intelligence Service
  *
  * Main process service providing:
  * - Rule-based analysis (free, always-on): orphaned clusters, hub nodes,

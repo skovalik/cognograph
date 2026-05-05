@@ -8,7 +8,7 @@
 // types. This abstraction allows swapping between Electron IPC (local) and
 // WebSocket (cloud) transports without changing agent/renderer code.
 //
-// Created as part of Phase 1: TRANSPORT-ABSTRACTION
+// Created as part of TRANSPORT-ABSTRACTION work
 // =============================================================================
 
 // -----------------------------------------------------------------------------
@@ -92,7 +92,7 @@ export interface ToolResult {
 }
 
 // -----------------------------------------------------------------------------
-// Permission Display Types (Phase 4B — UX-PERMISSIONS)
+// Permission Display Types (UX-PERMISSIONS)
 // -----------------------------------------------------------------------------
 
 /** Shell command display data — shows command with dangerous subcommand highlighting. */
@@ -232,8 +232,8 @@ export type PayloadFor<C extends AgentMessageChannel> = Extract<
  * Transport-agnostic message bus.
  *
  * Implementations:
- *   - ElectronTransport (Phase 1) — wraps webContents.send / ipcMain.on
- *   - WebTransport (Phase 5)      — WebSocket-based for cloud agents
+ *   - ElectronTransport — wraps webContents.send / ipcMain.on
+ *   - WebTransport      — WebSocket-based for cloud agents
  */
 export interface Transport {
   /** Send a message to the other side. */

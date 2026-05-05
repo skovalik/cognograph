@@ -4,7 +4,7 @@
 /**
  * KeyboardModeIndicator Tests
  *
- * PFD Phase 5B: Canvas Interaction Patterns
+ * Canvas Interaction Patterns
  */
 
 import { describe, it, expect, vi } from 'vitest'

@@ -16,7 +16,7 @@
  *   agent:stream-chunk → stream text to conversation UI (delegates to existing stream handler)
  *   agent:complete     → finalize conversation, update usage stats
  *
- * Created as part of Phase 2C: RENDERER-PASSIVIZE
+ * Created as part of RENDERER-PASSIVIZE work
  */
 
 import type {
@@ -24,6 +24,8 @@ import type {
   TokenUsage,
   ToolResult as TransportToolResult,
 } from '@shared/transport/types'
+import { v4 as uuid } from 'uuid'
+import { notify } from '../stores/notificationStore'
 import { useSessionStatsStore } from '../stores/sessionStatsStore'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { layoutEvents } from '../utils/layoutEvents'
@@ -179,7 +181,7 @@ function handleToolStart(payload: ToolStartPayload): void {
   // Add a tool_use message to the conversation to show the tool badge in UI
   if (payload.conversationId) {
     store.addToolMessage(payload.conversationId, {
-      id: payload.toolId,
+      id: uuid(),
       role: 'tool_use' as const,
       content: `Calling ${payload.toolName}`,
       timestamp: Date.now(),
@@ -203,13 +205,20 @@ function handleToolResult(payload: ToolResultPayload): void {
       : `Error: ${payload.result.error ?? 'Unknown error'}`
 
     store.addToolMessage(payload.conversationId, {
-      id: `result-${payload.toolId}`,
+      id: uuid(),
       role: 'tool_result' as const,
       content: resultContent,
       timestamp: Date.now(),
       toolResultFor: payload.toolId,
       isError: !payload.result.success,
     })
+
+    // Surface tool failures to the user via NotificationToast (WS-8 producer).
+    if (!payload.result.success) {
+      notify(`${payload.toolName} failed: ${payload.result.error ?? 'Unknown error'}`, 'warning', {
+        nodeId: payload.conversationId,
+      })
+    }
 
     // Track created nodes/edges for layout pipeline
     if (payload.result.success && payload.result.output) {
@@ -274,6 +283,13 @@ function handleAgentComplete(payload: AgentCompletePayload): void {
 
   // Clear streaming state
   store.setStreaming(payload.conversationId, false)
+
+  // Surface terminal failures to the user via NotificationToast (WS-8 producer).
+  if (payload.stopReason === 'error') {
+    notify('Agent run failed.', 'error', { nodeId: payload.conversationId })
+  } else if (payload.stopReason === 'timeout') {
+    notify('Agent run timed out.', 'warning', { nodeId: payload.conversationId })
+  }
 
   // Record usage stats
   if (payload.usage) {

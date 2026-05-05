@@ -2,11 +2,11 @@
  * bridgeAnimations.css — Spatial Command Bridge CSS animations
  *
  * All Bridge-related animations in one file:
- * - Edge flow animation (Phase 1)
- * - Agent badge states (Phase 1)
- * - Orchestrator badge glow (Phase 1)
- * - Ghost node/edge (Phase 3)
- * - Status bar transitions (Phase 1)
+ * - Edge flow animation
+ * - Agent badge states
+ * - Orchestrator badge glow
+ * - Ghost node/edge
+ * - Status bar transitions
  * ============================================================================= */
 
 /* --- Edge Flow Animation --------------------------------------------------- */
@@ -200,7 +200,7 @@
   50% { opacity: 0.6; }
 }
 
-/* --- Ghost Node (Phase 3) -------------------------------------------------- */
+/* --- Ghost Node -------------------------------------------------- */
 
 .ghost-node {
   background: var(--surface-node, #1e293b);
@@ -242,7 +242,7 @@
   50% { border-color: color-mix(in srgb, var(--ghost-color) 50%, transparent); }
 }
 
-/* --- Ghost Edge (Phase 3) -------------------------------------------------- */
+/* --- Ghost Edge -------------------------------------------------- */
 
 .ghost-edge {
   stroke-dasharray: 5 5;

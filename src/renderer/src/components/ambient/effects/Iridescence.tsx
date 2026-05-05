@@ -96,7 +96,7 @@ export default function Iridescence({
 
     function resize() {
       const scale = 1
-      renderer.setSize(ctn.offsetWidth * scale, ctn.offsetHeight * scale)
+      renderer.setSize(Math.max(1, ctn.offsetWidth * scale), Math.max(1, ctn.offsetHeight * scale))
       if (program) {
         program.uniforms.uResolution.value = new Color(
           gl.canvas.width,
@@ -132,6 +132,7 @@ export default function Iridescence({
     let currentScale = -1
     function update(t: number) {
       animateId = requestAnimationFrame(update)
+      if (gl.drawingBufferWidth === 0 || gl.drawingBufferHeight === 0) return
       if (qualityRef?.current && !qualityRef.current.shouldRender) return
       if (reportFrameFn) reportFrameFn()
       if (qualityRef?.current?.frameSkip && ++frameCount % 2 === 0) return
@@ -139,7 +140,10 @@ export default function Iridescence({
         const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap
         if (scale !== currentScale) {
           currentScale = scale
-          renderer.setSize(ctn.offsetWidth * scale, ctn.offsetHeight * scale)
+          renderer.setSize(
+            Math.max(1, ctn.offsetWidth * scale),
+            Math.max(1, ctn.offsetHeight * scale),
+          )
           // OGL setSize also sets canvas CSS dimensions — force back to 100% so
           // low-res content stretches to fill container (CSS upscaling, not shrinking)
           const c = renderer.gl.canvas as HTMLCanvasElement

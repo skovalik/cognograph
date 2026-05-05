@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * BridgeLogPanel Component (Phase 2: Bridge Log)
+ * BridgeLogPanel Component (Bridge Log)
  *
  * A LeftSidebar tab that provides the complete audit trail of canvas actions.
  * Features:

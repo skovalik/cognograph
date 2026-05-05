@@ -4,7 +4,7 @@
 // =============================================================================
 // dispatchMenuItems.ts -- Context menu items for task dispatch workflow
 //
-// Phase 6E: Rich Node Depth System - Dispatch Workflow Integration
+// Rich Node Depth System - Dispatch Workflow Integration
 //
 // Returns dispatch-related context menu item configurations based on node type.
 // Only TaskNodes get the "Run in Embedded CLI" option.

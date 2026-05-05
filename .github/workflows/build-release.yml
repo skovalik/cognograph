@@ -1,15 +1,17 @@
-name: Build & Release
+name: Build & Release (Unsigned)
 
 on:
   push:
     tags:
-      - 'v*.*.*'  # Trigger on version tags like v1.5.3
-  workflow_dispatch:  # Allow manual trigger
+      - 'v*.*.*'  # Trigger on version tags like v0.1.0
+  workflow_dispatch:  # Allow manual trigger from GitHub Actions tab
+
+permissions:
+  contents: write  # Required for creating releases and uploading assets
 
 jobs:
   build:
     strategy:
-      fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
 
@@ -33,56 +35,15 @@ jobs:
         continue-on-error: true
 
       - name: Type check
-        run: npm run typecheck
+        run: npm run typecheck:node
 
-      # ============ macOS Signing Setup ============
-      - name: Import Apple Certificate (macOS only)
+      # ============ Build (Unsigned) ============
+      - name: Build (macOS - unsigned)
         if: matrix.os == 'macos-latest'
-        env:
-          CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
-          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          # Create variables
-          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-
-          # Import certificate from secrets
-          echo -n "$CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-
-          # Create temporary keychain
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          # Import certificate to keychain
-          security import $CERTIFICATE_PATH -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
-
-          # Enable codesigning
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-      # ============ Build & Sign ============
-      - name: Build & Sign (macOS)
-        if: matrix.os == 'macos-latest'
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npm run build:mac
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: Build & Sign (Windows)
+      - name: Build (Windows - unsigned)
         if: matrix.os == 'windows-latest'
-        env:
-          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-          # For DigiCert KeyLocker cloud signing:
-          # SM_API_KEY: ${{ secrets.SM_API_KEY }}
-          # SM_CLIENT_CERT_FILE_BASE64: ${{ secrets.SM_CLIENT_CERT_FILE_BASE64 }}
-          # SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
-          # SM_CODE_SIGNING_CERT_SHA1_HASH: ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}
         run: npm run build:win
 
       - name: Build (Linux - no signing required)
@@ -117,12 +78,6 @@ jobs:
             release/*/Cognograph-*.AppImage
             release/*/Cognograph-*.deb
 
-      # ============ Cleanup (macOS) ============
-      - name: Cleanup keychain (macOS only)
-        if: always() && matrix.os == 'macos-latest'
-        run: |
-          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
-
   # ============ Create GitHub Release ============
   release:
     needs: build
@@ -136,14 +91,14 @@ jobs:
           path: artifacts
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v1
         with:
           files: |
             artifacts/**/*.dmg
             artifacts/**/*.exe
             artifacts/**/*.AppImage
             artifacts/**/*.deb
-          draft: true
+          draft: true  # Create as draft for manual review
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

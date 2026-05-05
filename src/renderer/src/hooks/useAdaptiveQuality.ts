@@ -15,6 +15,7 @@
 
 import { useEffect, useRef } from 'react'
 import { useCanvasViewportStore } from '../stores/canvasViewportStore'
+import { usePerfStore } from '../stores/perfStore'
 import { useUIStore } from '../stores/uiStore'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { getGPUTier } from '../utils/gpuDetection'
@@ -50,15 +51,10 @@ const DPR_CAP = Math.min(window.devicePixelRatio || 1, 2.0)
 // Hook
 // =============================================================================
 
-export function useAdaptiveQuality(opts?: {
-  initialScale?: number
-  resetKey?: string
-  performanceMode?: PerformanceModeSetting
-}): {
+export function useAdaptiveQuality(opts?: { initialScale?: number; resetKey?: string }): {
   qualityRef: React.RefObject<AdaptiveQualityState>
   reportFrame: () => void
 } {
-  const performanceMode = opts?.performanceMode ?? 'auto'
   const resetKey = opts?.resetKey
 
   // Determine initial scale from GPU tier + node count
@@ -74,16 +70,10 @@ export function useAdaptiveQuality(opts?: {
 
   const initialScale = useRef(computeInitialScale()).current
 
-  // Lock modes
-  const lockedScale =
-    performanceMode === 'quality' ? 1.0 : performanceMode === 'battery' ? 0.25 : null
-  const lockedFrameSkip =
-    performanceMode === 'battery' ? true : performanceMode === 'quality' ? false : null
-
   // Quality state ref — stable identity, read from rAF loops
   const qualityRef = useRef<AdaptiveQualityState>({
-    resolutionScale: lockedScale ?? initialScale,
-    frameSkip: lockedFrameSkip ?? false,
+    resolutionScale: initialScale,
+    frameSkip: false,
     shouldRender: !document.hidden,
     dprCap: DPR_CAP,
   })
@@ -126,18 +116,15 @@ export function useAdaptiveQuality(opts?: {
   useEffect(() => {
     frameBufHead.current = 0
     frameBufCount.current = 0
-    const scale = lockedScale ?? initialScale
     qualityRef.current = {
       ...qualityRef.current,
-      resolutionScale: scale,
-      frameSkip: lockedFrameSkip ?? false,
+      resolutionScale: initialScale,
+      frameSkip: false,
     }
-  }, [resetKey, initialScale, lockedScale, lockedFrameSkip])
+  }, [resetKey, initialScale])
 
   // FPS analysis on interval (not per-frame)
   useEffect(() => {
-    if (performanceMode !== 'auto') return
-
     let downSince = 0
     let upSince = 0
     let currentStepIndex = SCALE_STEPS.indexOf(
@@ -161,6 +148,11 @@ export function useAdaptiveQuality(opts?: {
       const elapsed = newest - oldest
       if (elapsed <= 0) return
       const fps = ((count - 1) / elapsed) * 1000
+
+      // Emit fpsTier to perfStore (new system)
+      const fpsTier: 'full' | 'reduced' | 'minimal' =
+        fps < 15 ? 'minimal' : fps < 25 ? 'reduced' : 'full'
+      usePerfStore.getState().setFpsTier(fpsTier)
 
       // Check interaction state — drop to minimum during canvas drag/pan/zoom
       const isInteracting = useUIStore.getState().isCanvasInteracting ?? false
@@ -215,7 +207,7 @@ export function useAdaptiveQuality(opts?: {
     }, FPS_CHECK_INTERVAL)
 
     return () => clearInterval(interval)
-  }, [performanceMode])
+  }, [])
 
   return { qualityRef, reportFrame }
 }

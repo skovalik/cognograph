@@ -9,16 +9,16 @@
  * undo/redo, terminal spawn, agent event receiver, compaction/context budget,
  * JSONL conversation persistence, and accessibility.
  *
- * Phase 2 updates:
+ * Earlier updates:
  *   - Flow #2 (Conversation): verifies window.api.agent bridge for main-process
  *     tool execution path
  *   - Flow #5 (Orchestration): verifies connectedAgents tool filtering fields
  *   - Flow #6 (Permission): verifies structured PermissionRequest support and
  *     permissionStore initialization
  *   - Flow #9 (Agent Event Receiver): new — verifies passive event handler
- *     infrastructure from Phase 2C (RENDERER-PASSIVIZE)
+ *     infrastructure (RENDERER-PASSIVIZE)
  *
- * Phase 3 updates:
+ * Subsequent updates:
  *   - Flow #5 (Orchestration): verifies coordinator strategy is accepted by the
  *     store and produces correct OrchestratorRun shape with edgeResults
  *   - Flow #6 (Permission): verifies PermissionQueue component rendering,
@@ -27,7 +27,7 @@
  *     context budget manager exports, microcompact function availability,
  *     and compaction service circuit breaker infrastructure
  *
- * Phase 4 updates:
+ * Later updates:
  *   - Flow #10 (Compaction): extended with notification store verification
  *   - Flow #11 (JSONL Persistence): new — verifies conversation:appendMessage
  *     and conversation:loadMessages IPC handlers, workspace store message
@@ -196,7 +196,7 @@ test.describe('Foundation: Conversation Flow', () => {
   test('F2-4: window.api.agent bridge exists for main-process tool execution', async ({
     window,
   }) => {
-    // Phase 2: tool execution now happens in main process. The renderer
+    // Tool execution now happens in main process. The renderer
     // communicates via window.api.agent — verify the bridge is exposed.
     const bridgeShape = await window.evaluate(() => {
       const api = (window as any).api
@@ -208,7 +208,7 @@ test.describe('Foundation: Conversation Flow', () => {
         hasSendWithTools: typeof agent.sendWithTools === 'function',
         hasCancel: typeof agent.cancel === 'function',
         hasOnStreamChunk: typeof agent.onStreamChunk === 'function',
-        // Phase 2 event listeners for transport events
+        // Event listeners for transport events
         hasOnToolStart: typeof agent.onToolStart === 'function',
         hasOnToolResult: typeof agent.onToolResult === 'function',
         hasOnNodeCreated: typeof agent.onNodeCreated === 'function',
@@ -463,10 +463,10 @@ test.describe('Foundation: Orchestration Pipeline', () => {
     expect(result!.hasData).toBe(true)
   })
 
-  test('F5-4: orchestrator connectedAgents supports Phase 2 tool filtering', async ({
+  test('F5-4: orchestrator connectedAgents supports tool filtering', async ({
     window,
   }) => {
-    // Phase 2: ConnectedAgent now has tools/disallowedTools/readOnly fields
+    // ConnectedAgent now has tools/disallowedTools/readOnly fields
     // for the resolveAgentTools filter. Verify the data structure accepts them.
     const result = await window.evaluate(() => {
       const store = (window as any).__workspaceStore
@@ -520,7 +520,7 @@ test.describe('Foundation: Orchestration Pipeline', () => {
   test('F5-5: orchestrator accepts coordinator strategy and stores edgeResults', async ({
     window,
   }) => {
-    // Phase 3: OrchestratorStrategy now includes 'coordinator'.
+    // OrchestratorStrategy now includes 'coordinator'.
     // Verify the store accepts it and the run data supports edgeResults.
     const result = await window.evaluate(() => {
       const store = (window as any).__workspaceStore
@@ -642,7 +642,7 @@ test.describe('Foundation: Permission Gate', () => {
   test('F6-3: transport PermissionRequest shape is supported by IPC bridge', async ({
     window,
   }) => {
-    // Phase 2: Permission requests now use the structured PermissionRequest
+    // Permission requests now use the structured PermissionRequest
     // type from @shared/transport/types.ts. Verify the bridge can handle
     // the request/response shape.
     const bridgeInfo = await window.evaluate(() => {
@@ -669,7 +669,7 @@ test.describe('Foundation: Permission Gate', () => {
   })
 
   test('F6-4: permissionStore is initialized and functional', async ({ window }) => {
-    // Phase 2: the permissionStore manages PermissionRequest lifecycle.
+    // The permissionStore manages PermissionRequest lifecycle.
     // Verify it's available and can create/resolve requests.
     const storeResult = await window.evaluate(() => {
       // The permission store may be exposed on window or accessible via import
@@ -717,7 +717,7 @@ test.describe('Foundation: Permission Gate', () => {
   test('F6-5: PermissionQueue region renders when requests are queued', async ({
     window,
   }) => {
-    // Phase 3: PermissionQueue component renders a fixed region with role="region"
+    // PermissionQueue component renders a fixed region with role="region"
     // aria-label="Permission requests" when pending requests exist.
     const result = await window.evaluate(() => {
       const permStore = (window as any).__permissionStore
@@ -743,7 +743,7 @@ test.describe('Foundation: Permission Gate', () => {
       return
     }
 
-    // Verify all Phase 3 permission queue methods exist
+    // Verify all permission queue methods exist
     expect(result.hasGrantPermission).toBe(true)
     expect(result.hasDenyPermission).toBe(true)
     expect(result.hasApproveAll).toBe(true)
@@ -754,7 +754,7 @@ test.describe('Foundation: Permission Gate', () => {
   test('F6-6: permission request lifecycle — create, grant, verify cleared', async ({
     window,
   }) => {
-    // Phase 3: create a permission request, grant it, verify it clears from pending.
+    // Create a permission request, grant it, verify it clears from pending.
     const result = await window.evaluate(() => {
       const permStore = (window as any).__permissionStore
       if (!permStore) return null
@@ -803,7 +803,7 @@ test.describe('Foundation: Permission Gate', () => {
   })
 
   test('F6-7: PERMISSION_TIMEOUT_MS is 60 seconds', async ({ window }) => {
-    // Phase 3: auto-deny timeout. We verify the constant exists and equals 60s.
+    // Auto-deny timeout. We verify the constant exists and equals 60s.
     // We do NOT wait 60s in E2E — just verify the configuration.
     const result = await window.evaluate(() => {
       const permStore = (window as any).__permissionStore
@@ -1053,7 +1053,7 @@ test.describe('Foundation: Terminal Spawn', () => {
 })
 
 // ---------------------------------------------------------------------------
-// 9. Agent Event Receiver — Phase 2 passive event handler infrastructure
+// 9. Agent Event Receiver — passive event handler infrastructure
 // ---------------------------------------------------------------------------
 
 test.describe('Foundation: Agent Event Receiver', () => {
@@ -1066,7 +1066,7 @@ test.describe('Foundation: Agent Event Receiver', () => {
   test('F9-1: workspace store supports addToolMessage for event receiver', async ({
     window,
   }) => {
-    // Phase 2: agentEventReceiver calls store.addToolMessage() when
+    // agentEventReceiver calls store.addToolMessage() when
     // tool-start and tool-result events arrive from main process.
     // Verify the method exists and accepts the expected message shape.
     const result = await window.evaluate(() => {
@@ -1172,7 +1172,7 @@ test.describe('Foundation: Agent Event Receiver', () => {
   test('F9-4: setStreaming controls conversation streaming state', async ({
     window,
   }) => {
-    // Phase 2: agentEventReceiver calls setStreaming(convId, false) on
+    // agentEventReceiver calls setStreaming(convId, false) on
     // agent:complete. Verify the streaming state management works.
     const result = await window.evaluate(() => {
       const store = (window as any).__workspaceStore
@@ -1208,7 +1208,7 @@ test.describe('Foundation: Agent Event Receiver', () => {
 })
 
 // ---------------------------------------------------------------------------
-// 10. Compaction & Context Budget — Phase 3 compaction infrastructure
+// 10. Compaction & Context Budget — compaction infrastructure
 // ---------------------------------------------------------------------------
 
 test.describe('Foundation: Compaction & Context Budget', () => {
@@ -1221,7 +1221,7 @@ test.describe('Foundation: Compaction & Context Budget', () => {
   test('F10-1: microcompact module exports are available in main process', async ({
     window,
   }) => {
-    // Phase 3: microcompact.ts provides synchronous context compaction.
+    // microcompact.ts provides synchronous context compaction.
     // In E2E we verify the module is loadable via the IPC bridge by
     // checking that the agent service references compaction infrastructure.
     const result = await window.evaluate(() => {
@@ -1254,7 +1254,7 @@ test.describe('Foundation: Compaction & Context Budget', () => {
   test('F10-2: context budget constants are enforced (200K cap)', async ({
     window,
   }) => {
-    // Phase 3: ContextBudgetManager enforces a 200K aggregate token cap.
+    // ContextBudgetManager enforces a 200K aggregate token cap.
     // In E2E we verify the budget infrastructure exists by checking that
     // the workspace store tracks conversation token usage.
     const result = await window.evaluate(() => {
@@ -1304,7 +1304,7 @@ test.describe('Foundation: Compaction & Context Budget', () => {
   test('F10-3: compaction service circuit breaker pattern is supported', async ({
     window,
   }) => {
-    // Phase 3: CompactionCircuitBreaker stops retrying after 3 consecutive
+    // CompactionCircuitBreaker stops retrying after 3 consecutive
     // failures. We verify the store supports the compaction state fields
     // that track failures and frozen conversations.
     const result = await window.evaluate(() => {
@@ -1350,7 +1350,7 @@ test.describe('Foundation: Compaction & Context Budget', () => {
   test('F10-4: orchestrator store tracks run token usage for budget enforcement', async ({
     window,
   }) => {
-    // Phase 3: The orchestrator store + context budget manager work together
+    // The orchestrator store + context budget manager work together
     // to enforce the aggregate cap. Verify the orchestrator store can track
     // token usage on runs.
     const result = await window.evaluate(() => {
@@ -1383,7 +1383,7 @@ test.describe('Foundation: Compaction & Context Budget', () => {
   test('F10-5: conversation node supports spill preview for context budget', async ({
     window,
   }) => {
-    // Phase 3: When context budget overflows, old results are spilled to disk
+    // When context budget overflows, old results are spilled to disk
     // with a 2KB preview retained in memory. Verify the node data model
     // accepts spill-related fields.
     const result = await window.evaluate(() => {
@@ -1419,10 +1419,10 @@ test.describe('Foundation: Compaction & Context Budget', () => {
     expect(result!.tokenCount).toBe(180000)
   })
 
-  test('F10-6: notification store is initialized with Phase 4 methods', async ({
+  test('F10-6: notification store is initialized with priority-aware methods', async ({
     window,
   }) => {
-    // Phase 4: NotificationStore provides priority-aware notification queue
+    // NotificationStore provides priority-aware notification queue
     // with duplicate folding. Verify the store is exposed and functional.
     const result = await window.evaluate(() => {
       const notifStore = (window as any).__notificationStore
@@ -1456,7 +1456,7 @@ test.describe('Foundation: Compaction & Context Budget', () => {
 })
 
 // ---------------------------------------------------------------------------
-// 11. JSONL Conversation Persistence — Phase 4 sidecar persistence
+// 11. JSONL Conversation Persistence — sidecar persistence
 // ---------------------------------------------------------------------------
 
 test.describe('Foundation: JSONL Conversation Persistence', () => {
@@ -1469,7 +1469,7 @@ test.describe('Foundation: JSONL Conversation Persistence', () => {
   test('F11-1: conversation persistence IPC handlers are registered', async ({
     window,
   }) => {
-    // Phase 4B: conversationPersistence.ts registers ipcMain handlers for
+    // conversationPersistence.ts registers ipcMain handlers for
     // conversation:appendMessage, conversation:loadMessages, conversation:loadAllMessages,
     // and conversation:migrate. Verify the IPC bridge can invoke them without error.
     const result = await window.evaluate(async () => {
@@ -1498,7 +1498,7 @@ test.describe('Foundation: JSONL Conversation Persistence', () => {
   test('F11-2: workspace store supports addToolMessage for JSONL persistence', async ({
     window,
   }) => {
-    // Phase 4: Messages appended via the store are candidates for JSONL sidecar
+    // Messages appended via the store are candidates for JSONL sidecar
     // persistence. Verify the store's addToolMessage still works with enriched
     // message shapes (uuid + isoTimestamp fields).
     const result = await window.evaluate(() => {
@@ -1536,7 +1536,7 @@ test.describe('Foundation: JSONL Conversation Persistence', () => {
   test('F11-3: conversation node data model supports uuid and isoTimestamp fields', async ({
     window,
   }) => {
-    // Phase 4B: PersistedMessage extends Message with uuid, isoTimestamp, and
+    // PersistedMessage extends Message with uuid, isoTimestamp, and
     // conversationId. Verify the store accepts these enriched fields.
     const result = await window.evaluate(() => {
       const store = (window as any).__workspaceStore
@@ -1639,7 +1639,7 @@ test.describe('Foundation: JSONL Conversation Persistence', () => {
 })
 
 // ---------------------------------------------------------------------------
-// 12. Accessibility — Phase 4 ARIA attributes and keyboard navigation
+// 12. Accessibility — ARIA attributes and keyboard navigation
 // ---------------------------------------------------------------------------
 
 test.describe('Foundation: Accessibility', () => {
@@ -1652,7 +1652,7 @@ test.describe('Foundation: Accessibility', () => {
   test('F12-1: canvas has role="application" and aria-roledescription', async ({
     window,
   }) => {
-    // Phase 4B UX-A11Y: The ReactFlow canvas must have role="application" and
+    // Accessibility: The ReactFlow canvas must have role="application" and
     // aria-roledescription="spatial canvas" for screen reader orientation.
     const result = await window.evaluate(() => {
       const canvas = document.querySelector('.react-flow')
@@ -1694,7 +1694,7 @@ test.describe('Foundation: Accessibility', () => {
   test('F12-3: spatial keyboard navigation hook is active', async ({
     window,
   }) => {
-    // Phase 4B UX-A11Y: useSpatialNavigation hook registers Arrow key, Tab,
+    // Accessibility: useSpatialNavigation hook registers Arrow key, Tab,
     // and Enter handlers on the canvas. Verify that pressing an arrow key
     // does not throw and the canvas remains interactive.
     const result = await window.evaluate(() => {
@@ -1730,7 +1730,7 @@ test.describe('Foundation: Accessibility', () => {
   test('F12-4: notification store supports priority levels for accessible alerts', async ({
     window,
   }) => {
-    // Phase 4: NotificationStore uses priority levels (error, warning, info) with
+    // NotificationStore uses priority levels (error, warning, info) with
     // auto-dismiss timeouts. Verify that notifications with different priorities
     // can be created and dismissed.
     const result = await window.evaluate(() => {
@@ -1775,7 +1775,7 @@ test.describe('Foundation: Accessibility', () => {
   test('F12-5: notification duplicate folding works within time window', async ({
     window,
   }) => {
-    // Phase 4: Duplicate notifications within FOLD_WINDOW_MS (5s) are folded
+    // Duplicate notifications within FOLD_WINDOW_MS (5s) are folded
     // into a single entry with incremented count, rather than creating duplicates.
     const result = await window.evaluate(() => {
       const notifStore = (window as any).__notificationStore

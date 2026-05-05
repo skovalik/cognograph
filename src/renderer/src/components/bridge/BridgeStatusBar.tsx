@@ -13,7 +13,7 @@
 
 import { Activity, Coins, Hash, ScrollText, Settings, X, Zap } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { usePerformanceMode } from '../../hooks/usePerformanceMode'
+import { useEffectiveTier } from '../../hooks/useEffectiveTier'
 import { cn } from '../../lib/utils'
 import { useBridgeStore } from '../../stores/bridgeStore'
 import { Badge } from '../ui/Badge'
@@ -50,7 +50,7 @@ function BridgeStatusBarComponent({
   const activeOrchestrators = useBridgeStore((s) => s.activeOrchestrators)
   const activeAgents = useBridgeStore((s) => s.activeAgents)
   const toggleStatusBar = useBridgeStore((s) => s.toggleStatusBar)
-  const performanceMode = usePerformanceMode()
+  const effectiveTier = useEffectiveTier()
 
   // Popover state
   const [detailsOpen, setDetailsOpen] = useState(false)

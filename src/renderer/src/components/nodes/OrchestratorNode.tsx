@@ -11,7 +11,7 @@ import {
 } from '@xyflow/react'
 import { ChevronDown, ChevronRight, Pause, Play, Square, Workflow } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
-import { CONIC_PALETTES } from '../../constants/conicPalettes'
+import { useConicPalette } from '../../constants/conicPalettes'
 import { useIsGlassEnabled } from '../../hooks/useIsGlassEnabled'
 import { useNodeResize } from '../../hooks/useNodeResize'
 import { useNodeContentVisibility } from '../../hooks/useSemanticZoom'
@@ -155,9 +155,10 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
     propsHeight || ((nodeData as Record<string, unknown>).height as number) || DEFAULT_HEIGHT
   const effectiveHeight = Math.max(MIN_HEIGHT, nodeHeight)
 
+  const palette = useConicPalette()
+
   const nodeStyle = useMemo((): NodeStyleWithCustomProps => {
     const safeNodeColor = nodeColor ?? themeSettings.nodeColors.orchestrator ?? '#6366f1'
-    const palette = CONIC_PALETTES['orchestrator'] || CONIC_PALETTES.default
 
     return {
       '--ring-color': safeNodeColor,
@@ -169,7 +170,7 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
       width: nodeWidth,
       height: effectiveHeight,
     }
-  }, [nodeColor, themeSettings.nodeColors.orchestrator, nodeWidth, effectiveHeight])
+  }, [nodeColor, themeSettings.nodeColors.orchestrator, nodeWidth, effectiveHeight, palette])
 
   // Handle resize
   const handleResizeStart = useCallback(() => {
@@ -247,7 +248,6 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
     selected && 'selected',
     isSpawning && 'spawning',
     isActive && 'cognograph-node--active-run',
-    // is-active reserved for functional state only (not selection)
     isProcessing && 'is-thinking',
     nonMemberClass,
     memberHighlightClass,
@@ -402,10 +402,10 @@ function OrchestratorNodeComponent({ id, data, selected, width, height }: NodePr
         </div>
       )}
 
-      {/* Bridge: Orchestrator activity badge (Phase 1) — L1+ */}
+      {/* Bridge: Orchestrator activity badge — L1+ */}
       {showTitle && <OrchestratorBadge nodeId={id} />}
 
-      {/* Execution status badge (Phase 5A) — visible at all zoom levels */}
+      {/* Execution status badge — visible at all zoom levels */}
       {executionState && (
         <ExecutionStatusBadge status={executionState.status} message={executionState.message} />
       )}

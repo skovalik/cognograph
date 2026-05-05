@@ -169,7 +169,6 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
     'cognograph-node',
     'cognograph-node--workspace',
     selected && 'selected',
-    // is-active reserved for functional state only (not selection)
     isProcessing && 'is-thinking',
     isDisabled && 'cognograph-node--disabled',
     isSpawning && 'spawning',
@@ -313,15 +312,19 @@ function WorkspaceNodeComponent({ id, data, selected, width, height }: NodeProps
             </span>
           )}
 
-          {/* L1+ member count badge */}
-          <span
-            className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded node-chrome--hover"
-            style={{ background: `${nodeColor}25`, color: nodeColor }}
-            aria-label={`${memberCount} members`}
-          >
-            <Users className="w-3 h-3" />
-            {memberCount}
-          </span>
+          {/* L1+ member count badge — R13: wrapped in <div className="node-chrome--hover">
+              so the hover/visibility class lives on a wrapper element, matching the
+              pattern used across the rest of the node chrome. */}
+          <div className="node-chrome--hover">
+            <span
+              className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded"
+              style={{ background: `${nodeColor}25`, color: nodeColor }}
+              aria-label={`${memberCount} members`}
+            >
+              <Users className="w-3 h-3" />
+              {memberCount}
+            </span>
+          </div>
 
           {/* AI Property Assist — L3+ only */}
           {lodLevel >= 3 && showInteractiveControls && (

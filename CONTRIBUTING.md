@@ -48,11 +48,11 @@ src/
 
 ### Branch Naming
 
-- `feature/feature-name` — New features
-- `fix/bug-name` — Bug fixes
-- `docs/doc-name` — Documentation only
-- `refactor/refactor-name` — Code refactoring
-- `test/test-name` — Test additions
+- `feature/feature-name`: New features
+- `fix/bug-name`: Bug fixes
+- `docs/doc-name`: Documentation only
+- `refactor/refactor-name`: Code refactoring
+- `test/test-name`: Test additions
 
 ### Commit Format
 
@@ -74,24 +74,24 @@ Co-Authored-By: Your Name <email@example.com>
 
 ### TypeScript
 
-- **Strict mode enabled** — No `any` types (use `unknown` + type guards)
+- **Strict mode enabled**: No `any` types (use `unknown` + type guards)
 - **Explicit return types** on all functions
-- **No optional chaining abuse** — Use proper null checks
+- **No optional chaining abuse**: Use proper null checks
 - **Discriminated unions** for node types (see `src/shared/types/nodes.ts`)
 
 ### React
 
-- **Wrap custom nodes in `memo()`** — Prevents unnecessary re-renders
-- **Use Zustand selectors** — Not entire store (`useNodes()` not `useWorkspaceStore()`)
-- **No `useState` for shared state** — Use Zustand stores
-- **Cleanup in `useEffect`** — Always return cleanup function
+- **Wrap custom nodes in `memo()`**: Prevents unnecessary re-renders
+- **Use Zustand selectors**: Not entire store (`useNodes()` not `useWorkspaceStore()`)
+- **No `useState` for shared state**: Use Zustand stores
+- **Cleanup in `useEffect`**: Always return cleanup function
 
 ### State Management
 
 - **Zustand stores** in `src/renderer/src/stores/`
-- **Immer for mutations** — All stores use immer middleware
-- **Custom hooks for selectors** — Export `useNodes()`, `useEdges()`, etc.
-- **No prop drilling** — Use stores, not props, for global state
+- **Immer for mutations**: All stores use immer middleware
+- **Custom hooks for selectors**: Export `useNodes()`, `useEdges()`, etc.
+- **No prop drilling**: Use stores, not props, for global state
 
 ---
 
@@ -132,7 +132,7 @@ describe('MyComponent', () => {
 
 ### Creating a New Node Type
 
-See `docs/wiki/components/node-component-guide.md` (coming soon) or study `TextNode.tsx` (simplest example) and `ConversationNode.tsx` (full-featured).
+Study `TextNode.tsx` (simplest example) or `ConversationNode.tsx` (full-featured) under `src/renderer/src/components/nodes/`.
 
 ### IPC Communication
 
@@ -166,11 +166,11 @@ const myStore = create<State>()(
 
 See `docs/guides/PITFALLS.md` for detailed explanations. Quick list:
 
-- **React Flow referential equality** — Always create new node/edge objects
-- **Re-render loops** — Use memo(), useCallback(), useMemo()
-- **IPC error handling** — Always wrap in try/catch
-- **Type assertions** — Avoid `as any`, use type guards
-- **Store subscriptions** — Unsubscribe in useEffect cleanup
+- **React Flow referential equality**: Always create new node/edge objects
+- **Re-render loops**: Use memo(), useCallback(), useMemo()
+- **IPC error handling**: Always wrap in try/catch
+- **Type assertions**: Avoid `as any`, use type guards
+- **Store subscriptions**: Unsubscribe in useEffect cleanup
 
 ---
 
@@ -194,16 +194,27 @@ Before submitting:
 - **Documentation:** Start with `ARCHITECTURE.md`
 - **Architecture:** See `ARCHITECTURE.md`
 - **Common issues:** See `docs/guides/PITFALLS.md`
-- **Decisions:** See `DECISIONS.md` for rationale on key choices
 - **Questions:** Open a GitHub issue or discussion
 
 ---
 
 ## Project Values
 
-1. **Working Software Over Plans** — Ship small and functional vs. plan big and theoretical
-2. **Spatial Thinking as First-Class** — Every feature respects the spatial metaphor
-3. **Progressive Disclosure** — Simple by default, powerful when needed
+1. **Working Software Over Plans**: Ship small and functional vs. plan big and theoretical
+2. **Spatial Thinking as First-Class**: Every feature respects the spatial metaphor
+3. **Progressive Disclosure**: Simple by default, powerful when needed
+
+---
+
+## Agent-Authored Contributions
+
+If you use an LLM-based coding assistant (Claude, Copilot, Cursor, etc.) to draft contributions:
+
+1. **Human review required.** Every PR must show evidence that a human reviewed, edited, and accepts authorship of the contributed code. PR descriptions should call out which portions are agent-drafted vs. human-edited.
+2. **`Co-Authored-By` trailer for the agent.** When a substantive portion of a commit is drafted by an agent, include a `Co-Authored-By: <agent-id> <noreply@...>` trailer in the commit message.
+3. **Disclose by default.** If you are uncertain whether your contribution requires disclosure, default to disclosing it.
+
+This posture keeps the AGPL-3.0 enforceable on the human-authored portion of the codebase, per the US Copyright Office February 2025 guidance on AI-assisted works.
 
 ---
 

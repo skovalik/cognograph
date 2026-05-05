@@ -4,7 +4,7 @@
 // =============================================================================
 // src/shared/transport/webTransport.stub.ts -- DEPRECATED
 //
-// This stub has been superseded by webSocketTransport.ts (Phase 5A).
+// This stub has been superseded by webSocketTransport.ts.
 // Kept for backwards compatibility — re-exports the real implementation
 // under the old name.
 // =============================================================================

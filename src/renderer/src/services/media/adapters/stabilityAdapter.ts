@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
+import { blobToFormField, mediaFetchBinary, type SerializedFormField } from '../mediaFetchClient'
 import {
   type ImageEditParams,
   type ImageGenParams,
@@ -14,61 +15,50 @@ export class StabilityAdapter extends ProviderAdapter {
 
   async generateImage(params: ImageGenParams): Promise<MediaResult> {
     return this.withRetry(async () => {
-      const fd = new FormData()
-      fd.append('prompt', params.prompt)
-      if (params.style) fd.append('style_preset', params.style)
-      if (params.aspectRatio) fd.append('aspect_ratio', params.aspectRatio)
-      fd.append('output_format', 'png')
+      const fields: SerializedFormField[] = [
+        { name: 'prompt', kind: 'string', value: params.prompt },
+        { name: 'output_format', kind: 'string', value: 'png' },
+      ]
+      if (params.style) fields.push({ name: 'style_preset', kind: 'string', value: params.style })
+      if (params.aspectRatio)
+        fields.push({ name: 'aspect_ratio', kind: 'string', value: params.aspectRatio })
 
-      const res = await fetch('https://api.stability.ai/v2beta/stable-image/generate/core', {
+      const { blob } = await mediaFetchBinary({
+        provider: 'stability',
+        url: 'https://api.stability.ai/v2beta/stable-image/generate/core',
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          Accept: 'image/*',
-        },
-        body: fd,
+        headers: { Accept: 'image/*' },
+        bodyKind: 'form',
+        bodyForm: fields,
       })
 
-      if (!res.ok) {
-        const err = new Error(`Stability API error: ${res.status}`) as any
-        err.status = res.status
-        throw err
-      }
-
-      const blob = await res.blob()
       return { buffer: blob, mimeType: 'image/png', metadata: { model: 'stable-image-core' } }
     })
   }
 
   async editImage(params: ImageEditParams): Promise<MediaResult> {
     return this.withRetry(async () => {
-      const fd = new FormData()
-      fd.append('image', params.image)
-      fd.append('prompt', params.prompt)
-      if (params.mask) fd.append('mask', params.mask)
-      fd.append('output_format', params.outputFormat || 'png')
+      const fields: SerializedFormField[] = [
+        await blobToFormField('image', params.image, 'image'),
+        { name: 'prompt', kind: 'string', value: params.prompt },
+        { name: 'output_format', kind: 'string', value: params.outputFormat || 'png' },
+      ]
+      if (params.mask) fields.push(await blobToFormField('mask', params.mask, 'mask'))
 
       const endpoint =
         params.mode === 'outpaint'
           ? 'https://api.stability.ai/v2beta/stable-image/edit/outpaint'
           : 'https://api.stability.ai/v2beta/stable-image/edit/inpaint'
 
-      const res = await fetch(endpoint, {
+      const { blob } = await mediaFetchBinary({
+        provider: 'stability',
+        url: endpoint,
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          Accept: 'image/*',
-        },
-        body: fd,
+        headers: { Accept: 'image/*' },
+        bodyKind: 'form',
+        bodyForm: fields,
       })
 
-      if (!res.ok) {
-        const err = new Error(`Stability edit error: ${res.status}`) as any
-        err.status = res.status
-        throw err
-      }
-
-      const blob = await res.blob()
       return {
         buffer: blob,
         mimeType: 'image/png',
@@ -79,29 +69,17 @@ export class StabilityAdapter extends ProviderAdapter {
 
   async removeBackground(imageBlob: Blob): Promise<MediaResult> {
     return this.withRetry(async () => {
-      const fd = new FormData()
-      fd.append('image', imageBlob)
-      fd.append('output_format', 'png')
-
-      const res = await fetch(
-        'https://api.stability.ai/v2beta/stable-image/edit/remove-background',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.apiKey}`,
-            Accept: 'image/*',
-          },
-          body: fd,
-        },
-      )
-
-      if (!res.ok) {
-        const err = new Error(`Stability remove-bg error: ${res.status}`) as any
-        err.status = res.status
-        throw err
-      }
-
-      const blob = await res.blob()
+      const { blob } = await mediaFetchBinary({
+        provider: 'stability',
+        url: 'https://api.stability.ai/v2beta/stable-image/edit/remove-background',
+        method: 'POST',
+        headers: { Accept: 'image/*' },
+        bodyKind: 'form',
+        bodyForm: [
+          await blobToFormField('image', imageBlob, 'image'),
+          { name: 'output_format', kind: 'string', value: 'png' },
+        ],
+      })
       return { buffer: blob, mimeType: 'image/png', metadata: { model: 'stable-image-remove-bg' } }
     })
   }
@@ -111,31 +89,23 @@ export class StabilityAdapter extends ProviderAdapter {
     mode: 'creative' | 'conservative' = 'conservative',
   ): Promise<MediaResult> {
     return this.withRetry(async () => {
-      const fd = new FormData()
-      fd.append('image', imageBlob)
-      fd.append('output_format', 'png')
-
       const endpoint =
         mode === 'creative'
           ? 'https://api.stability.ai/v2beta/stable-image/upscale/creative'
           : 'https://api.stability.ai/v2beta/stable-image/upscale/conservative'
 
-      const res = await fetch(endpoint, {
+      const { blob } = await mediaFetchBinary({
+        provider: 'stability',
+        url: endpoint,
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          Accept: 'image/*',
-        },
-        body: fd,
+        headers: { Accept: 'image/*' },
+        bodyKind: 'form',
+        bodyForm: [
+          await blobToFormField('image', imageBlob, 'image'),
+          { name: 'output_format', kind: 'string', value: 'png' },
+        ],
       })
 
-      if (!res.ok) {
-        const err = new Error(`Stability upscale error: ${res.status}`) as any
-        err.status = res.status
-        throw err
-      }
-
-      const blob = await res.blob()
       return {
         buffer: blob,
         mimeType: 'image/png',

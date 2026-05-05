@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
-// Tool call handlers - Phase 14
+// Tool call handlers
 // Implements each MCP tool using the FileSyncProvider directly
 
 import type { DesignToken, DesignTokenSet } from '../../shared/types/common'
@@ -138,6 +138,10 @@ function handleGetContextChain(provider: MCPSyncProvider, args: ToolArgs): unkno
 
   const depth = (args.depth as number) || 2
   const chain = buildContextChain(provider, nodeId, depth)
+
+  // F5: notify renderer that CLI just read context for this node so it can
+  // animate the incoming edges. Fire-and-forget — failures must be silent.
+  provider.notifyContextRead?.(nodeId)
 
   return {
     rootNode: formatNodeForOutput(node),
@@ -940,6 +944,11 @@ async function handleGetInitialContext(
       { nodes: provider.getNodes(), edges: provider.getEdges() },
       { useCache: false },
     )
+
+    // F5: notify renderer that CLI just read context for this node so it can
+    // animate the incoming edges. Fire-and-forget — failures must be silent.
+    provider.notifyContextRead?.(nodeId)
+
     return {
       nodeId,
       markdown: context.markdown,

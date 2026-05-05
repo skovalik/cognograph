@@ -30,11 +30,6 @@ interface PageCreateOptions {
   children?: unknown[] // Notion block objects (for note/artifact content)
 }
 
-interface PageUpdateOptions {
-  page_id: string
-  properties: Record<string, unknown>
-}
-
 // -----------------------------------------------------------------------------
 // UpsertService
 // -----------------------------------------------------------------------------
@@ -77,7 +72,7 @@ export class UpsertService {
    */
   async upsertPage(
     parentPageId: string,
-    nodeId: string,
+    _nodeId: string,
     pageProperties: Record<string, unknown>,
     nodeType: 'note' | 'artifact',
     nodeData: { noteMode?: string; contentType?: string },
@@ -176,13 +171,18 @@ export class UpsertService {
    * Returns the page ID if found, null otherwise.
    */
   async findPageByNodeId(dbId: string, nodeId: string): Promise<string | null> {
+    // Note: SDK 2025-09-03 removed databases.query; we route through the legacy
+    // REST endpoint via client.request() which still works server-side.
     const result = await notionService.request(
       async (client) =>
-        client.databases.query({
-          database_id: dbId,
-          filter: {
-            property: 'Cognograph Node ID',
-            rich_text: { equals: nodeId },
+        client.request<{ results: Array<{ id: string }> }>({
+          method: 'post',
+          path: `databases/${dbId}/query`,
+          body: {
+            filter: {
+              property: 'Cognograph Node ID',
+              rich_text: { equals: nodeId },
+            },
           },
         }),
       'queryByNodeId',

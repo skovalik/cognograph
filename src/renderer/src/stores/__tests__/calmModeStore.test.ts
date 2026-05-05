@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Stefan Kovalik / Aurochs Digital
 
 /**
- * Calm Mode Store (Phase 6F) -- Stepped calm level tests
+ * Calm Mode Store -- Stepped calm level tests
  *
  * Tests the calm mode store actions and pure selector functions.
  */

@@ -7,7 +7,7 @@
  * Tests the pure functions: findNearestInDirection, arrowToDirection.
  * These are the core spatial algorithms that power keyboard navigation.
  *
- * Phase 4B UX-A11Y: Keyboard navigation and ARIA attributes.
+ * Accessibility: Keyboard navigation and ARIA attributes.
  */
 
 import { describe, expect, it } from 'vitest'

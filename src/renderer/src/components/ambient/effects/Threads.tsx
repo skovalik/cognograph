@@ -184,7 +184,8 @@ const Threads: React.FC<ThreadsProps> = ({
     const mesh = new Mesh(gl, { geometry, program })
 
     function resize() {
-      const { clientWidth, clientHeight } = container
+      const clientWidth = Math.max(1, container.clientWidth)
+      const clientHeight = Math.max(1, container.clientHeight)
       renderer.setSize(clientWidth, clientHeight)
       program.uniforms.iResolution.value.r = clientWidth
       program.uniforms.iResolution.value.g = clientHeight
@@ -226,7 +227,8 @@ const Threads: React.FC<ThreadsProps> = ({
         const scale = qualityRef.current.resolutionScale * qualityRef.current.dprCap
         if (scale !== currentScale) {
           currentScale = scale
-          const { clientWidth, clientHeight } = container
+          const clientWidth = Math.max(1, container.clientWidth)
+          const clientHeight = Math.max(1, container.clientHeight)
           renderer.setSize(clientWidth * scale, clientHeight * scale)
           // OGL setSize also sets canvas CSS dimensions — force back to 100% so
           // low-res content stretches to fill container (CSS upscaling, not shrinking)
@@ -259,6 +261,10 @@ const Threads: React.FC<ThreadsProps> = ({
 
       program.uniforms.iTime.value = t * 0.001
 
+      if (gl.drawingBufferWidth === 0 || gl.drawingBufferHeight === 0) {
+        animationFrameId.current = requestAnimationFrame(update)
+        return
+      }
       renderer.render({ scene: mesh })
       animationFrameId.current = requestAnimationFrame(update)
     }

@@ -4,7 +4,7 @@
 // =============================================================================
 // dispatchWorkflow.ts -- Pure functions for task-to-CLI dispatch pipeline
 //
-// Phase 6E: Rich Node Depth System - Dispatch Workflow Integration
+// Rich Node Depth System - Dispatch Workflow Integration
 //
 // Right-click a TaskNode → system creates an adjacent ConversationNode in
 // terminal mode, links them with a dispatch edge, and prepares context.

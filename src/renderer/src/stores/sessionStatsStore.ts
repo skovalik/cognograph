@@ -60,6 +60,21 @@ export const useSessionStatsStore = create<SessionStatsState>((set) => ({
         },
       },
     }))
+
+    try {
+      window.api.telemetry?.logTokenUsage(
+        JSON.stringify({
+          provider,
+          model,
+          inputTokens,
+          outputTokens,
+          costUSD,
+          timestamp: new Date().toISOString(),
+        }) + '\n',
+      )
+    } catch {
+      /* silent */
+    }
   },
 
   resetStats: () => set(INITIAL_STATE),

@@ -7,7 +7,7 @@
  * A draggable and collapsible wrapper around React Flow's MiniMap.
  * Can be positioned anywhere on the canvas and collapsed to save space.
  *
- * Phase 1C enhancements:
+ * Minimap enhancements:
  * - District boundary overlays (colored rectangles at 20% opacity)
  * - Landmark node markers (filled circle with glow effect)
  * - Terminal pulse animation on streaming conversation nodes
@@ -22,7 +22,7 @@ import { useCanvasStore } from '../stores'
 import { selectDistricts, useSpatialRegionStore } from '../stores/spatialRegionStore'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 
-// PFD Phase 6A: NoteMode badge colors for minimap node coloring
+// NoteMode badge colors for minimap node coloring
 // Uses CSS custom properties via getComputedStyle at render time
 const NOTE_MODE_CSS_VARS: Record<NoteMode, string> = {
   general: '',
@@ -61,7 +61,7 @@ function getContainerBounds(): { left: number; top: number; width: number; heigh
 type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 
 // --------------------------------------------------------------------------
-// Phase 1C: Custom MiniMap node component
+// Custom MiniMap node component
 // Renders landmark nodes with a distinctive filled circle marker and applies
 // a pulse CSS class to streaming conversation nodes (Terminal pulse).
 // --------------------------------------------------------------------------
@@ -187,7 +187,7 @@ const CustomMiniMapNodeComponent = ({
 const CustomMiniMapNode = memo(CustomMiniMapNodeComponent)
 
 // --------------------------------------------------------------------------
-// Phase 1C: District overlay component
+// District overlay component
 // Renders semi-transparent colored rectangles for each district region.
 // Uses the same coordinate space as the MiniMap SVG.
 // --------------------------------------------------------------------------
@@ -225,7 +225,7 @@ const DistrictOverlayComponent = ({ districts }: DistrictOverlayProps): JSX.Elem
 const DistrictOverlay = memo(DistrictOverlayComponent)
 
 // --------------------------------------------------------------------------
-// Phase 1C: Minimap district SVG overlay
+// Minimap district SVG overlay
 // Positioned absolutely on top of the MiniMap, sharing the same viewBox
 // computed from React Flow's internal bounding rect state.
 // --------------------------------------------------------------------------
@@ -313,7 +313,7 @@ function CollapsibleMinimapComponent({
   const districts = useSpatialRegionStore(selectDistricts)
   const streamingConversations = useCanvasStore((s) => s.streamingConversations)
 
-  // Phase 1C: Compute the same viewBox the MiniMap uses internally
+  // Compute the same viewBox the MiniMap uses internally
   const viewBox = useRFStore(selectMinimapViewBox)
 
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -474,7 +474,7 @@ function CollapsibleMinimapComponent({
   // Theme-aware styling using GUI theme CSS variables
   const isLightMode = themeSettings.mode === 'light'
 
-  // Phase 1C: nodeClassName — adds landmark / streaming CSS classes
+  // nodeClassName — adds landmark / streaming CSS classes
   // React Flow's nodeClassName receives the full node object including .id
   const nodeClassNameFn = useCallback(
     (node: { id?: string; type?: string; data?: Record<string, unknown> }): string => {
@@ -550,7 +550,7 @@ function CollapsibleMinimapComponent({
         {/* Minimap content */}
         {!isCollapsed && (
           <div className="relative">
-            {/* Phase 1C: District boundary overlay SVG */}
+            {/* District boundary overlay SVG */}
             {districts.length > 0 && viewBox && (
               <svg
                 role="img"
@@ -568,7 +568,7 @@ function CollapsibleMinimapComponent({
             <MiniMap
               key={JSON.stringify(themeSettings.nodeColors)} // Force re-render on theme change
               nodeColor={(node) => {
-                // PFD Phase 6A: Note nodes colored by NoteMode (resolved from theme tokens), others by type
+                // Note nodes colored by NoteMode (resolved from theme tokens), others by type
                 if (node.type === 'note') {
                   const noteMode = (node.data as { noteMode?: NoteMode })?.noteMode
                   if (noteMode && noteModeColors[noteMode]) {
@@ -579,7 +579,7 @@ function CollapsibleMinimapComponent({
                 return themeSettings.nodeColors[nodeType] || fallbackNodeColor
               }}
               nodeStrokeWidth={(node) => {
-                // PFD Phase 6B: Landmark nodes get thicker stroke in minimap
+                // Landmark nodes get thicker stroke in minimap
                 return (node.data as { isLandmark?: boolean })?.isLandmark ? 4 : 2
               }}
               nodeClassName={nodeClassNameFn}
