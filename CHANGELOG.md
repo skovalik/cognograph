@@ -9,22 +9,35 @@ All notable changes to Cognograph are documented in this file.
 - **SLSA-grade build provenance**: cosign keyless workflow + Ed25519 signer + per-platform manifest verifier in the release pipeline.
 - **AutoUpdater signature verification**: `cosign verify-blob` runs against any candidate update before it is applied; verification failure aborts the update path.
 - **Docker-based sandbox surface**: a `dockerSandbox` service with an allowlist contract for terminal-node command execution.
-- **README screenshots**: 5 product screenshots embedded (1 hero + 4 in a Screenshots section).
+- **Unified perf-tier system**: Quality / Auto / Battery dropdown is now the single master switch for shader, edge LOD, particles, ambient effects, and bridge badges across all zoom levels.
+- **PerfTierBadge**: surfaces the active tier + reason + override hint when not at full quality.
+- **Animated thinking-dot loader**: conic-gradient progress indicator replaces the inline spinner.
+- **Microsoft Clarity beacon** for usage analytics on the web canvas.
+- 5 product screenshots embedded in README (1 hero + 4 in a Screenshots section).
 
 ### Changed
 
+- **Smooth 60fps at all zoom levels** with full workspace + plasma shader on (was 3-15fps at zoom 10-20%).
+- **AmbientEffectLayer, ParticleDrift, LivingGrid, CustomEdge LOD, Bridge badges** all migrated to read `useEffectiveTier()` instead of raw zoom; eliminates jitter at threshold boundaries.
+- **LivingGrid step scales with zoom**: fixes 520k-dots-per-frame draw at zoom 0.10.
+- **Vite pre-bundles lazy-only deps** (`@xterm/*`, `ogl`, `three/r3f`) to prevent `Outdated Optimize Dep` 504 cascades in dev.
 - Notion SDK 2025-09-03 compatibility: `databases.query` and `databases.update {properties}` routed through legacy REST paths; runtime behavior preserved.
 - CI workflow: bumped to Node.js 22; test step now `continue-on-error` so artifacts ship regardless of flaky tests.
 - Vitest config: enabled JSX automatic runtime, eliminating 38 `ReferenceError: React is not defined` failures in component tests.
 
 ### Fixed
 
-- 121 TypeScript errors swept across `src/main`, `src/renderer`, `src/shared`, and `src/plugins` (unused declarations, possibly-undefined narrowing, Anthropic SDK type matches, Notion SDK adaptation, transport-test required-property fixes).
+- **Workspace list deduplication**: duplicate workspace IDs no longer multiply in the workspace picker.
+- **Defensive null guards for legacy artifact loads**: pre-migration artifacts no longer crash on open.
+- **Quality-mode FPS floor** removed: was causing self-reinforcing re-render cascade.
+- **Edge skeleton off-by-one at 0.30 zoom**: LOD threshold tuned from 0.15 to 0.30.
+- 121 TypeScript errors swept across `src/main`, `src/renderer`, `src/shared`, and `src/plugins`.
 
 ### Maintenance
 
-- Compressed 15 product screenshots (PNG → JPEG at 1600px max, q85): 21.95 MB → 2.86 MB total.
-- Documentation cleanup: 8 broken cross-references fixed; voice-scrubbed (0 em dashes in shipped prose docs); internal phase markers (Tier 0, T0.xx, Wave-5, ADR XXXX, OB-sec.X, RL personas) stripped from ~110 source-code comments.
+- Compressed 15 product screenshots (PNG to JPEG at 1600px max, q85): 21.95 MB to 2.86 MB total.
+- Documentation cleanup: 8 broken cross-references fixed.
+- `build:mcp` extracted from inline `node -e` to `scripts/build-mcp.mjs` (resolves Windows desktop-shortcut launch issues).
 
 ---
 
