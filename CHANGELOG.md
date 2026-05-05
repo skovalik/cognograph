@@ -29,7 +29,6 @@ All notable changes to Cognograph are documented in this file.
 - **MCP bridge edge animations** — edge animations triggered by MCP bridge notifications in CLI context.
 - **HTML artifact iframe keying** — keyed by content hash instead of length for deterministic reconciliation.
 - **HTML artifact defaults** — white background + dark text default for consistency.
-- **ReactBits Pro Preloader** — themed circle variant spinner replacing legacy SplashScreen.
 - **Warm Charcoal light mode** — improved light-mode text contrast and readability.
 - **Session Content Security Policy widened** — allows external HTTPS stylesheets and fonts safely.
 - **5 product screenshots embedded in README** (1 hero + 4 in a Screenshots section).
